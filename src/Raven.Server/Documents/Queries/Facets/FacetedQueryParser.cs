@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using Lucene.Net.Util;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Constants = Raven.Client.Constants;
 
@@ -31,7 +33,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                     foreach (var f in ProcessFacetSetup(facetSetup))
                     {
-                        var r = ProcessFacet(f.Facet, f.Ranges, query);
+                        var r = ProcessFacet(f.Facet, f.Ranges, query, f.Facet.FacetParameters);
                         results[r.Result.Name] = r;
                     }
 
@@ -109,7 +111,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
         }
 
-        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges, FacetQuery query)
+        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges, FacetQuery query, Parameters facetParameters = null)
         {
             var result = new FacetResult
             {
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 foreach (var range in facetRanges)
                 {
-                    var parsedRange = ParseRange(range, query, out var type);
+                    var parsedRange = ParseRange(range, query, facetParameters, out var type);
                     if (rangeType.HasValue == false)
                         rangeType = type;
                     else if (rangeType.Value != type)
@@ -190,12 +192,12 @@ namespace Raven.Server.Documents.Queries.Facets
             return result;
         }
 
-        private static ParsedRange ParseRange(QueryExpression expression, FacetQuery query, out RangeType type)
+        private static ParsedRange ParseRange(QueryExpression expression, FacetQuery query, Parameters facetParameters, out RangeType type)
         {
             if (expression is BetweenExpression bee)
             {
-                var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value);
-                var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value);
+                var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value, query.Query.QueryParameters, facetParameters);
+                var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value, query.Query.QueryParameters, facetParameters);
 
                 var fieldName = ((FieldExpression)bee.Source).FieldValue;
 
@@ -204,7 +206,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 type = hValue.Type;
 
-                return new ParsedRange
+                var range = new ParsedRange
                 {
                     Field = fieldName,
                     HighInclusive = true,
@@ -213,6 +215,17 @@ namespace Raven.Server.Documents.Queries.Facets
                     LowValue = lValue.Value,
                     RangeText = expression.GetText()
                 };
+
+                if (bee.Max.Value == ValueTokenType.Parameter)
+                {
+                    range.RangeText = range.RangeText.Replace(bee.Max.Token, hValue.Value);
+                }
+                if (bee.Min.Value == ValueTokenType.Parameter)
+                {
+                    range.RangeText = range.RangeText.Replace(bee.Min.Token, lValue.Value);
+                }
+
+                return range;
             }
 
             if (expression is BinaryExpression be)
@@ -226,7 +239,7 @@ namespace Raven.Server.Documents.Queries.Facets
                         var fieldName = ExtractFieldName(be, query);
 
                         var r = (ValueExpression)be.Right;
-                        var fieldValue = ConvertFieldValue(r.Token, r.Value);
+                        var fieldValue = ConvertFieldValue(r.Token, r.Value, query.Query.QueryParameters, facetParameters);
 
                         type = fieldValue.Type;
 
@@ -235,6 +248,12 @@ namespace Raven.Server.Documents.Queries.Facets
                             Field = fieldName,
                             RangeText = expression.GetText()
                         };
+
+                        if (r.Value == ValueTokenType.Parameter)
+                        {
+                            range.RangeText = range.RangeText.Replace(r.Token, fieldValue.Value);
+                        }
+                        
 
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
                         {
@@ -254,8 +273,8 @@ namespace Raven.Server.Documents.Queries.Facets
 
                         return range;
                     case OperatorType.And:
-                        var left = ParseRange(be.Left, query, out var lType);
-                        var right = ParseRange(be.Right, query, out var rType);
+                        var left = ParseRange(be.Left, query, facetParameters, out var lType);
+                        var right = ParseRange(be.Right, query, facetParameters, out var rType);
 
                         if (lType != rType)
                             ThrowDifferentTypesOfRangeValues(query, lType, rType, left.Field);
@@ -274,7 +293,7 @@ namespace Raven.Server.Documents.Queries.Facets
                             left.LowInclusive = right.LowInclusive;
                         }
 
-                        left.RangeText = expression.GetText();
+                        left.RangeText = $"{left.RangeText} and {right.RangeText}";
                         return left;
                     default:
                         ThrowUnsupportedRangeOperator(query, be.Operator);
@@ -299,7 +318,38 @@ namespace Raven.Server.Documents.Queries.Facets
             return null;
         }
 
-        private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type)
+        private static string GetParameterValue(string parameter, BlittableJsonReaderObject queryParameters, Parameters facetParameters)
+        {
+            object o;
+            if (facetParameters == null)
+            {
+                queryParameters.TryGet(parameter, out o);
+            }
+            else
+            {
+                //we pass the facetParameters to ProcessFacet() only 
+                //when using a range facet from a FacetSetup document.
+                //if we used facets from a FacetSetup document in this query
+                //(i.e : session.Query<>...AggragateUsing("facets/facetsName"))
+                //then the FacetParameters of these facets were not used in the generated RQL,
+                //and are not a part of the queryParameters
+
+                facetParameters.TryGetValue(parameter, out o);
+                var typeName = o?.GetType().FullName;
+                if (typeName == "System.DateTime")
+                {
+                    o = ((DateTime)o).GetDefaultRavenFormat();
+                }
+                else if (typeName == "System.DateTimeOffset")
+                {
+                    o = ((DateTimeOffset)o).UtcDateTime.GetDefaultRavenFormat();
+                }
+            }
+
+            return o?.ToString();
+        }
+
+        private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters, Parameters facetParameters)
         {
             switch (type)
             {
@@ -313,6 +363,9 @@ namespace Raven.Server.Documents.Queries.Facets
                     return (value, RangeType.None);
                 case ValueTokenType.Null:
                     return (null, RangeType.None);
+                case ValueTokenType.Parameter:
+                    value = GetParameterValue(value, queryParameters, facetParameters);
+                    return (value, RangeType.None);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
