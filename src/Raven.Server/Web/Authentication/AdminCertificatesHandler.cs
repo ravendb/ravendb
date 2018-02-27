@@ -781,6 +781,32 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task TriggerCertificateRefresh()
+        {
+            // What we do here is trigger the refresh cycle which normally happens once an hour.
+
+            // The difference between this and /admin/certificates/letsencrypt/force-renew is that here we also allow it for non-LetsEncrypt setups
+            // in which case we'll check if the certificate changed on disk and if so we'll update it immediately on the local node (only)
+            
+            var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
+
+            if (Server.Certificate.Certificate == null)
+                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle. The server certificate is not loaded.");
+
+            try
+            {
+                Server.RefreshClusterCertificate(replaceImmediately);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle", e);
+            }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task ReplaceClusterCert()
         {

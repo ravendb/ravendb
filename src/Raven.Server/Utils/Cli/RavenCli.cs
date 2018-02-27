@@ -116,6 +116,7 @@ namespace Raven.Server.Utils.Cli
             TrustClientCert,
             GenerateClientCert,
             ReplaceClusterCert,
+            TriggerCertificateRefresh,
             LowMem,
             Help,
             Logo,
@@ -781,6 +782,30 @@ namespace Raven.Server.Utils.Cli
             return true;
         }
 
+        private static bool CommandTriggerCertificateRefresh(List<string> args, RavenCli cli)
+        {
+            if (args.Count < 0 || args.Count > 1)
+            {
+                WriteError("Usage: triggerCertificateRefresh [-replaceImmediately]", cli);
+                return false;
+            }
+
+            var replaceImmediately = args[0] != null && args[0].Equals("-replaceImmediately");
+            
+            try
+            {
+                cli._server.RefreshClusterCertificate(replaceImmediately);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle.", e);
+            }
+
+            WriteText("Triggered a certificate refresh cycle.", TextColor, cli);
+
+            return true;
+        }
+
         private static bool CommandScript(List<string> args, RavenCli cli)
         {
             // script <database|server> [databaseName]
@@ -1003,7 +1028,8 @@ namespace Raven.Server.Utils.Cli
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
                 new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
                 new[] {"trustClientCert <name> <path-to-pfx> [password]", "Register a client certificate to be trusted on this server with 'ClusterAdmin' security clearance."},
-                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."}
+                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
+                new[] {"triggerCertificateRefresh [-replaceImmediately]", "Trigger a certificate refresh check (normally happens once an hour)."}
             };
 
             string[][] commandExperimentalDescription =
@@ -1052,6 +1078,7 @@ namespace Raven.Server.Utils.Cli
             [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustClientCert },
             [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandGenerateClientCert },
             [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert},
+            [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTriggerCertificateRefresh},
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
