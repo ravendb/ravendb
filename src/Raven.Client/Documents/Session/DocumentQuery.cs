@@ -753,6 +753,12 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         bool IDocumentQueryBase<T>.Any()
         {
+            if (IsDistinct)
+            {
+                // for distinct it is cheaper to do count 1
+                return ExecuteQueryOperation(1).Any();
+            }
+
             Take(0);
             var queryResult = GetQueryResult();
             return queryResult.TotalResults > 0;
@@ -760,7 +766,7 @@ namespace Raven.Client.Documents.Session
 
         private List<T> ExecuteQueryOperation(int? take)
         {
-            if (take.HasValue && (PageSize.HasValue == false || PageSize > take)) 
+            if (take.HasValue && (PageSize.HasValue == false || PageSize > take))
                 Take(take.Value);
 
             InitSync();
