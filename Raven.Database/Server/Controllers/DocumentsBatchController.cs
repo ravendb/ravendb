@@ -27,6 +27,8 @@ namespace Raven.Database.Server.Controllers
 {
     public class DocumentsBatchController : ClusterAwareRavenDbApiController
     {
+        private static long numberOfConcurrentBulkPosts = 0;
+
         [HttpPost]
         [RavenRoute("bulk_docs")]
         [RavenRoute("databases/{databaseName}/bulk_docs")]
@@ -69,51 +71,72 @@ namespace Raven.Database.Server.Controllers
                      select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
                      .ToArray();
 
-                if (Log.IsDebugEnabled)
+                Stopwatch sp = null;
+                try
                 {
-                    Log.Debug(
-                        () =>
-                        {
-                            if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+                    if (Log.IsDebugEnabled)
+                    {
+                        Interlocked.Increment(ref numberOfConcurrentBulkPosts);
+                        Log.Debug(
+                            () =>
                             {
-                                return "\tExecuted "
-                                       + string.Join(
-                                           ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
-                            }
+                                if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+                                {
+                                    return "\tExecuting "
+                                           + string.Join(
+                                               ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key))) + "" +
+                                           $", number of concurrent BulkPost: {Interlocked.Read(ref numberOfConcurrentBulkPosts):#,#;;0}";
+                                }
 
-                            var sb = new StringBuilder();
-                            foreach (var commandData in commands)
-                            {
-                                sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
-                            }
-                            return sb.ToString();
-                        });
+                                var sb = new StringBuilder();
+                                foreach (var commandData in commands)
+                                {
+                                    sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
+                                }
+
+                                return sb.ToString();
+                            });
+
+                        sp = Stopwatch.StartNew();
+                    }
+
+                    //take "snapshots" of NextIndexingRound TaskCompletionSource's --> prevent a race condition
+                    //between NextIndexingRound completion after the Batch() execution and waiting for it's completion in WaitForIndexesAsync()
+                    var nextIndexingRoundsByIndexId = new Dictionary<int, Task>();
+                    var existingIndexes = Database.IndexStorage.GetAllIndexes().ToArray();
+                    foreach (var index in existingIndexes)
+                        nextIndexingRoundsByIndexId.Add(index.indexId, index.NextIndexingRound);
+
+                    var batchResult = Database.Batch(commands, cts.Token);
+
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug($"Executed {commands.Length:#,#;;0} operations, " +
+                                  $"took: {sp?.ElapsedMilliseconds:#,#;;0}ms, " +
+                                  $"number of concurrent BulkPost: {numberOfConcurrentBulkPosts:#,#;;0}");
+                    }
+
+                    var writeAssurance = GetHeader("Raven-Write-Assurance");
+                    if (writeAssurance != null)
+                    {
+                        await WaitForReplicationAsync(writeAssurance, batchResult.LastOrDefault(x => x.Etag != null)).ConfigureAwait(false);
+                    }
+
+                    var waitIndexes = GetHeader("Raven-Wait-Indexes");
+                    if (waitIndexes != null)
+                    {
+                        //take care to pass existing indexes, in case any index is added or removed between Database.Batch() and WaitForIndexesAsync()
+                        //(essentially create "snapshot" of indexes just before the Batch() execution)
+                        await WaitForIndexesAsync(waitIndexes, nextIndexingRoundsByIndexId, existingIndexes, batchResult).ConfigureAwait(false);
+                    }
+
+                    return GetMessageWithObject(batchResult);
                 }
-
-                //take "snapshots" of NextIndexingRound TaskCompletionSource's --> prevent a race condition
-                //between NextIndexingRound completion after the Batch() execution and waiting for it's completion in WaitForIndexesAsync()
-                var nextIndexingRoundsByIndexId = new Dictionary<int, Task>();
-                var existingIndexes = Database.IndexStorage.GetAllIndexes().ToArray();
-                foreach (var index in existingIndexes)
-                    nextIndexingRoundsByIndexId.Add(index.indexId,index.NextIndexingRound);
-
-                var batchResult = Database.Batch(commands, cts.Token);
-
-                var writeAssurance = GetHeader("Raven-Write-Assurance");
-                if (writeAssurance != null)
+                finally
                 {
-                    await WaitForReplicationAsync(writeAssurance, batchResult.LastOrDefault(x => x.Etag != null)).ConfigureAwait(false);
+                    if (sp != null)
+                        Interlocked.Decrement(ref numberOfConcurrentBulkPosts);
                 }
-
-                var waitIndexes = GetHeader("Raven-Wait-Indexes");
-                if (waitIndexes != null)
-                {
-                    //take care to pass existing indexes, in case any index is added or removed between Database.Batch() and WaitForIndexesAsync()
-                    //(essentially create "snapshot" of indexes just before the Batch() execution)
-                    await WaitForIndexesAsync(waitIndexes, nextIndexingRoundsByIndexId, existingIndexes, batchResult).ConfigureAwait(false);
-                }
-
-                return GetMessageWithObject(batchResult);
             }
         }
 
