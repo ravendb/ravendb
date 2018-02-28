@@ -15,8 +15,8 @@ class deleteCompareExchangeValueCommand extends commandBase {
         };
 
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
-        return this.del(url, null, this.database);
-        // don't handle failure here
+        return this.del<Raven.Client.Documents.Operations.CompareExchange.CompareExchangeResult<any>>(url, null, this.database)
+            .fail((response: JQueryXHR) => this.reportError("Failed to delete compare exchange value", response.responseText, response.statusText));
     }
 
 }
