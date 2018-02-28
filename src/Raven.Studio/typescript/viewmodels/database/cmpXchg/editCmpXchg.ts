@@ -17,7 +17,9 @@ import eventsCollector = require("common/eventsCollector");
 
 class editCmpXchg extends viewModelBase {
 
-    //TODO: spinner for delete
+    spinners = {
+        delete: ko.observable<boolean>(false)
+    };
     
     static valueEditorSelector = "#docEditor";
 
@@ -290,11 +292,13 @@ class editCmpXchg extends viewModelBase {
         app.showBootstrapDialog(deleteDialog)
             .done((deleting: boolean) => {
                 if (deleting) {
+                    this.spinners.delete(true);
+                    
                     const deleteProgress = new deleteCompareExchangeProgress([{ Key: this.key(), Index: this.loadedIndex() }], this.activeDatabase());
                  
-                    //TODO: handle failure ?
                     deleteProgress.start()
-                        .done((success) => this.onDeleteCompleted(success));
+                        .done((success) => this.onDeleteCompleted(success))
+                        .always(() => this.spinners.delete(false));
                 }
             });
     }
@@ -303,7 +307,6 @@ class editCmpXchg extends viewModelBase {
         if (success) {
             router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
         } else {
-            //TODO: display failure?
             this.displayExternalChange(true);
         }
     }
