@@ -89,6 +89,10 @@ namespace Raven.Server.Documents.Patch
                         {
                             _writer.WriteValue(BlittableJsonToken.CompressedString, wrapper.Target);
                         }
+                        else if (wrapper.Target is long)
+                        {
+                            _writer.WriteValue(BlittableJsonToken.Integer, (long)wrapper.Target);
+                        }
                         else
                         {
 							var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);

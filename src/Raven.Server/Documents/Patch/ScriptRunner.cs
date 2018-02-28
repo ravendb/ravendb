@@ -624,10 +624,8 @@ namespace Raven.Server.Documents.Patch
                         return JsValue.Null;
                     case BlittableJsonToken.Boolean:
                         return new JsValue((bool)propDetails.Value);
-                    case BlittableJsonToken.Integer:
-                        // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
-                        var lnv= GetIntegerAsLazyNumber(selfInstance, (long)value);
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine,lnv));
+                    case BlittableJsonToken.Integer:  
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
                     case BlittableJsonToken.LazyNumber:                                                
                         return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
                     case BlittableJsonToken.String:
@@ -637,38 +635,7 @@ namespace Raven.Server.Documents.Patch
                     default:
                         throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
                 }            
-            }
-
-            private static unsafe LazyNumberValue GetIntegerAsLazyNumber(BlittableObjectInstance owner, long value)
-            {
-                var negative = value < 0;
-                long absLongVal = Math.Abs((long)value);
-                var digitsNumber = Math.Max((int)Math.Ceiling(Math.Log10(absLongVal)),1);
-                int allocatedMemorySize = digitsNumber + (negative ? 1 : 0);
-                var mem = owner.AllocateMemory(allocatedMemorySize);
-                var lsv = new LazyStringValue(null,
-                    mem.Address,
-                    allocatedMemorySize,
-                    owner.Blittable._context);
-
-                long temp = absLongVal;
-                long curDigit;
-                byte* endPtr = lsv.Buffer + lsv.Size;
-
-                if (negative)
-                {
-                    *lsv.Buffer = (byte)'-';
-                }
-
-                for (var i = 1; i <= digitsNumber; i++)
-                {
-                    curDigit = temp % 10;
-                    *(endPtr - i) = (byte)((byte)curDigit + (byte)'0');
-                    temp /= 10;
-                }
-
-                return new LazyNumberValue(lsv);
-            }
+            }           
 
             private JsValue CmpXchangeInternal(string key)
             {
