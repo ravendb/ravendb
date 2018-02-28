@@ -2585,6 +2585,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
         {
             var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
+            if (_afterQueryExecuted != null)
+                documentQuery.AfterQueryExecuted(_afterQueryExecuted);
+
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
 
             try
@@ -2621,6 +2624,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
         {
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
+            if (_afterQueryExecuted != null)
+                asyncDocumentQuery.AfterQueryExecuted(_afterQueryExecuted);
+
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
             try
             {
@@ -2690,8 +2696,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var executeQuery = GetQueryResult(finalQuery);
 
-            var queryResult = finalQuery.GetQueryResult();
-            _afterQueryExecuted?.Invoke(queryResult);
             return executeQuery;
         }
 

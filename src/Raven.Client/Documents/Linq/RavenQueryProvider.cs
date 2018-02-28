@@ -222,15 +222,6 @@ namespace Raven.Client.Documents.Linq
         }
 
         /// <summary>
-        /// Move the registered after query actions
-        /// </summary>
-        public void MoveAfterQueryExecuted<TK>(IAsyncDocumentQuery<TK> documentQuery)
-        {
-            if (_afterQueryExecuted != null)
-                documentQuery.AfterQueryExecuted(_afterQueryExecuted);
-        }
-
-        /// <summary>
         /// Convert the expression to a Lucene query
         /// </summary>
         public IAsyncDocumentQuery<TResult> ToAsyncDocumentQuery<TResult>(Expression expression)
@@ -250,9 +241,6 @@ namespace Raven.Client.Documents.Linq
             var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetDocumentQueryFor(expression);
 
-            if (_afterQueryExecuted != null)
-                query.AfterQueryExecuted(_afterQueryExecuted);
-
             if (FieldsToFetch.Count > 0)
             {
                 var (fields, projections) = processor.GetProjections();
@@ -271,9 +259,6 @@ namespace Raven.Client.Documents.Linq
             var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetAsyncDocumentQueryFor(expression);
 
-            if (_afterQueryExecuted != null)
-                query.AfterQueryExecuted(_afterQueryExecuted);
-
             if (FieldsToFetch.Count > 0)
             {
                 var (fields, projections) = processor.GetProjections();
@@ -291,6 +276,7 @@ namespace Raven.Client.Documents.Linq
         {
             var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetDocumentQueryFor(expression);
+
             return query.CountLazily();
         }
 
@@ -302,6 +288,7 @@ namespace Raven.Client.Documents.Linq
         {
             var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetAsyncDocumentQueryFor(expression);
+
             return query.CountLazilyAsync(token);
         }
 
