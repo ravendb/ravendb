@@ -1140,7 +1140,7 @@ namespace Sparrow.Json
             return ulong.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
 
-        public unsafe bool TryParseUlong(byte* ptr, int length, out ulong val)
+        public unsafe bool TryParseULong(byte* ptr, int length, out ulong val)
         {
             InitializeStringBufferForNumberParsing(ptr, length);
 
