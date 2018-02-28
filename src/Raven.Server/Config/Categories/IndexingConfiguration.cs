@@ -110,6 +110,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutAfterEtagReachedInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MapTimeoutAfterEtagReached { get; protected set; }
 
+        [Description("Max number of steps in the script execution of a JavaScript index")]
+        [DefaultValue(10_000)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxStepsForScript { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();

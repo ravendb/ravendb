@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -182,7 +183,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var instance = CreateIndexInstance(definition);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
@@ -193,7 +194,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(definition);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
 
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -211,9 +212,9 @@ namespace Raven.Server.Documents.Indexes.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapIndex CreateIndexInstance(IndexDefinition definition)
+        private static MapIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);

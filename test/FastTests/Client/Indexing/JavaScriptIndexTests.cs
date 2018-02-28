@@ -127,6 +127,27 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        [Fact]
+        public void CanElivateSimpleFunctions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersByNameAndIsActive());
+                using (var session = store.OpenSession())
+                {
+
+                    session.Store(new User
+                    {
+                        Name = "Brendan Eich",
+                        IsActive = true
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    session.Query<User>("UsersByNameAndIsActive").Single(x => x.Name == "Brendan Eich" && x.IsActive == true);
+                }
+
+            }
+        }
         [Fact(Skip = "The code for this is not yet ready")]
         public void CanUseJavaScriptMapReduceIndex()
         {
@@ -244,6 +265,25 @@ map('Users', function (u){
                             @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                             @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                         },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class UsersByNameAndIsActive : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "UsersByNameAndIsActive",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Users', u => u.Name, function(f){ return f.IsActive;})",
+                    },
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,

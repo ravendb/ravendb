@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
 
-        public static StaticIndexBase GetIndexInstance(IndexDefinition definition)
+        public static StaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
             var list = new List<string>();
             list.AddRange(definition.Maps);
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var key = new CacheKey(list);
-            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition)));
+            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration)));
 
             try
             {
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StaticIndexBase GenerateIndex(IndexDefinition definition)
+        private static StaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
             switch (definition.DetectStaticIndexType())
             {
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return IndexCompiler.Compile(definition);
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return new JavaScriptIndex(definition);                
+                    return new JavaScriptIndex(definition, configuration);                
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
