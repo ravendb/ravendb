@@ -350,6 +350,7 @@ namespace TypingsGenerator
             // compare exchange
             scripter.AddType(typeof(CompareExchangeHandler.CompareExchangeListItem));
             scripter.AddType(typeof(CompareExchangeResult<object>));
+            scripter.AddType(typeof(CompareExchangeValue<object>));
             
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
