@@ -885,9 +885,29 @@ ReturnFalse:
             try
             {
                 int numLength = _unmanagedWriteBuffer.SizeInBytes;
-                var tmpBuff = stackalloc byte[numLength];
-                _unmanagedWriteBuffer.CopyTo(tmpBuff);
-                _ctx.ParseDouble(tmpBuff, numLength);
+
+                if (numLength <= 100)
+                {
+                    byte* tmpBuff = stackalloc byte[numLength];
+                    _unmanagedWriteBuffer.CopyTo(tmpBuff);
+                    _ctx.ParseDouble(tmpBuff, numLength);
+                }
+                else
+                {
+                    var memoryForNumber = _ctx.GetMemory(numLength);
+
+                    try
+                    {
+                        _unmanagedWriteBuffer.CopyTo(memoryForNumber.Address);                        
+                        _ctx.ParseDouble(memoryForNumber.Address, numLength);
+                    }
+                    finally
+                    {
+                        _ctx.ReturnMemory(memoryForNumber);
+                    }
+
+                }
+                
             }
 #pragma warning disable RDB0004 // Exception handler is empty or just logging
             catch (Exception e)

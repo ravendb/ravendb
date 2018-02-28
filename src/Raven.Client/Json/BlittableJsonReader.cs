@@ -166,7 +166,7 @@ namespace Raven.Client.Json
                     else
                     {
                         LazyNumberValue lnv = (LazyNumberValue)value;
-                        if (lnv.TryParseUlong(out var ulongValue))
+                        if (lnv.TryParseULong(out var ulongValue))
                         {
                             SetToken(JsonToken.Integer, ulongValue);
                         }
@@ -216,7 +216,7 @@ namespace Raven.Client.Json
             if (Value is LazyNumberValue lazyNumber)
             {
                 int numberAsInt;
-                if (lazyNumber.TryParseUlong(out var ulongValue) == false)
+                if (lazyNumber.TryParseULong(out var ulongValue) == false)
                 {
                     numberAsInt = (int)(double)lazyNumber;
                 }

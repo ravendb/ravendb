@@ -98,8 +98,6 @@ namespace Sparrow.Json
         public AllocatedMemoryData AllocatedMemoryData;
         public int? LastFoundAt;
 
-        public bool HasMaterializedStringValue => _string != null;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
         {
@@ -250,7 +248,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator byte[](LazyStringValue self)
+        public static implicit operator byte[] (LazyStringValue self)
         {
             var valueAsString = (string)self;
             return Convert.FromBase64String(valueAsString);
@@ -909,7 +907,7 @@ namespace Sparrow.Json
                     return GetReversedStringFromBuffer(buffer);
                 }
             }
-            
+
             return GetReversedStringFromBuffer(buffer);
         }
 
@@ -945,6 +943,6 @@ namespace Sparrow.Json
             return b < 32 || (b >= 127 && b <= 159);
         }
 
-                
+
     }
 }
