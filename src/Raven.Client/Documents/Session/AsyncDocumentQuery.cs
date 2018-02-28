@@ -761,13 +761,21 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         async Task<bool> IAsyncDocumentQueryBase<T>.AnyAsync(CancellationToken token)
         {
-            var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
-            return operation.Any();
+            if (IsDistinct)
+            {
+                // for distinct it is cheaper to do count 1
+                var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
+                return operation.Any();
+            }
+
+            Take(0);
+            var result = await GetQueryResultAsync(token).ConfigureAwait(false);
+            return result.TotalResults > 0;
         }
 
         private async Task<List<T>> ExecuteQueryOperation(int? take, CancellationToken token)
         {
-            if (take.HasValue && (PageSize.HasValue == false || PageSize > take)) 
+            if (take.HasValue && (PageSize.HasValue == false || PageSize > take))
                 Take(take.Value);
 
             await InitAsync(token).ConfigureAwait(false);

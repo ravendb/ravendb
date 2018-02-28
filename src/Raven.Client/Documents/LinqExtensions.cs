@@ -287,12 +287,11 @@ namespace Raven.Client.Documents
             return provider.CountLazily<T>(source.Expression);
         }
 
-
         /// <summary>
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
+        public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -308,14 +307,13 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public static Task<List<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
+        public static Task<List<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             var provider = source.Provider as IRavenQueryProvider;
             if (provider == null)
                 throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
 
             var documentQuery = provider.ToAsyncDocumentQuery<T>(source.Expression);
-            provider.MoveAfterQueryExecuted(documentQuery);
             return documentQuery.ToListAsync(token);
         }
 
@@ -339,7 +337,7 @@ namespace Raven.Client.Documents
         /// <exception cref="ArgumentNullException">
         /// source is null.
         /// </exception>
-        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
+        public static Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -349,15 +347,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
-                                .Take(0);
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-            query.Statistics(out var stats);
-
-            await query.ToListAsync(token).ConfigureAwait(false);
-
-            return stats.TotalResults > 0;
+            return query.AnyAsync(token);
         }
 
         /// <summary>
@@ -386,7 +378,7 @@ namespace Raven.Client.Documents
         /// <exception cref="ArgumentNullException">
         /// source or predicate is null.
         /// </exception>
-        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
+        public static Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -397,16 +389,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
-                                .Take(0);
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            query.Statistics(out var stats);
-
-            await query.ToListAsync(token).ConfigureAwait(false);
-
-            return stats.TotalResults > 0;
+            return query.AnyAsync(token);
         }
 
         /// <summary>
@@ -433,7 +418,7 @@ namespace Raven.Client.Documents
         /// <exception cref="OverflowException">
         /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
         /// </exception>
-        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
+        public static Task<int> CountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -443,16 +428,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
-                                .Take(0);
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            query.Statistics(out var stats);
-
-            await query.ToListAsync(token).ConfigureAwait(false);
-
-            return stats.TotalResults;
+            return query.CountAsync(token);
         }
 
         /// <summary>
@@ -485,7 +463,7 @@ namespace Raven.Client.Documents
         /// <exception cref="OverflowException">
         /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
         /// </exception>
-        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
+        public static Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -496,15 +474,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
-                                .Take(0);
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-            query.Statistics(out var stats);
-
-            await query.ToListAsync(token).ConfigureAwait(false);
-
-            return stats.TotalResults;
+            return query.CountAsync(token);
         }
 
         /// <summary>
@@ -532,7 +504,7 @@ namespace Raven.Client.Documents
         /// The source sequence is empty or source
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -542,14 +514,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
-                                .Take(1);
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.First();
+            return query.FirstAsync(token);
         }
 
         /// <summary>
@@ -582,7 +549,7 @@ namespace Raven.Client.Documents
         /// the source sequence is empty or source
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -593,14 +560,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
-                                .Take(1);
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.First();
+            return query.FirstAsync(token);
         }
 
         /// <summary>
@@ -628,7 +590,7 @@ namespace Raven.Client.Documents
         /// <exception cref="InvalidOperationException">
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -638,14 +600,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
-                                .Take(1);
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.FirstOrDefault();
+            return query.FirstOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -680,7 +637,7 @@ namespace Raven.Client.Documents
         /// <exception cref="InvalidOperationException">
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -691,14 +648,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
-                                .Take(1);
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.FirstOrDefault();
+            return query.FirstOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -727,7 +679,7 @@ namespace Raven.Client.Documents
         /// The source sequence is empty, has more than one element or
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -737,14 +689,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
-                                .Take(2);
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.Single();
+            return query.SingleAsync(token);
         }
 
         /// <summary>
@@ -778,7 +725,7 @@ namespace Raven.Client.Documents
         /// one element satisfies the condition, the source sequence is empty or
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -789,14 +736,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
-                                .Take(2);
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.Single();
+            return query.SingleAsync(token);
         }
 
         /// <summary>
@@ -827,7 +769,7 @@ namespace Raven.Client.Documents
         /// source has more than one element or
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -837,14 +779,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
-                                .Take(2);
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.SingleOrDefault();
+            return query.SingleOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -880,7 +817,7 @@ namespace Raven.Client.Documents
         /// More than one element satisfies the condition in predicate
         /// or source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default(CancellationToken))
+        public static Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -891,14 +828,9 @@ namespace Raven.Client.Documents
             if (provider == null)
                 throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
-                                .Take(2);
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression);
 
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync(token).ConfigureAwait(false);
-
-            return result.SingleOrDefault();
+            return query.SingleOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -972,16 +904,17 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Returns the query results as a stream
         /// </summary>
-        public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream, CancellationToken token = default(CancellationToken))
+        public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream, CancellationToken token = default)
         {
             var queryProvider = (IRavenQueryProvider)self.Provider;
             var docQuery = queryProvider.ToAsyncDocumentQuery<T>(self.Expression);
             await ToStreamAsync(docQuery, stream, token).ConfigureAwait(false);
         }
+
         /// <summary>
         /// Returns the query results as a stream
         /// </summary>
-        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream, CancellationToken token = default(CancellationToken))
+        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream, CancellationToken token = default)
         {
             var documentQuery = (AbstractDocumentQuery<T, AsyncDocumentQuery<T>>)self;
             var session = documentQuery.AsyncSession;
