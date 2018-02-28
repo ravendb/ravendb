@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                             var cacheKey = GetCacheKey(command, out string _);
                             using (_cache.Get(ctx, cacheKey, out string cachedChangeVector, out var _))
                             {
-                                var headers = new DynamicJsonValue();
+                                var headers = new Dictionary<string, string>();
                                 if (cachedChangeVector != null)
                                     headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
 
@@ -73,8 +73,9 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                                 writer.WritePropertyName(nameof(GetRequest.Headers));
                                 writer.WriteStartObject();
+
                                 var firstInner = true;
-                                foreach (var kvp in command.Headers)
+                                foreach (var kvp in headers)
                                 {
                                     if (firstInner == false)
                                         writer.WriteComma();
