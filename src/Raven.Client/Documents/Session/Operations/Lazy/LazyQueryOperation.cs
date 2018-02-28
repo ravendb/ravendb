@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Conventions;
@@ -46,6 +47,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             var queryResult = JsonDeserializationClient.QueryResult((BlittableJsonReaderObject)response.Result);
+
+            if (response.StatusCode == HttpStatusCode.NotModified)
+                queryResult.DurationInMs = -1; // taken from cache
 
             HandleResponse(queryResult);
         }
