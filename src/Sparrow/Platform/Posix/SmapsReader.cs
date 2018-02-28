@@ -14,9 +14,9 @@ namespace Sparrow.Platform.Posix
         // after that, in the following order :
         // Size, Rss, Shared_Clean, Private_Clean, Shared_Dirty, Private_Dirty and in order to finish reading a file data : Locked
         // Each must have with white-space delimiters a value, delimiter, "kB"
-        
+
         private const int BufferSize = 4096;
-        private readonly byte[][] _smapsBuffer = { new byte[BufferSize], new byte[BufferSize] };
+        private readonly byte[][] _smapsBuffer = {new byte[BufferSize], new byte[BufferSize]};
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
@@ -29,7 +29,7 @@ namespace Sparrow.Platform.Posix
         private readonly byte[] _lockedBytes = Encoding.UTF8.GetBytes("Locked:");
         private readonly byte[] _tempBufferBytes = new byte[256];
 
-        private readonly int[] _endOfBuffer = { 0,0 };
+        private readonly int[] _endOfBuffer = {0, 0};
         private int _currentBuffer;
 
         private enum SearchState
@@ -100,8 +100,7 @@ namespace Sparrow.Platform.Posix
                         if (switchBuffer == false && i + term.Length + offset > _endOfBuffer[_currentBuffer])
                         {
                             var nextBuffer = (_currentBuffer + 1) % 2;
-                            var _ = ReadFromFile(fileStream, nextBuffer);
-                            // we don't care if this is the end of the file
+                            read = ReadFromFile(fileStream, nextBuffer);
                             switchBuffer = true;
                         }
 
@@ -226,11 +225,11 @@ namespace Sparrow.Platform.Posix
                         if (term != _rwsBytes)
                         {
                             if (foundValue == false)
-                                throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{currentProcess.Id}/smaps, but no value");
+                                ThrowNotContainsValidValue(term, currentProcess.Id);
                             if (foundK == false)
-                                throw new InvalidDataException(
-                                    $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{currentProcess.Id}/smaps, and value but not in kB - invalid format");
+                                ThrowNotContainsKbValue(term, currentProcess.Id);
                         }
+                        
 
                         i += term.Length + bytesSearched;
                         if (i >= _smapsBuffer[_currentBuffer].Length)
@@ -259,8 +258,7 @@ namespace Sparrow.Platform.Posix
                         if (term == _rwsBytes)
                         {
                             if (state != SearchState.None)
-                                throw new InvalidDataException(
-                                    $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{currentProcess.Id}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}'");
+                                ThrowNotRwsTermAfterLockedTerm(state, term, currentProcess.Id);
                             state = SearchState.Rws;
                         }
                         else if (term == _sizeBytes)
@@ -314,14 +312,13 @@ namespace Sparrow.Platform.Posix
                                 continue;
                             state = SearchState.None;
 
-
                             if (resultString == null)
-                                throw new InvalidDataException("Got term 'Locked' (end of single mapping data) with no filename after rw-s");
+                                ThrowOnNullString();
 
-                            if (resultString.EndsWith(".voron") == false && 
-                                resultString.EndsWith(".buffers") == false) 
+                            if (resultString.EndsWith(".voron") == false &&
+                                resultString.EndsWith(".buffers") == false)
                                 continue;
-                            
+
                             var djv = new DynamicJsonValue
                             {
                                 ["File"] = resultString,
@@ -352,6 +349,28 @@ namespace Sparrow.Platform.Posix
 
                 return (tmpRss, tmpSharedClean, tmpPrivateClean, dja);
             }
+        }
+
+        private static void ThrowOnNullString()
+        {
+            throw new InvalidDataException($"Got term 'Locked' (end of single mapping data) with no filename (in 'resultString') after rw-s");
+        }
+
+        private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
+        {
+            throw new InvalidDataException(
+                $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}' (instead got {state})");
+        }
+
+        private void ThrowNotContainsValidValue(byte[] term, int processId)
+        {
+            throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
+        }
+
+        private void ThrowNotContainsKbValue(byte[] term, int processId)
+        {
+            throw new InvalidDataException(
+                $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, and value but not in kB - invalid format");
         }
     }
 }
