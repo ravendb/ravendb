@@ -264,6 +264,9 @@ namespace Raven.Client.Documents.Session
         {
             var type = Type.GetType(typeValue);
 
+            if (type == null)
+                return false;
+
             if (type.IsArray)
                 return true;
 
