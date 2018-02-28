@@ -441,8 +441,9 @@ from EdgeCaseValues as e select MyProjection(e)"
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DecimalMinVal.ToString() == edgeCaseValues.DecimalMinVal.ToString()).ToListAsync());
 
-                    var decimalMaxValMinusOne = edgeCaseValues.DecimalMaxVal - 1;
-                    Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DecimalMaxVal == decimalMaxValMinusOne).ToListAsync());
+                    // todo: RavenDB-10603
+                    //var decimalMaxValMinusOne = edgeCaseValues.DecimalMaxVal - 1;
+                    //Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DecimalMaxVal == decimalMaxValMinusOne).ToListAsync());
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DoubleNegativeInfinity == edgeCaseValues.DoubleNegativeInfinity).ToListAsync());
                     Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DoubleNegativeInfinity == 0).ToListAsync());
