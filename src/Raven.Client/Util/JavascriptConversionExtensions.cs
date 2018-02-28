@@ -1167,16 +1167,17 @@ namespace Raven.Client.Util
                     return;
 
                 context.PreventDefault();
-                var writer = context.GetWriter();
 
-                using (writer.Operation(binaryExpression))
-                {
-                    context.Visitor.Visit(binaryExpression.Left);
-                    writer.Write(" != null ? ");
-                    context.Visitor.Visit(binaryExpression.Left);
-                    writer.Write(" : ");
-                    context.Visitor.Visit(binaryExpression.Right);
-                }
+                var test = Expression.NotEqual(
+                        binaryExpression.Left,
+                        Expression.Constant(null, binaryExpression.Left.Type)
+                    );
+
+                var condition = Expression.Condition(test, 
+                    binaryExpression.Left, 
+                    Expression.Convert(binaryExpression.Right, binaryExpression.Left.Type));
+
+                context.Visitor.Visit(condition);
             }
         }
 
