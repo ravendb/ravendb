@@ -19,7 +19,8 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
     
     private processed = ko.observable<number>(0);
     private total = ko.observable<number>();
-    private failures = ko.observable<number>(0);
+    private concurrencyFailures = ko.observable<number>(0);
+    private operationFailed = ko.observable<boolean>(false);
     private actionDescription: string;
     
     spinners = {
@@ -48,15 +49,20 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
                 nextTask
                     .done((result) => {
                         if (!result.Successful) {
-                            this.failures(this.failures() + 1);
+                            this.concurrencyFailures(this.concurrencyFailures() + 1);
                         }
+                        continueFunc();
                     })
-                    .fail(() => this.failures(this.failures() + 1));
+                    .fail(() => {
+                        // we have hard failure, so stop operation!
+                        this.operationFailed(true);
+                        task.resolve(false);
+                        this.spinners.deleting(false);
+                    });
                     
-                nextTask.always(() => continueFunc());
             } else {
                 // all tasks completed
-                task.resolve(this.failures() === 0);
+                task.resolve(this.concurrencyFailures() === 0);
                 this.spinners.deleting(false);
             }
         };
@@ -87,20 +93,19 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
                // don't show dialog at all
                clearTimeout(delayedShowDialog);
                
-               //TODO: show failure message as well
-               
                messagePublisher.reportSuccess(this.actionDescription);
            } 
         });
         
-        this.failures.subscribe(v => {
-            if (v > 0) {
-                if (!this.dialogOpened) {
-                    clearTimeout(delayedShowDialog);
-                    showDialog();
-                }
+        const failureHandler = (v: boolean | number) => {
+              if (v && !this.dialogOpened) {
+                clearTimeout(delayedShowDialog);
+                showDialog();
             }
-        });
+        };
+        
+        this.concurrencyFailures.subscribe(v => failureHandler(v));
+        this.operationFailed.subscribe(v => failureHandler(v));
     }
     
     private nextTask(): JQueryPromise<Raven.Client.Documents.Operations.CompareExchange.CompareExchangeResult<any>> {
@@ -112,11 +117,6 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
         
         return new deleteCompareExchangeValueCommand(this.db, itemToDelete.Key, itemToDelete.Index)
             .execute();
-    }
-    
-    
-    cancel() {
-        //TODO:
     }
 }
 

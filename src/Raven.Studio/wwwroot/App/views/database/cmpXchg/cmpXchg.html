@@ -20,7 +20,7 @@
                 </div>
                
                 <div>
-                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
+                    <input class="form-control" placeholder="Filter keys that start with..." data-bind="textInput: filter">
                 </div>
             </div>
 
@@ -37,8 +37,7 @@
 </div>
 
 <script type="text/html" id="empty-cmp-xchg-template">
-    <div>
-        No Compare Exchange values found.
+    <div data-bind="text: $root.filter() ? 'No matching items found.' : 'No Compare Exchange items found.'">
     </div>
 </script>
 <div class="tooltip json-preview" style="opacity: 0">
