@@ -30,6 +30,7 @@ using Raven.Client.Documents.Operations;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.Indexing.Static;
 using FastTests.Client.Indexing;
+using SlowTests.MailingList;
 
 namespace Tryouts
 {
@@ -110,16 +111,23 @@ select {Number1:scalarToRawString(u,(x=> x.Number)), Number2:u.Number, Char1:u.S
 
         public static async Task Main(string[] args)
         {
-            try
+            for (int i = 0; i < 1000; i++)
             {
-                //new RavenDB_7691().ScalarToRawThrowsOnIllegalLambdas().Wait();
-                new RavenDB_7691().CanModifyRawAndOriginalValuesTogether().Wait();
-                
-            }
-            catch (Exception e)
-            {
+                Console.WriteLine(i);
+                try
+                {
 
-                Console.WriteLine(e);
+                    new RavenDB_7691().CanParseNumericPercisionEdgeCasesRawValuesInJSProjection().Wait();
+                    //new RavenDB_7691().CanModifyRawAndOriginalValuesTogether().Wait();
+                    //new MultiMapIndexWithDynamicFieldsTests().CanSortDynamically();
+
+
+                }
+                catch (Exception e)
+                {
+
+                    Console.WriteLine(e);
+                } 
             }
             //new BlittableTest().TestDecimalNumbers();
         }

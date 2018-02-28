@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
                         .Take(128)
                         .ToList();
                     Assert.Equal(50, result.Count); //FAIL(:
-                    Assert.Equal(49.50, result.First().Attributes.First(x => x.Name == "N1").Value);
+                    Assert.Equal((decimal)49.50, result.First().Attributes.First(x => x.Name == "N1").Value);
                 }
             }
         }
