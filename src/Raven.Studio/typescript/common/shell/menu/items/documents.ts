@@ -44,7 +44,16 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-query',
             alias: true,
             dynamicHash: appUrls.query('')
-        }),       
+        }),
+        
+        new leafMenuItem({
+            title: "Compare Exchange",
+            nav: true,
+            route: "databases/cmpXchg",
+            moduleId: "viewmodels/database/documents/cmpXchg",
+            css: 'icon-cmp-xchg',
+            dynamicHash: appUrls.cmpXchg
+        }),
         
         new leafMenuItem({
             title: "Conflicts",
