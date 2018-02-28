@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenLoadFromProjection : RavenTestBase
     {
