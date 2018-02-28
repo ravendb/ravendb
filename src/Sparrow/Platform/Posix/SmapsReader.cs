@@ -14,9 +14,9 @@ namespace Sparrow.Platform.Posix
         // after that, in the following order :
         // Size, Rss, Shared_Clean, Private_Clean, Shared_Dirty, Private_Dirty and in order to finish reading a file data : Locked
         // Each must have with white-space delimiters a value, delimiter, "kB"
-        
+
         private const int BufferSize = 4096;
-        private readonly byte[][] _smapsBuffer = { new byte[BufferSize], new byte[BufferSize] };
+        private readonly byte[][] _smapsBuffer = {new byte[BufferSize], new byte[BufferSize]};
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
@@ -29,7 +29,7 @@ namespace Sparrow.Platform.Posix
         private readonly byte[] _lockedBytes = Encoding.UTF8.GetBytes("Locked:");
         private readonly byte[] _tempBufferBytes = new byte[256];
 
-        private readonly int[] _endOfBuffer = { 0,0 };
+        private readonly int[] _endOfBuffer = {0, 0};
         private int _currentBuffer;
 
         private enum SearchState
@@ -222,7 +222,14 @@ namespace Sparrow.Platform.Posix
                             ++bytesSearched;
                         }
 
-                        ThrowNotContainsValidValue(term, foundValue, foundK, currentProcess.Id);
+                        if (term != _rwsBytes)
+                        {
+                            if (foundValue == false)
+                                ThrowNotContainsValidValue(term, currentProcess.Id);
+                            if (foundK == false)
+                                ThrowNotContainsKbValue(term, currentProcess.Id);
+                        }
+                        
 
                         i += term.Length + bytesSearched;
                         if (i >= _smapsBuffer[_currentBuffer].Length)
@@ -250,7 +257,8 @@ namespace Sparrow.Platform.Posix
 
                         if (term == _rwsBytes)
                         {
-                            ThrowNotRwsTermAfterLockedTerm(state, term, currentProcess.Id);                            
+                            if (state != SearchState.None)
+                                ThrowNotRwsTermAfterLockedTerm(state, term, currentProcess.Id);
                             state = SearchState.Rws;
                         }
                         else if (term == _sizeBytes)
@@ -306,11 +314,11 @@ namespace Sparrow.Platform.Posix
 
                             if (resultString == null)
                                 ThrowOnNullString();
-                            
-                            if (resultString.EndsWith(".voron") == false && 
-                                resultString.EndsWith(".buffers") == false) 
+
+                            if (resultString.EndsWith(".voron") == false &&
+                                resultString.EndsWith(".buffers") == false)
                                 continue;
-                            
+
                             var djv = new DynamicJsonValue
                             {
                                 ["File"] = resultString,
@@ -350,21 +358,19 @@ namespace Sparrow.Platform.Posix
 
         private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
         {
-            if (state != SearchState.None)
-                throw new InvalidDataException(
-                    $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}' (instead got {state})");
+            throw new InvalidDataException(
+                $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}' (instead got {state})");
         }
 
-        private void ThrowNotContainsValidValue(byte[] term, bool foundValue, bool foundK, int processId)
+        private void ThrowNotContainsValidValue(byte[] term, int processId)
         {
-            if (term != _rwsBytes)
-            {
-                if (foundValue == false)
-                    throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
-                if (foundK == false)
-                    throw new InvalidDataException(
-                        $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, and value but not in kB - invalid format");
-            }
+            throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
+        }
+
+        private void ThrowNotContainsKbValue(byte[] term, int processId)
+        {
+            throw new InvalidDataException(
+                $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, and value but not in kB - invalid format");
         }
     }
 }
