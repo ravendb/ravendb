@@ -81,6 +81,12 @@ namespace Raven.Client.Util
 
         public class LinqMethodsSupport : JavascriptConversionExtension
         {
+            public static readonly LinqMethodsSupport Instance = new LinqMethodsSupport();
+
+            private LinqMethodsSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node is MemberExpression node && node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
@@ -100,24 +106,24 @@ namespace Raven.Client.Util
                 switch (methodName)
                 {
                     case "Any":
-                    {
-                        if (methodCallExpression.Arguments.Count > 1)
                         {
-                            newName = "some";
-                            break;
-                        }
-
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
+                            if (methodCallExpression.Arguments.Count > 1)
                             {
-                                writer.Write(".length > 0");
-                                return;
+                                newName = "some";
+                                break;
+                            }
+
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                {
+                                    writer.Write(".length > 0");
+                                    return;
+                                }
                             }
                         }
-                    }
                     case "All":
                         newName = "every";
                         break;
@@ -142,247 +148,247 @@ namespace Raven.Client.Util
                         newName = "concat";
                         break;
                     case "ToDictionary":
-                    {
-                        context.PreventDefault();
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(".reduce(function(_obj, _cur) {");
-                            writer.Write("_obj[");
-                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            writer.Write("(_cur)] = ");
-
-                            if (methodCallExpression.Arguments.Count > 2)
+                            context.PreventDefault();
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
                             {
-                                context.Visitor.Visit(methodCallExpression.Arguments[2]);
-                                writer.Write("(_cur);");
-                            }
-                            else
-                            {
-                                writer.Write("_cur;");
-                            }
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(".reduce(function(_obj, _cur) {");
+                                writer.Write("_obj[");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write("(_cur)] = ");
 
-                            writer.Write("return _obj;");
-                            writer.Write("}, {})");
+                                if (methodCallExpression.Arguments.Count > 2)
+                                {
+                                    context.Visitor.Visit(methodCallExpression.Arguments[2]);
+                                    writer.Write("(_cur);");
+                                }
+                                else
+                                {
+                                    writer.Write("_cur;");
+                                }
+
+                                writer.Write("return _obj;");
+                                writer.Write("}, {})");
+                            }
+                            return;
                         }
-                        return;
-                    }
                     case "FirstOrDefault":
                     case "First":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            if (methodCallExpression.Arguments.Count > 1)
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write(".find");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                if (methodCallExpression.Arguments.Count > 1)
+                                {
+                                    writer.Write(".find");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                    return;
+                                }
+
+                                writer.Write("[0]");
                                 return;
                             }
-                            
-                            writer.Write("[0]");
-                            return;
                         }
-                    }
                     case "Last":
                     case "LastOrDefault":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            if (methodCallExpression.Arguments.Count > 1)
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write(".slice().reverse().find");
+                                if (methodCallExpression.Arguments.Count > 1)
+                                {
+                                    writer.Write(".slice().reverse().find");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                    return;
+                                }
+                                // arrayExpr.slice([-1])[0] will get the last value
+                                writer.Write(".slice(-1)[0]");
+                                return;
+
+                            }
+                        }
+                    case "ElementAt":
+                        {
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write("[");
                                 context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write("]");
+                                return;
+
+                            }
+                        }
+                    case "Reverse":
+                        {
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write(".slice().reverse()");
                                 return;
                             }
-                            // arrayExpr.slice([-1])[0] will get the last value
-                            writer.Write(".slice(-1)[0]");
-                            return;
-
                         }
-                    }
-                    case "ElementAt":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            writer.Write("[");
-                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            writer.Write("]");
-                            return;
-
-                        }
-                    }
-                    case "Reverse":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            writer.Write(".slice().reverse()");
-                            return;
-                        }
-                    }
                     case "Max":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            if (methodCallExpression.Arguments.Count > 1)
-                            {
-                                writer.Write(".map");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            }
-                            writer.Write(".reduce(function(a, b) { return Math.max(a, b);})");
-                            return;
-
-                        }
-                    }
-                    case "Min":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            if (methodCallExpression.Arguments.Count > 1)
-                            {
-                                writer.Write(".map");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            }
-                            writer.Write(".reduce(function(a, b) { return Math.min(a, b);})");
-                            return;
-
-                        }
-                    }
-                    case "Skip":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            writer.Write(".slice(");
-                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            writer.Write(", ");
+                            context.PreventDefault();
                             context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(".length)");
-                            return;
-                        }
-                    }
-                    case "Take":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            writer.Write(".slice(0, ");
-                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            writer.Write(")");
-                            return;
-                        }
-                    }
-                    case "Distinct":
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            writer.Write(".filter((value, index) => ");
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(".indexOf(value) == index)");
-                            return;
-                        }
-                    }
-                    case "DefaultIfEmpty":
-                    {
-                        context.PreventDefault();
-
-                        object defaultVal = null;                       
-                        var genericArguments = methodCallExpression.Arguments[0].Type.GetGenericArguments();
-                        if (genericArguments.Length > 0)
-                        {
-                            if (genericArguments[0] == typeof(bool))
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
                             {
-                                defaultVal = "false";
-                            }
-                            else if (genericArguments[0] == typeof(char))
-                            {
-                                defaultVal = '0';
-                            }
-                            else
-                            {
-                                defaultVal = GetDefault(genericArguments[0]);
-                            }                            
-                        }
-                        
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {
-                            writer.Write($"(function(arr){{return arr.length > 0 ? arr : [{defaultVal?? "null"}]}})(");
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write($")");
-                            return;
-                        }
-                    }
-                    case "SelectMany":
-                    {
-                        if (methodCallExpression.Arguments.Count > 2)
-                            return;
-                        
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
-                        {                                                                                                                
-                            if (IsDictionary(methodCallExpression.Arguments[0].Type))
-                            {
-                                if (!(methodCallExpression.Arguments[1] is LambdaExpression lambda) ||
-                                    !(lambda.Body is MemberExpression member) ||
-                                    member.Member.Name != "Key" && member.Member.Name != "Value")
-                                    return;
-                                
-                                context.PreventDefault();
-
-                                writer.Write("Object.getOwnPropertyNames(");
-                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                writer.Write(")");
-
-                                if (member.Member.Name == "Value")
+                                if (methodCallExpression.Arguments.Count > 1)
                                 {
-                                    writer.Write(".map(function(k){return ");
-                                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                    writer.Write("[k]})");
+                                    writer.Write(".map");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 }
-                                
-                                writer.Write(".reduce(function(a, b) { return a.concat(b);},[])");
+                                writer.Write(".reduce(function(a, b) { return Math.max(a, b);})");
+                                return;
 
                             }
-                            
-                            else
-                            {
-                                context.PreventDefault();
-                                
-                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                writer.Write(".reduce(function(a, b) { return a.concat(");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                                writer.Write("(b)); }, [])");
-                            }
-                                                        
-                            return;
                         }
-                    }
+                    case "Min":
+                        {
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                if (methodCallExpression.Arguments.Count > 1)
+                                {
+                                    writer.Write(".map");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                }
+                                writer.Write(".reduce(function(a, b) { return Math.min(a, b);})");
+                                return;
+
+                            }
+                        }
+                    case "Skip":
+                        {
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write(".slice(");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write(", ");
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(".length)");
+                                return;
+                            }
+                        }
+                    case "Take":
+                        {
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write(".slice(0, ");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write(")");
+                                return;
+                            }
+                        }
+                    case "Distinct":
+                        {
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write(".filter((value, index) => ");
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(".indexOf(value) == index)");
+                                return;
+                            }
+                        }
+                    case "DefaultIfEmpty":
+                        {
+                            context.PreventDefault();
+
+                            object defaultVal = null;
+                            var genericArguments = methodCallExpression.Arguments[0].Type.GetGenericArguments();
+                            if (genericArguments.Length > 0)
+                            {
+                                if (genericArguments[0] == typeof(bool))
+                                {
+                                    defaultVal = "false";
+                                }
+                                else if (genericArguments[0] == typeof(char))
+                                {
+                                    defaultVal = '0';
+                                }
+                                else
+                                {
+                                    defaultVal = GetDefault(genericArguments[0]);
+                                }
+                            }
+
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write($"(function(arr){{return arr.length > 0 ? arr : [{defaultVal ?? "null"}]}})(");
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write($")");
+                                return;
+                            }
+                        }
+                    case "SelectMany":
+                        {
+                            if (methodCallExpression.Arguments.Count > 2)
+                                return;
+
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                if (IsDictionary(methodCallExpression.Arguments[0].Type))
+                                {
+                                    if (!(methodCallExpression.Arguments[1] is LambdaExpression lambda) ||
+                                        !(lambda.Body is MemberExpression member) ||
+                                        member.Member.Name != "Key" && member.Member.Name != "Value")
+                                        return;
+
+                                    context.PreventDefault();
+
+                                    writer.Write("Object.getOwnPropertyNames(");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                    writer.Write(")");
+
+                                    if (member.Member.Name == "Value")
+                                    {
+                                        writer.Write(".map(function(k){return ");
+                                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                        writer.Write("[k]})");
+                                    }
+
+                                    writer.Write(".reduce(function(a, b) { return a.concat(b);},[])");
+
+                                }
+
+                                else
+                                {
+                                    context.PreventDefault();
+
+                                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                    writer.Write(".reduce(function(a, b) { return a.concat(");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                    writer.Write("(b)); }, [])");
+                                }
+
+                                return;
+                            }
+                        }
                     case "Count":
                         HandleCount(context, methodCallExpression.Arguments[0]);
                         return;
@@ -466,7 +472,7 @@ namespace Raven.Client.Util
 
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
-            
+
             public static object GetDefault(Type type)
             {
                 if (type.GetTypeInfo().IsValueType)
@@ -475,7 +481,7 @@ namespace Raven.Client.Util
                 }
                 return null;
             }
-            
+
             public static bool IsDictionary(Type type)
             {
                 if (type.GetGenericArguments().Length == 0)
@@ -485,9 +491,15 @@ namespace Raven.Client.Util
                        typeof(IDictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
         }
-        
+
         public class NullableSupport : JavascriptConversionExtension
         {
+            public static readonly NullableSupport Instance = new NullableSupport();
+
+            private NullableSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node is MemberExpression memberExpression &&
@@ -503,6 +515,12 @@ namespace Raven.Client.Util
 
         public class CompareExchangeSupport : JavascriptConversionExtension
         {
+            public static readonly CompareExchangeSupport Instance = new CompareExchangeSupport();
+
+            private CompareExchangeSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
@@ -510,7 +528,7 @@ namespace Raven.Client.Util
                 if (methodCallExpression?.Method.Name != nameof(RavenQuery.CmpXchg))
                     return;
 
-                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery) 
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery)
                     && (methodCallExpression.Object == null || methodCallExpression.Object.Type != typeof(IDocumentSession)))
                     return;
 
@@ -518,11 +536,11 @@ namespace Raven.Client.Util
 
                 if (string.IsNullOrEmpty(key.ToString()))
                 {
-                    throw new NotSupportedException("");                    
+                    throw new NotSupportedException("");
                 }
 
                 context.PreventDefault();
- 
+
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
@@ -532,7 +550,7 @@ namespace Raven.Client.Util
                 }
             }
         }
-        
+
         public class LoadSupport : JavascriptConversionExtension
         {
             public bool HasLoad { get; set; }
@@ -547,7 +565,7 @@ namespace Raven.Client.Util
                 if (methodCallExpression?.Method.Name != "Load")
                     return;
 
-                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery) 
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery)
                     && (methodCallExpression.Object == null || methodCallExpression.Object.Type != typeof(IDocumentSession)))
                     return;
 
@@ -561,14 +579,14 @@ namespace Raven.Client.Util
                                                     "You should use RavenQuery.Load(IEnumerable<string> ids) instead")
                     {
                         HelpLink = "DoNotWrap"
-                    };                    
+                    };
                 }
 
                 context.PreventDefault();
 
                 if (DoNotTranslate)
                     return;
-               
+
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
@@ -576,18 +594,24 @@ namespace Raven.Client.Util
                     context.Visitor.Visit(Arg);
                     writer.Write(")");
                 }
-                               
+
             }
         }
 
         public class MathSupport : JavascriptConversionExtension
         {
+            public static readonly MathSupport Instance = new MathSupport();
+
             private static readonly Dictionary<string, string> SupportedNames = new Dictionary<string, string>{
                 {"Abs", "abs"}, {"Acos", "acos"}, {"Asin", "asin"}, {"Atan", "atan"}, {"Atan2", "atan2"},
                 {"Ceiling", "ceil"}, {"Cos", "cos"}, {"Exp", "exp"}, {"Floor", "floor"}, {"Log", "log"},
                 {"Max", "max"}, {"Min", "min" }, {"Pow", "pow" }, {"Round", "round"}, {"Sin", "sin"},
                 {"Sqrt", "sqrt"}, {"Tan", "tan"}
             };
+
+            private MathSupport()
+            {
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -624,14 +648,20 @@ namespace Raven.Client.Util
                 }
             }
         }
-        
+
         public class WrappedConstantSupport<T> : JavascriptConversionExtension
         {
-            public IAbstractDocumentQuery<T> DocumentQuery { private get; set; }
-            public List<string> ProjectionParameters { get; set; }
-            
+            private readonly IAbstractDocumentQuery<T> _documentQuery;
+            private readonly List<string> _projectionParameters;
+
+            public WrappedConstantSupport(IAbstractDocumentQuery<T> documentQuery, List<string> projectionParameters)
+            {
+                _documentQuery = documentQuery;
+                _projectionParameters = projectionParameters;
+            }
+
             private static bool IsWrapedConstatntExpression(Expression expression)
-            {            
+            {
                 while (expression is MemberExpression memberExpression)
                 {
                     expression = memberExpression.Expression;
@@ -639,17 +669,17 @@ namespace Raven.Client.Util
 
                 return expression is ConstantExpression;
             }
-            
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is MemberExpression memberExpression) ||
-                    IsWrapedConstatntExpression(memberExpression) == false)                   
+                    IsWrapedConstatntExpression(memberExpression) == false)
                     return;
-                
+
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
-                var parameter = DocumentQuery.ProjectionParameter(value);
-                ProjectionParameters?.Add(parameter);
-                
+                var parameter = _documentQuery.ProjectionParameter(value);
+                _projectionParameters?.Add(parameter);
+
                 var writer = context.GetWriter();
                 context.PreventDefault();
 
@@ -659,20 +689,26 @@ namespace Raven.Client.Util
                 }
             }
         }
-              
+
         public class JsonPropertyAttributeSupport : JavascriptConversionExtension
         {
+            public static readonly JsonPropertyAttributeSupport Instance = new JsonPropertyAttributeSupport();
+
+            private JsonPropertyAttributeSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is MemberExpression memberExpression))
                     return;
-                
+
                 var jsonPropertyAttribute = memberExpression.Member.GetCustomAttributes()
                                                                     .OfType<JsonPropertyAttribute>()
                                                                     .FirstOrDefault();
                 if (jsonPropertyAttribute == null)
                     return;
-                
+
                 context.PreventDefault();
                 var writer = context.GetWriter();
 
@@ -690,7 +726,7 @@ namespace Raven.Client.Util
             private readonly string _newName;
             private readonly ParameterExpression _parameter;
 
-            public ReplaceParameterWithNewName(ParameterExpression parameter, string newName )
+            public ReplaceParameterWithNewName(ParameterExpression parameter, string newName)
             {
                 _newName = newName;
                 _parameter = parameter;
@@ -718,7 +754,7 @@ namespace Raven.Client.Util
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node is LambdaExpression lambdaExpression
-                    && lambdaExpression.Parameters.Count > 0 
+                    && lambdaExpression.Parameters.Count > 0
                     && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
                 {
                     DoNotIgnore = true;
@@ -739,8 +775,8 @@ namespace Raven.Client.Util
                     return;
                 }
 
-                if (context.Node is ParameterExpression p && 
-                    p.Name.StartsWith("<>h__TransparentIdentifier") && 
+                if (context.Node is ParameterExpression p &&
+                    p.Name.StartsWith("<>h__TransparentIdentifier") &&
                     DoNotIgnore)
                 {
                     context.PreventDefault();
@@ -797,6 +833,13 @@ namespace Raven.Client.Util
 
         public class InvokeSupport : JavascriptConversionExtension
         {
+            public static readonly InvokeSupport Instance = new InvokeSupport();
+
+            private InvokeSupport()
+            {
+
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is InvocationExpression invocationExpression))
@@ -828,18 +871,24 @@ namespace Raven.Client.Util
 
         public class ValueTypeParseSupport : JavascriptConversionExtension
         {
+            public static readonly ValueTypeParseSupport Instance = new ValueTypeParseSupport();
+
             private static readonly Dictionary<Type, string> ValueTypes = new Dictionary<Type, string>() {
                 { typeof(int), "parseInt" }, { typeof(uint), "parseInt" }, { typeof(double), "parseFloat" }, { typeof(decimal), "parseFloat" },
                 { typeof(bool), "\"true\" == " }, { typeof(char), "" }, { typeof(long), "parseInt" }, { typeof(ulong), "parseInt" },
                 { typeof(sbyte), "parseInt" },  { typeof(short), "parseInt" }, {typeof(ushort), "parseInt" }, { typeof(byte), "parseInt" }
             };
 
+            private ValueTypeParseSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
                 var method = methodCallExpression?.Method;
 
-                if (method == null || method.Name != "Parse" || 
+                if (method == null || method.Name != "Parse" ||
                     !ValueTypes.TryGetValue(method.DeclaringType, out var expr))
                     return;
 
@@ -857,6 +906,12 @@ namespace Raven.Client.Util
 
         public class DateTimeSupport : JavascriptConversionExtension
         {
+            public static readonly DateTimeSupport Instance = new DateTimeSupport();
+
+            private DateTimeSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node is NewExpression newExp && newExp.Type == typeof(DateTime))
@@ -976,14 +1031,19 @@ namespace Raven.Client.Util
                                 writer.Write(".getTime()*10000");
                                 break;
                         }
-                    }                 
-                }                
+                    }
+                }
             }
         }
 
         public class ConstSupport : JavascriptConversionExtension
         {
-            public DocumentConventions Conventions { get; set; }
+            private readonly DocumentConventions _conventions;
+
+            public ConstSupport(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -1001,8 +1061,8 @@ namespace Raven.Client.Util
                     }
 
                     // Type.IsEnum is unavailable in .netstandard1.3
-                    if (nodeAsConst.Type.GetTypeInfo().IsEnum 
-                        && Conventions.SaveEnumsAsIntegers == false)
+                    if (nodeAsConst.Type.GetTypeInfo().IsEnum
+                        && _conventions.SaveEnumsAsIntegers == false)
                     {
                         context.PreventDefault();
                         writer.Write("\"");
@@ -1072,6 +1132,12 @@ namespace Raven.Client.Util
 
         public class NullCoalescingSupport : JavascriptConversionExtension
         {
+            public static NullCoalescingSupport Instance = new NullCoalescingSupport();
+
+            private NullCoalescingSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node.NodeType != ExpressionType.Coalesce || !(context.Node is BinaryExpression binaryExpression))
@@ -1094,10 +1160,16 @@ namespace Raven.Client.Util
 
         public class ListInitSupport : JavascriptConversionExtension
         {
+            public static readonly ListInitSupport Instance = new ListInitSupport();
+
+            private ListInitSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (context.Node is ListInitExpression lie && 
-                    LinqMethodsSupport.IsCollection(lie.Type) && 
+                if (context.Node is ListInitExpression lie &&
+                    LinqMethodsSupport.IsCollection(lie.Type) &&
                     LinqMethodsSupport.IsDictionary(lie.Type) == false)
                 {
                     context.PreventDefault();
@@ -1127,6 +1199,12 @@ namespace Raven.Client.Util
 
         public class NewSupport : JavascriptConversionExtension
         {
+            public static readonly NewSupport Instance = new NewSupport();
+
+            private NewSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node is NewExpression newExp)
@@ -1167,13 +1245,13 @@ namespace Raven.Client.Util
                         }
                     }
 
-                    if (LinqMethodsSupport.IsCollection(newExp.Type) && 
+                    if (LinqMethodsSupport.IsCollection(newExp.Type) &&
                         LinqMethodsSupport.IsDictionary(newExp.Type) == false)
                     {
                         var writer = context.GetWriter();
                         context.PreventDefault();
 
-                        if (newExp.Arguments.Count > 0 && 
+                        if (newExp.Arguments.Count > 0 &&
                             LinqMethodsSupport.IsCollection(newExp.Arguments[0].Type))
                         {
                             context.Visitor.Visit(newExp.Arguments);
@@ -1211,9 +1289,9 @@ namespace Raven.Client.Util
                     {
                         writer.Write("[");
 
-                        if (nae.Expressions.Count == 1 && 
-                            nae.Expressions[0] is ConstantExpression val && 
-                            val.Value is int asInt )
+                        if (nae.Expressions.Count == 1 &&
+                            nae.Expressions[0] is ConstantExpression val &&
+                            val.Value is int asInt)
                         {
                             if (asInt != 0)
                             {
@@ -1235,7 +1313,7 @@ namespace Raven.Client.Util
                                     if (i < asInt - 1)
                                         writer.Write(",");
                                 }
-                            }                                               
+                            }
                         }
 
                         else if (nae.Expressions.Count > 0)
@@ -1288,13 +1366,19 @@ namespace Raven.Client.Util
 
         public class NullComparisonSupport : JavascriptConversionExtension
         {
+            public static readonly NullComparisonSupport Instance = new NullComparisonSupport();
+
+            private NullComparisonSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
-            {                
-                if (!(context.Node is BinaryExpression binaryExpression) || 
-                    (binaryExpression.NodeType != ExpressionType.Equal && 
-                     binaryExpression.NodeType != ExpressionType.NotEqual)) 
+            {
+                if (!(context.Node is BinaryExpression binaryExpression) ||
+                    (binaryExpression.NodeType != ExpressionType.Equal &&
+                     binaryExpression.NodeType != ExpressionType.NotEqual))
                     return;
-                
+
                 if (binaryExpression.Right is ConstantExpression right && right.Value == null)
                 {
                     if (binaryExpression.Left is ConstantExpression leftConst && leftConst.Value == null)
@@ -1313,16 +1397,22 @@ namespace Raven.Client.Util
 
             private static void WriteExpression(JavascriptConversionContext context, Expression expression, ExpressionType op)
             {
-                var writer = context.GetWriter();                
+                var writer = context.GetWriter();
                 context.PreventDefault();
-                
-                context.Visitor.Visit(expression);                
-                writer.Write(op == ExpressionType.Equal ? "==null" : "!=null");                
+
+                context.Visitor.Visit(expression);
+                writer.Write(op == ExpressionType.Equal ? "==null" : "!=null");
             }
         }
 
         public class NestedConditionalSupport : JavascriptConversionExtension
         {
+            public static readonly NestedConditionalSupport Instance = new NestedConditionalSupport();
+
+            private NestedConditionalSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var cond = context.Node as ConditionalExpression;
@@ -1345,6 +1435,12 @@ namespace Raven.Client.Util
 
         public class StringSupport : JavascriptConversionExtension
         {
+            public static readonly StringSupport Instance = new StringSupport();
+
+            private StringSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is MethodCallExpression mce) || mce.Method.DeclaringType != typeof(string))
@@ -1486,7 +1582,7 @@ namespace Raven.Client.Util
                                         context.Visitor.Visit(arrayExpression.Expressions[i]);
                                     }
                                 }
-                                else if(mce.Arguments[0] is MethodCallExpression mce2)
+                                else if (mce.Arguments[0] is MethodCallExpression mce2)
                                 {
                                     var value = Expression.Lambda(mce2).Compile().DynamicInvoke();
                                     switch (value)
@@ -1508,7 +1604,7 @@ namespace Raven.Client.Util
                                             }
                                             break;
                                         default:
-                                            throw new InvalidOperationException("Unable to understand how to convert " + value + " to RQL (" + value?.GetType() ?? "null" +")");
+                                            throw new InvalidOperationException("Unable to understand how to convert " + value + " to RQL (" + value?.GetType() ?? "null" + ")");
                                     }
                                 }
                                 else
@@ -1558,6 +1654,12 @@ namespace Raven.Client.Util
 
         public class MetadataSupport : JavascriptConversionExtension
         {
+            public static readonly MetadataSupport Instance = new MetadataSupport();
+
+            private MetadataSupport()
+            {
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
@@ -1584,15 +1686,20 @@ namespace Raven.Client.Util
 
         public class IdentityPropertySupport : JavascriptConversionExtension
         {
-            public DocumentConventions Conventions { get; set; }
+            private readonly DocumentConventions _conventions;
+
+            public IdentityPropertySupport(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
-            {                
+            {
                 if (!(context.Node is MemberExpression member))
                     return;
 
-                if (member.Expression is ParameterExpression parameter 
-                    && Conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
+                if (member.Expression is ParameterExpression parameter
+                    && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1610,7 +1717,7 @@ namespace Raven.Client.Util
                 var p = GetParameter(innerMember);
 
                 if (p != null && p.StartsWith("<>h__TransparentIdentifier")
-                    && Conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
+                    && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();

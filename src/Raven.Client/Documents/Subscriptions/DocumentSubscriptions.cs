@@ -110,15 +110,15 @@ namespace Raven.Client.Documents.Subscriptions
                 var script = predicate.CompileToJavascript(
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
-                        new JavascriptConversionExtensions.MathSupport(),
-                        new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.ConstSupport() { Conventions = _store.Conventions },
+                        JavascriptConversionExtensions.MathSupport.Instance,
+                        JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                        new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0], "this"),
-                        new JavascriptConversionExtensions.DateTimeSupport(),
-                        new JavascriptConversionExtensions.InvokeSupport(),
-                        new JavascriptConversionExtensions.NullCoalescingSupport(),
-                        new JavascriptConversionExtensions.NestedConditionalSupport(),
-                        new JavascriptConversionExtensions.StringSupport()
+                        JavascriptConversionExtensions.DateTimeSupport.Instance,
+                        JavascriptConversionExtensions.InvokeSupport.Instance,
+                        JavascriptConversionExtensions.NullCoalescingSupport.Instance,
+                        JavascriptConversionExtensions.NestedConditionalSupport.Instance,
+                        JavascriptConversionExtensions.StringSupport.Instance
                     ));
 
                 criteria.Query = $"declare function predicate() {{ return {script} }}{Environment.NewLine}" +
@@ -130,14 +130,14 @@ namespace Raven.Client.Documents.Subscriptions
                 var script = project.CompileToJavascript(
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
-                        new JavascriptConversionExtensions.MathSupport(),
-                        new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.ConstSupport() { Conventions = _store.Conventions },
-                        new JavascriptConversionExtensions.DateTimeSupport(),
-                        new JavascriptConversionExtensions.InvokeSupport(),
-                        new JavascriptConversionExtensions.NullCoalescingSupport(),
-                        new JavascriptConversionExtensions.StringSupport(),
-                        new JavascriptConversionExtensions.NestedConditionalSupport(),
+                        JavascriptConversionExtensions.MathSupport.Instance,
+                        JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                        new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
+                        JavascriptConversionExtensions.DateTimeSupport.Instance,
+                        JavascriptConversionExtensions.InvokeSupport.Instance,
+                        JavascriptConversionExtensions.NullCoalescingSupport.Instance,
+                        JavascriptConversionExtensions.StringSupport.Instance,
+                        JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc")
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
