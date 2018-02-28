@@ -791,8 +791,21 @@ namespace Raven.Database
                 }
 
                 BatchResult[] results = null;
+
+                Stopwatch sp2 = null;
+                if (Log.IsDebugEnabled)
+                {
+                    sp2 = Stopwatch.StartNew();
+                }
+
                 TransactionalStorage.Batch(
                     actions => { results = ProcessBatch(commands, token); });
+
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($"Executed {commands.Count:#,#;;0} commands, " +
+                              $"took: {sp2?.ElapsedMilliseconds:#,#;;0}ms");
+                }
 
                 return results;
             }
