@@ -2185,41 +2185,38 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
         {
-            if (loadSupport == null)
+            var extensions = new JavascriptConversionExtension[]
             {
-                loadSupport = new JavascriptConversionExtensions.LoadSupport();
-            }
-
-            var extentions = new List<JavascriptConversionExtension>
-            {
-                new JavascriptConversionExtensions.MathSupport(),
-                new JavascriptConversionExtensions.LinqMethodsSupport(),
+                JavascriptConversionExtensions.MathSupport.Instance,
+                JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
-                new JavascriptConversionExtensions.InvokeSupport(),
-                new JavascriptConversionExtensions.DateTimeSupport(),
-                new JavascriptConversionExtensions.NullCoalescingSupport(),
-                new JavascriptConversionExtensions.NestedConditionalSupport(),
-                new JavascriptConversionExtensions.StringSupport(),
-                new JavascriptConversionExtensions.ConstSupport() { Conventions = _documentQuery.Conventions },
-                new JavascriptConversionExtensions.MetadataSupport(),
-                new JavascriptConversionExtensions.CompareExchangeSupport(),
-                new JavascriptConversionExtensions.ValueTypeParseSupport(),
-                new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
-                new JavascriptConversionExtensions.NullComparisonSupport(),
-                new JavascriptConversionExtensions.NullableSupport(),
-                new JavascriptConversionExtensions.NewSupport(),
-                new JavascriptConversionExtensions.ListInitSupport(),
-                new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                loadSupport,
+                JavascriptConversionExtensions.InvokeSupport.Instance,
+                JavascriptConversionExtensions.DateTimeSupport.Instance,
+                JavascriptConversionExtensions.NullCoalescingSupport.Instance,
+                JavascriptConversionExtensions.NestedConditionalSupport.Instance,
+                JavascriptConversionExtensions.StringSupport.Instance,
+                new JavascriptConversionExtensions.ConstSupport(_documentQuery.Conventions),
+                JavascriptConversionExtensions.MetadataSupport.Instance,
+                JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                JavascriptConversionExtensions.ValueTypeParseSupport.Instance,
+                JavascriptConversionExtensions.JsonPropertyAttributeSupport.Instance,
+                JavascriptConversionExtensions.NullComparisonSupport.Instance,
+                JavascriptConversionExtensions.NullableSupport.Instance,
+                JavascriptConversionExtensions.NewSupport.Instance,
+                JavascriptConversionExtensions.ListInitSupport.Instance,
+                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
+                loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
                 MemberInitAsJson.ForAllTypes
-        };
+            };
 
             if (loadArg == false)
             {
-                extentions.Add(new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions });
+                Array.Resize(ref extensions, extensions.Length + 1);
+
+                extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
             }
 
-            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extentions.ToArray()));
+            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extensions));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
