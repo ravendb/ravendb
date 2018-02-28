@@ -33,7 +33,7 @@
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button type="button" data-bind="click: deleteValue, enable: !isCreatingNewValue()" class="delete-btn btn btn-danger">
+                    <button type="button" data-bind="click: deleteValue, enable: !isCreatingNewValue() && !spinners.delete(), css: { 'btn-spinner': spinners.delete }" class="delete-btn btn btn-danger">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
