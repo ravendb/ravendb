@@ -20,14 +20,26 @@ namespace Sparrow.Json
 
         public static unsafe implicit operator long(LazyNumberValue self)
         {
-            long val = self.Inner._context.ParseLong(self.Inner.Buffer, self.Inner.Size);
+            if (self.Inner._context.TryParseLong(self.Inner.Buffer, self.Inner.Size, out long val) == false)
+            {
+                var doubleVal = (double)self;
+                val = (long)doubleVal;
+            }
+
+            
             self._longVal = val;
             return val;
         }
 
         public static unsafe implicit operator ulong(LazyNumberValue self)
         {
-            ulong val = self.Inner._context.ParseULong(self.Inner.Buffer, self.Inner.Size);
+            if (self.Inner._context.TryParseUlong(self.Inner.Buffer, self.Inner.Size, out ulong val) == false)
+            {
+                var doubleVal = (double)self;
+                val = (ulong)doubleVal;
+            }
+
+            
             self._ulongVal = val;
             return val;
         }
