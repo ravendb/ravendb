@@ -155,24 +155,8 @@ namespace Raven.Client.Json
                     _items.Push(newArray);
                     SetToken(JsonToken.StartArray);
                     return true;
-                case BlittableJsonToken.Integer:
-                    if (_readAsLazyNumber)
-                    {
-                        SetToken(JsonToken.Integer, value);
-                    }
-                    else
-                    {
-                        if (value is long)
-                        {
-                            SetToken(JsonToken.Integer, (long)value);
-                        }
-                        else
-                        {
-                            SetToken(JsonToken.Integer, (long)(LazyNumberValue)value);
-                        }
-                        
-                    }
-                    
+                case BlittableJsonToken.Integer:                  
+                    SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.LazyNumber:
                     if (_readAsLazyNumber)
@@ -187,7 +171,7 @@ namespace Raven.Client.Json
                             SetToken(JsonToken.Integer, ulongValue);
                         }
                         else if (lnv.TryParseDecimal(out var decimalValue))
-                        {
+                        {                            
                             SetToken(JsonToken.Float, decimalValue);
                         }
                         else
@@ -231,7 +215,15 @@ namespace Raven.Client.Json
 
             if (Value is LazyNumberValue lazyNumber)
             {
-                int numberAsInt = (int)lazyNumber;
+                int numberAsInt;
+                if (lazyNumber.TryParseUlong(out var ulongValue) == false)
+                {
+                    numberAsInt = (int)(double)lazyNumber;
+                }
+                else
+                {
+                    numberAsInt = (int)ulongValue;
+                }
                 SetToken(JsonToken.Integer, numberAsInt);
 
                 return numberAsInt;
