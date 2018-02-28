@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -345,6 +346,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupMode));
             scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
+            
+            // compare exchange
+            scripter.AddType(typeof(CompareExchangeHandler.CompareExchangeListItem));
+            scripter.AddType(typeof(CompareExchangeResult<object>));
             
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));

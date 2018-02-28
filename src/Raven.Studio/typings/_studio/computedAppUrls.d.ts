@@ -10,6 +10,7 @@ interface computedAppUrls {
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
+    cmpXchg: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
