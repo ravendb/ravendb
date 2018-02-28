@@ -897,7 +897,6 @@ namespace Raven.Client.Documents.Session
                 DefaultOperator = DefaultOperator
             };
 
-            query.AfterQueryExecuted(AfterQueryExecutedCallback);
             return query;
         }
     }
