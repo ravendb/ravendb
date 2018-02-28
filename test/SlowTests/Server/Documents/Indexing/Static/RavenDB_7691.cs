@@ -240,7 +240,39 @@ return x;
 }
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync());
-                    
+
+                    await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
+                      @"declare function MyProjection(x){
+x.IntMinVal = 4;
+var intMinValRaw = parseInt(scalarToRawString(x, u=> 4).toString());
+x.IntMinVal = intMinValRaw;
+var intMinValOriginal = x.IntMinVal;
+return x;
+}
+from EdgeCaseValues as e select MyProjection(e)"
+                  ).FirstAsync());
+
+                    await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
+                    @"declare function MyProjection(x){
+x.IntMinVal = 4;
+var intMinValRaw = parseInt(scalarToRawString(x, 4).toString());
+x.IntMinVal = intMinValRaw;
+var intMinValOriginal = x.IntMinVal;
+return x;
+}
+from EdgeCaseValues as e select MyProjection(e)"
+                ).FirstAsync());
+
+                    await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
+                    @"declare function MyProjection(x){
+x.IntMinVal = 4;
+var intMinValRaw = parseInt(scalarToRawString(x, u=> u.IntMinVal + 5).toString());
+x.IntMinVal = intMinValRaw;
+var intMinValOriginal = x.IntMinVal;
+return x;
+}
+from EdgeCaseValues as e select MyProjection(e)"
+                ).FirstAsync());
 
                 }
             }

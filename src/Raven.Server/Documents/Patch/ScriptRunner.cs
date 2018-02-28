@@ -18,6 +18,8 @@ using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -561,80 +563,66 @@ namespace Raven.Server.Documents.Patch
 
 
                 JsValue firstParam = args[0];
-                if (firstParam.IsObject() == false || args[0].AsObject() is BlittableObjectInstance == false)
+                if (firstParam.IsObject() &&  args[0].AsObject() is BlittableObjectInstance selfInstance)
+                {
+                    JsValue secondParam = args[1];
+                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
+                    {                       
+
+                        var functionAst = lambda.GetFunctionAst();
+                        var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();                        
+
+                        if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
+                        {
+                            if (existingValue.Changed)
+                            {
+                                return existingValue.Value;
+                            }
+                        }
+
+                        var propertyIndex = selfInstance.Blittable.GetPropertyIndex(propName);
+
+                        if (propertyIndex == -1)
+                        {
+                            return new JsValue(new ObjectInstance(selfInstance.Engine)
+                            {
+                                Extensible = true
+                            });
+                        }
+
+                        BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        selfInstance.Blittable.GetPropertyByIndex(propertyIndex, ref propDetails);
+                        var value = propDetails.Value;
+
+                        switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
+                        {
+                            case BlittableJsonToken.Null:
+                                return JsValue.Null;
+                            case BlittableJsonToken.Boolean:
+                                return new JsValue((bool)propDetails.Value);
+                            case BlittableJsonToken.Integer:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            case BlittableJsonToken.LazyNumber:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            case BlittableJsonToken.String:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            case BlittableJsonToken.CompressedString:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            default:
+                                throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
+                    }                    
+                }
+                else
                 {
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
                 }
 
-                JsValue secondParam = args[1];
-                if (args[1].IsObject() == false || secondParam.AsObject() is FunctionInstance == false)
-                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
-
-
-
-                BlittableObjectInstance selfInstance = firstParam.AsObject() as BlittableObjectInstance;
-                FunctionInstance lambda = secondParam.AsObject() as FunctionInstance;
-                //TODO: expose this in Jint directly instead of reflection
-
-
-                var funcDeclField = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
-                var func = (IFunction)funcDeclField.GetValue(lambda);
-
-
-                var ret = func.Body.Body.As<ReturnStatement[]>();
-
-                if (ret.Length != 1)
-                {
-                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must contain a single return expression");
-                }
-                StaticMemberExpression staticMemberExpression = ret[0].Argument.As<StaticMemberExpression>();
-                var prop = staticMemberExpression.Property;
-
-                if (staticMemberExpression.Object is Identifier == false)
-                {
-                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must contain a single return expression of a single field");
-                }
-                var propName = prop.As<Identifier>().Name;
-
-                if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
-                {
-                    if (existingValue.Changed)
-                    {
-                        return existingValue.Value;
-                    }
-                }
-
-                var propertyIndex = selfInstance.Blittable.GetPropertyIndex(propName);
-
-                if (propertyIndex == -1)
-                {
-                    return  new JsValue(new ObjectInstance(selfInstance.Engine)
-                    {
-                        Extensible = true
-                    });
-                }
-
-                BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                selfInstance.Blittable.GetPropertyByIndex(propertyIndex,ref propDetails);
-                var value = propDetails.Value;
-
-                switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
-                {
-                    case BlittableJsonToken.Null:
-                        return JsValue.Null;
-                    case BlittableJsonToken.Boolean:
-                        return new JsValue((bool)propDetails.Value);
-                    case BlittableJsonToken.Integer:  
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
-                    case BlittableJsonToken.LazyNumber:                                                
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
-                    case BlittableJsonToken.String:
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
-                    case BlittableJsonToken.CompressedString:
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
-                    default:
-                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
-                }            
+                
             }           
 
             private JsValue CmpXchangeInternal(string key)
@@ -701,17 +689,8 @@ namespace Raven.Server.Documents.Patch
                     _docsCtx = null;
                     _jsonCtx = null;
                 }
-            }
-
-            internal void ReleaseAllocations()
-            {
-                for (var i=0; i< _objectInstances.Count; i++)
-                {
-                    _objectInstances[i].Dispose();
-                }
-            }
-
-            private List<BlittableObjectInstance> _objectInstances = new List<BlittableObjectInstance>();
+            }            
+            
             
             private static JsonOperationContext ThrowArgumentNull()
             {
@@ -771,37 +750,28 @@ namespace Raven.Server.Documents.Patch
                     _disposables.Add(cloned);
                     return cloned;
                 }
-
-                BlittableObjectInstance blittableObjectInstance;
+                                
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
-                    blittableObjectInstance = new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified, d.ChangeVector)
+                    return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified, d.ChangeVector)
                     {
                         LuceneDocument = t.Item2,
                         LuceneState = t.Item3
-                    };
-                    _objectInstances.Add(blittableObjectInstance);
-                    return blittableObjectInstance;
+                    };                    
                 }
                 if (o is Document doc)
                 {
-                    blittableObjectInstance = new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);
-                    _objectInstances.Add(blittableObjectInstance);
-                    return blittableObjectInstance;
+                    return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);                    
                 }
                 if (o is DocumentConflict dc)
                 {
-                    blittableObjectInstance = new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);
-                    _objectInstances.Add(blittableObjectInstance);
-                    return blittableObjectInstance;
+                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);                    
                 }
 
                 if (o is BlittableJsonReaderObject json)
                 {
-                    blittableObjectInstance = new BlittableObjectInstance(engine, null, json, null, null);
-                    _objectInstances.Add(blittableObjectInstance);
-                    return blittableObjectInstance;
+                    return new BlittableObjectInstance(engine, null, json, null, null);                    
                 }
 
                 if (o == null)

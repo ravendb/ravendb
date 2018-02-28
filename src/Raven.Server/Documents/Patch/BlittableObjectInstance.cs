@@ -18,11 +18,10 @@ using Sparrow.Utils;
 namespace Raven.Server.Documents.Patch
 {
     [DebuggerDisplay("Blittable JS object")]
-    public class BlittableObjectInstance : ObjectInstance, IDisposable
+    public class BlittableObjectInstance : ObjectInstance
     {
         public bool Changed;
-        private readonly BlittableObjectInstance _parent;
-        private readonly BlittableObjectInstance _root;        
+        private readonly BlittableObjectInstance _parent;        
 
         public readonly DateTime? LastModified;
         public readonly string ChangeVector;
@@ -33,27 +32,13 @@ namespace Raven.Server.Documents.Patch
             new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
-        public IState LuceneState;
-        public List<AllocatedMemoryData> AllocatedMemory;
+        public IState LuceneState;        
 
         private void MarkChanged()
         {
             Changed = true;
             _parent?.MarkChanged();
-        }
-
-        internal AllocatedMemoryData AllocateMemory(int size)
-        {
-            if (_root != null)
-                return _root.AllocateMemory(size);
-
-            var allocatedMemory = Blittable._context.GetMemory(size);
-
-            if (AllocatedMemory == null)
-                AllocatedMemory = new List<AllocatedMemoryData>();
-            AllocatedMemory.Add(allocatedMemory);
-            return allocatedMemory;
-        }
+        }        
 
         public ObjectInstance GetOrCreate(string key)
         {
@@ -222,11 +207,7 @@ namespace Raven.Server.Documents.Patch
             string docId,
             DateTime? lastModified, string changeVector = null) : base(engine)
         {
-            _parent = parent;
-            _root = parent;
-
-            while (_root != null && _root._parent != null)
-                _root = _root._parent;
+            _parent = parent;            
 
             LastModified = lastModified;
             ChangeVector = changeVector;
@@ -286,18 +267,6 @@ namespace Raven.Server.Documents.Patch
             if (OriginalPropertiesTypes == null)
                 OriginalPropertiesTypes = new Dictionary<string, BlittableJsonToken>();
             OriginalPropertiesTypes[key] = type;
-        }
-
-        public void Dispose()
-        {
-            if (AllocatedMemory != null && AllocatedMemory.Count > 0)
-            {
-                for (var i=0; i< AllocatedMemory.Count; i++)
-                {
-                    Blittable._context.ReturnMemory(AllocatedMemory[i]);                    
-                }
-                AllocatedMemory = null;
-            }
-        }
+        }       
     }
 }
