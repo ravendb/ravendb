@@ -96,9 +96,7 @@ namespace Sparrow.Json
 
         public int[] EscapePositions;
         public AllocatedMemoryData AllocatedMemoryData;
-        public int? LastFoundAt;
-
-        public bool HasMaterializedStringValue => _string != null;
+        public int? LastFoundAt;        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)

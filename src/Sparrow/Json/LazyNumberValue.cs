@@ -33,7 +33,7 @@ namespace Sparrow.Json
 
         public static unsafe implicit operator ulong(LazyNumberValue self)
         {
-            if (self.Inner._context.TryParseUlong(self.Inner.Buffer, self.Inner.Size, out ulong val) == false)
+            if (self.Inner._context.TryParseULong(self.Inner.Buffer, self.Inner.Size, out ulong val) == false)
             {
                 var doubleVal = (double)self;
                 val = (ulong)doubleVal;
@@ -171,9 +171,9 @@ namespace Sparrow.Json
             return parsedDecimalValue;
         }
 
-        internal unsafe bool TryParseUlong(out ulong ulongValue)
+        internal unsafe bool TryParseULong(out ulong ulongValue)
         {
-            bool parsedDecimalValue = Inner._context.TryParseUlong(Inner.Buffer, Inner.Size, out ulongValue);
+            bool parsedDecimalValue = Inner._context.TryParseULong(Inner.Buffer, Inner.Size, out ulongValue);
             return parsedDecimalValue;
         }
 

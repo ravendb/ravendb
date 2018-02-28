@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -380,7 +381,7 @@ function groupBy(lambda) {
                 if (!(MapFunc is ScriptFunctionInstance sfi))
                     return;
 
-                var theFuncAst = GetFunctionAst(sfi);
+                var theFuncAst = sfi.GetFunctionAst();
 
                 var res = CheckIfsimpleMapExpression(engine, theFuncAst);
                 if (res != null)
@@ -421,19 +422,11 @@ function groupBy(lambda) {
                                                             $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.Key.GetKey()))}");
                     }
                 }
-            }
-
-            private static IFunction GetFunctionAst(ScriptFunctionInstance scriptFunctionInstance)
-            {
-                //TODO: expose this in Jint directly instead of reflection
-                var funcDeclField = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
-                var theFuncAst = (IFunction)funcDeclField.GetValue(scriptFunctionInstance);
-                return theFuncAst;
-            }
+            }            
 
             private (FunctionInstance Function, IFunction FunctionAst)? CheckIfsimpleMapExpression(Engine engine, IFunction function)
             {
-                var field = TryGetField(function);
+                var field = function.TryGetFieldFromSimpleLambdaExpression();
                 if (field == null)
                     return null;
                 var properties = new List<Property>
@@ -450,8 +443,8 @@ function groupBy(lambda) {
 
                         if(!(arg is ScriptFunctionInstance sfi))
                             continue;
-                        var moreFuncAst = GetFunctionAst(sfi);
-                        field = TryGetField(moreFuncAst);
+                        var moreFuncAst = sfi.GetFunctionAst();
+                        field = moreFuncAst.TryGetFieldFromSimpleLambdaExpression();
                         if(field != null)
                         {
                             properties.Add(new Property(PropertyKind.Data, new Identifier(field), false,
@@ -474,22 +467,7 @@ function groupBy(lambda) {
                     )
                     { Extensible = true };
                 return (functionObject, functionExp);
-            }
-
-            private static string TryGetField(IFunction function)
-            {
-                if (!(function.Params.SingleOrDefault() is Identifier identifier))
-                    return null;
-                if (!(function.Body.Body.SingleOrDefault() is ReturnStatement returnStatement))
-                    return null;
-                if (!(returnStatement.Argument is MemberExpression me))
-                    return null;
-                if (!(me.Property is Identifier property))
-                    return null;
-                if ((!(me.Object is Identifier reference) || reference.Name != identifier.Name))
-                    return null;
-                return property.Name;
-            }
+            }            
 
             public HashSet<CollectionName> ReferencedCollection { get; set; } = new HashSet<CollectionName>();
             public ArrayInstance MoreArguments { get; set; }
