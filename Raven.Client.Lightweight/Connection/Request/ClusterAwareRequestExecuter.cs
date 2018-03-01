@@ -263,7 +263,16 @@ namespace Raven.Client.Connection.Request
                 case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     if (node == null)
                     {
-                        return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+                        try
+                        {
+                            return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (withClusterFailoverHeader == false)
+                                return await HandleWithFailovers(operation, token, true).ConfigureAwait(false);
+                            throw;
+                        }
 
                     }
 
@@ -273,12 +282,31 @@ namespace Raven.Client.Connection.Request
                 case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
                     if (node == null)
                     {
-                        return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+                        try
+                        {
+                            return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (withClusterFailoverHeader == false)
+                                return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+                            throw;
+                        }                        
                     }
                     break;
             }
 
-            var operationResult = await TryClusterOperationAsync(node, operation, false, token).ConfigureAwait(false);
+            var originalWithClusterFailoverValue = node.ClusterInformation.WithClusterFailoverHeader;
+            AsyncOperationResult<T> operationResult;
+            node.ClusterInformation.WithClusterFailoverHeader = withClusterFailoverHeader;
+            try
+            {
+                operationResult = await TryClusterOperationAsync(node, operation, false, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                node.ClusterInformation.WithClusterFailoverHeader = originalWithClusterFailoverValue;
+            }
 
             if (operationResult.Success)
             {
