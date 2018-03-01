@@ -31,7 +31,7 @@ namespace Raven.Database.Raft.Util
         {            
             if (waitTimeoutInSeconds > 0)
             {
-                if (engine.WaitForLeader(waitTimeoutInSeconds * 1000) == false)
+                if (engine.WaitForLeader(waitTimeoutInSeconds) == false)
                 {
                     throw new InvalidOperationException($"No leader. Waited {waitTimeoutInSeconds} seconds. Current leader: {engine.CurrentLeader ?? "None"}");
                 }
