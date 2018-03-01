@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Web;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -296,12 +297,13 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             SetupCORSHeaders();
 
-            var nodeUrl = GetStringQueryString("url").TrimEnd('/');
+            var nodeUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             var watcher = GetBoolValueQueryString("watcher", false);
             var assignedCores = GetIntValueQueryString("assignedCores", false);
             if (assignedCores <= 0)
                 throw new ArgumentException("Assigned cores must be greater than 0!");
 
+            nodeUrl = UrlHelper.TryGetLeftPart(nodeUrl);
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
 
             if (HttpContext.Request.IsHttps != remoteIsHttps)

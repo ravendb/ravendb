@@ -22,6 +22,7 @@ namespace Raven.Server.Web.System
         public async Task TestConnection()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+            url = UrlHelper.TryGetLeftPart(url);
             DynamicJsonValue result;
 
             try
