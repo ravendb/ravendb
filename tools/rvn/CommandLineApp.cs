@@ -138,6 +138,8 @@ namespace rvn
                 cmd.Command("register", subcmd =>
                 {
                     var serviceNameOpt = ConfigureServiceNameOption(subcmd);
+                    var serviceUserNameOpt = ConfigureServiceUserNameOption(subcmd);
+                    var serviceUserPasswordOpt = ConfigureServiceUserPasswordOption(subcmd);
                     var serverDirOpt = ConfigureServerDirOption(subcmd);
 
                     subcmd.Description = "Registers RavenDB Server as Windows Service";
@@ -149,6 +151,8 @@ namespace rvn
                     {
                         WindowsService.Register(
                             serviceNameOpt.Value() ?? defaultServiceName,
+                            serviceUserNameOpt.Value(),
+                            serviceUserPasswordOpt.Value(),
                             serverDirOpt.Value(),
                             subcmd.RemainingArguments);
 
@@ -293,7 +297,7 @@ namespace rvn
                                               "It is recommended that you do that as part of the initial setup of the server, before it is running. " +
                                               "Encrypted server store can only talk to other encrypted server stores, and only over SSL." +
                                               Environment.NewLine + EncryptionCommandsNote;
-                    
+
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
@@ -307,7 +311,7 @@ namespace rvn
 
                 cmd.Command("decrypt", subcmd =>
                 {
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." + 
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." +
                                               Environment.NewLine + EncryptionCommandsNote;
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.Description = "Decrypts RavenDB files";
@@ -339,6 +343,16 @@ namespace rvn
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureServiceUserNameOption(CommandLineApplication cmd)
+        {
+            return cmd.Option("--service-user-name", "RavenDB Server Windows Service user name", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureServiceUserPasswordOption(CommandLineApplication cmd)
+        {
+            return cmd.Option("--service-user-password", "RavenDB Server Windows Service user password", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureServerDirOption(CommandLineApplication cmd)
