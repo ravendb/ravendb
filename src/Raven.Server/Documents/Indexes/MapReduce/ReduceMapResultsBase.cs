@@ -426,14 +426,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (remainingBranchesToAggregate.Contains(pageNumber))
                             {
-                                // we have a modified branch page but its children were not modified (branch page splitting) so we didn't aggregated it yet, let's do it now
+                                // RavenDB-5363: we have a modified branch page but its children were not modified (branch page splitting) so we didn't
+                                // aggregated it yet, let's do it now
+
                                 try
                                 {
-                                    page.Base = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).Pointer;
+                                    // RavenDB-10372: we need to use new instance of page here as we still iterate over 'page', we create it occasionally
+                                    
+                                    var unaggregatedBranch = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer, Constants.Storage.PageSize);
 
-                                    using (var result = AggregateBranchPage(page, table, indexContext, remainingBranchesToAggregate, token))
+                                    using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, token))
                                     {
-                                        StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result);
+                                        StoreAggregationResult(unaggregatedBranch.PageNumber, unaggregatedBranch.NumberOfEntries, table, result);
                                     }
                                 }
                                 finally
