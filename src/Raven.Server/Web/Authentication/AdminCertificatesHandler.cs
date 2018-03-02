@@ -37,8 +37,8 @@ namespace Raven.Server.Web.Authentication
             // us also use that to indicate that we are the seed node
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
             {
-
                 var operationId = GetLongQueryString("operationId", false);
                 if (operationId.HasValue == false)
                     operationId = ServerStore.Operations.GetNextOperationId();
@@ -81,7 +81,7 @@ namespace Raven.Server.Web.Authentication
         public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore)
         {
             ValidateCertificateDefinition(certificate, serverStore);
-            
+
             if (serverStore.Server.Certificate?.Certificate == null)
             {
                 var keys = new[]
@@ -108,7 +108,7 @@ namespace Raven.Server.Web.Authentication
                 Thumbprint = selfSignedCertificate.Thumbprint,
                 NotAfter = selfSignedCertificate.NotAfter
             };
-            
+
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
@@ -119,7 +119,7 @@ namespace Raven.Server.Web.Authentication
 
                 var entry = archive.CreateEntry(certificate.Name + ".pfx");
                 using (var s = entry.Open())
-                    s.Write(certBytes,0, certBytes.Length);
+                    s.Write(certBytes, 0, certBytes.Length);
 
                 WriteCertificateAsPem(certificate.Name, clientCertBytes, certificate.Password, archive);
             }
@@ -132,7 +132,7 @@ namespace Raven.Server.Web.Authentication
         {
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
-            
+
             X509CertificateEntry entry = null;
             AsymmetricKeyEntry key = null;
             foreach (var alias in a.Aliases)
@@ -152,7 +152,7 @@ namespace Raven.Server.Web.Authentication
             }
 
             using (var stream = s.CreateEntry(name + ".crt").Open())
-            using(var writer = new StreamWriter(stream))
+            using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
                 pw.WriteObject(entry.Certificate);
@@ -183,7 +183,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        
+
         [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
@@ -198,14 +198,17 @@ namespace Raven.Server.Web.Authentication
 
                 ValidateCertificateDefinition(certificate, ServerStore);
 
-                var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
-                var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
+                using (ctx.OpenReadTransaction())
+                {
+                    var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
+                    var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
 
-                if ((certificate.SecurityClearance == SecurityClearance.ClusterAdmin || certificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
-                    throw new InvalidOperationException($"Cannot save the certificate '{certificate.Name}' with '{certificate.SecurityClearance}' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
-                
-                if (string.IsNullOrWhiteSpace(certificate.Certificate))
-                    throw new ArgumentException($"{nameof(certificate.Certificate)} is a mandatory property when saving an existing certificate");
+                    if ((certificate.SecurityClearance == SecurityClearance.ClusterAdmin || certificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
+                        throw new InvalidOperationException($"Cannot save the certificate '{certificate.Name}' with '{certificate.SecurityClearance}' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
+
+                    if (string.IsNullOrWhiteSpace(certificate.Certificate))
+                        throw new ArgumentException($"{nameof(certificate.Certificate)} is a mandatory property when saving an existing certificate");
+                }
 
                 byte[] certBytes;
                 try
@@ -242,7 +245,7 @@ namespace Raven.Server.Web.Authentication
 
             var first = true;
             var collectionPrimaryKey = string.Empty;
-            
+
             foreach (var x509Certificate in collection)
             {
                 if (serverStore.Server.Certificate.Certificate?.Thumbprint != null && serverStore.Server.Certificate.Certificate.Thumbprint.Equals(x509Certificate.Thumbprint))
@@ -303,7 +306,7 @@ namespace Raven.Server.Web.Authentication
                     var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef));
                     await serverStore.Cluster.WaitForIndexNotification(putResult.Index);
                 }
-                
+
                 first = false;
             }
         }
@@ -317,6 +320,7 @@ namespace Raven.Server.Web.Authentication
             var clientCert = feature?.Certificate;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
             {
                 if (clientCert != null && clientCert.Thumbprint.Equals(thumbprint))
                 {
@@ -332,7 +336,7 @@ namespace Raven.Server.Web.Authentication
 
                 var key = Constants.Certificates.Prefix + thumbprint;
                 var definition = ReadCertificateFromCluster(ctx, key);
-                if (definition != null && (definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode) 
+                if (definition != null && (definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode)
                     && IsClusterAdmin() == false)
                 {
                     var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
@@ -360,16 +364,13 @@ namespace Raven.Server.Web.Authentication
 
         private CertificateDefinition ReadCertificateFromCluster(TransactionOperationContext ctx, string key)
         {
-            using (ctx.OpenReadTransaction())
-            {
-                var certificate = ServerStore.Cluster.Read(ctx, key);
-                if (certificate == null)
-                    return null;
+            var certificate = ServerStore.Cluster.Read(ctx, key);
+            if (certificate == null)
+                return null;
 
-                return JsonDeserializationServer.CertificateDefinition(certificate);
-            }
+            return JsonDeserializationServer.CertificateDefinition(certificate);
         }
-        
+
         private async Task DeleteInternal(List<string> keys)
         {
             // Delete from cluster
@@ -419,7 +420,7 @@ namespace Raven.Server.Web.Authentication
 
                                 if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
                                     certificates.Add((localCertKey, localCertificate));
-                                else 
+                                else
                                     localCertificate.Dispose();
                             }
                         }
@@ -440,10 +441,10 @@ namespace Raven.Server.Web.Authentication
                     {
                         var key = Constants.Certificates.Prefix + thumbprint;
 
-                        var certificate = ServerStore.CurrentRachisState == RachisState.Passive 
-                            ? ServerStore.Cluster.GetLocalState(context, key) 
+                        var certificate = ServerStore.CurrentRachisState == RachisState.Passive
+                            ? ServerStore.Cluster.GetLocalState(context, key)
                             : ServerStore.Cluster.Read(context, key);
-                        
+
                         if (certificate == null)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -604,7 +605,7 @@ namespace Raven.Server.Web.Authentication
             HttpContext.Response.ContentType = "application/octet-stream";
 
             HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
-            
+
             return Task.CompletedTask;
         }
 
@@ -690,7 +691,7 @@ namespace Raven.Server.Web.Authentication
                     }
 
                     var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
-                    
+
                     var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Name, replaceImmediately);
 
                     await Task.WhenAny(replicationTask, timeoutTask);
