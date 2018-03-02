@@ -8,13 +8,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class EtlAlerts
+    public class EtlNotifications
     {
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         private readonly string _databaseName;
 
-        public EtlAlerts(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string databaseName)
+        public EtlNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string databaseName)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
@@ -45,9 +45,9 @@ namespace Raven.Server.NotificationCenter
 
         public void AddSlowSqlWarnings(string processTag, string processName, Queue<SlowSqlStatementInfo> slowSqls)
         {
-            var alert = GetOrCreateAlert<SlowSqlDetails>(processTag,
+            var alert = GetOrCreatePerformanceHint<SlowSqlDetails>(processTag,
                 processName,
-                AlertType.SqlEtl_SlowSql,
+                PerformanceHintType.SqlEtl_SlowSql,
                 $"Slow SQL detected (last {SlowSqlDetails.MaxNumberOfStatements} statements are shown)",
                 out var details);
 
@@ -70,7 +70,7 @@ namespace Raven.Server.NotificationCenter
 
         private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertType etlAlertType, string message, out T details) where T : INotificationDetails, new()
         {
-            Debug.Assert(etlAlertType == AlertType.Etl_LoadError || etlAlertType == AlertType.Etl_TransformationError || etlAlertType == AlertType.SqlEtl_SlowSql);
+            Debug.Assert(etlAlertType == AlertType.Etl_LoadError || etlAlertType == AlertType.Etl_TransformationError);
 
             var key = $"{processTag}/{processName}";
 
@@ -87,6 +87,29 @@ namespace Raven.Server.NotificationCenter
                     etlAlertType,
                     NotificationSeverity.Warning,
                     key: key,
+                    details: details);
+            }
+        }
+
+        private PerformanceHint GetOrCreatePerformanceHint<T>(string processTag, string processName, PerformanceHintType etlHintType, string message, out T details) where T : INotificationDetails, new()
+        {
+            Debug.Assert(etlHintType == PerformanceHintType.SqlEtl_SlowSql);
+
+            var key = $"{processTag}/{processName}";
+
+            var id = PerformanceHint.GetKey(etlHintType, key);
+
+            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            {
+                details = GetDetails<T>(ntv);
+
+                return PerformanceHint.Create(
+                    _databaseName,
+                    $"{processTag}: '{processName}'",
+                    message,
+                    etlHintType,
+                    NotificationSeverity.Warning,
+                    source: key,
                     details: details);
             }
         }

@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public string Source { get; private set; }
 
-        public override string Id => $"{Type}/{HintType}/{Source}";
+        public override string Id => GetKey(HintType, Source);
 
         public INotificationDetails Details { get; protected set; }
 
@@ -40,6 +40,11 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Source = source,
                 Details = details
             };
+        }
+
+        public static string GetKey(PerformanceHintType type, string source)
+        {
+            return $"{NotificationType.PerformanceHint}/{type}/{source}";
         }
     }
 }
