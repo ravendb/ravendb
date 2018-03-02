@@ -89,6 +89,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
+                token.ThrowIfCancellationRequested();
+
                 using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
                 using (store.Value)
                 using (_aggregationBatch)
@@ -180,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is OperationCanceledException == false)
             {
                 _index.ErrorIndexIfCriticalException(e);
 
@@ -286,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception e) when (e is OperationCanceledException == false)
                     {
                         _index.ErrorIndexIfCriticalException(e);
 
@@ -350,7 +352,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception e) when (e is OperationCanceledException == false)
                     {
                         _index.ErrorIndexIfCriticalException(e);
 
