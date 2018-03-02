@@ -415,10 +415,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private AggregationResult AggregateBranchPage(TreePage page, 
-            Table table, 
+        private AggregationResult AggregateBranchPage(TreePage page,
+            Table table,
             TransactionOperationContext indexContext,
-            HashSet<long> remainingBranchesToAggregate, 
+            HashSet<long> remainingBranchesToAggregate,
             HashSet<long> compressedEmptyLeafs,
             CancellationToken token)
         {
@@ -432,41 +432,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (table.ReadByKey(childPageNumberSlice, out TableValueReader tvr) == false)
                         {
-                            if (remainingBranchesToAggregate.Contains(pageNumber))
+                            if (TryAggregateChildPageOrThrow(pageNumber, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
                             {
-                                // RavenDB-5363: we have a modified branch page but its children were not modified (branch page splitting) so we didn't
-                                // aggregated it yet, let's do it now
-
-                                try
-                                {
-                                    // RavenDB-10372: we need to use new instance of page here as we still iterate over 'page', we create it occasionally
-
-                                    var unaggregatedBranch = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer,
-                                        Constants.Storage.PageSize);
-
-                                    using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
-                                    {
-                                        StoreAggregationResult(unaggregatedBranch, table, result);
-                                    }
-                                }
-                                finally
-                                {
-                                    remainingBranchesToAggregate.Remove(pageNumber);
-                                }
-
                                 table.ReadByKey(childPageNumberSlice, out tvr);
-                            }
-                            else if (compressedEmptyLeafs != null && compressedEmptyLeafs.Contains(pageNumber))
-                            {
-                                // it's empty after decompression, we can safely skip it here
-                                continue;
                             }
                             else
                             {
-                                var relatedPage = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer,
-                                    Constants.Storage.PageSize);
-
-                                throw new InvalidOperationException($"Couldn't find pre-computed results for existing page: {relatedPage}");
+                                continue;
                             }
                         }
 
@@ -520,6 +492,47 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     table.Set(tvb);
                 }
             }
+        }
+
+        private bool TryAggregateChildPageOrThrow(long pageNumber, Table table, TransactionOperationContext indexContext,
+            HashSet<long> remainingBranchesToAggregate,
+            HashSet<long> compressedEmptyLeafs,
+            CancellationToken token)
+        {
+            if (remainingBranchesToAggregate.Contains(pageNumber))
+            {
+                // RavenDB-5363: we have a modified branch page but its children were not modified (branch page splitting) so we didn't
+                // aggregated it yet, let's do it now
+
+                try
+                {
+                    var unaggregatedBranch = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer,
+                        Constants.Storage.PageSize);
+
+                    using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
+                    {
+                        StoreAggregationResult(unaggregatedBranch, table, result);
+                    }
+                }
+                finally
+                {
+                    remainingBranchesToAggregate.Remove(pageNumber);
+                }
+
+                return true;
+            }
+
+            if (compressedEmptyLeafs != null && compressedEmptyLeafs.Contains(pageNumber))
+            {
+                // it's empty after decompression, we can safely skip it here
+
+                return false;
+            }
+
+            var relatedPage = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer,
+                Constants.Storage.PageSize);
+
+            throw new InvalidOperationException($"Couldn't find pre-computed results for existing page: {relatedPage}");
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);
