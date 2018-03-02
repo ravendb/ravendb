@@ -42,7 +42,6 @@ namespace FastTests.Issues
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>
             {
-                // empty for now
                 Operations.OperationType.Setup, // it is in secured setup
             };
 
@@ -66,7 +65,8 @@ namespace FastTests.Issues
                PerformanceHintType.Paging,
                PerformanceHintType.Indexing,
                PerformanceHintType.RequestLatency,
-               PerformanceHintType.UnusedCapacity
+               PerformanceHintType.UnusedCapacity,
+               PerformanceHintType.SqlEtl_SlowSql
             };
 
             var operationWithoutDetails = new HashSet<PerformanceHintType>
