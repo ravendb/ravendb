@@ -10,7 +10,6 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
-        SqlEtl_SlowSql,
         
         Etl_InvalidScript,
         

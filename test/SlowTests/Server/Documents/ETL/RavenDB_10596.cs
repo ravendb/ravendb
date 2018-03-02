@@ -92,10 +92,11 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    database.NotificationCenter.EtlAlerts.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
+                    database.NotificationCenter.EtlNotifications.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
 
                     var alert = await GetAlert(notifications);
 
+                    Assert.Equal(NotificationType.AlertRaised.ToString(), alert[nameof(Notification.Type)]);
                     Assert.Equal("Raven ETL Test: 'test'", alert[nameof(AlertRaised.Title)]);
                     Assert.Contains("Loading transformed data to the destination has failed", alert[nameof(AlertRaised.Message)].ToString());
 
@@ -119,7 +120,7 @@ namespace SlowTests.Server.Documents.ETL
                         Error = "fatal load error2"
                     });
 
-                    database.NotificationCenter.EtlAlerts.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
+                    database.NotificationCenter.EtlNotifications.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
 
                     alert = await GetAlert(notifications);
 
@@ -146,7 +147,7 @@ namespace SlowTests.Server.Documents.ETL
                         });
                     }
 
-                    database.NotificationCenter.EtlAlerts.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
+                    database.NotificationCenter.EtlNotifications.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
 
                     alert = await GetAlert(notifications);
 
@@ -177,14 +178,15 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    database.NotificationCenter.EtlAlerts.AddSlowSqlWarnings("Raven ETL Test", "test", slowStatements);
+                    database.NotificationCenter.EtlNotifications.AddSlowSqlWarnings("Raven ETL Test", "test", slowStatements);
 
-                    var alert = await GetAlert(notifications);
+                    var hint = await GetAlert(notifications);
 
-                    Assert.Equal("Raven ETL Test: 'test'", alert[nameof(AlertRaised.Title)]);
-                    Assert.Contains("Slow SQL detected", alert[nameof(AlertRaised.Message)].ToString());
+                    Assert.Equal(NotificationType.PerformanceHint.ToString(), hint[nameof(Notification.Type)]);
+                    Assert.Equal("Raven ETL Test: 'test'", hint[nameof(PerformanceHint.Title)]);
+                    Assert.Contains("Slow SQL detected", hint[nameof(PerformanceHint.Message)].ToString());
 
-                    var details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
+                    var details = (DynamicJsonValue)hint[nameof(PerformanceHint.Details)];
                     var statements = (DynamicJsonArray)details[nameof(SlowSqlDetails.Statements)];
 
                     Assert.Equal(1, statements.Items.Count);
@@ -202,11 +204,11 @@ namespace SlowTests.Server.Documents.ETL
                         Duration = 1
                     });
 
-                    database.NotificationCenter.EtlAlerts.AddSlowSqlWarnings("Raven ETL Test", "test", slowStatements);
+                    database.NotificationCenter.EtlNotifications.AddSlowSqlWarnings("Raven ETL Test", "test", slowStatements);
 
-                    alert = await GetAlert(notifications);
+                    hint = await GetAlert(notifications);
 
-                    details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
+                    details = (DynamicJsonValue)hint[nameof(AlertRaised.Details)];
                     statements = (DynamicJsonArray)details[nameof(SlowSqlDetails.Statements)];
 
                     Assert.Equal(3, statements.Items.Count);
@@ -229,11 +231,11 @@ namespace SlowTests.Server.Documents.ETL
                         });
                     }
 
-                    database.NotificationCenter.EtlAlerts.AddSlowSqlWarnings("Raven ETL Test", "test", slowStatements);
+                    database.NotificationCenter.EtlNotifications.AddSlowSqlWarnings("Raven ETL Test", "test", slowStatements);
 
-                    alert = await GetAlert(notifications);
+                    hint = await GetAlert(notifications);
 
-                    details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
+                    details = (DynamicJsonValue)hint[nameof(AlertRaised.Details)];
                     statements = (DynamicJsonArray)details[nameof(SlowSqlDetails.Statements)];
 
                     Assert.Equal(SlowSqlDetails.MaxNumberOfStatements, statements.Items.Count);
