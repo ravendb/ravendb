@@ -8,6 +8,7 @@
         Paging,
         RequestLatency,
         UnusedCapacity,
-        SlowIO
+        SlowIO,
+        SqlEtl_SlowSql
     }
 }
