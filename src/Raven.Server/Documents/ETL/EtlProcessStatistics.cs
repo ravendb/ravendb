@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.ETL
             if (_transformationErrorsInCurrentBatch.Errors.Count == 0)
                 return;
 
-            LastAlert = _notificationCenter.EtlAlerts.AddTransformationErrors(_processTag, _processName, _transformationErrorsInCurrentBatch.Errors, preMessage);
+            LastAlert = _notificationCenter.EtlNotifications.AddTransformationErrors(_processTag, _processName, _transformationErrorsInCurrentBatch.Errors, preMessage);
 
             _transformationErrorsInCurrentBatch.Errors.Clear();
         }
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.ETL
             if (_loadErrorsInCurrentBatch.Errors.Count == 0)
                 return;
 
-            LastAlert = _notificationCenter.EtlAlerts.AddLoadErrors(_processTag, _processName, _loadErrorsInCurrentBatch.Errors, preMessage);
+            LastAlert = _notificationCenter.EtlNotifications.AddLoadErrors(_processTag, _processName, _loadErrorsInCurrentBatch.Errors, preMessage);
 
             _loadErrorsInCurrentBatch.Errors.Clear();
         }
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.ETL
             if (_slowSqlsInCurrentBatch.Statements.Count == 0)
                 return;
 
-            _notificationCenter.EtlAlerts.AddSlowSqlWarnings(_processTag, _processName, _slowSqlsInCurrentBatch.Statements);
+            _notificationCenter.EtlNotifications.AddSlowSqlWarnings(_processTag, _processName, _slowSqlsInCurrentBatch.Statements);
 
             _slowSqlsInCurrentBatch.Statements.Clear();
         }
