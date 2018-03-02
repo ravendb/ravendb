@@ -835,31 +835,53 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             }
         }
 
+        private static bool IsConcurrentOrObservableCollection(Type t)
+        {
+            if (t.IsGenericType())
+            {
+                Type definition = t.GetGenericTypeDefinition();
+
+                switch (definition.FullName)
+                {
+                    case "System.Collections.Concurrent.ConcurrentQueue`1":
+                    case "System.Collections.Concurrent.ConcurrentStack`1":
+                    case "System.Collections.Concurrent.ConcurrentBag`1":
+                    case JsonTypeReflector.ConcurrentDictionaryTypeName:
+                    case "System.Collections.ObjectModel.ObservableCollection`1":
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         private static bool ShouldSkipDeserialized(Type t)
         {
-#if !(NET35 || NET20 || PORTABLE || PORTABLE40 || MONO)
             // ConcurrentDictionary throws an error in its OnDeserialized so ignore - http://json.codeplex.com/discussions/257093
-            if (t.IsGenericType() && t.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>))
+            if (IsConcurrentOrObservableCollection(t))
+            {
                 return true;
-#endif
-#if !(NET35 || NET20 || NETFX_CORE)
+            }
+
             if (t.Name == FSharpUtils.FSharpSetTypeName || t.Name == FSharpUtils.FSharpMapTypeName)
+            {
                 return true;
-#endif
+            }
 
             return false;
         }
 
         private static bool ShouldSkipSerializing(Type t)
         {
-#if !(NET35 || NET20 || NETFX_CORE)
+            if (IsConcurrentOrObservableCollection(t))
+            {
+                return true;
+            }
+
             if (t.Name == FSharpUtils.FSharpSetTypeName || t.Name == FSharpUtils.FSharpMapTypeName)
+            {
                 return true;
-#endif
-#if NETFX_CORE
-            if (t.IsGenericType() && t.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>))
-                return true;
-#endif
+            }
 
             return false;
         }
