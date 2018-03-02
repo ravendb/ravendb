@@ -165,6 +165,7 @@
     <Compile Include="Configuration\ConfigurationTests.cs" />
     <Compile Include="Indexing\IndexCreationTests.cs" />
     <Compile Include="Indexing\MultiMap.cs" />
+    <Compile Include="Issues\RavenDB_10653.cs" />
     <Compile Include="Querying\escaping.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
