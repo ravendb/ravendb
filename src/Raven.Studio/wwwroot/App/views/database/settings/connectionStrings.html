@@ -97,15 +97,17 @@
                     </div>
                     <div class="flex-horizontal">
                         <div class="flex-grow"></div>
-                        <span data-bind="if: editedSqlEtlConnectionString">
-                            <button type="submit" class="btn btn-info" title="Test url connection"
-                                    data-bind="click: onTestConnectionSql, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
-                                <i class="icon-rocket"></i>
-                                <span>Test Connection</span>
-                            </button>
-                        </span>                            
-                        <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
-                        <button class="btn btn-success" data-bind="click: onSave" title="Click to save this connection string"><i class="icon-check"></i><span>Save</span></button>                            
+                        <div>
+                            <span data-bind="if: editedSqlEtlConnectionString">
+                                <button type="submit" class="btn btn-info" title="Test url connection"
+                                        data-bind="click: onTestConnectionSql, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
+                                </button>
+                            </span>
+                            <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
+                            <button class="btn btn-success" data-bind="click: onSave" title="Click to save this connection string"><i class="icon-check"></i><span>Save</span></button>    
+                        </div>
                     </div>
                 </form>
                 <div class="panel-addon" data-bind="with: testConnectionResult">
