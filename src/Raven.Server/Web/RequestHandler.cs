@@ -376,9 +376,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature);
                     return false;
-
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                     return true;
                 default:
