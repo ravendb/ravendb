@@ -374,9 +374,9 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
 
-                                    Debug.Assert(id.Type == ValueTokenType.String);
+                                    Debug.Assert(id.Type == ValueTokenType.String || id.Type == ValueTokenType.Null);
 
-                                    AddId(id.Value.ToString());
+                                    AddId(id.Value?.ToString());
                                 }
                                 if (value is MethodExpression right)
                                 {
@@ -447,8 +447,14 @@ namespace Raven.Server.Documents.Queries
 
                 private void AddId(string id)
                 {
-                    Slice.From(_allocator, id, out Slice key);
-                    _allocator.ToLowerCase(ref key.Content);
+                    Slice key;
+                    if (string.IsNullOrEmpty(id) == false)
+                    {
+                        Slice.From(_allocator, id, out key);
+                        _allocator.ToLowerCase(ref key.Content);
+                    }
+                    else
+                        key = Slices.Empty;
 
                     Ids.Add(key);
                 }
