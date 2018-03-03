@@ -15,7 +15,7 @@ namespace FastTests.Issues
         [Fact]
         public void TranslateMathRound()
         {
-            using (var store = GetDocumentStore()
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
