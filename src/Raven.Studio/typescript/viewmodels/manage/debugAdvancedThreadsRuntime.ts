@@ -117,6 +117,11 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     const json = JSON.stringify(timings, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
                     onValue(html);
+                } else if (column.header === "Start Time") {
+                    const value = column.getCellValue(entry);
+                    const diff = moment.utc().diff(moment.utc(value));
+                    const fromDuration = generalUtils.formatDuration(moment.duration(diff), true, 2) + "ago";
+                    onValue(fromDuration);
                 } else {
                     const value = column.getCellValue(entry);
                     onValue(value);
