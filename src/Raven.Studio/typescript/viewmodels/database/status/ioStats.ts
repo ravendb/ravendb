@@ -1455,6 +1455,10 @@ class ioStats extends viewModelBase {
                 tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
                 tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`;
                 tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
+                
+                const speed = element.Duration ? generalUtils.formatBytesToSize(element.Size / element.Duration * 1000) + " / s" : "unknown";
+                tooltipHtml += `Speed: ${speed}<br />`; 
+                
             } else {
                 const compressionElement = element as Raven.Server.Documents.Handlers.IOMetricsRecentStatsAdditionalTypes;
                 tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br/>`;
@@ -1462,6 +1466,9 @@ class ioStats extends viewModelBase {
                 tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br/>`;
                 tooltipHtml += `Compressed Size (bytes): ${compressionElement.CompressedSize.toLocaleString()}<br/>`;
                 tooltipHtml += `Compression Ratio: ${(compressionElement.CompressionRatio * 100).toFixed(2)}%<br/>`;
+                
+                const compressionSpeed = element.Duration ? generalUtils.formatBytesToSize(compressionElement.OriginalSize / element.Duration * 1000) + " / s" : "unknown";
+                tooltipHtml += `Compression speed: ${compressionSpeed}`;
             }
 
             this.handleTooltip(element, x, y, tooltipHtml);
