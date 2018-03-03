@@ -33,7 +33,6 @@ class editSqlEtlTask extends viewModelBase {
 
     possibleMentors = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
-    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
