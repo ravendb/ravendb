@@ -122,10 +122,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="panel-addon" data-bind="visible: $root.sqlEtlConnectionStringsNames().length === 0">
+                    <div class="panel-addon" data-bind="visible: $root.sqlEtlConnectionStringsNames().length === 0 && !$root.createNewConnectionString()">
                         <div class="padding bg-warning small">
                             <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
-                            <a data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>                        
                         </div>
                     </div>
                 </div>
