@@ -657,14 +657,25 @@ namespace Raven.Client.Util
 
                     writer.Write("(");
 
-                    for (var i = 0; i < methodCallExpression.Arguments.Count; i++)
+                    if (method.Name == "Round" && methodCallExpression.Arguments.Count > 1)
                     {
-                        if (i != 0)
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        writer.Write(" * Math.pow(10, ");
+                        context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                        writer.Write(")) / Math.pow(10, ");
+                        context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                    }
+                    else
+                    {
+                        for (var i = 0; i < methodCallExpression.Arguments.Count; i++)
                         {
-                            writer.Write(", ");
-                        }
+                            if (i != 0)
+                            {
+                                writer.Write(", ");
+                            }
 
-                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                            context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                        }
                     }
 
                     writer.Write(")");
