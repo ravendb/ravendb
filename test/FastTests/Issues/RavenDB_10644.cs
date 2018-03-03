@@ -15,10 +15,7 @@ namespace FastTests.Issues
         [Fact]
         public void TranslateMathRound()
         {
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = false
-            }))
+            using (var store = GetDocumentStore()
             {
                 using (var session = store.OpenSession())
                 {
