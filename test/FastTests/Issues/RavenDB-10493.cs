@@ -13,7 +13,7 @@ namespace FastTests.Issues
         }
                         
         [Fact]
-        public void CanHaveArrayInMetadata()
+        public void CanTranslateDateTimeMinValueMaxValue()
         {             
             using (var store = GetDocumentStore())
             {             
@@ -42,8 +42,11 @@ namespace FastTests.Issues
                     var result = query.ToList();
                     
                     Assert.Equal(DateTime.MinValue, result[0].DateTimeMinValue);
-                    // Only missing 0.0009999 sec... 
-                    //Assert.Equal(DateTime.MaxValue, result[0].DateTimeMaxValue);
+
+                    // Only missing 0.9999 ms
+                    var epsilon = 1; // Lower than 1 ms
+                    Assert.True(
+                        Math.Abs((DateTime.MaxValue.ToUniversalTime() - result[0].DateTimeMaxValue).TotalSeconds) < epsilon);
 
                 }                              
             }
