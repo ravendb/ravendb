@@ -161,6 +161,7 @@ class dashboardChart {
     
     showTooltip() {
         this.tooltip
+            .style('display', undefined)
             .transition()
             .duration(250)
             .style("opacity", 1);
@@ -231,7 +232,8 @@ class dashboardChart {
     hideTooltip() {
         this.tooltip.transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each('end', () => this.tooltip.style('display', 'none'));
 
         this.lastXPosition = null;
     }
