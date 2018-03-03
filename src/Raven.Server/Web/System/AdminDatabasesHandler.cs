@@ -723,7 +723,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
-        public async Task ToggleDynamicNodeDistribution()
+        public async Task ToggleDynamicDatabaseDistribution()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var enable = GetBoolValueQueryString("enable") ?? true;

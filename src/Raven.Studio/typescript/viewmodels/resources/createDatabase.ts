@@ -36,7 +36,7 @@ class createDatabase extends dialogViewModelBase {
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
-    showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
+    showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
     showReplicationFactorWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
     disableReplicationFactorInput: KnockoutComputed<boolean>;
@@ -169,12 +169,12 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
-        this.showDynamicNodeDistributionWarning = ko.pureComputed(() => {
-            const hasDynamicNodesDistribution = license.licenseStatus().HasDynamicNodesDistribution;
-            if (!hasDynamicNodesDistribution) {
+        this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
+            const hasDynamicDatabaseDistribution = license.licenseStatus().HasDynamicNodesDistribution;
+            if (!hasDynamicDatabaseDistribution) {
                 this.databaseModel.replication.dynamicMode(false);
             }
-            return !hasDynamicNodesDistribution;
+            return !hasDynamicDatabaseDistribution;
         });
 
         this.showReplicationFactorWarning = ko.pureComputed(() => {
