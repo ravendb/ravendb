@@ -1236,8 +1236,8 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.HasDynamicNodesDistribution)
                 return true;
 
-            const string message = "Your current license doesn't include the dynamic nodes distribution feature";
-            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true);
+            const string message = "Your current license doesn't include the dynamic database distribution feature";
+            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true); 
             return false;
         }
 

@@ -275,7 +275,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (TryMoveToRehab(dbName, topology, current, member))
                     return $"Node {member} is currently not responding (with status: {status}) and moved to rehab";
 
-                // node distribution is off and the node is down
+                // database distribution is off and the node is down
                 if (topology.DynamicNodesDistribution == false && (
                     topology.PromotablesStatus.TryGetValue(member, out var currentStatus) == false
                     || currentStatus != DatabasePromotionStatus.NotResponding))
@@ -320,7 +320,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Bad)
                 {
-                    // node distribution is off and the node is down
+                    // database distribution is off and the node is down
                     if (topology.DynamicNodesDistribution == false)
                     {
                         if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false

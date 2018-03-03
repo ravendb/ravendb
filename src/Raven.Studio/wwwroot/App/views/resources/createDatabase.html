@@ -295,13 +295,13 @@
             </div>
         </div>
         
-        <div data-bind="css: {'has-warning': $root.showDynamicNodeDistributionWarning()}">
+        <div data-bind="css: {'has-warning': $root.showDynamicDatabaseDistributionWarning()}">
             <div class="toggle">
-                <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, enable: $root.canUseDynamicOption() && !$root.showDynamicNodeDistributionWarning()">
-                <label for="dynamic_mode">Allow dynamic node distribution</label>
+                <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, enable: $root.canUseDynamicOption() && !$root.showDynamicDatabaseDistributionWarning()">
+                <label for="dynamic_mode">Allow dynamic database distribution</label>
             </div>
             <small class="toggle-caption">Maintain replication factor upon node failure.</small>
-            <div class="help-block" data-bind="visible: $root.showDynamicNodeDistributionWarning">
+            <div class="help-block" data-bind="visible: $root.showDynamicDatabaseDistributionWarning">
                 Your current license doesn't include the dynamic nodes distribution feature.
             </div>
         </div>

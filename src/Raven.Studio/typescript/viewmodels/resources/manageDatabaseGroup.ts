@@ -30,7 +30,7 @@ class manageDatabaseGroup extends viewModelBase {
     nodes: KnockoutComputed<databaseGroupNode[]>;
     deletionInProgress: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
-    showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
+    showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -57,7 +57,7 @@ class manageDatabaseGroup extends viewModelBase {
             return dbInfo ? dbInfo.deletionInProgress() : [];
         });
 
-        this.showDynamicNodeDistributionWarning = ko.pureComputed(() => {
+        this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
             return !license.licenseStatus().HasDynamicNodesDistribution;
         });
     }
@@ -165,7 +165,7 @@ class manageDatabaseGroup extends viewModelBase {
         
         this.currentDatabaseInfo(dbInfo);
         
-        dbInfo.dynamicNodesDistribution.subscribe((dynamic) => {
+        dbInfo.dynamicDatabaseDistribution.subscribe((dynamic) => {
             new toggleDynamicNodeAssignmentCommand(this.activeDatabase().name, dynamic)
                 .execute();
         });
