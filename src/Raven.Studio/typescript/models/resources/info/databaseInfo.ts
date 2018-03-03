@@ -17,7 +17,7 @@ class databaseInfo {
     bundles = ko.observableArray<string>();
     backupStatus = ko.observable<string>();
     lastFullOrIncrementalBackup = ko.observable<string>();
-    dynamicNodesDistribution = ko.observable<boolean>();
+    dynamicDatabaseDistribution = ko.observable<boolean>();
 
     loadError = ko.observable<string>();
 
@@ -178,7 +178,7 @@ class databaseInfo {
         this.alerts(dto.Alerts);
         this.loadError(dto.LoadError);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
-        this.dynamicNodesDistribution(dto.DynamicNodesDistribution);
+        this.dynamicDatabaseDistribution(dto.DynamicNodesDistribution);
 
         if (dto.BackupInfo && dto.BackupInfo.LastBackup) {
             this.lastFullOrIncrementalBackup(moment.utc(dto.BackupInfo.LastBackup).local().fromNow());
