@@ -27,21 +27,21 @@ namespace Raven.Database.Raft.Util
             return engine.Engine.CurrentTopology.AllNodes.Any();
         }
 
-        public static NodeConnectionInfo GetLeaderNode(this RaftEngine engine, int waitTimeoutInSeconds = 0)
+        public static NodeConnectionInfo GetLeaderNode(this RaftEngine engine, int waitTimeoutInMiliseconds = 0)
         {            
-            if (waitTimeoutInSeconds > 0)
+            if (waitTimeoutInMiliseconds > 0)
             {
-                if (engine.WaitForLeader(waitTimeoutInSeconds) == false)
+                if (engine.WaitForLeader(waitTimeoutInMiliseconds) == false)
                 {
-                    throw new InvalidOperationException($"No leader. Waited {waitTimeoutInSeconds} seconds. Current leader: {engine.CurrentLeader ?? "None"}");
+                    throw new InvalidOperationException($"No leader. Waited {waitTimeoutInMiliseconds} miliseconds. Current leader: {engine.CurrentLeader ?? "None"}");
                 }
             }
 
             var leader = engine.CurrentLeader;
             if (leader == null)
             {
-                if (waitTimeoutInSeconds > 0)
-                    throw new InvalidOperationException($"No leader. Waited {waitTimeoutInSeconds} seconds.");
+                if (waitTimeoutInMiliseconds > 0)
+                    throw new InvalidOperationException($"No leader. Waited {waitTimeoutInMiliseconds} miliseconds.");
 
                 return null;
             }

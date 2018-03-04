@@ -142,7 +142,7 @@ namespace Raven.Database.Raft
             }
             catch (NotLeadingException)
             {
-                await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo).ConfigureAwait(false);
+                await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds * 1000), nodeConnectionInfo).ConfigureAwait(false);
             }
         }
 
@@ -180,7 +180,7 @@ namespace Raven.Database.Raft
             }
             catch (NotLeadingException)
             {
-                return SendClusterConfigurationInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), configuration);
+                return SendClusterConfigurationInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds*1000), configuration);
             }
         }
 
@@ -194,7 +194,7 @@ namespace Raven.Database.Raft
             }
             catch (NotLeadingException)
             {
-                return SendDatabaseUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseName, document);
+                return SendDatabaseUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds * 1000), databaseName, document);
             }
         }
 
@@ -208,7 +208,7 @@ namespace Raven.Database.Raft
             }
             catch (NotLeadingException)
             {
-                return SendDatabaseDeleteInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseName, hardDelete);
+                return SendDatabaseDeleteInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds*1000), databaseName, hardDelete);
             }
         }
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Raft
             }
             catch (NotLeadingException)
             {
-                return SendReplicationStateAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), replicationState);
+                return SendReplicationStateAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds*1000), replicationState);
             }
         }
 
@@ -336,7 +336,7 @@ namespace Raven.Database.Raft
             }
             catch (NotLeadingException)
             {
-                await SendNodeUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
+                await SendNodeUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds*1000), node).ConfigureAwait(false);
             }
         }
 
@@ -374,7 +374,7 @@ namespace Raven.Database.Raft
             {
             }
             
-            await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
+            await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds*1000), node).ConfigureAwait(false);
         }
 
         public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
@@ -541,7 +541,7 @@ namespace Raven.Database.Raft
                 try
                 {
                     noLeaderThrown = false;
-                    var leaderNode = raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds);
+                    var leaderNode = raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds*1000);
                     var url = $"{leaderNode.GetAbsoluteUri()}admin/cluster/changeVotingMode?isVoting={isVoting}";
                     using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
                     {
