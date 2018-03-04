@@ -43,10 +43,10 @@ namespace FastTests.Issues
                     
                     Assert.Equal(DateTime.MinValue, result[0].DateTimeMinValue);
 
-                    // Only missing 0.9999 ms
-                    var epsilon = 1; // Lower than 1 ms
-                    Assert.True(
-                        Math.Abs((DateTime.MaxValue.ToUniversalTime() - result[0].DateTimeMaxValue).TotalSeconds) < epsilon);
+                    // Only missing 0.9999 ms, but with additional timezone
+                    var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
+                    var val = (DateTime.MaxValue - result[0].DateTimeMaxValue).TotalSeconds;
+                    Assert.True(Math.Abs(val) < (epsilon));
 
                 }                              
             }
