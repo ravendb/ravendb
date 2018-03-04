@@ -162,7 +162,7 @@ namespace Raven.Client.Connection.Request
 
         public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token)
         {
-            return ExecuteWithinClusterInternalAsync(serverClient, method, operation, token);
+            return ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries: Math.Max(NodeUrls.Count,3));
         }
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
@@ -207,7 +207,7 @@ namespace Raven.Client.Connection.Request
             this.readStripingBase = strippingBase;
         }
 
-        private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 3, bool withClusterFailoverHeader = false)
+        private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 3, bool withClusterFailoverHeader = false, int? readStripingBaseForRetries = null)
         {
             token.ThrowIfCancellationRequested();
             bool isFaultedNode = false;
@@ -228,7 +228,7 @@ namespace Raven.Client.Connection.Request
                      serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers))
                 {
                     var primaryNode = new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null);
-                    node = GetNodeForReadOperation(primaryNode, out isFaultedNode);
+                    node = GetNodeForReadOperation(primaryNode, readStripingBaseForRetries, out isFaultedNode, out readStripingBaseForRetries);
                 }
                 else
                 {
@@ -258,7 +258,7 @@ namespace Raven.Client.Connection.Request
             {
                 case FailoverBehavior.ReadFromAllWriteToLeader:
                     if (method == HttpMethods.Get)
-                        node = GetNodeForReadOperation(node, out isFaultedNode);
+                        node = GetNodeForReadOperation(node, readStripingBaseForRetries, out isFaultedNode, out readStripingBaseForRetries);
                     break;
                 case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     if (node == null)
@@ -277,7 +277,7 @@ namespace Raven.Client.Connection.Request
                     }
 
                     if (method == HttpMethods.Get)
-                        node = GetNodeForReadOperation(node, out isFaultedNode);
+                        node = GetNodeForReadOperation(node, readStripingBaseForRetries, out isFaultedNode, out readStripingBaseForRetries);
                     break;
                 case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
                     if (node == null)
@@ -338,11 +338,14 @@ namespace Raven.Client.Connection.Request
                 throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.", operationResult.Error);
             }
 
-            return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1, withClusterFailoverHeader).ConfigureAwait(false);
-        }
+            return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1, withClusterFailoverHeader, readStripingBaseForRetries).ConfigureAwait(false);
+        }            
 
-        private OperationMetadata GetNodeForReadOperation(OperationMetadata node, out bool isFaultedNode)
+  
+
+        private OperationMetadata GetNodeForReadOperation(OperationMetadata node, int? readStripingBaseForRetriesInput, out bool isFaultedNode, out int? readStripingBaseForRetriesOutput)
         {
+            readStripingBaseForRetriesOutput = readStripingBaseForRetriesInput;
             Debug.Assert(node != null);
 
             var nodes = new List<OperationMetadata>(NodeUrls);
@@ -375,7 +378,18 @@ namespace Raven.Client.Connection.Request
                 return node;
             }
 
-            var stripingBase = readStripingBase;
+            int stripingBase;
+            if (readStripingBaseForRetriesInput.HasValue == false)
+            {
+                stripingBase = readStripingBase;                
+            }
+            else
+            {
+                stripingBase = readStripingBaseForRetriesInput.Value + 1;
+            }
+
+            readStripingBaseForRetriesOutput = stripingBase;
+
             var nodeIndex = stripingBase % nodes.Count;
             var readNode = nodes[nodeIndex];
 
