@@ -79,6 +79,114 @@ namespace Raven.Client.Util
             }
         }
 
+        public class DictionarySupport : JavascriptConversionExtension
+        {
+            public enum DictionaryInnerCall
+            {
+                None,
+                Key,
+                Value,
+                KeyValue
+            }
+
+            private DictionaryInnerCall _innerCallExpected;
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                // Rewrite .Count / .Values / .Keys
+                if (context.Node is MemberExpression contextNode
+                    && typeof(IDictionary).IsAssignableFrom(contextNode.Expression.Type))
+                {
+                    context.PreventDefault();
+                    // Get KeyValueType identifier:
+                    var keyValuePairType = typeof(KeyValuePair<,>)
+                                .MakeGenericType(contextNode.Expression.Type.GetGenericArguments());
+
+                    switch (contextNode.Member.Name)
+                    {
+                        case "Count":
+                        {
+                            var expression = Expression.Call(
+                                typeof(Enumerable),
+                                "Count",
+                                new[] { keyValuePairType },
+                                contextNode.Expression
+                            );
+                            _innerCallExpected = DictionaryInnerCall.Key;
+                            context.Visitor.Visit(expression);
+                            return;
+                        }
+                        case "Keys":
+                            _innerCallExpected = DictionaryInnerCall.Key;
+                            context.Visitor.Visit(contextNode.Expression);
+                            return;
+                        case "Values":
+                            _innerCallExpected = DictionaryInnerCall.Value;
+                            context.Visitor.Visit(contextNode.Expression);
+                            return;
+                    }
+                }
+
+                // Only call it when we do a methodCall on a memberExpression of type dictionary
+                if (context.Node is MethodCallExpression callNode
+                    && typeof(IDictionary).IsAssignableFrom(callNode.Arguments[0].Type))
+                {
+                    if (_innerCallExpected == default(DictionaryInnerCall))
+                    {
+                        // If not given, decide on method name if we should shorten:
+                        switch (callNode.Method.Name)
+                        {
+                            default:
+                                _innerCallExpected = DictionaryInnerCall.KeyValue;
+                                break;
+                            case "Count":
+                                _innerCallExpected = DictionaryInnerCall.Key;
+                                break;
+                        }
+                    }
+                }
+
+                // Now we translate the memberExpression
+                if(_innerCallExpected != default(DictionaryInnerCall)
+                    && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
+                {
+                    context.PreventDefault();
+                    var currentCall = _innerCallExpected;
+                    _innerCallExpected = default(DictionaryInnerCall);
+
+                    var writer = context.GetWriter();
+                    using (writer.Operation(context.Node))
+                    {
+                        writer.Write("Object.keys(");
+                        context.Visitor.Visit(context.Node);
+                        writer.Write(")");
+
+                        // Do not translate Key (we already have the keys here!)
+                        if (currentCall != DictionaryInnerCall.Key)
+                        {
+                            writer.Write(".map(function(a){");
+
+                            switch (currentCall)
+                            {
+                                case DictionaryInnerCall.Value:
+                                    writer.Write("return ");
+                                    context.Visitor.Visit(context.Node);
+                                    writer.Write("[a];");
+                                    break;
+                                case DictionaryInnerCall.KeyValue:
+                                    writer.Write("return{Key: a,Value:");
+                                    context.Visitor.Visit(context.Node);
+                                    writer.Write("[a]};");
+                                    break;
+                            }
+
+                            writer.Write("})");
+                        }
+                    }
+                }
+            }
+        }
+
         public class LinqMethodsSupport : JavascriptConversionExtension
         {
             public static readonly LinqMethodsSupport Instance = new LinqMethodsSupport();
@@ -139,6 +247,7 @@ namespace Raven.Client.Util
                     case "Contains":
                         newName = "indexOf";
                         break;
+                    case "Cast":
                     case "ToList":
                     case "ToArray":
                         context.PreventDefault();
@@ -152,18 +261,31 @@ namespace Raven.Client.Util
                     case "Average":
                     {
                         context.PreventDefault();
-                        // Rewrite expression to Sum() / Count()
-                        var typeArguments = methodCallExpression.Arguments[0].Type.GenericTypeArguments;
+                        // -- Rewrite expression to Sum() (using second (if available) argument Types) / Count() (using last argument Type)
+
                         var sum = Expression.Call(
                             typeof(Enumerable), 
-                            "Sum", 
+                            "Sum",
                             methodCallExpression.Arguments.Count > 1 ?
-                                typeArguments :
-                                new Type[] { }, 
+                                    new Type[] { methodCallExpression.Arguments[1].Type.GenericTypeArguments.First() } :
+                                    new Type[] { }, 
                             methodCallExpression.Arguments.ToArray());
-                        var count = Expression.Call(typeof(Enumerable), "Count", typeArguments, methodCallExpression.Arguments[0]);
+
+                        // Get resulting type by interface of IEnumerable<>
+                        var typeArguments = methodCallExpression.Arguments[0].Type.GetInterfaces()
+                                .Concat(new[] { methodCallExpression.Arguments[0].Type })
+                                .First(a => a.GetTypeInfo().IsGenericType && a.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                                .GetGenericArguments()
+                                .First();
+                        var count = Expression.Call(typeof(Enumerable), "Count", new Type[] { typeArguments }, methodCallExpression.Arguments[0]);
                         
-                        context.Visitor.Visit(Expression.Divide(sum, count));
+                        // When doing the devide, make sure count matches the sum type
+                        context.Visitor.Visit(
+                            Expression.Divide(
+                                sum, 
+                                Expression.Convert(count, sum.Type)
+                            )
+                        );
                         return;
                     }
                     case "ToDictionary":
@@ -428,26 +550,7 @@ namespace Raven.Client.Util
                 }
                 else
                 {
-                    var typeInfo = methodCallExpression.Arguments[0].Type.GetTypeInfo();
-                    if (typeInfo.IsGenericType &&
-                           (
-                            typeInfo.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
-                             typeInfo.GetGenericTypeDefinition() == typeof(IDictionary<,>)
-                           )
-                        )
-                    {
-                        javascriptWriter.Write("Object.keys(");
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        javascriptWriter.Write(").reduce(function(state,index) { ");
-
-                        javascriptWriter.Write(" state.push({Key: index, Value: ");
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        javascriptWriter.Write("[index] }); return state; }, [])");
-                    }
-                    else
-                    {
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                    }
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
 
                     // When having no other arguments, don't call the function, when it's a .map operation
                     // .Sum()/.Average()/.Select() for example can be called without arguments, which means, 
