@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
 
@@ -134,6 +135,26 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
+        [RavenAction("/admin/debug/memory/query-ws", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task MemoryQueryWs()
+        {
+            if (PlatformDetails.RunningOnLinux == true)
+                throw new IOException("End point runing QueryWorkingSetEx is available only for windows");
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var rc = Win32MemoryQueryMethods.GetMaps();
+                var djv = new DynamicJsonValue
+
+                {
+                    ["Totals"] = rc
+                };
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, djv);
+                }
+                return Task.CompletedTask;
+            }
+        }
 
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
