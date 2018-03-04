@@ -69,17 +69,13 @@ namespace Raven.Server.Dashboard
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
 
                 var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-                var systemCommitLimit = memoryInfoResult.TotalCommittableMemory.GetValue(SizeUnit.Bytes);
-                var committedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes);
-                var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
-
                 var cpuInfo = CpuUsage.Calculate();
 
                 var machineResources = new MachineResources
                 {
-                    TotalMemory = installedMemory,
-                    SystemCommitLimit = systemCommitLimit,
-                    CommitedMemory =  committedMemory,
+                    TotalMemory = memoryInfoResult.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                    SystemCommitLimit = memoryInfoResult.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
+                    CommitedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                     ProcessMemoryUsage = workingSet,
                     IsProcessMemoryRss = PlatformDetails.RunningOnPosix,
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
