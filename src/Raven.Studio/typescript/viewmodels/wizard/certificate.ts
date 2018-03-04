@@ -118,7 +118,7 @@ class certificate extends setupStep {
             .execute()
             .done((hosts: Array<string>) => {
                 cert.certificateCNs(_.uniq(hosts));
-                
+                cert.certificatePassword.clearError();
                 if (!password) {
                     this.model.certificate().fileProtected(false);
                 }
@@ -126,6 +126,7 @@ class certificate extends setupStep {
             .fail((response: JQueryXHR) => {
                 if (response.status === 400) {
                     this.model.certificate().fileProtected(true);
+                    cert.certificatePassword.setError("Invalid password");
                 }
             })
             .always(() => this.spinners.hosts(false));
