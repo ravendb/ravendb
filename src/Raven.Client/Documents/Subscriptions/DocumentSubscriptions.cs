@@ -111,6 +111,7 @@ namespace Raven.Client.Documents.Subscriptions
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
                         JavascriptConversionExtensions.MathSupport.Instance,
+                        new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                         new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0], "this"),
@@ -131,6 +132,7 @@ namespace Raven.Client.Documents.Subscriptions
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
                         JavascriptConversionExtensions.MathSupport.Instance,
+                        new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                         new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
                         JavascriptConversionExtensions.DateTimeSupport.Instance,
