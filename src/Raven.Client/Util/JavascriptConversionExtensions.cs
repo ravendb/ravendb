@@ -440,9 +440,9 @@ namespace Raven.Client.Util
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         javascriptWriter.Write(").reduce(function(state,index) { ");
 
-                        javascriptWriter.Write(" state.push(");
+                        javascriptWriter.Write(" state.push({Key: index, Value: ");
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        javascriptWriter.Write("[index]); return state; }, [])");
+                        javascriptWriter.Write("[index] }); return state; }, [])");
                     }
                     else
                     {
