@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
 
         public int NumberOfQueuedOperations => _operations.Count;
 
-        private string TransactionMergerThreadName => _parent.Name + " transaction merging thread";
+        private string TransactionMergerThreadName => $"'{_parent.Name}' Transaction Merging Thread";
 
         public void Start()
         {
