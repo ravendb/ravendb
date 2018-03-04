@@ -960,7 +960,7 @@ class ioStats extends viewModelBase {
             
             const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
             const indexesExpanded = this.isIndexesExpanded();
-
+            
             for (let envIdx = 0; envIdx < this.data.Environments.length; envIdx++) {
                 const env = this.data.Environments[envIdx];
                 if (!this.filtered(env.Path)) {
@@ -985,6 +985,8 @@ class ioStats extends viewModelBase {
                     for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
                         const file = env.Files[fileIdx];
                        
+                        let lastRegisteredX1 = -1e10;
+                        
                         for (let recentIdx = 0; recentIdx < file.Recent.length; recentIdx++) {
                             const recentItem = file.Recent[recentIdx] as IOMetricsRecentStatsWithCache;
                             const itemStartDateAsInt = recentItem.StartedAsDate.getTime();
@@ -999,8 +1001,17 @@ class ioStats extends viewModelBase {
                                 const yStartItem = yStartPerTypeCache.get(recentItem.Type);
 
                                 const x1 = xScale(recentItem.StartedAsDate);
-                                let dx = extentFunc(recentItem.Duration);
-                                dx = dx < ioStats.minItemWidth ? ioStats.minItemWidth : dx;
+                                const originalDx = extentFunc(recentItem.Duration);
+                                const dx = originalDx < ioStats.minItemWidth ? ioStats.minItemWidth : originalDx;
+                                
+                                let registerTracks = true;
+                                // when item is really small and it is quite close to last *registered* item, skip it
+                                // since we register bigger areas anyway
+                                if (originalDx < 0.5 && x1 < lastRegisteredX1 + 0.8) {
+                                    registerTracks = false;
+                                } else {
+                                    lastRegisteredX1 = x1;
+                                }
 
                                 context.fillRect(x1, yStartItem, dx, ioStats.itemHeight);
                                 
@@ -1008,7 +1019,8 @@ class ioStats extends viewModelBase {
                                 // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack] or it is compression item
                                 if (indexesExpanded || !isIndexTrack) {
 
-                                    if (recentItem.Type !== "Compression") {
+                                    // dx > 15 allows to skip itemSizeText calulcation when width is too low to fit
+                                    if (recentItem.Type !== "Compression" && dx > 15) {
                                         // Calc text size:
                                         const itemSizeText = generalUtils.formatBytesToSize(recentItem.Size);
                                         if (dx > itemSizeText.length * ioStats.charWidthApproximation) {
@@ -1018,17 +1030,21 @@ class ioStats extends viewModelBase {
                                             context.fillText(itemSizeText, x1 + dx / 2, yStartItem + ioStats.trackHeight / 2 + 4);
                                         }
                                     }
-
-                                    // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
-                                    this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
-                                }
-                                else {
-                                    // 3.8 On the closed index track: 
-                                    // Register toggle, so that indexes details will open
-                                    this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, ioStats.itemHeight);
-
-                                    // Register closed index track item for toolip
-                                    this.hitTest.registerClosedTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
+                                    
+                                    if (registerTracks) {
+                                        // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
+                                        this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);    
+                                    }
+                                } else {
+                                    
+                                    if (registerTracks) {
+                                        // 3.8 On the closed index track: 
+                                        // Register toggle, so that indexes details will open
+                                        this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, ioStats.itemHeight);
+    
+                                        // Register closed index track item for toolip
+                                        this.hitTest.registerClosedTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);    
+                                    }
 
                                     // Update closed index track StartEnd array (durations array), used in the tooltip on closed index track items
                                     this.indexesItemsStartEnds.get(recentItem.Type).push([itemStartDateAsInt, itemEndDateAsInt]);
@@ -1174,6 +1190,7 @@ class ioStats extends viewModelBase {
         // xScale.domain has Start & End times of Activity periods
 
         const range = xScale.range(); 
+        const domain = xScale.domain();
        
         context.beginPath();
         context.strokeStyle = ioStats.colors.gaps;
@@ -1186,7 +1203,7 @@ class ioStats extends viewModelBase {
 
             // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
             // Using direct array access to xScale.domain instead
-            const gapStartTime = xScale.domain()[i]; 
+            const gapStartTime = domain[i]; 
             const gapInfo = this.gapFinder.getGapInfoByTime(gapStartTime);
 
             if (gapInfo) {
