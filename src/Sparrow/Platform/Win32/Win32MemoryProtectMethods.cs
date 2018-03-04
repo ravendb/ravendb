@@ -24,6 +24,33 @@ namespace Sparrow.Platform.Win32
             UIntPtr dwLength
         );
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern int VirtualQueryEx(
+            IntPtr hProcess,
+            byte* lpAddress,
+            MEMORY_BASIC_INFORMATION* lpBuffer,
+            UIntPtr dwLength
+        );
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool ReadProcessMemory(
+            IntPtr hProcess,
+            byte* lpBaseAddress,
+            byte* lpBuffer,
+            uint nSize,
+            UIntPtr lpNumberOfBytesRead
+        );
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        public static extern int GetMappedFileName(
+            IntPtr hProcess,
+            void* lpv,
+            byte* lpFilename,
+            uint nSize
+        );
+
+
+
         [StructLayout(LayoutKind.Sequential)]
         public struct MEMORY_BASIC_INFORMATION
         {
