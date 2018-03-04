@@ -4,6 +4,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using System;
 using System.IO;
+using Raven.Database.Extensions;
 using Voron;
 using Voron.Impl.Backup;
 
@@ -14,6 +15,15 @@ namespace Raven.Database.Storage.Voron.Backup
         public RestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, InMemoryRavenConfiguration globalConfiguration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, globalConfiguration, operationOutputCallback)
         {
+            journalLocation = GenerateJournalLocation(_restoreRequest, configuration).ToFullPath();
+        }
+
+        private string GenerateJournalLocation(DatabaseRestoreRequest databaseRestoreRequest, InMemoryRavenConfiguration configuration)
+        {
+            if (!string.IsNullOrWhiteSpace(databaseRestoreRequest.JournalsLocation))
+                return databaseRestoreRequest.JournalsLocation;
+
+            return configuration != null ? configuration.DataDirectory : databaseRestoreRequest.DatabaseLocation;
         }
 
         protected override bool IsValidBackup(string backupFilename)
