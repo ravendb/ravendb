@@ -22,6 +22,7 @@ using Xunit;
 using Order = Raven.Tests.Common.Dto.Faceted.Order;
 using Raven.Tests.Raft;
 using Raven.Tests.Faceted;
+using Raven.Abstractions.Replication;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -72,9 +73,9 @@ namespace Raven.Tryouts
         public static void Main(string[] args)
         {
             
-            using (var test = new DistinctAggregation())
+            using (var test = new WithFailovers())
             {
-                test.GetDistinctValuesForRangeFacets().Wait();
+                test.ReadFromAllWriteToLeaderWithFailoversAndMajorityDown(3, FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers);
             }
             
         }
