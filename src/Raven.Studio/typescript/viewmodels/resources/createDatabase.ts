@@ -127,6 +127,11 @@ class createDatabase extends dialogViewModelBase {
         if (this.databaseModel.isFromBackupOrFromOfflineMigration) {
             this.databaseModel.replication.replicationFactor(1);
         }
+        
+        // if we have single node - select it to make things easier
+        if (this.clusterNodes.length === 1) {
+            this.databaseModel.replication.nodes([this.clusterNodes[0]]);
+        }
     }
 
     private onTopologyLoaded(topology: clusterTopology) {
