@@ -19,7 +19,8 @@ namespace Raven.Database.Storage
 
         protected readonly DatabaseRestoreRequest _restoreRequest;
         protected readonly InMemoryRavenConfiguration Configuration;
-        protected readonly string databaseLocation, indexLocation, indexDefinitionLocation, journalLocation;
+        protected readonly string databaseLocation, indexLocation, indexDefinitionLocation;
+        protected string journalLocation;
 
         protected BaseRestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, InMemoryRavenConfiguration globalConfiguration, Action<string> output)
         {
@@ -29,13 +30,13 @@ namespace Raven.Database.Storage
             indexLocation = GenerateIndexLocation(_restoreRequest, configuration, globalConfiguration).ToFullPath();
             journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
             Configuration = configuration;
-            this.output = output;			
+            this.output = output;
         }
         
         private string GenerateIndexLocation(DatabaseRestoreRequest databaseRestoreRequest, InMemoryRavenConfiguration configuration, InMemoryRavenConfiguration globalConfiguration)
         {
             //If we got the index location in the request use that.
-            if (databaseRestoreRequest.IndexesLocation != null)
+            if (!string.IsNullOrWhiteSpace(databaseRestoreRequest.IndexesLocation))
                 return databaseRestoreRequest.IndexesLocation;
 
             if (globalConfiguration != null)
