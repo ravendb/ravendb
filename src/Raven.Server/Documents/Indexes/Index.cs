@@ -543,7 +543,7 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Disabled)
                 return;
 
-            SetState(IndexState.Normal);
+            SetState(State);
 
             _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
             _indexDisabled = false;
@@ -2197,7 +2197,7 @@ namespace Raven.Server.Documents.Indexes
         {
             DocumentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
 
-            if (_isCompactionInProgress)
+            if (assertState && _isCompactionInProgress)
                 ThrowCompactionInProgress();
 
             if (_initialized == false)
