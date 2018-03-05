@@ -75,6 +75,8 @@ class shell extends viewModelBase {
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
     favNodeBadge = new favNodeBadge();
+    
+    static instance: shell;
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred<boolean>();
@@ -83,7 +85,7 @@ class shell extends viewModelBase {
 
     private onBootstrapFinishedTask = $.Deferred<void>();
     
-    showConnectionLost = ko.pureComputed(() => {
+    static showConnectionLost = ko.pureComputed(() => {
         const serverWideWebSocket = changesContext.default.serverNotifications();
         
         if (!serverWideWebSocket) {
