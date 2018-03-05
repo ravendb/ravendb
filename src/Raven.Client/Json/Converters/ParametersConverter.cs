@@ -1,5 +1,8 @@
 ﻿using System;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes.Suggestions;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -53,6 +56,24 @@ namespace Raven.Client.Json.Converters
                     finally
                     {
                         serializer.TypeNameHandling = oldTypeNameHandling;
+                    }
+                }
+                else if (v is MoreLikeThisOptions || v is FacetOptions || v is SuggestionOptions)
+                {
+                    var oldNullValueHandling = serializer.NullValueHandling;
+                    var oldDefaultValueHandling = serializer.DefaultValueHandling;
+
+                    try
+                    {
+                        serializer.NullValueHandling = NullValueHandling.Ignore;
+                        serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
+
+                        serializer.Serialize(writer, kvp.Value);
+                    }
+                    finally
+                    {
+                        serializer.NullValueHandling = oldNullValueHandling;
+                        serializer.DefaultValueHandling = oldDefaultValueHandling;
                     }
                 }
                 else
