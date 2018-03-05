@@ -11,9 +11,9 @@
                         <span>Refresh</span>
                     </button>
                 </div>
-                <div>Term: <span data-bind="text: topology().currentTerm().toLocaleString()"></span></div>
+                <div data-bind="visible: !noLeader()">Term: <span data-bind="text: topology().currentTerm().toLocaleString()"></span></div>
                 <div class="flex-separator"></div>
-                <div>
+                <div data-bind="visible: !noLeader()">
                     <button class="btn btn-default" title="Cluster observer won't be making any decisions"
                             data-bind="click: suspendObserver, visible: !$root.observerSuspended(), enable: !spinners.toggleObserver(), css: { 'btn-spinner': spinners.toggleObserver() }">
                         <i class="icon-pause"></i>
@@ -43,7 +43,12 @@
     </div>
 </div>
 <script type="text/html" id="empty-cluster-log-template">
-    No entries found.
+    <div class="text-danger" data-bind="visible: $root.noLeader">
+        Cluster Observer Log entries are only available on <strong>Leader</strong> node.
+    </div>
+    <div data-bind="visible: !$root.noLeader()">
+        No entries found.
+    </div>
 </script>
 <div class="tooltip json-preview lg" style="opacity: 0">
     <pre><code class="white-space-pre"></code></pre>
