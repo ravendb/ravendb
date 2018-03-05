@@ -217,6 +217,10 @@ class databaseCreationModel {
 
         const rg1 = /^[^*?"<>\|]*$/; // forbidden characters * ? " < > |
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        const invalidPrefixCheck = (dbName: string) => {
+            const dbToLower = dbName ? dbName.toLocaleLowerCase() : "";
+            return !dbToLower.startsWith("~") && !dbToLower.startsWith("$home") && !dbToLower.startsWith("appdrive:");
+        };
 
         observable.extend({
             maxLength: {
@@ -232,6 +236,10 @@ class databaseCreationModel {
                 validator: (val: string) => !rg3.test(val),
                 message: `The name {0} is forbidden for use!`,
                 params: this.name
+            }, 
+            {
+                validator: (val: string) => invalidPrefixCheck(val),
+                message: "The path is illegal! Paths in RavenDB can't start with 'appdrive:', '~' or '$home'"
             }]
         });
     }
