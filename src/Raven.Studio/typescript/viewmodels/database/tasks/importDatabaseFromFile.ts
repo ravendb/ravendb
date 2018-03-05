@@ -13,7 +13,9 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import EVENTS = require("common/constants/events");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class importDatabaseFromFile extends viewModelBase {
 
@@ -189,6 +191,8 @@ class importDatabaseFromFile extends viewModelBase {
                 .done((operationId: number) => {
                     notificationCenter.instance.openDetailsForOperationById(db, operationId);
     
+                    this.checkIfRevisionsWasEnabled(db, operationId);
+                    
                     new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
                         .execute()
                         .always(() => this.isUploading(false));
@@ -198,6 +202,23 @@ class importDatabaseFromFile extends viewModelBase {
                 messagePublisher.reportError("Invalid import options", response.responseText, response.statusText);
                 this.isUploading(false);
             });
+    }
+    
+    private checkIfRevisionsWasEnabled(db: database, operationId: number) {
+        if (!db.hasRevisionsConfiguration()) {
+            notificationCenter.instance.databaseOperationsWatch.monitorOperation(operationId)
+            .done(() => {
+                new getDatabaseCommand(db.name)
+                    .execute()
+                    .done(dbInfo => {
+                        if (dbInfo.HasRevisionsConfiguration) {
+                            db.hasRevisionsConfiguration(true);
+                            
+                            collectionsTracker.default.configureRevisions(db);
+                        }
+                    })
+            });    
+        }
     }
 
     copyCommandToClipboard() {
