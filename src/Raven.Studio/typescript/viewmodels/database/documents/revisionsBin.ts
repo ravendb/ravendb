@@ -1,4 +1,5 @@
 import appUrl = require("common/appUrl");
+import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsBinEntryCommand = require("commands/database/documents/getRevisionsBinEntryCommand");
@@ -78,6 +79,15 @@ class revisionsBin extends viewModelBase {
                     totalResultCount: totalCount,
                     items: result.items
                 });
+            })
+            .fail((result: JQueryXHR) => {
+                if (result.responseJSON) {
+                    const errorType = result.responseJSON['Type'] || "";
+                    
+                    if (errorType.endsWith("RevisionsDisabledException")) {
+                        router.navigate(appUrl.forDocuments(null,  this.activeDatabase()));
+                    }
+                }
             });
 
         return task;
