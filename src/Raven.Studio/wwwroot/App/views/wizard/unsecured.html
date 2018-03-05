@@ -18,19 +18,19 @@
                            data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode, attr: { title: $root.model.fixTcpPortNumberOnLocalNode() ? 'Fixed by startup parameter': '' }">
                 </div>
             </div>
-            <div data-bind="foreach: ips">
+            <div data-bind="with: ip">
                 <div class="form-group" data-bind="validationElement: ip">
-                    <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
-                        <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
+                    <label class="control-label" data-bind="attr: { for: 'ipInput' }">
+                        <span>IP address<i class="required"></i></span>
                     </label>
                     <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }"> 
                         <input type="text" autocomplete="off" class="form-control"
                                placeholder="Enter server IP address that the server will listen to"
                                title="An IP address that the server will listen to"
-                               data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
+                               data-bind="textInput: ip, attr: { id: 'inInput' }">
                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                         <ul class="dropdown-menu" role="menu" style="display: none;"
-                            data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.model.createIpAutocompleter($parent.ips, ip)">
+                            data-bind="autoComplete: '#inInput', foreach: $root.model.createIpAutocompleter(null, ip)">
                             <li role="presentation" data-bind="click: $parent.ip.bind($parent, $data)" title="The server will listen to this IP">
                                 <a role="menuitem" tabindex="-1" href="#">
                                     <span data-bind="text: $data"></span>
@@ -40,26 +40,6 @@
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
                             <div class="help-block" data-bind="validationMessage: ip"></div>
                         </div>
-                    </div>
-                    <!-- TODO: Bring back after RTM - issue 9869 -->
-                    <!--<button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>-->
-                </div>
-            </div>
-            <!-- TODO: Bring back after RTM - issue 9869 -->
-            <!--<div class="form-group">-->
-                <!--<label class="control-label"></label>-->
-                <!--<div class="flex-grow">-->
-                    <!--<button class="btn btn-default" data-bind="click: addIpAddress">-->
-                        <!--<i class="icon-plus"></i>-->
-                        <!--<span>Add another IP address</span>-->
-                    <!--</button>-->
-                <!--</div>-->
-            <!--</div>-->
-            <div class="form-group">
-                <label class="control-label"></label>
-                <div class="flex-grow">
-                    <div data-bind="validationElement: ips">
-                        <div class="help-block" data-bind="validationMessage: ips"></div>
                     </div>
                 </div>
             </div>
