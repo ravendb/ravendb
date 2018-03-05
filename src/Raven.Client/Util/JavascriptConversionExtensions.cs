@@ -95,6 +95,7 @@ namespace Raven.Client.Util
             {
                 // Rewrite .Count / .Values / .Keys
                 if (context.Node is MemberExpression contextNode
+                    && contextNode.Expression != null
                     && typeof(IDictionary).IsAssignableFrom(contextNode.Expression.Type))
                 {
                     context.PreventDefault();
@@ -129,6 +130,7 @@ namespace Raven.Client.Util
 
                 // Only call it when we do a methodCall on a memberExpression of type dictionary
                 if (context.Node is MethodCallExpression callNode
+                    && callNode.Arguments.Count > 0
                     && typeof(IDictionary).IsAssignableFrom(callNode.Arguments[0].Type))
                 {
                     if (_innerCallExpected == default(DictionaryInnerCall))
@@ -148,6 +150,7 @@ namespace Raven.Client.Util
 
                 // Now we translate the memberExpression
                 if(_innerCallExpected != default(DictionaryInnerCall)
+                    && context.Node != null
                     && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
                 {
                     context.PreventDefault();
