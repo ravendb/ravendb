@@ -20,7 +20,7 @@ namespace Raven.Client.Json.Converters
                 writer.WriteNull();
                 return;
             }
-            
+
             writer.WriteStartObject();
 
             foreach (var kvp in (Parameters)value)
@@ -40,10 +40,23 @@ namespace Raven.Client.Json.Converters
                     var dateTimeOffset = (DateTimeOffset)v;
                     writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
                 }
+                else if (v is object[])
+                {
+                    var oldTypeNameHandling = serializer.TypeNameHandling;
+
+                    try
+                    {
+                        serializer.TypeNameHandling = TypeNameHandling.None;
+
+                        serializer.Serialize(writer, kvp.Value);
+                    }
+                    finally
+                    {
+                        serializer.TypeNameHandling = oldTypeNameHandling;
+                    }
+                }
                 else
                 {
-                    if (v is object[])
-                        serializer.TypeNameHandling = TypeNameHandling.None;
                     serializer.Serialize(writer, kvp.Value);
                 }
             }
@@ -55,7 +68,7 @@ namespace Raven.Client.Json.Converters
         {
             if (reader.TokenType == JsonToken.Null)
                 return null;
-            
+
             var result = new Parameters();
             do
             {
