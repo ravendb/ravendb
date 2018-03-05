@@ -15,6 +15,7 @@ class clusterObserverLog extends viewModelBase {
     decisions = ko.observable<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>();
     topology = clusterTopologyManager.default.topology;
     observerSuspended = ko.observable<boolean>();
+    noLeader = ko.observable<boolean>(false);
 
     private gridController = ko.observable<virtualGridController<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>>();
     columnsSelector = new columnsSelector<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
@@ -33,8 +34,9 @@ class clusterObserverLog extends viewModelBase {
         this.termChanged = ko.pureComputed(() => {
             const topologyTerm = this.topology().currentTerm();
             const dataTerm = this.decisions().Term;
+            const hasLeader = !this.noLeader();
 
-            return topologyTerm !== dataTerm;
+            return hasLeader && topologyTerm !== dataTerm;
         })
     }
 
@@ -83,20 +85,47 @@ class clusterObserverLog extends viewModelBase {
     }
 
     private loadDecisions() {
-        return new getClusterObserverDecisionsCommand()
+        const loadTask = $.Deferred<void>();
+        
+        new getClusterObserverDecisionsCommand()
             .execute()
             .done(response => {
                 response.ObserverLog.reverse();
                 this.decisions(response);
                 this.observerSuspended(response.Suspended);
+                this.noLeader(false);
+                
+                loadTask.resolve();
+            })
+            .fail((response: JQueryXHR) => {
+                if (response && response.responseJSON ) {
+                    const type = response.responseJSON['Type'];
+                    if (type && type.includes("NoLeaderException")) {
+                        this.noLeader(true);
+                        this.decisions({
+                            Term: -1,
+                            ObserverLog: [],
+                            LeaderNode: null, 
+                            Suspended: false,
+                            Iteration: -1
+                        });
+                        loadTask.resolve();
+                        return;
+                    }
+                }
+                
+                loadTask.reject(response);
             });
+        return loadTask;
     }
 
     refresh() {
         this.spinners.refresh(true);
         return this.loadDecisions()
-            .done(() => this.gridController().reset(true))
-            .always(() => this.spinners.refresh(false));
+            .always(() => {
+                this.gridController().reset(true);
+                this.spinners.refresh(false)
+            });
     }
 
     private static formatTimestampAsAgo(time: string): string {
