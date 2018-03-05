@@ -18,10 +18,10 @@ class unsecured extends setupStep {
     attached() {
         super.attached();
 
-        if (this.model.unsecureSetup().ips().length === 0) {
+        if (!this.model.unsecureSetup().ip()) {
             const initialIp = ipEntry.runningOnDocker ? "" : "127.0.0.1";
             
-            this.model.unsecureSetup().ips.push(ipEntry.forIp(initialIp));                       
+            this.model.unsecureSetup().ip(ipEntry.forIp(initialIp));                       
         }
     }    
     
@@ -41,11 +41,9 @@ class unsecured extends setupStep {
     save() {
         let isValid = true;
 
-        this.model.unsecureSetup().ips().forEach(entry => {
-            if (!this.isValid(entry.validationGroup)) {
-                isValid = false;
-            }
-        });
+        if (!this.isValid(this.model.unsecureSetup().ip().validationGroup)) {
+            isValid = false;
+        }
         
         if (!this.isValid(this.model.unsecureSetup().validationGroup)) {
             isValid = false;
