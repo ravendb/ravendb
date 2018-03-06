@@ -30,12 +30,12 @@ namespace Raven.Server.Monitoring.Snmp.Objects
                     var database = Landlord.TryGetOrCreateResourceStore(DatabaseName).Result;
                     var index = GetIndex(database);
                     if (index == null)
-                        return DefaultValue();
+                        return null;
 
                     return GetData(database);
                 }
 
-                return DefaultValue();
+                return null;
             }
         }
 
