@@ -33,8 +33,8 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration>(db, payload, scriptsToReset);
     }
 
-    static forSqlEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration) {
-        return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration>(db, payload);
+    static forSqlEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration, scriptsToReset?: string[]) {
+        return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration>(db, payload, scriptsToReset);
     }    
 }
 

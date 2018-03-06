@@ -9,13 +9,14 @@ class ongoingTaskSqlEtlTransformationModel {
     
     collectionColorIndex: KnockoutComputed<number>;    
     isNew = ko.observable<boolean>(true);
+    resetScript = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup; 
   
     dirtyFlag: () => DirtyFlag;
     
-    constructor(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean) {
-        this.update(dto, isNew);
+    constructor(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean) {
+        this.update(dto, isNew, resetScript);
         
         this.initObservables();
         this.initValidation();
@@ -27,7 +28,8 @@ class ongoingTaskSqlEtlTransformationModel {
         this.dirtyFlag = new ko.DirtyFlag([
             this.name, 
             this.script,
-            this.collection
+            this.collection,
+            this.resetScript
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
@@ -40,7 +42,7 @@ class ongoingTaskSqlEtlTransformationModel {
                 HasLoadAttachment: false,
                 Name: "",
                 Script: ""
-            }, true);
+            }, true, false);
     }
 
     toDto(): Raven.Client.Documents.Operations.ETL.Transformation {
@@ -70,11 +72,12 @@ class ongoingTaskSqlEtlTransformationModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean) {
+    update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean) {
         this.name(dto.Name);
         this.script(dto.Script); 
         this.collection(dto.Collections[0]); // todo: check this..  
         this.isNew(isNew);
+        this.resetScript(resetScript);
     }
 
     getCollectionEntry(collectionName: string) {
