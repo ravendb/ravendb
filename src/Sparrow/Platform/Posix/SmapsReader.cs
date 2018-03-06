@@ -327,7 +327,11 @@ namespace Sparrow.Platform.Posix
                                 ["SharedClean"] = Sizes.Humane(valSharedClean),
                                 ["SharedDirty"] = Sizes.Humane(valSharedDirty),
                                 ["PrivateClean"] = Sizes.Humane(valPrivateClean),
-                                ["PrivateDirty"] = Sizes.Humane(valPrivateDirty)
+                                ["PrivateDirty"] = Sizes.Humane(valPrivateDirty),
+                                ["TotalClean"] = valSharedClean + valPrivateClean,
+                                ["TotalCleanHumanly"] = Sizes.Humane(valSharedClean + valPrivateClean),
+                                ["TotalDirty"] = valSharedDirty + valPrivateDirty,
+                                ["TotalDirtyHumanly"] = Sizes.Humane(valSharedDirty + valPrivateDirty)
                             };
                             dja.Add(djv);
                         }
