@@ -114,7 +114,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
 
-                    var facets = new List<RangeFacet>
+                    var facets = new List<RangeFacet<Foo>>
                     {
                         new RangeFacet<Foo>
                         {
@@ -306,7 +306,7 @@ namespace SlowTests.Tests.Faceted
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var facets = new List<RangeFacet>
+                    var facets = new List<RangeFacet<Foo>>
                     {
                         new RangeFacet<Foo>
                         {
@@ -368,7 +368,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     //new List<RangeFacet>
-                    var facets = new List<RangeFacet>
+                    var facets = new List<RangeFacet<Foo>>
                     {
                         new RangeFacet<Foo>
                         {
