@@ -24,7 +24,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                     return new OctetString(exists.ToString(CultureInfo.InvariantCulture));
                 }
 
-                return DefaultValue();
+                return null;
             }
         }
 
