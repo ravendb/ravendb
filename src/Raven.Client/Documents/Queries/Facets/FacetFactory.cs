@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
     internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>
     {
-        private RangeFacet _range;
+        private RangeFacet<T> _range;
         private Facet _default;
         private readonly HashSet<string> _rqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -53,20 +53,15 @@ namespace Raven.Client.Documents.Queries.Facets
                 throw new ArgumentNullException(nameof(path));
 
             if (_range == null)
-                _range = new RangeFacet();
+                _range = new RangeFacet<T>();
 
-            _range.Ranges.Add(RangeFacet<T>.Parse(path));
-            _range.RangeExpressions = new List<LambdaExpression>
-            {
-                path
-            };
+            _range.Ranges.Add(path);
 
             if (paths != null)
             {
                 foreach (var p in paths)
                 {
-                    _range.Ranges.Add(RangeFacet<T>.Parse(p));
-                    _range.RangeExpressions.Add(p);
+                    _range.Ranges.Add(p);
                 }
             }
 

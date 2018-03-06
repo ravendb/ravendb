@@ -74,9 +74,9 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            Assert.Equal(true, AreFacetsEqual(oldFacets[0], newFacets[0]));
-            Assert.Equal(true, AreFacetsEqual(oldFacets[1], newFacets[1]));
-            Assert.Equal(true, AreFacetsEqual(oldFacets[2], newFacets[2]));
+            Assert.Equal(true, AreFacetsEqual<Test>(oldFacets[0], newFacets[0]));
+            Assert.Equal(true, AreFacetsEqual<Test>(oldFacets[1], newFacets[1]));
+            Assert.Equal(true, AreFacetsEqual<Test>(oldFacets[2], newFacets[2]));
         }
 
         [Fact]
@@ -126,17 +126,17 @@ namespace SlowTests.Tests.Faceted
 
         }
 
-        private bool AreFacetsEqual(FacetBase left, FacetBase right)
+        private bool AreFacetsEqual<T>(FacetBase left, FacetBase right)
         {
             if (left is Facet leftFacet)
             {
-                var rightFacet = right.AsFacet();
+                var rightFacet = (Facet)(Facet<T>)right;
 
                 return leftFacet.FieldName == rightFacet.FieldName;
             }
 
-            var leftRangeFacet = left.AsRangeFacet();
-            var rightRangeFacet = right.AsRangeFacet();
+            var leftRangeFacet = (RangeFacet)left;
+            var rightRangeFacet = (RangeFacet)(RangeFacet<T>)right;
 
             return leftRangeFacet.Ranges.Count == rightRangeFacet.Ranges.Count &&
                 leftRangeFacet.Ranges.All(x => rightRangeFacet.Ranges.Contains(x));

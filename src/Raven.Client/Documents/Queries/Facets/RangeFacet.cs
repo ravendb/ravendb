@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -21,21 +21,50 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<string> Ranges { get; set; }
 
-        /// <summary>
-        /// For client side use only, this is not stored 
-        /// in a facet setup document.
-        /// </summary>
-        [JsonIgnore]
-        public List<LambdaExpression> RangeExpressions { get; set; }
-
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return null;
+            return FacetToken.Create(this, addQueryParameter);
+        }
+    }
+
+    public class RangeFacet<T> : FacetBase
+    {
+        public RangeFacet()
+        {
+            Ranges = new List<Expression<Func<T, bool>>>();
         }
 
-        internal override RangeFacet AsRangeFacet()
+        /// <summary>
+        /// List of facet ranges.
+        /// </summary>
+        public List<Expression<Func<T, bool>>> Ranges { get; set; }
+
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return this;
+            return FacetToken.Create(this, addQueryParameter);
+        }
+
+        public static implicit operator RangeFacet(RangeFacet<T> other)
+        {
+            var ranges = other.Ranges.Select(Parse).ToList();
+
+            return new RangeFacet
+            {
+                Ranges = ranges,
+                Options = other.Options,
+                Aggregations = other.Aggregations,
+                DisplayFieldName = other.DisplayFieldName
+            };
+        }
+
+        public static string Parse(Expression<Func<T, bool>> expr)
+        {
+            return Parse(null, expr, null);
+        }
+
+        public static string Parse(string prefix, LambdaExpression expr)
+        {
+            return Parse(prefix, expr, null);
         }
 
         public static string Parse(string prefix, LambdaExpression expr, Func<object, string> addQueryParameter)
@@ -47,7 +76,7 @@ namespace Raven.Client.Documents.Queries.Facets
                     if (mce.Arguments[0] is MemberExpression src &&
                         mce.Arguments[1] is LambdaExpression le)
                     {
-                        return Parse(GetFieldName(prefix, src), le, addQueryParameter);
+                        return Parse(GetFieldName(prefix, src), le);
                     }
                 }
                 throw new InvalidOperationException("Don't know how to translate expression to facets: " + expr);
@@ -210,7 +239,7 @@ namespace Raven.Client.Documents.Queries.Facets
             throw new NotSupportedException("Not supported unary expression type " + expression.NodeType);
         }
 
-        public static object TryInvokeLambda(Expression expression)
+        private static object TryInvokeLambda(Expression expression)
         {
             try
             {
@@ -246,15 +275,10 @@ namespace Raven.Client.Documents.Queries.Facets
 
         private static string GetStringValue(object value, Func<object, string> addQueryParameter)
         {
-
-            if (addQueryParameter != null &&
-                (value is DateTime || value is DateTimeOffset || value is string))
-            {
+            if (addQueryParameter != null && (value is DateTime || value is DateTimeOffset || value is string))
                 return "$" + addQueryParameter(value);
-            }
 
-            var type = value.GetType().FullName;
-            switch (type)
+            switch (value.GetType().FullName)
             {
                 //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
                 case "System.DateTime":
@@ -274,7 +298,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 case "System.String":
                     return $"'{value}'";
                 default:
-                    throw new InvalidOperationException("Unable to parse the given type " + type + ", into a facet range!!! ");
+                    throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
             }
         }
 
@@ -290,51 +314,6 @@ namespace Raven.Client.Documents.Queries.Facets
             if (op == ExpressionType.GreaterThanOrEqual)
                 return $"{fieldName} >= {valueAsStr}";
             throw new InvalidOperationException("Cannot use " + op + " as facet range. Allowed operators: <, <=, >, >=.");
-        }
-    }
-
-    public class RangeFacet<T> : FacetBase
-    {
-        public RangeFacet()
-        {
-            Ranges = new List<Expression<Func<T, bool>>>();
-        }
-
-        /// <summary>
-        /// List of facet ranges.
-        /// </summary>
-        public List<Expression<Func<T, bool>>> Ranges { get; set; }
-
-        internal override Facet AsFacet()
-        {
-            return null;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return this;
-        }
-
-        public static implicit operator RangeFacet(RangeFacet<T> other)
-        {
-            return new RangeFacet
-            {
-                Options = other.Options,
-                Aggregations = other.Aggregations,
-                DisplayFieldName = other.DisplayFieldName,
-                Ranges = other.Ranges.Select(Parse).ToList(),
-                RangeExpressions = other.Ranges.Cast<LambdaExpression>().ToList()
-            };
-        }
-
-        public static string Parse(Expression<Func<T, bool>> expr)
-        {
-            return Parse(null, (LambdaExpression)expr);
-        }
-
-        public static string Parse(string prefix, LambdaExpression expr)
-        {
-            return RangeFacet.Parse(prefix, expr, null);
         }
     }
 }
