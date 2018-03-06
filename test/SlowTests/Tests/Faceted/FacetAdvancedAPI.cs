@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
-using Sparrow.Extensions;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -123,17 +122,8 @@ namespace SlowTests.Tests.Faceted
             var facet = TriggerConversion(edgeCaseFacet);
             Assert.Equal(2, facet.Ranges.Count);
             Assert.False(string.IsNullOrWhiteSpace(facet.Ranges[0]));
-            Assert.Equal(@"Date > $p1 and Date < $p2", facet.Ranges[1]);
+            Assert.Equal(@"Date > '2001-12-05T00:00:00.0000000' and Date < '2010-12-05T00:00:00.0000000'", facet.Ranges[1]);
 
-            var facetParameterValues = facet.FacetParameters
-                .Select(kvp => ((DateTime)kvp.Value).GetDefaultRavenFormat()).ToList();
-
-            Assert.Equal(3, facetParameterValues.Count);
-            Assert.Equal($"{now:o}", facetParameterValues[0]);
-            Assert.Equal("2001-12-05T00:00:00.0000000", facetParameterValues[1]);
-            Assert.Equal("2010-12-05T00:00:00.0000000", facetParameterValues[2]);
-
-           
         }
 
         private bool AreFacetsEqual(FacetBase left, FacetBase right)

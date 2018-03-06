@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
@@ -56,21 +55,14 @@ namespace SlowTests.Bugs.Facets
             {
                 var o = facetOldSchool[i];
                 var n = facetsNewWay[i];
+
                 Assert.Equal(o.DisplayFieldName, n.DisplayFieldName);
                 Assert.Equal(o.Options, n.Options);
                 Assert.Equal(o.Ranges.Count, n.Ranges.Count);
 
-                //replace the parameters in facetNewWay.Ranges with the actual dates 
-                var newWayRanges = new List<string>(n.Ranges);
-                newWayRanges[0] = newWayRanges[0].Replace("$p0", $"'{dates[0]:o}'");
-                newWayRanges[1] = newWayRanges[1].Replace("$p1", $"'{dates[0]:o}'").Replace("$p2", $"'{dates[1]:o}'");
-                newWayRanges[2] = newWayRanges[2].Replace("$p3", $"'{dates[1]:o}'").Replace("$p4", $"'{dates[2]:o}'");              ;
-                newWayRanges[3] = newWayRanges[3].Replace("$p5", $"'{dates[2]:o}'").Replace("$p6", $"'{dates[3]:o}'");
-                newWayRanges[4] = newWayRanges[4].Replace("$p7", $"'{dates[3]:o}'");
-
                 for (int j = 0; j < o.Ranges.Count; j++)
                 {
-                    Assert.Equal(o.Ranges[j], newWayRanges[j]);
+                    Assert.Equal(o.Ranges[j], n.Ranges[j]);
                 }
 
                 Assert.Equal(o.Aggregations.Count, n.Aggregations.Count);
