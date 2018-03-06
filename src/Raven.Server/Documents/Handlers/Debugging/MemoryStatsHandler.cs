@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     {
                         ["Totals"] = new DynamicJsonValue
                         {
-                            ["RssOrWorkingSet"] = rc.WorkingSet,
+                            ["WorkingSet"] = rc.WorkingSet,
                             ["SharedClean"] = "N/A",
                             ["PrivateClean"] = "N/A",
                             ["TotalClean"] = rc.ProcessClean,
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     ["Totals"] = new DynamicJsonValue
                     {
-                        ["RssOrWorkingSet"] = result.Rss,
+                        ["WorkingSet"] = result.Rss,
                         ["SharedClean"] = result.SharedClean,
                         ["PrivateClean"] = result.PrivateClean,
                         ["TotalClean"] = result.SharedClean + result.PrivateClean,
