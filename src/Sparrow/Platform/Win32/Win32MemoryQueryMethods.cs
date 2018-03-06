@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow.Exceptions;
-using Sparrow.Global;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using static Sparrow.Platform.Win32.Win32MemoryProtectMethods;
@@ -77,25 +78,40 @@ namespace Sparrow.Platform.Win32
         [DllImport("kernel32.dll")]
         public static extern void GetSystemInfo(out SYSTEM_INFO lpSystemInfo);
 
-        private static readonly byte[] VoronPostFix = new Byte[] {(byte)'.', (byte)'v', (byte)'o', (byte)'r', (byte)'o', (byte)'n'};
-        private static readonly byte[] BufferPostFix = new Byte[] { (byte)'.', (byte)'b', (byte)'u', (byte)'f', (byte)'f', (byte)'e', (byte)'r', (byte)'s' };
+        private static readonly byte[][] RelevantFilesPostFixes =
+        {
+            Encoding.ASCII.GetBytes(".voron"),
+            Encoding.ASCII.GetBytes(".buffers")
+        };
+
+        private static readonly UnmanagedBuffersPool BuffersPool = new UnmanagedBuffersPool("AddrWillCauseHardPageFault");
+
+        private static uint? _pageSize;
+        public static uint PageSize
+        {
+            get
+            {
+                if (_pageSize != null)
+                    return _pageSize.Value;
+                GetSystemInfo(out var systemInfo);
+                _pageSize = systemInfo.pageSize;
+                return _pageSize.Value;
+            }
+        }
 
         public static DynamicJsonArray GetMaps()
         {
+            const uint uintMaxVal = uint.MaxValue;
             var dja = new DynamicJsonArray();
 
-            SYSTEM_INFO systemInfo;
-            GetSystemInfo(out systemInfo);
+            GetSystemInfo(out var systemInfo);
 
             var procMinAddress = systemInfo.minimumApplicationAddress;
             var procMaxAddress = systemInfo.maximumApplicationAddress;
             var processHandle = GetCurrentProcess();
 
-            var bytesRead = new UIntPtr(0); // number of bytes read with ReadProcessMemory
             var results = new Dictionary<string, Tuple<long, long>>();
-            var bufferArr = new byte[64 * Constants.Size.Megabyte];
             var filenameString = new byte[2048];
-
 
             while (procMinAddress.ToInt64() < procMaxAddress.ToInt64())
             {
@@ -109,43 +125,37 @@ namespace Sparrow.Platform.Win32
                     memoryBasicInformation.Type == (uint)MemoryTypeConstants.MEM_MAPPED)
                 {
                     var regionSize = memoryBasicInformation.RegionSize.ToInt64();
-                    long offset = 0;
-                    for (long size = 0; size < regionSize + 64 * Constants.Size.Megabyte; size += 64 * Constants.Size.Megabyte)
+                    for (long size = uintMaxVal; size < regionSize + uintMaxVal; size += uintMaxVal)
                     {
-                        var partLength = size <= regionSize ? 64 * Constants.Size.Megabyte : size - regionSize;
-                        fixed (byte* buffer = bufferArr)
-                            ReadProcessMemory(processHandle,
-                                (byte*)memoryBasicInformation.BaseAddress.ToPointer() + offset, buffer, (uint)partLength, bytesRead);
-                        offset += partLength;
+                        var partLength = size > regionSize ? regionSize % uintMaxVal : uintMaxVal;
 
                         var totalDirty = AddrWillCauseHardPageFault((byte*)memoryBasicInformation.BaseAddress.ToPointer(), (uint)partLength,
                             performCount: true);
                         var totalClean = partLength - totalDirty;
                         int stringLength;
                         fixed (byte* pFilename = filenameString)
+                        {
                             stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
 
-                        if (stringLength == 0)
-                            break;
+                            if (stringLength == 0)
+                                break;
 
-                        var posInBuffersPostFix = BufferPostFix.Length - 1;
-                        var posInVoronPostFix = VoronPostFix.Length - 1;
-                        bool matchBufferPostFix = false;
-                        bool matchVoronPostFix = false;
-                        for (int i = stringLength - 1; i >= 0; i--)
-                        {
-                            if (posInBuffersPostFix >= 0 && (i == stringLength - 1 || matchBufferPostFix))
-                                matchBufferPostFix = BufferPostFix[posInBuffersPostFix] == filenameString[i];
-                            posInBuffersPostFix--;
-
-                            if (posInVoronPostFix >= 0 && (i == stringLength - 1 || matchVoronPostFix))
-                                matchVoronPostFix = VoronPostFix[posInVoronPostFix] == filenameString[i];
-                            posInVoronPostFix--;
+                            var foundRelevantFilename = false;
+                            foreach (var item in RelevantFilesPostFixes)
+                            {
+                                fixed (byte* pItem = item)
+                                {
+                                    if (stringLength < item.Length ||
+                                        Memory.Compare(pItem, pFilename + stringLength - item.Length, item.Length) != 0)
+                                        continue;
+                                    foundRelevantFilename = true;
+                                    break;
+                                }
+                            }
+                            if (foundRelevantFilename == false)
+                                break;
                         }
-
-                        if (matchBufferPostFix == false &&
-                            matchVoronPostFix == false)
-                            break;
+                        
 
                         var encodedString = Encodings.Utf8.GetString(filenameString, 0, stringLength);
                         if (results.ContainsKey(encodedString))
@@ -187,27 +197,26 @@ namespace Sparrow.Platform.Win32
             return dja;
         }
 
-        public static bool WillCauseHardPageFault(byte* addr, long length)
+        public static bool WillCauseHardPageFault(byte* address, long length)
         {
             if (length > int.MaxValue)
                 return true; // truelly big sizes are not going to be handled
 
-            return AddrWillCauseHardPageFault(addr, length) > 0;
+            return AddrWillCauseHardPageFault(address, length) > 0;
         }
 
-        public static int AddrWillCauseHardPageFault(byte*addr, long length, bool performCount = false)
+        public static uint AddrWillCauseHardPageFault(byte* address, long length, bool performCount = false)
         {
-            const int pagesize = 64 * Constants.Size.Kilobyte;
-            int count = 0;
-            var remain = length % pagesize == 0 ? 0 : 1;
-            var pages = (length / pagesize) + remain;
+            uint count = 0;
+            var remain = length % PageSize == 0 ? 0 : 1;
+            var pages = (length / PageSize) + remain;
 
             IntPtr wsInfo = IntPtr.Zero;
             PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
             var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[2];
             if (pages > 2)
             {
-                wsInfo = Marshal.AllocHGlobal((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages));
+                wsInfo = new IntPtr(BuffersPool.Allocate((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)).Address);
                 pWsInfo = (PPSAPI_WORKING_SET_EX_INFORMATION*)wsInfo.ToPointer();
             }
             else
@@ -218,10 +227,10 @@ namespace Sparrow.Platform.Win32
             try
             {
                 for (var i = 0; i < pages; i++)
-                    pWsInfo[i].VirtualAddress = addr + (i * pagesize);
+                    pWsInfo[i].VirtualAddress = address + (i * PageSize);
 
                 if (QueryWorkingSetEx(GetCurrentProcess(), (byte*)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) == false)
-                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {new IntPtr(addr).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
+                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx address: {new IntPtr(address).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
 
                 for (int i = 0; i < pages; i++)
                 {
@@ -230,7 +239,7 @@ namespace Sparrow.Platform.Win32
                     {
                         if (performCount == false)
                             return 1;
-                        count += pagesize;
+                        count += PageSize;
                     }
 
                 }
