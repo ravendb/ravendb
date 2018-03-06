@@ -26,19 +26,10 @@ namespace Sparrow.Platform.Win32
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern int VirtualQueryEx(
-      IntPtr hProcess,
-      byte* lpAddress,
-      MEMORY_BASIC_INFORMATION* lpBuffer,
-      UIntPtr dwLength
-        );
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool ReadProcessMemory(
             IntPtr hProcess,
-            byte* lpBaseAddress,
-            byte* lpBuffer,
-            uint nSize,
-            UIntPtr lpNumberOfBytesRead
+            byte* lpAddress,
+            MEMORY_BASIC_INFORMATION* lpBuffer,
+            UIntPtr dwLength
         );
 
         [DllImport("psapi.dll", SetLastError = true)]

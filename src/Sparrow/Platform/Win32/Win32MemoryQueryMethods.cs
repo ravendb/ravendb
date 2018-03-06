@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow.Exceptions;
-using Sparrow.Global;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using static Sparrow.Platform.Win32.Win32MemoryProtectMethods;
@@ -37,8 +39,10 @@ namespace Sparrow.Platform.Win32
         public struct SYSTEM_INFO
         {
             public ushort processorArchitecture;
+
             // ReSharper disable once FieldCanBeMadeReadOnly.Local
             ushort reserved;
+
             public uint pageSize;
             public IntPtr minimumApplicationAddress;
             public IntPtr maximumApplicationAddress;
@@ -77,86 +81,112 @@ namespace Sparrow.Platform.Win32
         [DllImport("kernel32.dll")]
         public static extern void GetSystemInfo(out SYSTEM_INFO lpSystemInfo);
 
-        private static readonly byte[] VoronPostFix = new Byte[] { (byte)'.', (byte)'v', (byte)'o', (byte)'r', (byte)'o', (byte)'n' };
-        private static readonly byte[] BufferPostFix = new Byte[] { (byte)'.', (byte)'b', (byte)'u', (byte)'f', (byte)'f', (byte)'e', (byte)'r', (byte)'s' };
-
-        public static DynamicJsonArray GetMaps()
+        private static readonly byte[][] RelevantFilesPostFixes =
         {
+            Encoding.ASCII.GetBytes(".voron"),
+            Encoding.ASCII.GetBytes(".buffers")
+        };
+
+        private static readonly UnmanagedBuffersPool BuffersPool = new UnmanagedBuffersPool("AddressWillCauseHardPageFault");
+
+        private static uint? _pageSize;
+
+        public static uint PageSize
+        {
+            get
+            {
+                if (_pageSize != null)
+                    return _pageSize.Value;
+                GetSystemInfo(out var systemInfo);
+                _pageSize = systemInfo.pageSize;
+                return _pageSize.Value;
+            }
+        }
+
+        private static string GetEncodedFilename(IntPtr processHandle, ref MEMORY_BASIC_INFORMATION memoryBasicInformation)
+        {
+            var memData = BuffersPool.Allocate(2048);
+            var pFilename = memData.Address;
+            try
+            {
+                int stringLength;
+                stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
+
+                if (stringLength == 0)
+                    return null;
+
+                var foundRelevantFilename = false;
+                foreach (var item in RelevantFilesPostFixes)
+                {
+                    fixed (byte* pItem = item)
+                    {
+                        if (stringLength < item.Length ||
+                            Memory.Compare(pItem, pFilename + stringLength - item.Length, item.Length) != 0)
+                            continue;
+                        foundRelevantFilename = true;
+                        break;
+                    }
+                }
+                if (foundRelevantFilename == false)
+                    return null;
+                return Encodings.Utf8.GetString(pFilename, stringLength);
+            }
+            finally
+            {
+                BuffersPool.Return(memData);
+            }
+        }
+
+        public static (long WorkingSet, long ProcessClean, DynamicJsonArray Json) GetMaps()
+        {
+            long processClean = 0;
+
+            const uint uintMaxVal = uint.MaxValue;
             var dja = new DynamicJsonArray();
 
-            SYSTEM_INFO systemInfo;
-            GetSystemInfo(out systemInfo);
+            GetSystemInfo(out var systemInfo);
 
             var procMinAddress = systemInfo.minimumApplicationAddress;
             var procMaxAddress = systemInfo.maximumApplicationAddress;
             var processHandle = GetCurrentProcess();
-
-            var bytesRead = new UIntPtr(0); // number of bytes read with ReadProcessMemory
             var results = new Dictionary<string, Tuple<long, long>>();
-            var bufferArr = new byte[64 * Constants.Size.Megabyte];
-            var filenameString = new byte[2048];
-
 
             while (procMinAddress.ToInt64() < procMaxAddress.ToInt64())
             {
                 MEMORY_BASIC_INFORMATION memoryBasicInformation;
-                VirtualQueryEx(processHandle, (byte*) procMinAddress.ToPointer(),
+                VirtualQueryEx(processHandle, (byte*)procMinAddress.ToPointer(),
                     &memoryBasicInformation, new UIntPtr((uint)sizeof(MEMORY_BASIC_INFORMATION)));
 
                 // if this memory chunk is accessible
-                if (memoryBasicInformation.Protect == (uint) MemoryProtectionConstants.PAGE_READWRITE &&
-                    memoryBasicInformation.State == (uint) MemoryStateConstants.MEM_COMMIT &&
-                    memoryBasicInformation.Type == (uint) MemoryTypeConstants.MEM_MAPPED)
+                if (memoryBasicInformation.Protect == (uint)MemoryProtectionConstants.PAGE_READWRITE &&
+                    memoryBasicInformation.State == (uint)MemoryStateConstants.MEM_COMMIT &&
+                    memoryBasicInformation.Type == (uint)MemoryTypeConstants.MEM_MAPPED)
                 {
-                    var regionSize = memoryBasicInformation.RegionSize.ToInt64();
-                    long offset = 0;
-                    for (long size = 0; size<regionSize + 64 * Constants.Size.Megabyte; size += 64 * Constants.Size.Megabyte)
+                    var encodedString = GetEncodedFilename(processHandle, ref memoryBasicInformation);
+                    if (encodedString != null)
                     {
-                        var partLength = size <= regionSize ? 64 * Constants.Size.Megabyte : size - regionSize;
-                        fixed (byte* buffer = bufferArr)
-ReadProcessMemory(processHandle,
-(byte*)memoryBasicInformation.BaseAddress.ToPointer() + offset, buffer, (uint)partLength, bytesRead);
-                        offset += partLength;
-
-                        var totalDirty = AddrWillCauseHardPageFault((byte*)memoryBasicInformation.BaseAddress.ToPointer(), (uint)partLength,
-performCount: true);
-                        var totalClean = partLength - totalDirty;
-                        int stringLength;
-                        fixed (byte* pFilename = filenameString)
-stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
-
-                        if (stringLength == 0)
-                            break;
-
-                        var posInBuffersPostFix = BufferPostFix.Length - 1;
-                        var posInVoronPostFix = VoronPostFix.Length - 1;
-                        bool matchBufferPostFix = false;
-                        bool matchVoronPostFix = false;
-                        for (int i = stringLength - 1; i >= 0; i--)
+                        var regionSize = memoryBasicInformation.RegionSize.ToInt64();
+                        for (long size = uintMaxVal; size < regionSize + uintMaxVal; size += uintMaxVal)
                         {
-                            if (posInBuffersPostFix >= 0 && (i == stringLength - 1 || matchBufferPostFix))
-                                matchBufferPostFix = BufferPostFix[posInBuffersPostFix] == filenameString[i];
-                            posInBuffersPostFix--;
+                            var partLength = size > regionSize ? regionSize % uintMaxVal : uintMaxVal;
 
-                            if (posInVoronPostFix >= 0 && (i == stringLength - 1 || matchVoronPostFix))
-                                matchVoronPostFix = VoronPostFix[posInVoronPostFix] == filenameString[i];
-                            posInVoronPostFix--;
-                        }
+                            var totalDirty = AddressWillCauseHardPageFault((byte*)memoryBasicInformation.BaseAddress.ToPointer(), (uint)partLength,
+                                performCount: true);
+                            var totalClean = partLength - totalDirty;
 
-                        if (matchBufferPostFix == false &&
-                            matchVoronPostFix == false)
-                            break;
+                            if (results.TryGetValue(encodedString, out var values))
+                            {
+                                var prevValClean = values.Item1 + totalClean;
+                                var prevValDirty = values.Item2 + totalDirty;
+                                results[encodedString] = new Tuple<long, long>(prevValClean, prevValDirty);
+                            }
+                            else
+                            {
+                                results[encodedString] = new Tuple<long, long>(totalClean, totalDirty);
+                            }
 
-                        var encodedString = Encodings.Utf8.GetString(filenameString, 0, stringLength);
-                        if (results.ContainsKey(encodedString))
-                        {
-                            var prevValClean = results[encodedString].Item1 + totalClean;
-                            var prevValDirty = results[encodedString].Item2 + totalDirty;
-                            results[encodedString] = new Tuple<long, long>(prevValClean, prevValDirty);
-                        }
-                        else
-                        {
-                            results[encodedString] = new Tuple<long, long>(totalClean, totalDirty);
+                            processClean += totalClean;
+
                         }
                     }
                 }
@@ -165,49 +195,61 @@ stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddre
                 procMinAddress = new IntPtr(procMinAddress.ToInt64() + memoryBasicInformation.RegionSize.ToInt64());
             }
 
+
+
+
+
             foreach (var result in results)
             {
                 var clean = result.Value.Item1;
                 var dirty = result.Value.Item2;
-                var djaInner = new DynamicJsonArray();
-                var djvInner = new DynamicJsonValue
+
+                var djv = new DynamicJsonValue
                 {
+                    ["File"] = result.Key,
+                    ["Size"] = "N/A",
+                    ["Rss"] = "N/A",
+                    ["SharedClean"] = "N/A",
+                    ["SharedDirty"] = "N/A",
+                    ["PrivateClean"] = "N/A",
+                    ["PrivateDirty"] = "N/A",
                     ["TotalClean"] = clean,
                     ["TotalCleanHumanly"] = Sizes.Humane(clean),
                     ["TotalDirty"] = dirty,
                     ["TotalDirtyHumanly"] = Sizes.Humane(dirty)
                 };
-                djaInner.Add(djvInner);
 
-                dja.Add(new DynamicJsonValue
-                {
-                    [result.Key] = djaInner
-                });
+                dja.Add(djv);
             }
-            return dja;
+
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                var workingSet = currentProcess.WorkingSet64;
+                return (workingSet, processClean, dja);
+            }
         }
 
-        public static bool WillCauseHardPageFault(byte* addr, long length)
+        public static bool WillCauseHardPageFault(byte* address, long length)
         {
             if (length > int.MaxValue)
                 return true; // truelly big sizes are not going to be handled
 
-            return AddrWillCauseHardPageFault(addr, length) > 0;
+            return AddressWillCauseHardPageFault(address, length) > 0;
         }
 
-        public static int AddrWillCauseHardPageFault(byte* addr, long length, bool performCount = false)
+        public static uint AddressWillCauseHardPageFault(byte* address, long length, bool performCount = false)
         {
-            const int pagesize = 64 * Constants.Size.Kilobyte;
-            int count = 0;
-            var remain = length % pagesize == 0 ? 0 : 1;
-            var pages = (length / pagesize) + remain;
+            uint count = 0;
+            var remain = length % PageSize == 0 ? 0 : 1;
+            var pages = (length / PageSize) + remain;
+            AllocatedMemoryData memData = null;
 
-            IntPtr wsInfo = IntPtr.Zero;
             PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
             var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[2];
             if (pages > 2)
             {
-                wsInfo = Marshal.AllocHGlobal((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages));
+                memData = BuffersPool.Allocate((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages));
+                var wsInfo = new IntPtr(memData.Address);
                 pWsInfo = (PPSAPI_WORKING_SET_EX_INFORMATION*)wsInfo.ToPointer();
             }
             else
@@ -218,10 +260,11 @@ stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddre
             try
             {
                 for (var i = 0; i < pages; i++)
-                    pWsInfo[i].VirtualAddress = addr + (i * pagesize);
+                    pWsInfo[i].VirtualAddress = address + (i * PageSize);
 
                 if (QueryWorkingSetEx(GetCurrentProcess(), (byte*)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) == false)
-                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {new IntPtr(addr).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
+                    throw new MemoryInfoException(
+                        $"Failed to QueryWorkingSetEx address: {new IntPtr(address).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
 
                 for (int i = 0; i < pages; i++)
                 {
@@ -230,16 +273,19 @@ stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddre
                     {
                         if (performCount == false)
                             return 1;
-                        count += pagesize;
+                        count += PageSize;
                     }
+
                 }
                 return count;
 
             }
             finally
             {
-                if (wsInfo != IntPtr.Zero)
-                    Marshal.FreeHGlobal(wsInfo);
+                if (memData != null)
+                {
+                    BuffersPool.Return(memData);
+                }
             }
         }
     }

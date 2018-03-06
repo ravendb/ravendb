@@ -7,12 +7,12 @@ namespace Sparrow.Platform.Posix
 {
     public static unsafe class PosixMemoryQueryMethods
     {
-        public static bool WillCauseHardPageFault(byte* addr, long length)
+        public static bool WillCauseHardPageFault(byte* address, long length)
         {
             if (length > int.MaxValue)
                 return true; // truelly big sizes are not going to be handled
 
-            Debug.Assert(new IntPtr(addr).ToInt64() % Syscall.PageSize == 0);
+            Debug.Assert(new IntPtr(address).ToInt64() % Syscall.PageSize == 0);
 
             var vecSize = (int)((length + Syscall.PageSize - 1) / Syscall.PageSize);
 
@@ -31,8 +31,8 @@ namespace Sparrow.Platform.Posix
 
             try
             {
-                if (Syscall.mincore(addr, new IntPtr(length), pVec) != 0)
-                    throw new MemoryInfoException($"Failed to mincore addr: {new IntPtr(addr).ToInt64()}, with length: {length}. Last Error = {Marshal.GetLastWin32Error()}");
+                if (Syscall.mincore(address, new IntPtr(length), pVec) != 0)
+                    throw new MemoryInfoException($"Failed to mincore address: {new IntPtr(address).ToInt64()}, with length: {length}. Last Error = {Marshal.GetLastWin32Error()}");
 
                 for (var i = 0; i < vecSize; i++)
                 {
