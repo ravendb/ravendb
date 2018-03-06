@@ -56,12 +56,17 @@ namespace Raven.Client.Documents.Queries.Facets
                 _range = new RangeFacet();
 
             _range.Ranges.Add(RangeFacet<T>.Parse(path));
+            _range.RangeExpressions = new List<LambdaExpression>
+            {
+                path
+            };
 
             if (paths != null)
             {
                 foreach (var p in paths)
                 {
                     _range.Ranges.Add(RangeFacet<T>.Parse(p));
+                    _range.RangeExpressions.Add(p);
                 }
             }
 

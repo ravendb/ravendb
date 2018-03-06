@@ -17,7 +17,21 @@ namespace Raven.Client.Documents.Queries.Facets
         /// <summary>
         /// List of range facets.
         /// </summary>
-        public List<RangeFacet> RangeFacets { get; set; }
+        public List<RangeFacet> RangeFacets
+        {
+            get => _rangeFacets;
+            set
+            {
+                foreach (var rangeFacet in value)
+                {
+                    rangeFacet.RangeExpressions = null;
+                }
+
+                _rangeFacets = value;
+            }
+        }
+
+        private List<RangeFacet> _rangeFacets;
 
         public FacetSetup()
         {
