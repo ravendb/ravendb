@@ -44,7 +44,7 @@
                         <i class="icon-upload"></i>
                         <span>Upload client certificate</span>
                     </button>
-                    <button class="btn btn-default" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Exports cluster certificates into .pfx file">
+                    <button class="btn btn-default js-export-certificates" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Export the server certificate(s) of the cluster without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
                         <i class="icon-export"></i>
                         <span>Export cluster certificates</span>
                     </button>

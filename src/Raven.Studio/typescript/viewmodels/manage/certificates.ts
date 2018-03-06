@@ -68,6 +68,11 @@ class certificates extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        $(".js-export-certificates").tooltip({
+            container: "body",
+            placement: "right"
+        });
+        
         this.model.subscribe(model  => {
             if (model) {
                 this.initPopover();
