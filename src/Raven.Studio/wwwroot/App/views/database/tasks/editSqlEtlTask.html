@@ -245,10 +245,8 @@
                             <label><strong>Collection:</strong></label>
                             <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
                                 <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           data-bind="textInput: collection, disable: $root.collectionNames().length === 0, 
-                                                      attr: { 'title': $root.collectionNames().length === 0 ? 'No collections are defined yet' : 'Select a collection' }"
-                                           placeholder="Select a collection">
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" title="Select/enter the collection name"
+                                           data-bind="textInput: collection" placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu max-height"
                                         data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
