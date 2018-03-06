@@ -84,7 +84,7 @@ namespace Sparrow.Platform.Win32
             Encoding.ASCII.GetBytes(".buffers")
         };
 
-        private static readonly UnmanagedBuffersPool BuffersPool = new UnmanagedBuffersPool("AddrWillCauseHardPageFault");
+        private static readonly UnmanagedBuffersPool BuffersPool = new UnmanagedBuffersPool("AddressWillCauseHardPageFault");
 
         private static uint? _pageSize;
         public static uint PageSize
@@ -99,6 +99,35 @@ namespace Sparrow.Platform.Win32
             }
         }
 
+        private static string GetEncodedFilename(IntPtr processHandle, MEMORY_BASIC_INFORMATION memoryBasicInformation)
+        {
+            var filenameString = new byte[2048];
+            int stringLength;
+            fixed (byte* pFilename = filenameString)
+            {
+                stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
+
+                if (stringLength == 0)
+                    return null;
+
+                var foundRelevantFilename = false;
+                foreach (var item in RelevantFilesPostFixes)
+                {
+                    fixed (byte* pItem = item)
+                    {
+                        if (stringLength < item.Length ||
+                            Memory.Compare(pItem, pFilename + stringLength - item.Length, item.Length) != 0)
+                            continue;
+                        foundRelevantFilename = true;
+                        break;
+                    }
+                }
+                if (foundRelevantFilename == false)
+                    return null;
+            }
+            return Encodings.Utf8.GetString(filenameString, 0, stringLength);
+        }
+
         public static DynamicJsonArray GetMaps()
         {
             const uint uintMaxVal = uint.MaxValue;
@@ -109,9 +138,7 @@ namespace Sparrow.Platform.Win32
             var procMinAddress = systemInfo.minimumApplicationAddress;
             var procMaxAddress = systemInfo.maximumApplicationAddress;
             var processHandle = GetCurrentProcess();
-
             var results = new Dictionary<string, Tuple<long, long>>();
-            var filenameString = new byte[2048];
 
             while (procMinAddress.ToInt64() < procMaxAddress.ToInt64())
             {
@@ -124,49 +151,28 @@ namespace Sparrow.Platform.Win32
                     memoryBasicInformation.State == (uint)MemoryStateConstants.MEM_COMMIT &&
                     memoryBasicInformation.Type == (uint)MemoryTypeConstants.MEM_MAPPED)
                 {
-                    var regionSize = memoryBasicInformation.RegionSize.ToInt64();
-                    for (long size = uintMaxVal; size < regionSize + uintMaxVal; size += uintMaxVal)
+                    var encodedString = GetEncodedFilename(processHandle, memoryBasicInformation);
+                    if (encodedString != null)
                     {
-                        var partLength = size > regionSize ? regionSize % uintMaxVal : uintMaxVal;
-
-                        var totalDirty = AddrWillCauseHardPageFault((byte*)memoryBasicInformation.BaseAddress.ToPointer(), (uint)partLength,
-                            performCount: true);
-                        var totalClean = partLength - totalDirty;
-                        int stringLength;
-                        fixed (byte* pFilename = filenameString)
+                        var regionSize = memoryBasicInformation.RegionSize.ToInt64();
+                        for (long size = uintMaxVal; size < regionSize + uintMaxVal; size += uintMaxVal)
                         {
-                            stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
+                            var partLength = size > regionSize ? regionSize % uintMaxVal : uintMaxVal;
 
-                            if (stringLength == 0)
-                                break;
+                            var totalDirty = AddressWillCauseHardPageFault((byte*)memoryBasicInformation.BaseAddress.ToPointer(), (uint)partLength,
+                                performCount: true);
+                            var totalClean = partLength - totalDirty;
 
-                            var foundRelevantFilename = false;
-                            foreach (var item in RelevantFilesPostFixes)
+                            if (results.TryGetValue(encodedString, out var values))
                             {
-                                fixed (byte* pItem = item)
-                                {
-                                    if (stringLength < item.Length ||
-                                        Memory.Compare(pItem, pFilename + stringLength - item.Length, item.Length) != 0)
-                                        continue;
-                                    foundRelevantFilename = true;
-                                    break;
-                                }
+                                var prevValClean = values.Item1 + totalClean;
+                                var prevValDirty = values.Item2 + totalDirty;
+                                results[encodedString] = new Tuple<long, long>(prevValClean, prevValDirty);
                             }
-                            if (foundRelevantFilename == false)
-                                break;
-                        }
-                        
-
-                        var encodedString = Encodings.Utf8.GetString(filenameString, 0, stringLength);
-                        if (results.ContainsKey(encodedString))
-                        {
-                            var prevValClean = results[encodedString].Item1 + totalClean;
-                            var prevValDirty = results[encodedString].Item2 + totalDirty;
-                            results[encodedString] = new Tuple<long, long>(prevValClean, prevValDirty);
-                        }
-                        else
-                        {
-                            results[encodedString] = new Tuple<long, long>(totalClean, totalDirty);
+                            else
+                            {
+                                results[encodedString] = new Tuple<long, long>(totalClean, totalDirty);
+                            }
                         }
                     }
                 }
@@ -202,21 +208,23 @@ namespace Sparrow.Platform.Win32
             if (length > int.MaxValue)
                 return true; // truelly big sizes are not going to be handled
 
-            return AddrWillCauseHardPageFault(address, length) > 0;
+            return AddressWillCauseHardPageFault(address, length) > 0;
         }
 
-        public static uint AddrWillCauseHardPageFault(byte* address, long length, bool performCount = false)
+        public static uint AddressWillCauseHardPageFault(byte* address, long length, bool performCount = false)
         {
             uint count = 0;
             var remain = length % PageSize == 0 ? 0 : 1;
             var pages = (length / PageSize) + remain;
+            AllocatedMemoryData memData = null;
 
             IntPtr wsInfo = IntPtr.Zero;
             PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
             var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[2];
             if (pages > 2)
             {
-                wsInfo = new IntPtr(BuffersPool.Allocate((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)).Address);
+                memData = BuffersPool.Allocate((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages));
+                wsInfo = new IntPtr(memData.Address);
                 pWsInfo = (PPSAPI_WORKING_SET_EX_INFORMATION*)wsInfo.ToPointer();
             }
             else
@@ -248,8 +256,10 @@ namespace Sparrow.Platform.Win32
             }
             finally
             {
-                if (wsInfo != IntPtr.Zero)
-                    Marshal.FreeHGlobal(wsInfo);
+                if (memData != null)
+                {
+                    BuffersPool.Return(memData);
+                }
             }
         }
     }

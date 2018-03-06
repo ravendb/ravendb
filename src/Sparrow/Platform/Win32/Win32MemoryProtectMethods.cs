@@ -32,15 +32,6 @@ namespace Sparrow.Platform.Win32
             UIntPtr dwLength
         );
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool ReadProcessMemory(
-            IntPtr hProcess,
-            byte* lpBaseAddress,
-            byte* lpBuffer,
-            uint nSize,
-            UIntPtr lpNumberOfBytesRead
-        );
-
         [DllImport("psapi.dll", SetLastError = true)]
         public static extern int GetMappedFileName(
             IntPtr hProcess,
