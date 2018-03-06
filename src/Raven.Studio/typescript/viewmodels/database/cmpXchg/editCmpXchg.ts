@@ -8,7 +8,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import copyToClipboard = require("common/copyToClipboard");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCompareExchangeValueCommand = require("commands/database/cmpXchg/getCompareExchangeValueCommand");
-import saveCompareExchangeValueCommand = require("commands/database/cmpXChg/saveCompareExchangeValueCommand");
+import saveCompareExchangeValueCommand = require("commands/database/cmpXchg/saveCompareExchangeValueCommand");
 import deleteCompareExchangeConfirm = require("viewmodels/database/documents/deleteCompareExchangeConfirm");
 import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeProgress");
 
