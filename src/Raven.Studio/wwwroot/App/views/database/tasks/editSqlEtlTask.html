@@ -258,6 +258,12 @@
                                 <span class="help-block" data-bind="validationMessage: collection"></span>
                             </div>
                         </div>   
+                        
+                         <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew()">
+                            <input id="reset" type="checkbox" data-bind="checked: resetScript">
+                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                        </div>
+                        
                         <div class="flex-noshrink">
                             <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
                                 <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
