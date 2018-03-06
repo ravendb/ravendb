@@ -55,19 +55,20 @@ namespace Raven.Client.Documents.Queries.Facets
             if (_range == null)
                 _range = new RangeFacet();
 
-            var facetParameters = new Parameters();
-
-            _range.Ranges.Add(RangeFacet<T>.Parse(path, facetParameters));
+            _range.Ranges.Add(RangeFacet<T>.Parse(path));
+            _range.RangeExpressions = new List<LambdaExpression>
+            {
+                path
+            };
 
             if (paths != null)
             {
                 foreach (var p in paths)
                 {
-                    _range.Ranges.Add(RangeFacet<T>.Parse(p, facetParameters));
+                    _range.Ranges.Add(RangeFacet<T>.Parse(p));
+                    _range.RangeExpressions.Add(p);
                 }
             }
-
-            _range.FacetParameters = facetParameters;
 
             return this;
         }
