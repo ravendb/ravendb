@@ -108,7 +108,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public Task MemorySmaps()
         {
             if (PlatformDetails.RunningOnLinux == false)
-                throw new IOException("End point runing smaps is available only for posix");
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var rc = Win32MemoryQueryMethods.GetMaps();
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Totals"] = rc
+                    };
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, djv);
+                    }
+                    return Task.CompletedTask;
+                }
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -127,26 +141,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["Details"] = result.Json
                 };
 
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(write, djv);
-                }
-                return Task.CompletedTask;
-            }
-        }
-
-        [RavenAction("/admin/debug/memory/query-ws", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task MemoryQueryWs()
-        {
-            if (PlatformDetails.RunningOnLinux == true)
-                throw new IOException("End point runing QueryWorkingSetEx is available only for windows");
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var rc = Win32MemoryQueryMethods.GetMaps();
-                var djv = new DynamicJsonValue
-                {
-                    ["Totals"] = rc
-                };
                 using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
