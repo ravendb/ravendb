@@ -114,7 +114,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var rc = Win32MemoryQueryMethods.GetMaps();
                     var djv = new DynamicJsonValue
                     {
-                        ["Totals"] = rc
+                        ["Totals"] = new DynamicJsonValue
+                        {
+                            ["RssOrWorkingSet"] = rc.WorkingSet,
+                            ["SharedClean"] = "N/A",
+                            ["PrivateClean"] = "N/A",
+                            ["TotalClean"] = rc.ProcessClean,
+                            ["RssHumanly"] = Sizes.Humane(rc.WorkingSet),
+                            ["SharedCleanHumanly"] = "N/A",
+                            ["PrivateCleanHumanly"] = "N/A",
+                            ["TotalCleanHumanly"] = Sizes.Humane(rc.ProcessClean)
+                        },
+                        ["Details"] = rc.Json
                     };
                     using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -131,12 +142,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     ["Totals"] = new DynamicJsonValue
                     {
-                        ["Rss"] = result.Rss,
+                        ["RssOrWorkingSet"] = result.Rss,
                         ["SharedClean"] = result.SharedClean,
                         ["PrivateClean"] = result.PrivateClean,
+                        ["TotalClean"] = result.SharedClean + result.PrivateClean,
                         ["RssHumanly"] = Sizes.Humane(result.Rss),
                         ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
-                        ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean)
+                        ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),
+                        ["TotalCleanHumanly"] = Sizes.Humane(result.SharedClean + result.PrivateClean)
                     },
                     ["Details"] = result.Json
                 };

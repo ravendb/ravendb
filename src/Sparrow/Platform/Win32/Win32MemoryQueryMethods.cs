@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Exceptions;
@@ -99,12 +100,13 @@ namespace Sparrow.Platform.Win32
             }
         }
 
-        private static string GetEncodedFilename(IntPtr processHandle, MEMORY_BASIC_INFORMATION memoryBasicInformation)
+        private static string GetEncodedFilename(IntPtr processHandle, ref MEMORY_BASIC_INFORMATION memoryBasicInformation)
         {
-            var filenameString = new byte[2048];
-            int stringLength;
-            fixed (byte* pFilename = filenameString)
+            var memData = BuffersPool.Allocate(2048);
+            var pFilename = memData.Address;
+            try
             {
+                int stringLength;
                 stringLength = GetMappedFileName(processHandle, memoryBasicInformation.BaseAddress.ToPointer(), pFilename, 2048);
 
                 if (stringLength == 0)
@@ -124,12 +126,18 @@ namespace Sparrow.Platform.Win32
                 }
                 if (foundRelevantFilename == false)
                     return null;
+                return Encodings.Utf8.GetString(pFilename, stringLength);
             }
-            return Encodings.Utf8.GetString(filenameString, 0, stringLength);
+            finally
+            {
+                BuffersPool.Return(memData);
+            }
         }
 
-        public static DynamicJsonArray GetMaps()
+        public static (long WorkingSet, long ProcessClean, DynamicJsonArray Json) GetMaps()
         {
+            long processClean = 0;
+
             const uint uintMaxVal = uint.MaxValue;
             var dja = new DynamicJsonArray();
 
@@ -151,7 +159,7 @@ namespace Sparrow.Platform.Win32
                     memoryBasicInformation.State == (uint)MemoryStateConstants.MEM_COMMIT &&
                     memoryBasicInformation.Type == (uint)MemoryTypeConstants.MEM_MAPPED)
                 {
-                    var encodedString = GetEncodedFilename(processHandle, memoryBasicInformation);
+                    var encodedString = GetEncodedFilename(processHandle, ref memoryBasicInformation);
                     if (encodedString != null)
                     {
                         var regionSize = memoryBasicInformation.RegionSize.ToInt64();
@@ -173,6 +181,9 @@ namespace Sparrow.Platform.Win32
                             {
                                 results[encodedString] = new Tuple<long, long>(totalClean, totalDirty);
                             }
+
+                            processClean += totalClean;
+
                         }
                     }
                 }
@@ -181,26 +192,38 @@ namespace Sparrow.Platform.Win32
                 procMinAddress = new IntPtr(procMinAddress.ToInt64() + memoryBasicInformation.RegionSize.ToInt64());
             }
 
+
+            
+
+
             foreach (var result in results)
             {
                 var clean = result.Value.Item1;
                 var dirty = result.Value.Item2;
-                var djaInner = new DynamicJsonArray();
-                var djvInner = new DynamicJsonValue
+
+                var djv = new DynamicJsonValue
                 {
+                    ["File"] = result.Key,
+                    ["Size"] = "N/A",
+                    ["Rss"] = "N/A",
+                    ["SharedClean"] = "N/A",
+                    ["SharedDirty"] = "N/A",
+                    ["PrivateClean"] = "N/A",
+                    ["PrivateDirty"] = "N/A",
                     ["TotalClean"] = clean,
                     ["TotalCleanHumanly"] = Sizes.Humane(clean),
                     ["TotalDirty"] = dirty,
                     ["TotalDirtyHumanly"] = Sizes.Humane(dirty)
                 };
-                djaInner.Add(djvInner);
 
-                dja.Add(new DynamicJsonValue
-                {
-                    [result.Key] = djaInner
-                });
+                dja.Add(djv);
             }
-            return dja;
+
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                var workingSet = currentProcess.WorkingSet64;
+                return (workingSet, processClean, dja);
+            }
         }
 
         public static bool WillCauseHardPageFault(byte* address, long length)
