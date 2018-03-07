@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -11,14 +12,9 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public string FieldName { get; set; }
 
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return this;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return null;
+            return FacetToken.Create(this, addQueryParameter);
         }
     }
 
@@ -40,14 +36,10 @@ namespace Raven.Client.Documents.Queries.Facets
             };
         }
 
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return this;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return null;
+            var facet = (Facet)this;
+            return facet.ToFacetToken(addQueryParameter);
         }
     }
 }

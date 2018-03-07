@@ -13,27 +13,14 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10538 : RavenTestBase
     {
-        private class Foo
-        {
-            public DateTime? DateIn { get; set; }
-        }
-
-        private class FooIndex : AbstractIndexCreationTask<Foo>
-        {
-            public FooIndex()
-            {
-                Map = docs => from foo in docs select new { foo.DateIn };
-            }
-        }
-
         [Fact]
         public void FacetWithNullableDateTime()
         {
             using (var store = GetDocumentStore())
             {
                 new FooIndex().Execute(store);
-
                 var now = DateTime.Now;
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Foo());
@@ -49,28 +36,30 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var facets = new List<RangeFacet>
+                    var facets = new List<FacetBase>
                     {
                         new RangeFacet<Foo>
                         {
-                            Ranges = { c => c.DateIn < now - TimeSpan.FromDays(365)}
+                            Ranges =
+                            {
+                                c => c.DateIn < now - TimeSpan.FromDays(365)
+                            }
                         }
                     };
 
-                    var query = session.Query<Foo, FooIndex>().AggregateBy(facets);
+                    var query = session.Query<Foo, FooIndex>()
+                        .AggregateBy(facets);
 
-                    var oneYearAgo = DateTime.SpecifyKind(now - TimeSpan.FromDays(365), DateTimeKind.Unspecified);
+                   Assert.Equal("from index 'FooIndex' select facet(DateIn < $p0)", query.ToString());
 
-                    Assert.Equal($"from index 'FooIndex' select facet(DateIn < '{oneYearAgo:o}')", query.ToString());
-
-                    var facetResult = query.Execute();
+                    var facetResult = query.Execute(); 
 
                     Assert.True(facetResult.TryGetValue("DateIn", out var value));
+
+                    var oneYearAgo = DateTime.SpecifyKind(now - TimeSpan.FromDays(365), DateTimeKind.Unspecified);
                     Assert.Equal($"DateIn < {oneYearAgo:o}", value.Values[0].Range);
                     Assert.Equal(2, value.Values[0].Count);
-
                 }
-
             }
 
         }
@@ -122,6 +111,20 @@ namespace SlowTests.Issues
 
                     Assert.Equal(new[] { 0, 1, 1, 1, 1, 6 }, generatedCounts);
                 }
+            }
+        }
+
+        private class Foo
+        {
+            public DateTime? DateIn { get; set; }
+            public int Age { get; set; }
+        }
+
+        private class FooIndex : AbstractIndexCreationTask<Foo>
+        {
+            public FooIndex()
+            {
+                Map = docs => from foo in docs select new { foo.DateIn, foo.Age };
             }
         }
 
