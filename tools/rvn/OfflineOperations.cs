@@ -15,31 +15,14 @@ namespace rvn
         
         public static string GetKey(string srcDir)
         {
-            var masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
-            var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Encryption");
+            var existingKeyBase64PlainText = RecoverServerStoreKey(srcDir);
 
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
-
-            dstOptions.MasterKey = masterKey;
-
-            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey);
-
-            StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
-
-            using (var f = File.OpenWrite(Path.Combine(dstDir, SecretKeyEncrypted)))
-            {
-                f.Write(protect, 0, protect.Length);
-                f.Flush();
-            }
-
-            return $"GetKey: {Path.Combine(dstDir, SecretKeyEncrypted)} Created Successfully";
+            return $"GetKey: {Path.Combine(srcDir, SecretKeyEncrypted)} ***PLAIN TEXT*** key is: {existingKeyBase64PlainText}";
         }
 
-        public static string PutKey(string destDir)
+        public static string PutKey(string destDir, string plainTextBase64KeyToPut)
         {
-            var base64Key = RecoverServerStoreKey(destDir);
-            var secret = Convert.FromBase64String(base64Key);
+            var secret = Convert.FromBase64String(plainTextBase64KeyToPut);
             var protect = new SecretProtection(new SecurityConfiguration()).Protect(secret);
 
             using (var f = File.OpenWrite(Path.Combine(destDir, SecretKeyEncrypted)))
@@ -97,7 +80,7 @@ namespace rvn
             IOExtensions.DeleteDirectory(srcDir);
             Directory.Move(dstDir, srcDir);
 
-            return $"Decrypt: {Path.Combine(dstDir, SecretKeyEncrypted)} Created Successfully";
+            return "Decrypt: Completed Successfully";
         }
 
         public static string Trust(string key, string tag)
@@ -109,7 +92,7 @@ namespace rvn
         {
             var keyPath = Path.Combine(srcDir, SecretKeyEncrypted);
             if (File.Exists(keyPath) == false)
-                throw new IOException("File not exists:" + keyPath);
+                throw new IOException("The key file " + keyPath + " doesn't exist. Either the Server Store is not encrypted or you provided a wrong path to the System folder");
 
             var buffer = File.ReadAllBytes(keyPath);
 

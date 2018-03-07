@@ -173,9 +173,9 @@ namespace Sparrow.Platform.Win32
 
                             if (results.TryGetValue(encodedString, out var values))
                             {
-                                var prevValClean = values.Item1 + totalClean;
-                                var prevValDirty = values.Item2 + totalDirty;
-                                var prevValSize = values.Item3 + partLength;
+                                var prevValClean = values.Clean + totalClean;
+                                var prevValDirty = values.Dirty + totalDirty;
+                                var prevValSize = values.Size + partLength;
                                 results[encodedString] = (prevValSize, prevValClean, prevValDirty);
                             }
                             else
