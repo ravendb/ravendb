@@ -5,6 +5,8 @@ class ipEntry {
     
    ip = ko.observable<string>();
    validationGroup: KnockoutValidationGroup;
+   
+   isLocalNetwork: KnockoutComputed<boolean>;
 
    static runningOnDocker: boolean = false;
    
@@ -25,6 +27,15 @@ class ipEntry {
        
        this.validationGroup = ko.validatedObservable({
            ip: this.ip
+       });
+       
+       this.isLocalNetwork = ko.pureComputed(() => {
+           const ip = this.ip();
+           if (!ip) {
+               return false;
+           }
+           
+           return ip === "localhost" || ip === "::1" || ip.startsWith("127.");
        });
    }
    
