@@ -5,7 +5,7 @@
         <h2 class="text-center">No new notifications</h2>
     </div>
 
-    <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="visible: !noNewNotifications()">
+    <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="if: includeInDom, visible: !noNewNotifications()">
         <div class="flex-grow flex-horizontal flex-stretch-items">
             <button data-bind="click: _.partial(filterBySeverity, null), css: { active: !severityFilter() }" 
                     title="Show all notifications" class="notification-type-toggle active">All</button>
@@ -23,9 +23,12 @@
 
     </div>
 
-    <div class="notification-list scroll" data-bind="foreach: visibleNotifications">
-        <div data-bind="template: { name: type + '-template' }"></div>  
+    <div data-bind="if: includeInDom">
+        <div class="notification-list scroll" data-bind="foreach: visibleNotifications">
+            <div data-bind="template: { name: type + '-template' }"></div>  
+        </div>
     </div>
+    
 </div>
 
 <script type="text/html" id="OperationChanged-template">
