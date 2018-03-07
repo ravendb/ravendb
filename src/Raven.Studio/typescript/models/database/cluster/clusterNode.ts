@@ -17,6 +17,11 @@ class clusterNode {
     usableMemory = ko.pureComputed(() => this.getNumber(this.usableMemoryInGb()));
     errorDetails = ko.observable<string>();
     isLeader = ko.observable<boolean>();
+    isPassive: KnockoutComputed<boolean>;
+    
+    constructor() {
+        this.isPassive = ko.pureComputed(() => this.tag() === "?");
+    }
     
     errorDetailsShort = ko.pureComputed(() => {
         const longError = this.errorDetails();
@@ -106,7 +111,7 @@ class clusterNode {
             if (!topology.leader()) {
                 if (this.type() === "Watcher") {
                     return "Waiting";
-                } else if (this.tag() === "?") {
+                } else if (this.isPassive()) {
                     return "Passive";
                 } else {
                     return this.connected() ? "Voting" : "Error";
