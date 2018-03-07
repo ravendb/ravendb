@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
@@ -19,6 +20,7 @@ namespace Raven.Client.Documents.Operations
         private readonly DocumentConventions _conventions;
         private readonly long _id;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
         public Action<IOperationProgress> OnProgressChanged;
         private JsonOperationContext _context;
@@ -69,14 +71,29 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         protected async Task FetchOperationStatus()
         {
-            var command = GetOperationStateCommand(_conventions, _id);
+            await _lock.WaitAsync().ConfigureAwait(false);
 
-            await _requestExecutor.ExecuteAsync(command, _context).ConfigureAwait(false);
+            OperationState state;
+            try
+            {
+                if (_result.Task.IsCompleted)
+                    return;
+
+                var command = GetOperationStateCommand(_conventions, _id);
+
+                await _requestExecutor.ExecuteAsync(command, _context).ConfigureAwait(false);
+
+                state = command.Result;
+            }
+            finally
+            {
+                _lock.Release();
+            }
 
             OnNext(new OperationStatusChange
             {
                 OperationId = _id,
-                State = command.Result
+                State = state
             });
         }
 
@@ -87,30 +104,41 @@ namespace Raven.Client.Documents.Operations
 
         public void OnNext(OperationStatusChange change)
         {
-            var onProgress = OnProgressChanged;
+            _lock.Wait();
 
-            switch (change.State.Status)
+            try
             {
-                case OperationStatus.InProgress:
-                    if (onProgress != null && change.State.Progress != null)
-                    {
-                        onProgress(change.State.Progress);
-                    }
-                    break;
-                case OperationStatus.Completed:
-                    StopProcessing();
-                    _result.TrySetResult(change.State.Result);
-                    break;
-                case OperationStatus.Faulted:
-                    StopProcessing();
-                    var exceptionResult = (OperationExceptionResult)change.State.Result;
-                    Debug.Assert(exceptionResult != null);
-                    _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
-                    break;
-                case OperationStatus.Canceled:
-                    StopProcessing();
-                    _result.TrySetCanceled();
-                    break;
+                var onProgress = OnProgressChanged;
+
+                switch (change.State.Status)
+                {
+                    case OperationStatus.InProgress:
+                        if (onProgress != null && change.State.Progress != null)
+                        {
+                            onProgress(change.State.Progress);
+                        }
+
+                        break;
+                    case OperationStatus.Completed:
+                        StopProcessing();
+                        _result.TrySetResult(change.State.Result);
+                        break;
+                    case OperationStatus.Faulted:
+                        StopProcessing();
+                        var exceptionResult = (OperationExceptionResult)change.State.Result;
+                        Debug.Assert(exceptionResult != null);
+                        _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type,
+                            exceptionResult.StatusCode));
+                        break;
+                    case OperationStatus.Canceled:
+                        StopProcessing();
+                        _result.TrySetCanceled();
+                        break;
+                }
+            }
+            finally
+            {
+                _lock.Release();
             }
         }
 
