@@ -11,6 +11,12 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class RangeFacet : FacetBase
     {
+        private readonly FacetBase _parent;
+
+        internal RangeFacet(FacetBase parent) : this()
+        {
+            _parent = parent;
+        }
         public RangeFacet()
         {
             Ranges = new List<string>();
@@ -23,6 +29,8 @@ namespace Raven.Client.Documents.Queries.Facets
 
         internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
+            if (_parent != null)
+                return _parent.ToFacetToken(addQueryParameter);
             return FacetToken.Create(this, addQueryParameter);
         }
     }
@@ -48,7 +56,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             var ranges = other.Ranges.Select(Parse).ToList();
 
-            return new RangeFacet
+            return new RangeFacet(other)
             {
                 Ranges = ranges,
                 Options = other.Options,
@@ -92,14 +100,13 @@ namespace Raven.Client.Documents.Queries.Facets
                 return expression;
             }
 
-            var left = operation.Left as BinaryExpression;
-            var right = operation.Right as BinaryExpression;
-            if (left == null || right == null || operation.NodeType != ExpressionType.AndAlso)
+            if (!(operation.Left is BinaryExpression left) || 
+                !(operation.Right is BinaryExpression right) || 
+                operation.NodeType != ExpressionType.AndAlso)
                 throw new InvalidOperationException($"Range can be only specified using: '&&'. Cannot use: '{operation.NodeType}'");
 
-            var leftMember = left.Left as MemberExpression;
-            var rightMember = right.Left as MemberExpression;
-            if (leftMember == null || rightMember == null)
+            if (!(left.Left is MemberExpression leftMember) || 
+                !(right.Left is MemberExpression rightMember))
             {
                 throw new InvalidOperationException("Expressions on both sides of '&&' must point to range field. E.g. x => x.Age > 18 && x.Age < 99");
             }
@@ -275,31 +282,43 @@ namespace Raven.Client.Documents.Queries.Facets
 
         private static string GetStringValue(object value, Func<object, string> addQueryParameter)
         {
-            if (addQueryParameter != null && (value is DateTime || value is DateTimeOffset || value is string))
-                return "$" + addQueryParameter(value);
-
-            switch (value.GetType().FullName)
+            if (addQueryParameter == null)
             {
-                //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
-                case "System.DateTime":
-                    return $"'{((DateTime)value).GetDefaultRavenFormat()}'";
-                case "System.DateTimeOffset":
-                    return $"'{((DateTimeOffset)value).UtcDateTime.GetDefaultRavenFormat()}'";
-                case "System.Int32":
-                    return NumberUtil.NumberToString((int)value);
-                case "System.Int64":
-                    return NumberUtil.NumberToString((long)value);
-                case "System.Single":
-                    return NumberUtil.NumberToString((float)value);
-                case "System.Double":
-                    return NumberUtil.NumberToString((double)value);
-                case "System.Decimal":
-                    return NumberUtil.NumberToString((double)(decimal)value);
-                case "System.String":
-                    return $"'{value}'";
-                default:
-                    throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
+                return DefaultGetStringValue(value);
             }
+            return "$" + addQueryParameter(value);
+        }
+
+        private static string DefaultGetStringValue(object o)
+        {
+            switch (o)
+            {
+                case null:
+                    return "null";
+                case DateTime dt:
+                    return "'" + dt.GetDefaultRavenFormat() + "'";
+                case DateTimeOffset dto:
+                    return "'" + dto.UtcDateTime.GetDefaultRavenFormat() + "'";
+                case string s:
+                    return "'" + EscapeString(s) + "'";
+                case int i:
+                    return NumberUtil.NumberToString(i);
+                case long l:
+                    return NumberUtil.NumberToString(l);
+                case float f:
+                    return NumberUtil.NumberToString(f);
+                case double d:
+                    return NumberUtil.NumberToString(d);
+                case decimal m:
+                    return NumberUtil.NumberToString((double)m);
+                default:
+                    throw new InvalidOperationException("Unable to parse the given type " + o.GetType().Name + ", into a facet range!!! ");
+            }
+        }
+
+        private static object EscapeString(string s)
+        {
+            return s.Replace("'", "''");
         }
 
         private static string GetStringRepresentation(string fieldName, ExpressionType op, object value, Func<object, string> addQueryParameter)
