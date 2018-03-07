@@ -28,5 +28,10 @@ namespace Raven.Client.Documents.Indexes
         {
             return number.ToString("G", CultureInfo.InvariantCulture);
         }
+
+        public static string NumberToString(float number)
+        {
+            return number.ToString("G", CultureInfo.InvariantCulture);
+        }
     }
 }
