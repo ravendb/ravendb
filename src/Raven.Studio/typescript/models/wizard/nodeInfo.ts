@@ -11,6 +11,7 @@ class nodeInfo {
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
     mode: KnockoutObservable<Raven.Server.Commercial.SetupMode | "Continue">;
+    isLoopbackOnly: KnockoutComputed<boolean>;
     
     externalIpAddress = ko.observable<string>();     
     effectiveIpAddresses: KnockoutComputed<string>;
@@ -39,6 +40,11 @@ class nodeInfo {
     private initObservables() {
         this.isLocal = ko.pureComputed(() => {
             return this.nodeTag() === 'A';
+        });
+        
+        this.isLoopbackOnly = ko.pureComputed(() => {
+            const ips = this.ips();
+            return ips.length === 1 && ips[0].isLocalNetwork();
         });
         
         this.ips.push(new ipEntry());
