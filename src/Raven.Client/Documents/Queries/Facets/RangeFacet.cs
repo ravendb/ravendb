@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -20,14 +21,9 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<string> Ranges { get; set; }
 
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return null;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return this;
+            return FacetToken.Create(this, addQueryParameter);
         }
     }
 
@@ -43,14 +39,9 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<Expression<Func<T, bool>>> Ranges { get; set; }
 
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return null;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return this;
+            return FacetToken.Create(this, addQueryParameter);
         }
 
         public static implicit operator RangeFacet(RangeFacet<T> other)
@@ -68,10 +59,15 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public static string Parse(Expression<Func<T, bool>> expr)
         {
-            return Parse(null, (LambdaExpression)expr);
+            return Parse(null, expr, null);
         }
-        
+
         public static string Parse(string prefix, LambdaExpression expr)
+        {
+            return Parse(prefix, expr, null);
+        }
+
+        public static string Parse(string prefix, LambdaExpression expr, Func<object, string> addQueryParameter)
         {
             if (expr.Body is MethodCallExpression mce)
             {
@@ -80,19 +76,19 @@ namespace Raven.Client.Documents.Queries.Facets
                     if (mce.Arguments[0] is MemberExpression src &&
                         mce.Arguments[1] is LambdaExpression le)
                     {
-                        return Parse(GetFieldName(prefix, src) , le);
+                        return Parse(GetFieldName(prefix, src), le);
                     }
                 }
                 throw new InvalidOperationException("Don't know how to translate expression to facets: " + expr);
             }
-            
+
             var operation = (BinaryExpression)expr.Body;
 
             if (operation.Left is MemberExpression me)
             {
                 var fieldName = GetFieldName(prefix, me);
                 var subExpressionValue = ParseSubExpression(operation);
-                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);
+                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue, addQueryParameter);
                 return expression;
             }
 
@@ -122,7 +118,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm1)
             {
-                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right), addQueryParameter);
             }
 
             // option #2: expression has form x < 10 && x > 5 --> reverse expression to end up with form #1
@@ -131,7 +127,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm2)
             {
-                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
+                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left), addQueryParameter);
             }
 
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
@@ -149,7 +145,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (prefix != null)
                 return prefix + "_" + left.Member.Name;
-            
+
             return left.Member.Name;
         }
 
@@ -256,7 +252,7 @@ namespace Raven.Client.Documents.Queries.Facets
             }
         }
 
-        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
+        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue, Func<object, string> addQueryParameter)
         {
             if (lValue is IComparable lValueAsComparable && rValue is IComparable rValueAsComparable)
             {
@@ -269,16 +265,19 @@ namespace Raven.Client.Documents.Queries.Facets
             if (lValue != null && rValue != null)
             {
                 if (leftOp == ExpressionType.GreaterThanOrEqual && rightOp == ExpressionType.LessThanOrEqual)
-                    return $"{fieldName} between {GetStringValue(lValue)} and {GetStringValue(rValue)}";
+                    return $"{fieldName} between {GetStringValue(lValue, addQueryParameter)} and {GetStringValue(rValue, addQueryParameter)}";
 
-                return $"{GetStringRepresentation(fieldName, leftOp, lValue)} and {GetStringRepresentation(fieldName, rightOp, rValue)}";
+                return $"{GetStringRepresentation(fieldName, leftOp, lValue, addQueryParameter)} and {GetStringRepresentation(fieldName, rightOp, rValue, addQueryParameter)}";
             }
 
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
 
-        private static string GetStringValue(object value)
+        private static string GetStringValue(object value, Func<object, string> addQueryParameter)
         {
+            if (addQueryParameter != null && (value is DateTime || value is DateTimeOffset || value is string))
+                return "$" + addQueryParameter(value);
+
             switch (value.GetType().FullName)
             {
                 //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
@@ -303,9 +302,9 @@ namespace Raven.Client.Documents.Queries.Facets
             }
         }
 
-        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value)
+        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value, Func<object, string> addQueryParameter)
         {
-            var valueAsStr = GetStringValue(value);
+            var valueAsStr = GetStringValue(value, addQueryParameter);
             if (op == ExpressionType.LessThan)
                 return $"{fieldName} < {valueAsStr}";
             if (op == ExpressionType.GreaterThan)

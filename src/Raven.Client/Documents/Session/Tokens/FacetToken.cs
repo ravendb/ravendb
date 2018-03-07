@@ -39,49 +39,45 @@ namespace Raven.Client.Documents.Session.Tokens
             return new FacetToken(facetSetupDocumentId);
         }
 
-        public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter)
+        public static FacetToken Create(Facet facet, Func<object, string> addQueryParameter)
         {
-            var optionsParameterName = facet.Options != null && facet.Options != FacetOptions.Default ? addQueryParameter(facet.Options) : null;
+            var optionsParameterName = GetOptionsParameterName(facet, addQueryParameter);
+            var token = new FacetToken(facet.FieldName, facet.DisplayFieldName, null, optionsParameterName);
 
-            string aggregateByField = null;
-            List<string> ranges = null;
-
-            var aggregationFacet = facet.AsFacet();
-            var rangeFacet = facet.AsRangeFacet();
-
-            if (aggregationFacet != null)
-                aggregateByField = aggregationFacet.FieldName;
-
-            if (rangeFacet != null)
-                ranges = rangeFacet.Ranges;
-
-            var token = new FacetToken(aggregateByField, facet.DisplayFieldName, ranges, optionsParameterName);
-
-            foreach (var aggregation in facet.Aggregations)
-            {
-                FacetAggregationToken aggregationToken;
-                switch (aggregation.Key)
-                {
-                    case FacetAggregation.Max:
-                        aggregationToken = FacetAggregationToken.Max(aggregation.Value);
-                        break;
-                    case FacetAggregation.Min:
-                        aggregationToken = FacetAggregationToken.Min(aggregation.Value);
-                        break;
-                    case FacetAggregation.Average:
-                        aggregationToken = FacetAggregationToken.Average(aggregation.Value);
-                        break;
-                    case FacetAggregation.Sum:
-                        aggregationToken = FacetAggregationToken.Sum(aggregation.Value);
-                        break;
-                    default:
-                        throw new NotSupportedException($"Unsupported aggregation method: {aggregation.Key}");
-                }
-
-                token._aggregations.Add(aggregationToken);
-            }
+            ApplyAggregations(facet, token);
 
             return token;
+        }
+
+        public static FacetToken Create(RangeFacet facet, Func<object, string> addQueryParameter)
+        {
+            var optionsParameterName = GetOptionsParameterName(facet, addQueryParameter);
+            var token = new FacetToken(null, facet.DisplayFieldName, facet.Ranges, optionsParameterName);
+
+            ApplyAggregations(facet, token);
+
+            return token;
+        }
+
+        public static FacetToken Create<T>(RangeFacet<T> facet, Func<object, string> addQueryParameter)
+        {
+            var optionsParameterName = GetOptionsParameterName(facet, addQueryParameter);
+
+            var ranges = new List<string>();
+            foreach (var expression in facet.Ranges)
+                ranges.Add(RangeFacet<T>.Parse(null, expression, addQueryParameter));
+
+            var token = new FacetToken(null, facet.DisplayFieldName, ranges, optionsParameterName);
+
+            ApplyAggregations(facet, token);
+
+            return token;
+        }
+
+        public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter)
+        {
+            // this is just a dispatcher
+            return facet.ToFacetToken(addQueryParameter);
         }
 
         public override void WriteTo(StringBuilder writer)
@@ -144,6 +140,39 @@ namespace Raven.Client.Documents.Session.Tokens
             writer
                 .Append(" as ")
                 .Append(_alias);
+        }
+
+
+        private static void ApplyAggregations(FacetBase facet, FacetToken token)
+        {
+            foreach (var aggregation in facet.Aggregations)
+            {
+                FacetAggregationToken aggregationToken;
+                switch (aggregation.Key)
+                {
+                    case FacetAggregation.Max:
+                        aggregationToken = FacetAggregationToken.Max(aggregation.Value);
+                        break;
+                    case FacetAggregation.Min:
+                        aggregationToken = FacetAggregationToken.Min(aggregation.Value);
+                        break;
+                    case FacetAggregation.Average:
+                        aggregationToken = FacetAggregationToken.Average(aggregation.Value);
+                        break;
+                    case FacetAggregation.Sum:
+                        aggregationToken = FacetAggregationToken.Sum(aggregation.Value);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unsupported aggregation method: {aggregation.Key}");
+                }
+
+                token._aggregations.Add(aggregationToken);
+            }
+        }
+
+        private static string GetOptionsParameterName(FacetBase facet, Func<object, string> addQueryParameter)
+        {
+            return facet.Options != null && facet.Options != FacetOptions.Default ? addQueryParameter(facet.Options) : null;
         }
 
         private class FacetAggregationToken : QueryToken
