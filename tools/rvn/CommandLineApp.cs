@@ -233,8 +233,8 @@ namespace rvn
                 cmd.Command("get-key", subcmd =>
                 {
                     subcmd.Description = "Exports unprotected server store encryption key";
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Exports unprotected server store encryption key. " +
-                                              "This key will allow decryption of the server store and must be secured. " +
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Exports the unprotected server store encryption key. " +
+                                              "This key will allow decryption of the server store and must be kept safely. " +
                                               "This is REQUIRED when restoring backups from an encrypted server store.";
                     subcmd.HelpOption(HelpOptionString);
 
@@ -252,16 +252,19 @@ namespace rvn
                 {
                     subcmd.Description = @"Restores and protects the key for current OS user";
                     subcmd.HelpOption(HelpOptionString);
-                    subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
+                    subcmd.Argument(systemDirArgText, systemDirArgDescText, args =>
                     {
                         subcmd.OnExecute(() =>
                         {
-                            return PerformOfflineOperation(
-                                () => OfflineOperations.PutKey(systemDir.Value), systemDir, subcmd);
-                        });
-                    });
+                            if (args.Values.Count != 2)
+                                return ExitWithError("Usage: ./rvn offline-operation put-key <path-to-system-dir> <key>", cmd);
 
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Restores the encryption key on the new machine and protects it for the current OS user. " +
+                            return PerformOfflineOperation(
+                                () => OfflineOperations.PutKey(args.Values[0], args.Values[1]), args, subcmd);
+                        });
+                    }, multipleValues: true);
+
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
                                               "This is typically used as part of the restore process of an encrypted server store on a new machine";
                 });
 
@@ -292,10 +295,9 @@ namespace rvn
                 {
                     subcmd.Description = "Encrypts RavenDB files and saves the key to the same directory";
                     subcmd.ExtendedHelpText = Environment.NewLine + "Encrypts RavenDB files and saves the key to a given directory. " +
-                                              "This key file (secret.key.encrypted) is protected for the current OS user. " +
-                                              "Once encrypted, The server will only work for the current OS user. " +
-                                              "It is recommended that you do that as part of the initial setup of the server, before it is running. " +
-                                              "Encrypted server store can only talk to other encrypted server stores, and only over SSL." +
+                                              "Once encrypted, the server will only work for the current OS user or the current Master Key (whichever method was chosen to protect secrets)" +
+                                              "It is recommended to do this at the very start, as part of the initial cluster setup, right after the server was launched for the first time." +
+                                              "Encrypted server stores can only talk to other encrypted server stores, and only over SSL." +
                                               Environment.NewLine + EncryptionCommandsNote;
 
                     subcmd.HelpOption(HelpOptionString);
@@ -373,12 +375,13 @@ namespace rvn
             }
         }
 
-        private static int PerformOfflineOperation(Action offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
+        private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try
             {
                 ValidateRavenSystemDir(systemDirArg);
-                offlineOperation();
+                var result = offlineOperation();
+                cmd.Out.WriteLine(result);
                 return 0;
             }
             catch (InvalidOperationException e)
