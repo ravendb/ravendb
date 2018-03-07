@@ -15,6 +15,7 @@ import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDat
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
 import license = require("models/auth/licenseModel");
 import eventsCollector = require("common/eventsCollector");
+import messagePublisher = require("common/messagePublisher");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -31,6 +32,8 @@ class manageDatabaseGroup extends viewModelBase {
     deletionInProgress: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
     showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
+    
+    anyNodeHasError: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -41,6 +44,31 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     private initObservables() {
+        
+        this.anyNodeHasError = ko.pureComputed(() => {
+            if (clusterTopologyManager.default.votingInProgress()) {
+                return true;
+            }
+            
+            const topology = clusterTopologyManager.default.topology();
+            
+            if (!topology) {
+                return true;
+            }
+            
+            const nodes = topology.nodes();
+            
+            let allConnected = true;
+            
+            for (let i = 0; i < nodes.length; i++) {
+                if (!nodes[i].connected()) {
+                    allConnected = false;
+                }
+            }
+            
+            return !allConnected;
+        });
+        
         this.nodes = ko.pureComputed(() => {
             const dbInfo = this.currentDatabaseInfo();
             return dbInfo.nodes();
@@ -59,6 +87,13 @@ class manageDatabaseGroup extends viewModelBase {
 
         this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
             return !license.licenseStatus().HasDynamicNodesDistribution;
+        });
+        
+        this.anyNodeHasError.subscribe((error) => {
+            if (error && this.inSortableMode()) {
+                messagePublisher.reportWarning("Can't reorder nodes, when at least one node is down or voting is in progress.");
+                this.cancelReorder();
+            }
         });
     }
 
