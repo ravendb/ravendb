@@ -2,8 +2,6 @@
 import ipEntry = require("models/wizard/ipEntry");
 
 class unsecureSetup {
-    static readonly localNetworks = [ "127.0.0.1", "localhost", "::1" ];
-    
     port = ko.observable<string>();
     tcpPort = ko.observable<string>();
     ip = ko.observable<ipEntry>();
@@ -22,7 +20,7 @@ class unsecureSetup {
             if (!this.ip()) {
                 return false;
             }
-            return !_.includes(unsecureSetup.localNetworks, this.ip().ip());
+            return !this.ip().isLocalNetwork();
         });
     }
     
