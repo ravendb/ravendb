@@ -19,9 +19,9 @@ namespace Raven.Server.Documents.Queries.AST
             return Source + " between " + Min + " and " + Max;
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
-            return Source.GetText() + " between " + Min.GetText() + " and " + Max.GetText();
+            return Source.GetText(parent) + " between " + Min.GetText(parent) + " and " + Max.GetText(parent);
         }
     }
 }
