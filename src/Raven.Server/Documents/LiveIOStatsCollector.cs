@@ -105,15 +105,22 @@ namespace Raven.Server.Documents
                     continue;
 
                 // 3. Get env path & file name from dictionary item
-                var fileName = Path.GetFileName(envFile.Key);
-                var envPath = Path.GetDirectoryName(envFile.Key);
+                var meterItem = listOfMeterItems[0];
+                var file = new FileInfo(envFile.Key);
+                var envPath = file.Directory;
+                if (meterItem.Type == IoMetrics.MeterType.Compression || meterItem.Type == IoMetrics.MeterType.JournalWrite)
+                    envPath = envPath?.Parent;
+
+                // 3a. Should not happen, but being extra careful here
+                if (envPath == null)
+                    continue;
 
                 // 4. Find relevant environment
-                var currentEnvironment = preparedMetricsResponse.Environments.FirstOrDefault(x => x.Path == envPath);
+                var currentEnvironment = preparedMetricsResponse.Environments.FirstOrDefault(x => x.Path == envPath.FullName);
                 if (currentEnvironment == null)
                 {
                     // If new index for example was added...
-                    currentEnvironment = new IOMetricsEnvironment { Path = envPath, Files = new List<IOMetricsFileStats>() };
+                    currentEnvironment = new IOMetricsEnvironment { Path = envPath.FullName, Files = new List<IOMetricsFileStats>() };
                     preparedMetricsResponse.Environments.Add(currentEnvironment);
                 }
 
@@ -123,9 +130,9 @@ namespace Raven.Server.Documents
                 }
 
                 // 5. Prepare response, add recent items.  Note: History items are not added since studio does not display them anyway
-                var preparedFilesInfo = currentEnvironment.Files.FirstOrDefault(x => x.File == fileName) ?? new IOMetricsFileStats
+                var preparedFilesInfo = currentEnvironment.Files.FirstOrDefault(x => x.File == file.Name) ?? new IOMetricsFileStats
                 {
-                    File = fileName
+                    File = file.Name
                 };
 
                 currentEnvironment.Files.Add(preparedFilesInfo);
