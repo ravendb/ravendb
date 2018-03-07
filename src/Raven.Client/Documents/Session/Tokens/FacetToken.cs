@@ -53,7 +53,20 @@ namespace Raven.Client.Documents.Session.Tokens
                 aggregateByField = aggregationFacet.FieldName;
 
             if (rangeFacet != null)
-                ranges = rangeFacet.Ranges;
+            {
+                if (rangeFacet.RangeExpressions?.Count > 0)
+                {
+                    ranges = new List<string>();
+                    foreach (var expr in rangeFacet.RangeExpressions)
+                    {
+                        ranges.Add(RangeFacet.Parse(null, expr, addQueryParameter));
+                    }
+                }
+                else
+                {
+                    ranges = rangeFacet.Ranges;
+                }
+            }
 
             var token = new FacetToken(aggregateByField, facet.DisplayFieldName, ranges, optionsParameterName);
 
@@ -145,6 +158,8 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append(" as ")
                 .Append(_alias);
         }
+
+
 
         private class FacetAggregationToken : QueryToken
         {
