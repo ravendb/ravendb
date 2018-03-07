@@ -58,6 +58,7 @@ class notificationCenter {
     };
 
     showNotifications = ko.observable<boolean>(false);
+    includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
     globalNotifications = ko.observableArray<abstractNotification>();
     databaseNotifications = ko.observableArray<abstractNotification>();
@@ -169,16 +170,25 @@ class notificationCenter {
         this.noNewNotifications = ko.pureComputed(() => {
             return this.totalItemsCount() === 0;
         });
+    }
 
+    initialize() {
+        $("#notification-center").on('transitionend', e => {
+            if (!this.showNotifications()) {
+                this.includeInDom(false);
+            }
+        });
+        
         this.showNotifications.subscribe((show: boolean) => {
             if (show) {
+                this.includeInDom(true);
                 window.addEventListener("click", this.hideHandler, true);
             } else {
                 window.removeEventListener("click", this.hideHandler, true);
             }
         });
     }
-
+    
     setupGlobalNotifications(serverWideClient: serverNotificationCenterClient) {
         this.globalOperationsWatch.configureFor(null);
         serverWideClient.watchAllAlerts(e => this.onAlertReceived(e, this.globalNotifications, null));
