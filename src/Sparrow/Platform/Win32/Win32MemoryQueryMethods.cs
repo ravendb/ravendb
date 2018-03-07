@@ -146,7 +146,7 @@ namespace Sparrow.Platform.Win32
             var procMinAddress = systemInfo.minimumApplicationAddress;
             var procMaxAddress = systemInfo.maximumApplicationAddress;
             var processHandle = GetCurrentProcess();
-            var results = new Dictionary<string, Tuple<long, long>>();
+            var results = new Dictionary<string, Tuple<long, long, long>>();
 
             while (procMinAddress.ToInt64() < procMaxAddress.ToInt64())
             {
@@ -175,11 +175,12 @@ namespace Sparrow.Platform.Win32
                             {
                                 var prevValClean = values.Item1 + totalClean;
                                 var prevValDirty = values.Item2 + totalDirty;
-                                results[encodedString] = new Tuple<long, long>(prevValClean, prevValDirty);
+                                var prevValSize = values.Item3 + partLength;
+                                results[encodedString] = new Tuple<long, long, long>(prevValSize, prevValClean, prevValDirty);
                             }
                             else
                             {
-                                results[encodedString] = new Tuple<long, long>(totalClean, totalDirty);
+                                results[encodedString] = new Tuple<long, long, long>(partLength, totalClean, totalDirty);
                             }
 
                             processClean += totalClean;
@@ -198,13 +199,15 @@ namespace Sparrow.Platform.Win32
 
             foreach (var result in results)
             {
-                var clean = result.Value.Item1;
-                var dirty = result.Value.Item2;
+                var size = result.Value.Item1;
+                var clean = result.Value.Item2;
+                var dirty = result.Value.Item3;
 
                 var djv = new DynamicJsonValue
                 {
                     ["File"] = result.Key,
-                    ["Size"] = "N/A",
+                    ["Size"] = size,
+                    ["SizeHumanly"] = Sizes.Humane(size),
                     ["Rss"] = "N/A",
                     ["SharedClean"] = "N/A",
                     ["SharedDirty"] = "N/A",
@@ -241,13 +244,12 @@ namespace Sparrow.Platform.Win32
             var pages = (length / PageSize) + remain;
             AllocatedMemoryData memData = null;
 
-            IntPtr wsInfo = IntPtr.Zero;
             PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
             var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[2];
             if (pages > 2)
             {
                 memData = BuffersPool.Allocate((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages));
-                wsInfo = new IntPtr(memData.Address);
+                var wsInfo = new IntPtr(memData.Address);
                 pWsInfo = (PPSAPI_WORKING_SET_EX_INFORMATION*)wsInfo.ToPointer();
             }
             else
