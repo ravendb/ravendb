@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Specialized;
+using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -16,6 +17,7 @@ namespace Raven.Tests.Issues
     {
         private readonly string DataDir;
         private readonly string BackupDir;
+        private readonly string LogsDir;
 
         private DocumentDatabase db;
 
@@ -23,6 +25,7 @@ namespace Raven.Tests.Issues
         {
             BackupDir = NewDataPath("BackupDatabase");
             DataDir = NewDataPath("DataDirectory");
+            LogsDir = NewDataPath("LogsDirectory");
         }
 
         public override void Dispose()
@@ -83,14 +86,78 @@ namespace Raven.Tests.Issues
             db.Dispose();
         }
 
-        private void InitializeDocumentDatabase(string storageName)
+        [Theory]
+        [PropertyData("Storages")]
+        public void Full_backup_then_restore_without_specifying_journal_path_should_work(string storageName)
+        {
+            var workingDir = NewDataPath("WorkingDir");
+            var dataDir = Path.Combine(workingDir, "Data");
+            var logsDir = Path.Combine(workingDir, "Logs");
+            var tempDir = Path.Combine(workingDir, "Swap");
+
+            var settings = new NameValueCollection
+            {
+                ["Raven/TransactionJournalsPath"] = logsDir,
+                ["Raven/DataDir"] = dataDir,
+                ["Raven/DataDir/Legacy"] = dataDir,
+                ["Raven/WorkingDir"] = workingDir,
+                ["Raven/Voron/TempPath"] = tempDir,
+                ["Raven/TempPath"] = tempDir
+            };
+
+            InitializeDocumentDatabase(storageName, settings);
+            IOExtensions.DeleteDirectory(BackupDir);
+
+            //generate some journal entries
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar2.com'}"), new RavenJObject(), null);
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar3.com'}"), new RavenJObject(), null);
+
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
+            WaitForBackup(db, true);
+
+            db.Dispose();
+            IOExtensions.DeleteDirectory(workingDir);
+
+            MaintenanceActions.Restore(new RavenConfiguration
+            {
+                DefaultStorageTypeName = storageName,
+                DataDirectory = dataDir,
+                RunInMemory = false,
+                Settings =  settings
+            }, new DatabaseRestoreRequest
+            {
+                BackupLocation = BackupDir,
+                DatabaseLocation = dataDir,
+                Defrag = true
+            }, s => { });
+
+            db = new DocumentDatabase(new RavenConfiguration
+            {
+                DataDirectory = dataDir,
+                RunInMemory = false,
+                Settings = settings
+            }, null);
+
+            var fetchedData = db.Documents.Get("Foo", null);
+            Assert.NotNull(fetchedData);
+
+            var jObject = fetchedData.ToJson();
+            Assert.NotNull(jObject);
+            Assert.Equal("foo@bar3.com", jObject.Value<string>("email"));
+
+            db.Dispose();
+        }
+
+        private void InitializeDocumentDatabase(string storageName, NameValueCollection settings = null)
         {
             db = new DocumentDatabase(new RavenConfiguration
             {
                 DefaultStorageTypeName = storageName,
                 DataDirectory = DataDir,
                 RunInMemory = false,
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false              
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                Settings = settings ?? new NameValueCollection()
             }, null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
         }

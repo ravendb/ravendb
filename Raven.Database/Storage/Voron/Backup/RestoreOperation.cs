@@ -23,7 +23,16 @@ namespace Raven.Database.Storage.Voron.Backup
             if (!string.IsNullOrWhiteSpace(databaseRestoreRequest.JournalsLocation))
                 return databaseRestoreRequest.JournalsLocation;
 
-            return configuration != null ? configuration.DataDirectory : databaseRestoreRequest.DatabaseLocation;
+            if (configuration != null)
+            {
+                var customJournalPath = configuration.Settings[Constants.RavenTxJournalPath];
+                if (!string.IsNullOrWhiteSpace(customJournalPath))
+                    return customJournalPath;
+
+                return configuration.DataDirectory;
+            }
+
+            return databaseRestoreRequest.DatabaseLocation;
         }
 
         protected override bool IsValidBackup(string backupFilename)
