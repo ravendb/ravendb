@@ -35,8 +35,7 @@ namespace Sparrow
 
         public void FileClosed(string filename)
         {
-            FileIoMetrics value;
-            if (!_fileMetrics.TryGetValue(filename, out value))
+            if (!_fileMetrics.TryGetValue(filename, out var value))
                 return;
             value.Closed = true;
             _closedFiles.Enqueue(filename);
@@ -71,12 +70,12 @@ namespace Sparrow
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
 
-            Action<IoMeterBuffer.MeterItem> onFileChange = meterItem =>
+            void OnFileChange(IoMeterBuffer.MeterItem meterItem)
             {
                 _ioChanges?.RaiseNotifications(fileName, meterItem);
-            };
+            }
 
-            return new IoMeterBuffer.DurationMeasurement(buffer, type, size, 0, onFileChange);
+            return new IoMeterBuffer.DurationMeasurement(buffer, type, size, 0, OnFileChange);
         }
 
         public class FileIoMetrics
