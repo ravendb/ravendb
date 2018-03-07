@@ -146,7 +146,7 @@ namespace Sparrow.Platform.Win32
             var procMinAddress = systemInfo.minimumApplicationAddress;
             var procMaxAddress = systemInfo.maximumApplicationAddress;
             var processHandle = GetCurrentProcess();
-            var results = new Dictionary<string, Tuple<long, long, long>>();
+            var results = new Dictionary<string, (long Size, long Clean, long Dirty)>();
 
             while (procMinAddress.ToInt64() < procMaxAddress.ToInt64())
             {
@@ -173,14 +173,14 @@ namespace Sparrow.Platform.Win32
 
                             if (results.TryGetValue(encodedString, out var values))
                             {
-                                var prevValClean = values.Item1 + totalClean;
-                                var prevValDirty = values.Item2 + totalDirty;
-                                var prevValSize = values.Item3 + partLength;
-                                results[encodedString] = new Tuple<long, long, long>(prevValSize, prevValClean, prevValDirty);
+                                var prevValClean = values.Clean + totalClean;
+                                var prevValDirty = values.Dirty + totalDirty;
+                                var prevValSize = values.Size + partLength;
+                                results[encodedString] = (prevValSize, prevValClean, prevValDirty);
                             }
                             else
                             {
-                                results[encodedString] = new Tuple<long, long, long>(partLength, totalClean, totalDirty);
+                                results[encodedString] = (partLength, totalClean, totalDirty);
                             }
 
                             processClean += totalClean;
@@ -193,30 +193,22 @@ namespace Sparrow.Platform.Win32
                 procMinAddress = new IntPtr(procMinAddress.ToInt64() + memoryBasicInformation.RegionSize.ToInt64());
             }
 
-
-            
-
-
             foreach (var result in results)
             {
-                var size = result.Value.Item1;
-                var clean = result.Value.Item2;
-                var dirty = result.Value.Item3;
-
                 var djv = new DynamicJsonValue
                 {
                     ["File"] = result.Key,
-                    ["Size"] = size,
-                    ["SizeHumanly"] = Sizes.Humane(size),
+                    ["Size"] = result.Value.Size,
+                    ["SizeHumanly"] = Sizes.Humane(result.Value.Size),
                     ["Rss"] = "N/A",
                     ["SharedClean"] = "N/A",
                     ["SharedDirty"] = "N/A",
                     ["PrivateClean"] = "N/A",
                     ["PrivateDirty"] = "N/A",
-                    ["TotalClean"] = clean,
-                    ["TotalCleanHumanly"] = Sizes.Humane(clean),
-                    ["TotalDirty"] = dirty,
-                    ["TotalDirtyHumanly"] = Sizes.Humane(dirty)
+                    ["TotalClean"] = result.Value.Clean,
+                    ["TotalCleanHumanly"] = Sizes.Humane(result.Value.Clean),
+                    ["TotalDirty"] = result.Value.Dirty,
+                    ["TotalDirtyHumanly"] = Sizes.Humane(result.Value.Dirty)
                 };
 
                 dja.Add(djv);
