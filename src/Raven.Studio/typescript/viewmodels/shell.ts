@@ -214,7 +214,9 @@ class shell extends viewModelBase {
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
-        this.favNodeBadge.initialize();
+        this.favNodeBadge.initialize(); 
+        
+        notificationCenter.instance.initialize();
     }
 
     compositionComplete() {
@@ -224,7 +226,7 @@ class shell extends viewModelBase {
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
-
+        
         this.initializeShellComponents();
 
         this.onBootstrapFinishedTask
