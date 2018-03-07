@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.AST
             return Left + " " + Operator + " " + Right;
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
             string op;
             switch (Operator)
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Queries.AST
                     throw new ArgumentOutOfRangeException();
             }
 
-            return Left.GetText() + " " + op + " " + Right.GetText();
+            return Left.GetText(parent) + " " + op + " " + Right.GetText(parent);
         }
     }
 }

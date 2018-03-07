@@ -22,9 +22,9 @@ namespace Raven.Server.Documents.Queries.AST
             return Source + " in ( " + string.Join(", ", Values.Select(x => x.ToString())) + ")";
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
-            return $"{Source} in ({string.Join(", ", Values.Select(x => x.GetText()))})";
+            return $"{Source} in ({string.Join(", ", Values.Select(x => x.GetText(parent)))})";
         }
     }
 }

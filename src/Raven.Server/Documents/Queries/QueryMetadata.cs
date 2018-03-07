@@ -1033,7 +1033,7 @@ namespace Raven.Server.Documents.Queries
             }
             else if (expression is ValueExpression val)
             {
-                name = new QueryFieldName(val.GetText(), false);
+                name = new QueryFieldName(val.GetText(null), false);
             }
             else
                 throw new InvalidQueryException($"Unsupported expression type '{expression.Type}' in GROUP BY", QueryText, parameters);
@@ -1139,12 +1139,12 @@ namespace Raven.Server.Documents.Queries
 
         private void ThrowInvalidArgumentExpressionInFacetQuery(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText()}.", QueryText, parameters);
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
         private void ThrowFacetQueryMustContainsOnlyFacetInSelect(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText()}.", QueryText, parameters);
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
         private void ThrowSuggestionQueryCannotBeFacet(BlittableJsonReaderObject parameters)
@@ -1525,7 +1525,7 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
 
-                    fieldName = new QueryFieldName(spatialExpression.GetText(), false);
+                    fieldName = new QueryFieldName(spatialExpression.GetText(null), false);
                 }
 
                 if (arguments.Count < 2 || arguments.Count > 3)

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 using Sparrow.Json;
 using Constants = Raven.Client.Constants;
 
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     var rangeFacet = new RangeFacet();
 
                     foreach (var range in facetField.Ranges)
-                        rangeFacet.Ranges.Add(range.GetText());
+                        rangeFacet.Ranges.Add(range.GetText(query.Query));
 
                     facet = rangeFacet;
                 }
@@ -211,17 +212,8 @@ namespace Raven.Server.Documents.Queries.Facets
                     HighValue = hValue.Value,
                     LowInclusive = true,
                     LowValue = lValue.Value,
-                    RangeText = expression.GetText()
+                    RangeText = expression.GetText(query.Query)
                 };
-
-                if (bee.Max.Value == ValueTokenType.Parameter)
-                {
-                    range.RangeText = range.RangeText.Replace(bee.Max.Token, hValue.Value);
-                }
-                if (bee.Min.Value == ValueTokenType.Parameter)
-                {
-                    range.RangeText = range.RangeText.Replace(bee.Min.Token, lValue.Value);
-                }
 
                 return range;
             }
@@ -244,14 +236,8 @@ namespace Raven.Server.Documents.Queries.Facets
                         var range = new ParsedRange
                         {
                             Field = fieldName,
-                            RangeText = expression.GetText()
+                            RangeText = expression.GetText(query.Query)
                         };
-
-                        if (r.Value == ValueTokenType.Parameter)
-                        {
-                            range.RangeText = range.RangeText.Replace(r.Token, fieldValue.Value);
-                        }
-                        
 
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
                         {
@@ -332,7 +318,18 @@ namespace Raven.Server.Documents.Queries.Facets
                     return (null, RangeType.None);
                 case ValueTokenType.Parameter:
                     queryParameters.TryGet(value, out object o);
-                    return (o?.ToString(), RangeType.None);
+                    var rangeType = RangeType.None;
+                    if (o is long l) 
+                    {
+                        o = NumericUtils.DoubleToPrefixCoded(l);
+                        rangeType = RangeType.Double;
+                    }
+                    else if (o is LazyNumberValue lnv)
+                    {
+                        o = NumericUtils.DoubleToPrefixCoded((double)lnv);
+                        rangeType = RangeType.Double;
+                    }
+                    return (o?.ToString(), rangeType);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -437,7 +434,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
         private static void ThrowUnsupportedRangeExpression(FacetQuery query, QueryExpression expression)
         {
-            throw new InvalidQueryException($"Unsupported range expression of a facet query: {expression.GetType().Name}. Text: {expression.GetText()}.", query.Query.Metadata.QueryText, query.Query.QueryParameters);
+            throw new InvalidQueryException($"Unsupported range expression of a facet query: {expression.GetType().Name}. Text: {expression.GetText(query.Query)}.", query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
     }
 }
