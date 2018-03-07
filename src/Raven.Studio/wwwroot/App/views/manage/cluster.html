@@ -64,7 +64,7 @@
                                 </button>
 
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: connected() && !isPassive()">
                                         <span>Operations</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
