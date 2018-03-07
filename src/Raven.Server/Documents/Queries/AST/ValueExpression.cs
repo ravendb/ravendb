@@ -19,8 +19,13 @@ namespace Raven.Server.Documents.Queries.AST
             return Token + " (" + Value + ")";
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
+            if (parent != null && Value == ValueTokenType.Parameter)
+            {
+                if (parent.QueryParameters.TryGet(Token, out object o))
+                    return o?.ToString();
+            }
             return Token;
         }
     }

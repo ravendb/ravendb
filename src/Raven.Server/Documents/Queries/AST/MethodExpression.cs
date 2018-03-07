@@ -23,9 +23,9 @@ namespace Raven.Server.Documents.Queries.AST
             return Name + "(" + string.Join(", ", Arguments.Select(x => x.ToString())) + ")";
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
-            return _text ?? (_text = $"{Name}({string.Join(", ", Arguments.Select(x => x.GetText()))})");
+            return _text ?? (_text = $"{Name}({string.Join(", ", Arguments.Select(x => x.GetText(parent)))})");
         }
     }
 }

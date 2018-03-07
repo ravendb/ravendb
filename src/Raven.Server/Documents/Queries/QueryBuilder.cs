@@ -662,7 +662,7 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 var spatialExpression = (MethodExpression)expression.Arguments[0];
-                fieldName = spatialExpression.GetText();
+                fieldName = spatialExpression.GetText(null);
             }
 
             var shapeExpression = (MethodExpression)expression.Arguments[1];
