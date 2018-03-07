@@ -101,49 +101,6 @@ namespace SlowTests.Tests.Faceted
         }
 
         [Fact]
-        public void FacetShouldUseParameters_WithRangeFacetList()
-        {
-            using (var store = GetDocumentStore())
-            {
-                new FooIndex().Execute(store);
-
-                var now = DateTime.Now;
-                StoreSampleData(store, now);
-                WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-
-                    var facets = new List<RangeFacet<Foo>>
-                    {
-                        new RangeFacet<Foo>
-                        {
-                            Ranges =
-                            {
-                                c => c.DateIn < now - TimeSpan.FromDays(365),
-                                c => c.DateIn >= now - TimeSpan.FromDays(365) && c.DateIn < now - TimeSpan.FromDays(180),
-                                c => c.DateIn >= now - TimeSpan.FromDays(180)
-                            }
-                        }
-                    };
-
-                    var query = session.Query<Foo, FooIndex>()
-                        .Where(x => x.DateIn != null && x.Age < 90)
-                        .AggregateBy(facets);
-
-                    Assert.Equal("from index 'FooIndex' where (DateIn != $p0 and Age < $p1) select " +
-                                 "facet(DateIn < $p2, DateIn >= $p3 and DateIn < $p4, DateIn >= $p5)"
-                                , query.ToString());
-
-                    var facetResult = query.Execute();
-
-                    AssertResults(facetResult, "DateIn", now);
-
-                }
-            }
-        }
-
-        [Fact]
         public void FacetShouldUseParameters_WithTypedRangeFacetList()
         {
             using (var store = GetDocumentStore())
@@ -156,6 +113,7 @@ namespace SlowTests.Tests.Faceted
 
                 using (var session = store.OpenSession())
                 {
+
                     var facets = new List<RangeFacet<Foo>>
                     {
                         new RangeFacet<Foo>
@@ -215,6 +173,56 @@ namespace SlowTests.Tests.Faceted
                     var facetResult = query.Execute();
 
                     AssertResults(facetResult, "DateIn", now);
+                }
+            }
+        }
+
+        [Fact]
+        public void TypedRangeFacetWithUntypedRangeFacetList_ShouldNotUseParameters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new FooIndex().Execute(store);
+
+                var now = DateTime.Now;
+                var oneYearAgo = DateTime.SpecifyKind(now - TimeSpan.FromDays(365), DateTimeKind.Unspecified);
+                var sixMonthsAgo = DateTime.SpecifyKind(now - TimeSpan.FromDays(180), DateTimeKind.Unspecified);
+
+                StoreSampleData(store, now);
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var facets = new List<RangeFacet>
+                    {
+                        //this facet will not use query-parameters when excecuting a query, due to the
+                        //implicit conversion that exists between RangeFacet<Foo> and RangeFacet
+
+                        new RangeFacet<Foo>
+                        {
+                            Ranges =
+                            {
+                                c => c.DateIn < now - TimeSpan.FromDays(365),
+                                c => c.DateIn >= now - TimeSpan.FromDays(365) && c.DateIn < now - TimeSpan.FromDays(180),
+                                c => c.DateIn >= now - TimeSpan.FromDays(180)
+                            }
+                        }
+                    };
+
+                    var query = session.Query<Foo, FooIndex>()
+                        .Where(x => x.DateIn != null && x.Age < 90)
+                        .AggregateBy(facets);
+
+
+                    Assert.Equal("from index 'FooIndex' where (DateIn != $p0 and Age < $p1) " +
+                                 $"select facet(DateIn < '{oneYearAgo:o}', DateIn >= '{oneYearAgo:o}' and DateIn < '{sixMonthsAgo:o}'," +
+                                 $" DateIn >= '{sixMonthsAgo:o}')"
+                                , query.ToString());
+
+                    var facetResult = query.Execute();
+
+                    AssertResults(facetResult, "DateIn", now);
+
                 }
             }
         }
