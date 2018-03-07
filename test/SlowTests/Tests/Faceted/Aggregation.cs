@@ -418,8 +418,8 @@ namespace SlowTests.Tests.Faceted
                     facetResult = r["Total"];
                     Assert.Equal(4, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "Total < 100").Sum);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "Total >= 1500").Sum);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "Total < 100.0").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "Total >= 1500.0").Sum);
                 }
             }
         }
