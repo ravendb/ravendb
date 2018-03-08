@@ -58,6 +58,8 @@ class ongoingTasks extends viewModelBase {
         super.activate(args);
         
         this.addNotification(this.changesContext.serverNotifications()
+            .watchClusterTopologyChanges(() => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications()
             .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
 
