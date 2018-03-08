@@ -22,5 +22,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("ETL.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? MaxNumberOfExtractedDocuments { get; protected set; }
+
+        [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
+        [DefaultValue(60 * 15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("ETL.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting MaxFallbackTime { get; set; }
+
     }
 }
