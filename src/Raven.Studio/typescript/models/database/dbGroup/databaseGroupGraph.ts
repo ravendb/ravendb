@@ -118,6 +118,7 @@ class databaseGroupGraph {
     private colaInitialized = false;
     private graphInitialized = false;
     private previousDbNodesCount = -1;
+    private previousLinks: string = null;
 
     private ongoingTasksCache: Raven.Server.Web.System.OngoingTasksResult;
     private databaseInfoCache: Raven.Client.ServerWide.Operations.DatabaseInfo;
@@ -180,13 +181,17 @@ class databaseGroupGraph {
         this.d3cola = cola.d3adaptor();
 
         this.d3cola.on('tick', () => {
-            this.updateDbNodes(this.dbNodesContainer.selectAll(".db-node"));
-            this.updateTaskNodes(this.tasksContainer.selectAll(".task-node"));
-            this.updateEdges(this.edgesContainer.selectAll(".edge"));
+            this.updateElementDecorators();
         });
 
         this.graphInitialized = true;
         this.draw();
+    }
+    
+    private updateElementDecorators() {
+        this.updateDbNodes(this.dbNodesContainer.selectAll(".db-node"));
+        this.updateTaskNodes(this.tasksContainer.selectAll(".task-node"));
+        this.updateEdges(this.edgesContainer.selectAll(".edge"));
     }
 
     private zoomed() {
@@ -261,7 +266,9 @@ class databaseGroupGraph {
         const colaLinks = this.findLinksForCola(this.data.databaseNodes, this.data.tasks);
 
         const visibleLinks = this.findVisibleLinks(this.data.databaseNodes, this.data.tasks);
-
+        
+        const linksEncoded = this.getLinksEncoded(colaLinks);
+        
         this.layout(this.data.databaseNodes, this.data.tasks, colaLinks, !this.colaInitialized);
 
         const dbNodes = this.dbNodesContainer
@@ -384,9 +391,15 @@ class databaseGroupGraph {
             .avoidOverlaps(false);
 
         if (this.colaInitialized) {
-            this.d3cola.start(0, 0, 0, 0, true);
-            this.d3cola.alpha(2);
-            this.d3cola.resume();
+            
+            if (this.previousLinks !== linksEncoded) {
+                this.d3cola.start(0, 0, 0, 0, true);
+                this.d3cola.alpha(2);
+                this.d3cola.resume();
+            } else {
+                this.updateElementDecorators();
+            }
+            
         } else {
             this.d3cola
                 .start(0, 0, 30, 0, true);
@@ -411,7 +424,8 @@ class databaseGroupGraph {
                 .call(this.zoom.event);
             this.colaInitialized = true;
         }
-
+        
+        this.previousLinks = linksEncoded;
     }
 
     private calculateInitialScale() {
@@ -720,6 +734,19 @@ class databaseGroupGraph {
 
     exitFullScreen() {
         $("#databaseGroupGraphContainer").fullScreen(false);
+    }
+    
+    private getLinksEncoded(links: Array<cola.Link<databaseNode | taskNode>>) {
+        const result = [] as Array<string>;
+        links.forEach(link => {
+            const linkEndpoints = [link.source.getId(), link.target.getId()];
+            linkEndpoints.sort();
+            result.push(linkEndpoints.join("<->"));
+        });
+        
+        result.sort();
+        
+        return result.join(",");
     }
 
 }
