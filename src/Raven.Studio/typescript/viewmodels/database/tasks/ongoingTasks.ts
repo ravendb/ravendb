@@ -16,6 +16,7 @@ import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoing
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
+import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -134,56 +135,86 @@ class ongoingTasks extends viewModelBase {
             });    
         }
     }
+    
+    private processTasksResult(result: Raven.Server.Web.System.OngoingTasksResult) {
+        const oldTasks = [
+            ...this.replicationTasks(),
+            ...this.backupTasks(),
+            ...this.etlTasks(),
+            ...this.sqlTasks(),
+            ...this.subscriptionTasks()] as Array<ongoingTaskListModel>;
 
-    private processTasksResult(result: Raven.Server.Web.System.OngoingTasksResult) { 
-        this.replicationTasks([]);
-        this.backupTasks([]);
-        this.etlTasks([]);
-        this.sqlTasks([]);
-        this.subscriptionTasks([]);
+        const oldTaskIds = oldTasks.map(x => x.taskId);
 
-        const taskTypesSet = new Set<TasksNamesInUI>();
-        const nodesSet = new Set<string>();
-      
-        result.OngoingTasksList.map((task) => {
-            
-            // Note: responsible node can be null if node is in a re-hab state for example..
-            if (task.ResponsibleNode.NodeTag) {
-                nodesSet.add(task.ResponsibleNode.NodeTag);
+        const newTaskIds = result.OngoingTasksList.map(x => x.TaskId);
+
+        const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
+
+        const groupedTasks = _.groupBy(result.OngoingTasksList, x => x.TaskType);
+
+        this.mergeTasks(this.replicationTasks, 
+            groupedTasks['Replication' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) => new ongoingTaskReplicationListModel(dto));
+        this.mergeTasks(this.backupTasks, 
+            groupedTasks['Backup' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => new ongoingTaskBackupListModel(dto, task => this.watchBackupCompletion(task)));
+        this.mergeTasks(this.etlTasks, 
+            groupedTasks['RavenEtl' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) => new ongoingTaskRavenEtlListModel(dto));
+        this.mergeTasks(this.sqlTasks, 
+            groupedTasks['SqlEtl' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) => new ongoingTaskSqlEtlListModel(dto));
+        this.mergeTasks(this.subscriptionTasks, 
+            groupedTasks['Subscription' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            toDeleteIds, 
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) => new ongoingTaskSubscriptionListModel(dto));
+
+        this.existingTaskTypes(Object.keys(groupedTasks)
+            .sort()
+            .map((taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) => {
+                switch (taskType) {
+                    case "RavenEtl":
+                        return "RavenDB ETL";
+                    case "Replication":
+                        return "External Replication";
+                    case "SqlEtl":
+                        return "SQL ETL";
+                    default:
+                        return taskType;
+                }
+            }));
+        
+        this.existingNodes(_.uniq(result
+            .OngoingTasksList
+            .map(x => x.ResponsibleNode.NodeTag)
+            .filter(x => x))
+            .sort());
+    }
+    
+     private mergeTasks<T extends ongoingTaskListModel>(container: KnockoutObservableArray<T>, 
+                                                       incomingData: Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTask>, 
+                                                       toDelete: Array<number>,
+                                                       ctr: (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) => T) {
+        // remove old tasks
+        container()
+            .filter(x => _.includes(toDelete, x.taskId))
+            .forEach(task => container.remove(task));
+        
+         (incomingData || []).forEach(item => {
+            const existingItem = container().find(x => x.taskId === item.TaskId);
+            if (existingItem) {
+                existingItem.update(item);
+            } else {
+                const newItem = ctr(item);
+                const insertIdx = _.sortedIndexBy(container(), newItem, x => x.taskName().toLocaleLowerCase());
+                container.splice(insertIdx, 0, newItem);
             }
-
-            switch (task.TaskType) {
-                case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplicationListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication));
-                    taskTypesSet.add("External Replication");
-                    break;
-                case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, task => this.watchBackupCompletion(task)));
-                    taskTypesSet.add("Backup");
-                    break;
-                case 'RavenEtl':
-                    this.etlTasks.push(new ongoingTaskRavenEtlListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView));
-                    taskTypesSet.add("RavenDB ETL");
-                    break;
-                case 'SqlEtl':
-                    this.sqlTasks.push(new ongoingTaskSqlEtlListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView));
-                    taskTypesSet.add("SQL ETL");
-                    break;
-                case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscriptionListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription)); 
-                    taskTypesSet.add("Subscription");
-                    break;
-            };
-        });
-
-        this.existingTaskTypes(Array.from(taskTypesSet).sort());
-        this.existingNodes(Array.from(nodesSet).sort());
-
-        this.replicationTasks(_.sortBy(this.replicationTasks(), x => x.taskName().toUpperCase()));
-        this.backupTasks(_.sortBy(this.backupTasks(), x => !x.taskName() ? "" : x.taskName().toUpperCase())); 
-        this.etlTasks(_.sortBy(this.etlTasks(), x => x.taskName().toUpperCase())); 
-        this.sqlTasks(_.sortBy(this.sqlTasks(), x => x.taskName().toUpperCase())); 
-        this.subscriptionTasks(_.sortBy(this.subscriptionTasks(), x => x.taskName().toUpperCase())); 
+        })
+        
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
