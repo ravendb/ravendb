@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
         public async Task<AttachmentResult> GetAsync(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
+            return await Session.OperationExecutor.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
         }
 
         public async Task<AttachmentResult> GetAsync(object entity, string name)
@@ -39,13 +39,13 @@ namespace Raven.Client.Documents.Session
                 ThrowEntityNotInSession(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
+            return await Session.OperationExecutor.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
         }
 
         public async Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
+            return await Session.OperationExecutor.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
         }
     }
 }
