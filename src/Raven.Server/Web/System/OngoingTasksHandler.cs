@@ -826,14 +826,17 @@ namespace Raven.Server.Web.System
                         if (etlProcess.ConfigurationName == ravenEtl.Name)
                         {
                             res.Url = etlProcess.Url;
-                            res.Status = OngoingTaskConnectionStatus.Active;
+                            res.Status = etlProcess.FallbackTime == null ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.Reconnect;
                             break;
                         }
                     }
                 }
                 if (res.Status == OngoingTaskConnectionStatus.None)
                 {
-                    error = $"The raven ETL process '{ravenEtl.Name}' was not found.";
+                    if (ravenEtl.Disabled)
+                        res.Status = OngoingTaskConnectionStatus.NotActive;
+                    else
+                        error = $"The raven ETL process '{ravenEtl.Name}' was not found.";
                 }
             }
             else
