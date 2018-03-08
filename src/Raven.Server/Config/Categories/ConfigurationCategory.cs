@@ -109,6 +109,8 @@ namespace Raven.Server.Config.Categories
                     if (value == null)
                         continue;
 
+                    value = value.Trim();
+
                     try
                     {
                         var minValue = property.GetCustomAttribute<MinValueAttribute>();
