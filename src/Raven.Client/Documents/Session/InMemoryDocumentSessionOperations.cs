@@ -18,6 +18,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
@@ -41,6 +42,7 @@ namespace Raven.Client.Documents.Session
         protected readonly int _clientSessionId = ++_clientSessionIdCounter;
 
         protected readonly RequestExecutor _requestExecutor;
+        private OperationExecutor _operationExecutor;
         private readonly IDisposable _releaseOperationContext;
         private readonly JsonOperationContext _context;
         protected readonly List<ILazyOperation> PendingLazyOperations = new List<ILazyOperation>();
@@ -124,6 +126,8 @@ namespace Raven.Client.Documents.Session
         public IDocumentStore DocumentStore => _documentStore;
 
         public RequestExecutor RequestExecutor => _requestExecutor;
+
+        public OperationExecutor OperationExecutor => _operationExecutor ?? (_operationExecutor = DocumentStore.Operations.ForDatabase(DatabaseName));
 
         public JsonOperationContext Context => _context;
 
