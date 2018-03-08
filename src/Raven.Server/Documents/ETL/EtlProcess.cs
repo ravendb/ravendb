@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -41,6 +42,8 @@ namespace Raven.Server.Documents.ETL
         public string ConfigurationName { get; protected set; }
 
         public string TransformationName { get; protected set; }
+
+        public TimeSpan? FallbackTime { get; protected set; }
 
         public abstract void Start();
 
@@ -92,7 +95,6 @@ namespace Raven.Server.Documents.ETL
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
         private readonly ServerStore _serverStore;
-        protected TimeSpan? FallbackTime;
 
         public readonly TConfiguration Configuration;        
 
@@ -264,15 +266,24 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to load transformed data for '{Name}'", e);
 
-                    HandleFallback();
+                    EnterFallbackMode();
 
                     Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems);
                 }
             }
         }
 
-        protected virtual void HandleFallback()
+        private void EnterFallbackMode()
         {
+            if (Statistics.LastLoadErrorTime == null)
+                FallbackTime = TimeSpan.FromSeconds(5);
+            else
+            {
+                // double the fallback time (but don't cross Etl.MaxFallbackTime)
+                var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastLoadErrorTime.Value).TotalSeconds;
+                
+                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.Seconds, Math.Max(5, secondsSinceLastError * 2)));
+            }
         }
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
@@ -415,11 +426,6 @@ namespace Raven.Server.Documents.ETL
 
                     var startTime = Database.Time.GetUtcNow();
 
-                    if (FallbackTime != null)
-                    {
-                        Thread.Sleep(FallbackTime.Value);
-                        FallbackTime = null;
-                    }
                     var didWork = false;
 
                     var state = GetProcessState(Database, Configuration.Name, Transformation.Name);
@@ -509,7 +515,29 @@ namespace Raven.Server.Documents.ETL
 
                     try
                     {
-                        _waitForChanges.Wait(CancellationToken);
+                        if (FallbackTime == null)
+                        {
+                            _waitForChanges.Wait(CancellationToken);
+                        }
+                        else
+                        {
+                            var sp = Stopwatch.StartNew();
+
+                            if (_waitForChanges.Wait(FallbackTime.Value, CancellationToken))
+                            {
+                                // we are in the fallback mode but got new docs to process
+                                // let's wait full time and retry the process then
+
+                                var timeLeftToWait = FallbackTime.Value - sp.Elapsed;
+
+                                if (timeLeftToWait > TimeSpan.Zero)
+                                {
+                                    Thread.Sleep(timeLeftToWait);
+                                }
+                            }
+
+                            FallbackTime = null;
+                        }
                     }
                     catch (ObjectDisposedException)
                     {

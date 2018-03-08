@@ -78,19 +78,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        protected override void HandleFallback()
-        {
-            if (Statistics.LastErrorTime == null)
-                FallbackTime = TimeSpan.FromSeconds(5);
-            else
-            {
-                // double the fallback time (but don't cross 15 minutes)
-                var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastErrorTime.Value).TotalSeconds;
-
-                FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
-            }
-        }
-
         protected override bool ShouldFilterOutHiLoDocument()
         {
             return true;
