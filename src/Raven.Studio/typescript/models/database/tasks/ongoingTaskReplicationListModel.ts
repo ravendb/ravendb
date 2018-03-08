@@ -1,11 +1,11 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel"); 
+import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 
-class ongoingTaskReplicationListModel extends ongoingTaskModel {
+class ongoingTaskReplicationListModel extends ongoingTaskListModel {
     editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
@@ -18,7 +18,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
 
     connectionStringsUrl: string; 
     
-    showReplicationDetails = ko.observable(false);
+    showDetails = ko.observable(false);
   
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super();
@@ -55,7 +55,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
     }
 
     toggleDetails() {
-        this.showReplicationDetails.toggle();
+        this.showDetails.toggle();
     }
 
 }

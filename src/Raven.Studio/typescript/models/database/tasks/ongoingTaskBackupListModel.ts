@@ -2,7 +2,7 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
+import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import backupNowCommand = require("commands/database/tasks/backupNowCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
@@ -10,7 +10,7 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import generalUtils = require("common/generalUtils");
 import timeHelpers = require("common/timeHelpers");
 
-class ongoingTaskBackupListModel extends ongoingTask {
+class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
 
     editUrl: KnockoutComputed<string>;
@@ -24,7 +24,6 @@ class ongoingTaskBackupListModel extends ongoingTask {
     lastIncrementalBackup = ko.observable<string>();
     onGoingBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.RunningBackup>();
 
-    showBackupDetails = ko.observable(false);
     textClass = ko.observable<string>();
 
     backupDestinations = ko.observableArray<string>([]);    
@@ -157,9 +156,9 @@ class ongoingTaskBackupListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showBackupDetails.toggle();
+        this.showDetails.toggle();
 
-        if (this.showBackupDetails()) {
+        if (this.showDetails()) {
             this.refreshBackupInfo();
         } 
     }

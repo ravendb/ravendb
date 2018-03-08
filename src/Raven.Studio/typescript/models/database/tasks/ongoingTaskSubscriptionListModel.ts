@@ -1,13 +1,13 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import ongoingTask = require("models/database/tasks/ongoingTaskModel");
+import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-class ongoingTaskSubscriptionListModel extends ongoingTask {
+class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
@@ -23,7 +23,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTask {
     textClass = ko.observable<string>("text-details");
 
     validationGroup: KnockoutValidationGroup; 
-    showSubscriptionDetails = ko.observable(false);
+    showDetails = ko.observable(false);
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
         super();
@@ -44,9 +44,9 @@ class ongoingTaskSubscriptionListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showSubscriptionDetails.toggle();
+        this.showDetails.toggle();
 
-        if (this.showSubscriptionDetails()) {
+        if (this.showDetails()) {
             this.refreshSubscriptionInfo();
         }
     }
