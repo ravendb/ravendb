@@ -95,6 +95,10 @@
                                             <li><span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
+                                            <li data-bind="visible: showDelayReplication">
+                                                <span>Replication Delay Time:</span>
+                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>                                           
+                                            </li>
                                             <li>
                                                 <span>Connection String:</span>
                                                 <span title="Connection string name">
