@@ -72,8 +72,12 @@ class certificateModel {
             case "Operator":
             case "ClusterNode":
                 return ["All"];
-            default: 
-                return _.sortBy(Object.keys(certificateDefinition.Permissions), x => x.toLowerCase());
+            default:
+                const access = Object.keys(certificateDefinition.Permissions);
+                if (access.length) {
+                    return _.sortBy(access, x => x.toLowerCase());
+                }
+                return null;
         }
     }
 
