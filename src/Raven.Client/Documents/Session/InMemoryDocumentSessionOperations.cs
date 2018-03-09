@@ -127,7 +127,7 @@ namespace Raven.Client.Documents.Session
 
         public RequestExecutor RequestExecutor => _requestExecutor;
 
-        public OperationExecutor OperationExecutor => _operationExecutor ?? (_operationExecutor = DocumentStore.Operations.ForDatabase(DatabaseName));
+        internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = DocumentStore.Operations.ForDatabase(DatabaseName));
 
         public JsonOperationContext Context => _context;
 
