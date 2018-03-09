@@ -297,7 +297,7 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Could not open server store for " + _name, e);
+                    _logger.Operations($"Could not open documents store for '{_name}' ({options}).", e);
 
                 Dispose();
                 options.Dispose();
