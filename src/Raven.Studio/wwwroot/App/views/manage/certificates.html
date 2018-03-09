@@ -65,7 +65,7 @@
                             <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
                             </div>
                         </div>
-                        <div class="expiration">
+                        <div class="expiration flex-noshrink">
                             <small data-bind="attr: { class: expirationClass }">
                                 <i data-bind="attr: { class: expirationIcon }"></i> <span data-bind="text: expirationText"></span>
                             </small>
@@ -82,6 +82,9 @@
                                 <div><i class="icon-database"></i></div>
                                 <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.resolveDatabasesAccess($data)">
                                     <div data-bind="text: $data"></div>
+                                </div>
+                                <div class="flex-horizontal flex-wrap text-danger" data-bind="visible: $root.resolveDatabasesAccess($data) === null">
+                                    None
                                 </div>
                             </div>
                         </div>
