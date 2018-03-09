@@ -30,12 +30,13 @@ class visualizerTreeExplorer extends dialogViewModelBase {
         grid.init((s, t) => this.fetcher(s, t), () => this.findColumns());
 
         this.columnPreview.install(".visualiserTreeExplorer", ".js-visualizer-tree-tooltip",
-            (details: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf, column: textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>, e: JQueryEventObject, onValue: (context: any) => void) => {
+            (details: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf, column: textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>,
+             e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
             const value = column.getCellValue(details);
             if (!_.isUndefined(value)) {
                 const json = JSON.stringify(value, null, 4);
                 const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);
+                onValue(html, json);
             }
         });
     }

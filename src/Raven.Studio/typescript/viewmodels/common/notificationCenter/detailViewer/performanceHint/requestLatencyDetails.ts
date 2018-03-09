@@ -39,7 +39,8 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
             ];
         });
 
-        this.columnPreview.install(".requestLatencyDetails", ".js-request-latency-details-tooltip", (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install(".requestLatencyDetails", ".js-request-latency-details-tooltip", 
+            (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, onValue: (context: any) => void) => {
             const value = column.getCellValue(details);
             if (value) {
                 onValue(value);

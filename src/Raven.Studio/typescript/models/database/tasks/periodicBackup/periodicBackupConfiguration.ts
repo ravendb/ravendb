@@ -293,7 +293,7 @@ class periodicBackupConfiguration {
             return;
         }
 
-        const dateFormat = "YYYY MMMM Do, h:mm A";
+        const dateFormat = generalUtils.dateFormat;
         new getNextBackupOccurrenceCommand(backupFrequency)
             .execute()
             .done((result: Raven.Server.Web.System.NextBackupOccurrence) => {

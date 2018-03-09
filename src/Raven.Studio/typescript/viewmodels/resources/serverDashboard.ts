@@ -517,7 +517,7 @@ class driveUsageSection {
 
 class serverDashboard extends viewModelBase {
     
-    static readonly dateFormat = "YYYY MMMM Do, h:mm A";
+    static readonly dateFormat = generalUtils.dateFormat;
     static readonly timeFormat = "h:mm:ss A";
     liveClient = ko.observable<serverDashboardWebSocketClient>();
     

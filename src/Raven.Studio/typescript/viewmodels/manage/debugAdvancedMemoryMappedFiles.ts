@@ -109,11 +109,11 @@ class memoryMappedFiles extends viewModelBase {
         this.columnPreview.install("virtual-grid", ".js-memory-mapped-files-tooltip",
             (entry: memoryMappingItem, 
                                     column: textColumn<memoryMappingItem>, 
-                                    e: JQueryEventObject, onValue: (context: any) => void) => {
+                                    e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Total Mapped") {
                 const json = JSON.stringify(entry.Mappings, null, 4);
                 const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);
+                onValue(html, json);
             } else {
                 const value = column.getCellValue(entry);
                 onValue(value);
