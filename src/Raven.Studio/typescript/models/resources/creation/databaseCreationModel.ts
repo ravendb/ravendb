@@ -186,7 +186,7 @@ class databaseCreationModel {
                 .done((restorePoints: Raven.Server.Documents.PeriodicBackup.RestorePoints) => {
                     this.restore.restorePoints(restorePoints.List.map(x => {
                         const date = x.Key;
-                        const dateFormat = "YYYY MMMM Do, h:mm A";
+                        const dateFormat = generalUtils.dateFormat;
                         x.Key = moment(date).format(dateFormat);
                         return x;
                     }));
