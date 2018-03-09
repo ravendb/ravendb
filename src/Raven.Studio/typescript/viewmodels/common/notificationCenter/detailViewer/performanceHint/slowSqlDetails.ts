@@ -47,7 +47,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
                 ];
         });
         
-        this.columnPreview.install(".slowSqlDetails", ".slow-sql-details-tooltip",
+        this.columnPreview.install(".slowSqlDetails", ".js-slow-sql-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>,
              e: JQueryEventObject, onValue: (context: any) => void) => {

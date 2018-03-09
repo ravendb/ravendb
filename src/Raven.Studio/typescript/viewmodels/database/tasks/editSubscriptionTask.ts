@@ -192,7 +192,7 @@ class editSubscriptionTask extends viewModelBase {
 
             grid.headerVisible(true);
 
-            this.columnPreview.install("virtual-grid", ".tooltip", (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+            this.columnPreview.install("virtual-grid", ".js-subscription-task-tooltip", (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
                 if (column instanceof textColumn) {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {
