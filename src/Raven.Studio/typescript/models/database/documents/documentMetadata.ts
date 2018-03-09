@@ -29,12 +29,12 @@ class documentMetadata {
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
 
-            const dateFormat = "YYYY MMMM Do, h:mm A (UTC)";
+            const dateFormat = generalUtils.dateFormat;
             this.lastModifiedFullDate = ko.pureComputed(() => {
                 const lastModified = this.lastModified();
                 if (lastModified) {
                     const lastModifiedMoment = moment(lastModified);
-                    return lastModifiedMoment.utc().format(dateFormat);
+                    return lastModifiedMoment.utc().format(dateFormat) + "(UTC)";
                 }
                 return "";
             });

@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import generalUtils = require("common/generalUtils");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
@@ -60,7 +61,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                 this.responsibleNode(result.ResponsibleNode);
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
                 
-                const dateFormat = "YYYY MMMM Do, h:mm A";
+                const dateFormat = generalUtils.dateFormat;
 
                 const lastServerTime = (!!result.LastBatchAckTime) ? moment.utc(result.LastBatchAckTime).local().format(dateFormat):"N/A";
                 this.lastTimeServerMadeProgressWithDocuments(lastServerTime);
