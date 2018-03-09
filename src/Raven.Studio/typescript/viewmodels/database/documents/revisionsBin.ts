@@ -109,7 +109,7 @@ class revisionsBin extends viewModelBase {
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
-        this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install(".documents-grid", ".js-revisions-bin-tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {

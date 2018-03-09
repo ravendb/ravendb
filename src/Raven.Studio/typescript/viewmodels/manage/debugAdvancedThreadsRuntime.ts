@@ -103,7 +103,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             ]
         );
 
-        this.columnPreview.install("virtual-grid", ".tooltip",
+        this.columnPreview.install("virtual-grid", ".js-threads-runtime-tooltip",
             (entry: Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo,
              column: textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>,
              e: JQueryEventObject, onValue: (context: any) => void) => {

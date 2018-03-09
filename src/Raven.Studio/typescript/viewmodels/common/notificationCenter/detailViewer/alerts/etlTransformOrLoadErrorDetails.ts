@@ -48,7 +48,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
                 [previewColumn, documentIdColumn, dateColumn, errorColumn];
             });
 
-        this.columnPreview.install(".etlErrorDetails", ".etl-error-details-tooltip",
+        this.columnPreview.install(".etlErrorDetails", ".js-etl-error-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>,
              e: JQueryEventObject, onValue: (context: any) => void) => {
