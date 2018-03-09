@@ -81,7 +81,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    protected update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
         super.update(dto);
 
         if (dto.Configuration) {
