@@ -73,6 +73,9 @@ namespace Raven.Server.Storage.Layout
                 var source = basePath.Combine(journalFileInfo.Name);
                 var destination = journalsPath.Combine(journalFileInfo.Name);
 
+                if (File.Exists(destination.FullPath))
+                    File.Delete(destination.FullPath);
+
                 File.Move(source.FullPath, destination.FullPath);
             }
 
