@@ -101,7 +101,7 @@ class documents extends viewModelBase {
             new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "510px"), 
         ]);
         
-         this.columnPreview.install(".js-cmp-xchg-grid", ".tooltip", 
+         this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
              (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);

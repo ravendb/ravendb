@@ -11,7 +11,6 @@ import patchCommand = require("commands/database/patch/patchCommand");
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
-import popoverUtils = require("common/popoverUtils");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
@@ -141,7 +140,6 @@ class patch extends viewModelBase {
     private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
     queryCompleter: queryCompleter;
     
-    private documentsProvider: documentBasedColumnsProvider;
     private fullDocumentsProvider: documentPropertyProvider;
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
