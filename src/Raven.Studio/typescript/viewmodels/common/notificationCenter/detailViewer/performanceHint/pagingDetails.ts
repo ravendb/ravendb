@@ -48,7 +48,8 @@ class pagingDetails extends abstractPerformanceHintDetails {
             ];
         });
 
-        this.columnPreview.install(".pagingDetails", ".js-paging-details-tooltip", (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install(".pagingDetails", ".js-paging-details-tooltip", 
+            (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, onValue: (context: any) => void) => {
             const value = column.getCellValue(details);
             if (!_.isUndefined(value)) {
                 onValue(value);  

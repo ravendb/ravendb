@@ -102,13 +102,13 @@ class documents extends viewModelBase {
         ]);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
-             (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+             (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html);
+                    onValue(html, json);
                 }
             }
         });

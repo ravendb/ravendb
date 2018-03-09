@@ -5,6 +5,8 @@ import moment = require("moment");
 
 class genUtils {
 
+    static dateFormat = "YYYY MMMM Do, h:mm A";
+    
     /***  IP Address Methods  ***/
 
     static isLocalhostIpAddress(ip: string) : boolean {
@@ -81,6 +83,11 @@ class genUtils {
         }
 
         return timeTokens.join(" ");
+    }
+    
+    static formatUtcDateAsLocal(date: string) {
+        const dateToFormat = moment.utc(date);
+        return dateToFormat.local().format(genUtils.dateFormat);
     }
 
     static formatDurationByDate(dateInUtc: moment.Moment, isFromDuration: boolean): string {
