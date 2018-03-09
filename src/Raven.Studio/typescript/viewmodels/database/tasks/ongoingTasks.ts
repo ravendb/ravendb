@@ -37,6 +37,12 @@ class ongoingTasks extends viewModelBase {
     sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
     backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
     subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
+    
+    showReplicationSection = this.createShowSectionComputed(this.replicationTasks, 'External Replication');
+    showEtlSection = this.createShowSectionComputed(this.etlTasks, 'RavenDB ETL');
+    showSqlSection = this.createShowSectionComputed(this.sqlTasks, 'SQL ETL');
+    showBackupSection = this.createShowSectionComputed(this.backupTasks, 'Backup');
+    showSubscriptionsSection = this.createShowSectionComputed(this.subscriptionTasks, 'Subscription');
 
     existingTaskTypes = ko.observableArray<string>();
     selectedTaskType = ko.observable<string>();
@@ -86,6 +92,20 @@ class ongoingTasks extends viewModelBase {
         });
         
         this.graph.init($("#databaseGroupGraphContainer"));
+    }
+    
+    private createShowSectionComputed(tasksContainer: KnockoutObservableArray<ongoingTaskListModel>, taskType: string) {
+        return ko.pureComputed(() =>  {
+            const hasAnyTask = tasksContainer().length > 0;
+            const matchesSelectTaskType = this.selectedTaskType() === taskType || this.selectedTaskType() === "All tasks";
+            
+            let nodeMatch = true;
+            if (this.selectedNode() !== "All nodes") {
+                nodeMatch = !!tasksContainer().find(x => x.responsibleNode() && x.responsibleNode().NodeTag === this.selectedNode());
+            }
+            
+            return hasAnyTask && matchesSelectTaskType && nodeMatch;
+        });
     }
 
     private refresh() {
