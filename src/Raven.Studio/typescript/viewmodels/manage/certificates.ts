@@ -167,64 +167,85 @@ class certificates extends viewModelBase {
 
     save() {
         this.newPermissionValidationGroup.errors.showAllMessages(false);
+
+        const model = this.model();
         
-        if (!this.isValid(this.model().validationGroup)) {
+        if (!this.isValid(model.validationGroup)) {
             return;
         }
-        
-        this.spinners.processing(true);
-        
-        const model = this.model();
-        switch (model.mode()) {
-            case "generate":
-                this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
-                
-                new getNextOperationId(null)
-                    .execute()
-                    .done(operationId => {
-                        
-                        const targetFrame = $("form#certificate_download_form");
-                        targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
-                        targetFrame.submit();
 
-                        notificationCenter.instance.monitorOperation(null, operationId)
-                            .done(() => {
-                                messagePublisher.reportSuccess("Client certificate was generated.");
+        const maybeWarnTask = $.Deferred<void>();
+        
+        if (model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
+            this.confirmationMessage("Did you forget about assigning database privileges?",
+            "Leaving the database privileges section empty is going to prevent users from accessing the database.",
+            ["I want to assign privileges", "Save anyway"],
+                true)
+            .done(result => {
+                if (result.can) {
+                    maybeWarnTask.resolve();
+                }
+            });
+        } else {
+            maybeWarnTask.resolve();
+        }
+        
+        maybeWarnTask
+            .done(() => {
+                this.spinners.processing(true);
+
+                switch (model.mode()) {
+                    case "generate":
+                        this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
+
+                        new getNextOperationId(null)
+                            .execute()
+                            .done(operationId => {
+
+                                const targetFrame = $("form#certificate_download_form");
+                                targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
+                                targetFrame.submit();
+
+                                notificationCenter.instance.monitorOperation(null, operationId)
+                                    .done(() => {
+                                        messagePublisher.reportSuccess("Client certificate was generated.");
+                                    })
+                                    .fail(() => {
+                                        notificationCenter.instance.openDetailsForOperationById(null, operationId);
+                                    })
+                                    .always(() => {
+                                        this.spinners.processing(false);
+                                        this.onCloseEdit();
+                                        this.loadCertificates();
+                                    })
                             })
                             .fail(() => {
-                                notificationCenter.instance.openDetailsForOperationById(null,  operationId);
-                            })
-                            .always(() => {
                                 this.spinners.processing(false);
                                 this.onCloseEdit();
+                            });
+                        break;
+                    case "upload":
+                        new uploadCertificateCommand(model)
+                            .execute()
+                            .always(() => {
+                                this.spinners.processing(false);
                                 this.loadCertificates();
-                            })
-                    })
-                    .fail(() => {
-                        this.spinners.processing(false);
-                        this.onCloseEdit();
-                    });
-                break;
-            case "upload":
-                new uploadCertificateCommand(model)
-                    .execute()
-                    .always(() => {
-                        this.spinners.processing(false);
-                        this.loadCertificates();
-                        this.onCloseEdit();
-                    });
-                break;
-                
-            case "editExisting":
-                new updateCertificatePermissionsCommand(model)
-                    .execute()
-                    .always(() => {
-                        this.spinners.processing(false);
-                        this.loadCertificates();
-                        this.onCloseEdit();
-                    });
-                break;
-        }
+                                this.onCloseEdit();
+                            });
+                        break;
+
+                    case "editExisting":
+                        new updateCertificatePermissionsCommand(model)
+                            .execute()
+                            .always(() => {
+                                this.spinners.processing(false);
+                                this.loadCertificates();
+                                this.onCloseEdit();
+                            });
+                        break;
+                }
+            });
+        
     }
     
     private loadCertificates() {
