@@ -96,7 +96,7 @@ class indexErrors extends viewModelBase {
             ]
         );
 
-        this.columnPreview.install("virtual-grid", ".tooltip", (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install("virtual-grid", ".js-index-errors-tooltip", (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column.header === "Action" || column.header === "Show") {
                 // do nothing
             } else if (column.header === "Timestamp") {

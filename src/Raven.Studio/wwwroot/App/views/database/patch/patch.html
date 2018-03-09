@@ -61,9 +61,6 @@
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
 <div class="backdrop" data-bind="click: test.closeTestMode"></div>
-<div class="tooltip json-preview" style="opacity: 0">
-    <pre><code></code></pre>
-</div>
 <script type="text/html" id="test-component">
     <div class="row margin-bottom form-horizontal" data-bind="with: test">
         <label class="control-label col-sm-3 col-lg-2">Document ID</label>

@@ -207,7 +207,7 @@ class documents extends viewModelBase {
 
         const fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install(".documents-grid", ".js-documents-preview", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
                 fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                     if (!_.isUndefined(v)) {

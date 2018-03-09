@@ -106,7 +106,7 @@ class memoryMappedFiles extends viewModelBase {
             ]
         );
 
-        this.columnPreview.install("virtual-grid", ".tooltip",
+        this.columnPreview.install("virtual-grid", ".js-memory-mapped-files-tooltip",
             (entry: memoryMappingItem, 
                                     column: textColumn<memoryMappingItem>, 
                                     e: JQueryEventObject, onValue: (context: any) => void) => {
