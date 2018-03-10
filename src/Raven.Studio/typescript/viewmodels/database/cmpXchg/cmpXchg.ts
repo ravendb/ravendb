@@ -15,7 +15,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import continueTest = require("common/shell/continueTest");
 
-class documents extends viewModelBase {
+class cmpXchg extends viewModelBase {
 
     filter = ko.observable<string>();
     deleteEnabled: KnockoutComputed<boolean>;
@@ -152,4 +152,4 @@ class documents extends viewModelBase {
     }
 }
 
-export = documents;
+export = cmpXchg;

@@ -96,7 +96,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             [
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.Name, "Name", "25%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => (x.ManagedThreadId || 'n/a') + " (" + x.Id + ")", "Thread Id", "10%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.StartingTime, "Start Time", "20%"),
+                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Duration", "10%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.State, "State", "10%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "20%"),
@@ -106,7 +106,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         this.columnPreview.install("virtual-grid", ".js-threads-runtime-tooltip",
             (entry: Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo,
              column: textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>,
-             e: JQueryEventObject, onValue: (context: any) => void) => {
+             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column.header === "Duration") {
                     const timings = {
                         StartTime: entry.StartingTime,
@@ -116,12 +116,9 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     };
                     const json = JSON.stringify(timings, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html);
+                    onValue(html, json);
                 } else if (column.header === "Start Time") {
-                    const value = column.getCellValue(entry);
-                    const diff = moment.utc().diff(moment.utc(value));
-                    const fromDuration = generalUtils.formatDuration(moment.duration(diff), true, 2) + "ago";
-                    onValue(fromDuration);
+                    onValue(moment.utc(entry.StartingTime), entry.StartingTime);
                 } else {
                     const value = column.getCellValue(entry);
                     onValue(value);
