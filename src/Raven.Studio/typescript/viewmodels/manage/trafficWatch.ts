@@ -143,7 +143,7 @@ class trafficWatch extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.TimeStamp, "Timestamp", "20%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "20%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", rowHighlightRules),
@@ -154,9 +154,11 @@ class trafficWatch extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip", 
             (item: Raven.Client.Documents.Changes.TrafficWatchChange, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>, 
-             e: JQueryEventObject, onValue: (context: any) => void) => {
+             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "URI") {
                 onValue(item.RequestUri);
+            } else if (column.header === "Timestamp") {
+                onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
             }
         });
 

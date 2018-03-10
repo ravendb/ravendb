@@ -4,6 +4,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import generalUtils = require("common/generalUtils");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
@@ -42,7 +43,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
             return [
                     previewColumn,
                     new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Duration, "Duration (ms)", "15%"),
-                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Date, "Date", "20%"),
+                    new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
                     new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Statement, "Statement", "50%")
                 ];
         });
@@ -50,11 +51,15 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
         this.columnPreview.install(".slowSqlDetails", ".js-slow-sql-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>,
-             e: JQueryEventObject, onValue: (context: any) => void) => {
+             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
-                    const value = column.getCellValue(details);
-                    if (value) {
-                        onValue(value);
+                    if (column.header === "Date") {
+                        onValue(moment.utc(details.Date), details.Date);
+                    } else {
+                        const value = column.getCellValue(details);
+                        if (value) {
+                            onValue(value);
+                        }
                     }
                 }
             });

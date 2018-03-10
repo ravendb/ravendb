@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsBinEntryCommand = require("commands/database/documents/getRevisionsBinEntryCommand");
+import generalUtils = require("common/generalUtils");
 
 import document = require("models/database/documents/document");
 
@@ -104,7 +105,7 @@ class revisionsBin extends viewModelBase {
             new checkedColumn(false),
             new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
             new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px"), 
-            new textColumn<document>(grid, x => x.__metadata.lastModified(), "Deletion date", "300px")
+            new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Deletion date", "300px")
         ]);
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
@@ -112,11 +113,16 @@ class revisionsBin extends viewModelBase {
         this.columnPreview.install(".documents-grid", ".js-revisions-bin-tooltip", 
             (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
-                const value = column.getCellValue(doc);
-                if (!_.isUndefined(value)) {
-                    const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html, json);
+                
+                if (column.header === "Deletion date") {
+                    onValue(moment.utc(doc.__metadata.lastModified()), doc.__metadata.lastModified());
+                } else {
+                    const value = column.getCellValue(doc);
+                    if (!_.isUndefined(value)) {
+                        const json = JSON.stringify(value, null, 4);
+                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        onValue(html, json);
+                    }
                 }
             }
         });
