@@ -6,6 +6,7 @@ import abstractPerformanceHintDetails = require("viewmodels/common/notificationC
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import generalUtils = require("common/generalUtils");
 
 type pagingDetailsItemDto = {
     Action: string;
@@ -42,17 +43,20 @@ class pagingDetails extends abstractPerformanceHintDetails {
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "20%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "10%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "10%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Occurrence, "Date", "15%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Occurrence), "Date", "15%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration (ms)", "15%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Details, "Details", "30%")
             ];
         });
 
         this.columnPreview.install(".pagingDetails", ".js-paging-details-tooltip", 
-            (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, onValue: (context: any) => void) => {
+            (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, 
+             onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(details);
-            if (!_.isUndefined(value)) {
-                onValue(value);  
+            if (column.header === "Date") {
+                onValue(moment.utc(details.Occurrence), details.Occurrence);
+            } else if (!_.isUndefined(value)) {
+                onValue(value);
             }
         });
     }

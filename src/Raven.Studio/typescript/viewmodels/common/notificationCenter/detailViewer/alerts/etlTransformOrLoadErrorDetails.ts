@@ -8,6 +8,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import copyToClipboard = require("common/copyToClipboard");
+import generalUtils = require("common/generalUtils");
 
 class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
 
@@ -39,7 +40,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
             {
                 title: () => 'Show item preview'
             });
-            const dateColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.Date, "Date", "20%");
+            const dateColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%");
             const errorColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.Error, "Error", "50%");
             const documentIdColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(grid, x => x.DocumentId || ' - ', "Document ID", "20%");
             
@@ -51,11 +52,16 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
         this.columnPreview.install(".etlErrorDetails", ".js-etl-error-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>,
-             e: JQueryEventObject, onValue: (context: any) => void) => {
+             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
-                    const value = column.getCellValue(details);
-                    if (value) {
-                        onValue(value);
+                    
+                    if (column.header === "Date") {
+                        onValue(moment.utc(details.Date), details.Date);       
+                    } else {
+                        const value = column.getCellValue(details);
+                        if (value) {
+                            onValue(value);
+                        }
                     }
                 }
             });

@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import generalUtils = require("common/generalUtils");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import messagePublisher = require("common/messagePublisher");
@@ -193,7 +194,7 @@ class documents extends viewModelBase {
                     new checkedColumn(true),
                     new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
                     new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "200px"),
-                    new textColumn<document>(grid, x => x.__metadata.lastModified(), "Last Modified", "300px"),
+                    new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Last Modified", "300px"),
                     new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px")
                 ];
             } else {
@@ -210,16 +211,20 @@ class documents extends viewModelBase {
         this.columnPreview.install(".documents-grid", ".js-documents-preview", 
             (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column instanceof textColumn) {
-                fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
-                    if (!_.isUndefined(v)) {
-                        const json = JSON.stringify(v, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                        onValue(html, json);    
-                    }
-                }, error => {
-                    const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
-                    onValue(html);
-                });
+                if (this.currentCollection().isAllDocuments && column.header === "Last Modified") {
+                    onValue(moment.utc(doc.__metadata.lastModified()), doc.__metadata.lastModified());
+                } else {
+                    fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
+                        if (!_.isUndefined(v)) {
+                            const json = JSON.stringify(v, null, 4);
+                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            onValue(html, json);
+                        }
+                    }, error => {
+                        const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
+                        onValue(html);
+                    });
+                }
             }
         });
     }
