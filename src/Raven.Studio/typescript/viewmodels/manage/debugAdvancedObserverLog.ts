@@ -4,6 +4,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import generalUtils = require("common/generalUtils");
 
 import getClusterObserverDecisionsCommand = require("commands/database/cluster/getClusterObserverDecisionsCommand");
 import toggleClusterObserverCommand = require("commands/database/cluster/toggleClusterObserverCommand");
@@ -67,18 +68,19 @@ class clusterObserverLog extends viewModelBase {
         grid.headerVisible(true);
         grid.init(fetcher, () =>
             [
-                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => clusterObserverLog.formatTimestampAsAgo(x.Date), "Date", "20%"),
+                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Database, "Database", "20%"),
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Message, "Message", "60%")
             ]
         );
 
         this.columnPreview.install("virtual-grid", ".js-observer-log-tooltip", 
-            (entry: Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry, column: textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>, e: JQueryEventObject, onValue: (context: any) => void) => {
+            (entry: Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry, 
+             column: textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>, e: JQueryEventObject, 
+             onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(entry);
             if (column.header === "Date") {
-                // for timestamp show 'raw' date in tooltip
-                onValue(entry.Date);
+                onValue(moment.utc(entry.Date), entry.Date);
             } else if (!_.isUndefined(value)) {
                 onValue(value);
             }
@@ -127,12 +129,6 @@ class clusterObserverLog extends viewModelBase {
                 this.gridController().reset(true);
                 this.spinners.refresh(false)
             });
-    }
-
-    private static formatTimestampAsAgo(time: string): string {
-        const dateMoment = moment.utc(time).local();
-        const ago = dateMoment.diff(moment());
-        return moment.duration(ago).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
     }
 
     suspendObserver() {

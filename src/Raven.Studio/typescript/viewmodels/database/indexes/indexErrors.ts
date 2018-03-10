@@ -12,6 +12,7 @@ import timeHelpers = require("common/timeHelpers");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 import indexErrorDetails = require("viewmodels/database/indexes/indexErrorDetails");
 import generalUtils = require("common/generalUtils");
+import index = require("../../../models/database/index/index");
 
 type indexNameAndCount = {
     indexName: string;
@@ -90,19 +91,19 @@ class indexErrors extends viewModelBase {
                     }),
                 new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
                 new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%"),
-                new textColumn<IndexErrorPerDocument>(grid, x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "20%"),
+                new textColumn<IndexErrorPerDocument>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Date", "20%"),
                 new textColumn<IndexErrorPerDocument>(grid, x => x.Action, "Action", "10%"),
                 new textColumn<IndexErrorPerDocument>(grid, x => x.Error, "Error", "15%")
             ]
         );
 
         this.columnPreview.install("virtual-grid", ".js-index-errors-tooltip", 
-            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, onValue: (context: any) => void) => {
+            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, 
+             onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Action" || column.header === "Show") {
                 // do nothing
-            } else if (column.header === "Timestamp") {
-                // for timestamp show 'raw' date in tooltip
-                onValue(indexError.Timestamp);
+            } else if (column.header === "Date") {
+                onValue(moment.utc(indexError.Timestamp), indexError.Timestamp);
             } else {
                 const value = column.getCellValue(indexError);
                 if (!_.isUndefined(value)) {
@@ -214,12 +215,6 @@ class indexErrors extends viewModelBase {
         if (!this.ignoreSearchCriteriaUpdatesMode) {
             this.gridController().reset();
         }
-    }
-
-    private formatTimestampAsAgo(time: string): string {
-        const dateMoment = moment.utc(time).local();
-        const ago = dateMoment.diff(moment());
-        return moment.duration(ago).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
     }
 }
 
