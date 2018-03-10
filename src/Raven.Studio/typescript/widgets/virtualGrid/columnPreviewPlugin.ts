@@ -1,6 +1,8 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+import copyToClipboard = require("common/copyToClipboard");
+import generalUtils = require("common/generalUtils");
 
 class columnPreviewPlugin<T> {
 
@@ -9,6 +11,7 @@ class columnPreviewPlugin<T> {
     private enterTooltipTimeoutHandle: number;
     private previewVisible = false;
     private $tooltip: JQuery;
+    private currentValue: any;
 
     private static readonly delay = 500;
     private static readonly enterTooltipDelay = 100;
@@ -17,8 +20,33 @@ class columnPreviewPlugin<T> {
         width: 500,
         height: 300
     };
+    
+    private defaultMarkupProvider(value: any) {
+        const copySyntax = '<button class="btn btn-default btn-sm copy"><i class="icon-copy"></i><span>Copy to clipboard</span></button>';
+        
+        if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
+            const dateAsMoment = value as moment.Moment;
+            const diff = moment.utc().diff(dateAsMoment);
+            const duration = generalUtils.formatDuration(moment.duration(diff), true, 2);
+            
+            const fullDuration = diff < 0 ? "in " + duration : duration + "ago";
+            return `<div class="dateContainer">
+                        <div>
+                            <div class="dateLabel">UTC: </div>
+                            <div class="dateValue">${dateAsMoment.format()}</div>
+                        </div>
+                        <div>
+                            <div class="dateLabel">Relative: </div>
+                            <div class="dateValue">${fullDuration}</div>
+                        </div>
+                </div>` + copySyntax;
+        } else {
+            return '<pre><code class="white-space-pre">' + value + '</code></pre>' + copySyntax;
+        }
+    }
 
-    install(containerSelector: string, tooltipSelector: string, previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any) => void) => void) {
+    install(containerSelector: string, tooltipSelector: string, 
+            previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any, valueToCopy?: any) => void) => void) {
         const $grid = $(containerSelector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
         if (!grid || !(grid instanceof virtualGrid)) {
@@ -28,6 +56,14 @@ class columnPreviewPlugin<T> {
         this.$tooltip = $(tooltipSelector);
 
         this.grid = grid;
+        
+        const markupProvider = this.defaultMarkupProvider;
+        this.$tooltip.on("click", ".copy", () => {
+            copyToClipboard.copy(this.currentValue);
+            $(".copy span", this.$tooltip)
+                .html("Copied!")
+                .addClass("text-success");
+        });
 
         $(containerSelector).on("mouseenter", ".cell", e => {
             const [element, column] = this.findItemAndColumn(e);
@@ -35,7 +71,11 @@ class columnPreviewPlugin<T> {
                 if (document.body.contains(e.target)) {
                     this.previewVisible = true;
 
-                    previewContextProvider(element, column, e, markup => this.show(markup, e));    
+                    previewContextProvider(element, column, e, (value, valueToCopy) => {
+                        const markup = markupProvider(value);
+                        this.show(markup, e); 
+                        this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
+                    });    
                 }
             }, columnPreviewPlugin.delay);
         });
@@ -49,6 +89,7 @@ class columnPreviewPlugin<T> {
                 this.enterTooltipTimeoutHandle = setTimeout(() => {
                     this.hide();
                     this.previewVisible = false;
+                    this.currentValue = undefined;
                 }, columnPreviewPlugin.enterTooltipDelay);
             }
         });
@@ -107,14 +148,14 @@ class columnPreviewPlugin<T> {
             .css('opacity', 1)
             .show();
 
-        $("code", this.$tooltip).html(markup);
+        this.$tooltip.html(markup);
     }
 
     hide() {
         this.$tooltip
             .css('opacity', 0)
             .hide();
-        $("code", this.$tooltip).html("");
+        this.$tooltip.html("");
     }
     
     private findItemAndColumn(e: JQueryEventObject): [T, virtualColumn] {
