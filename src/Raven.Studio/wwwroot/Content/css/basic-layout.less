@@ -166,6 +166,44 @@ body {
     .slidein-style;
 }
 
+.json-preview {
+    button.copy {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        transform: translateY(100%);
+        
+        span {
+            display: none;
+        }
+        
+        &:hover {
+            span {
+                display: inline;
+            }
+        }
+    }
+    
+    .dateContainer {
+        border-color: @gray-darker;
+        background-color: @gray-dark;
+        color: @gray-light;
+        padding: 13px;
+        font-size: 11px;
+        
+        .dateValue {
+            color: @gray-lighter;
+            display: inline-block;
+        }
+        
+        .dateLabel {
+            display: inline-block;
+            width: 50px;
+        }
+    }
+}
+
+
 .flex-vertical, .flex-horizontal, .flex-row, .form-group {
     .flex-noshrink {
         flex-shrink: 0;
