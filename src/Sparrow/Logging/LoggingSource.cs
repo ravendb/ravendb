@@ -45,6 +45,7 @@ namespace Sparrow.Logging
         private Stream _additionalOutput;
 
         private Stream _pipeSink;
+        private static readonly int TimeToWaitForLoggingToEndInMilliseconds = 5_000;
 
         public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
@@ -182,6 +183,13 @@ namespace Sparrow.Logging
             _loggingThread.Start();
         }
 
+        public void EndLogging()
+        {
+            _keepLogging.Lower();
+            _hasEntries.Set();
+            _loggingThread.Join(TimeToWaitForLoggingToEndInMilliseconds);
+
+        }
 
         private Stream GetNewStream(long maxFileSize)
         {
