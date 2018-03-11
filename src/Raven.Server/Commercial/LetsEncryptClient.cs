@@ -243,7 +243,7 @@ namespace Raven.Server.Commercial
             }
 
             // if it is about to expire, we need to refresh
-            if ((cert.NotAfter - DateTime.UtcNow).TotalDays < 14)
+            if ((cert.NotAfter - DateTime.UtcNow).TotalDays <= 30)
                 return false;
 
             var rsa = new RSACryptoServiceProvider(4096);
