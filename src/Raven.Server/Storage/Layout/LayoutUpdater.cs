@@ -73,13 +73,29 @@ namespace Raven.Server.Storage.Layout
                 var source = basePath.Combine(journalFileInfo.Name);
                 var destination = journalsPath.Combine(journalFileInfo.Name);
 
-                if (File.Exists(destination.FullPath))
-                    File.Delete(destination.FullPath);
+                BackupAndDeleteFile(destination);
 
                 File.Move(source.FullPath, destination.FullPath);
             }
 
             return true;
+        }
+
+        private static void BackupAndDeleteFile(VoronPathSetting path)
+        {
+            if (File.Exists(path.FullPath) == false)
+                return;
+
+            var count = 0;
+            while (true)
+            {
+                var filePath = $"{path.FullPath}.{count++}.bak";
+                if (File.Exists(filePath))
+                    continue;
+
+                File.Move(path.FullPath, filePath);
+                break;
+            }
         }
     }
 }
