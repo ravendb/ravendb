@@ -49,7 +49,7 @@ namespace FastTests
             return _globalServer == server;
         }
 
-        protected RavenServer _localServer;
+        private RavenServer _localServer;
 
         protected List<RavenServer> Servers = new List<RavenServer>();
 
