@@ -127,10 +127,11 @@ namespace Raven.Server.Commercial
 
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
             await acmeClient.Init(setupInfo.Email);
-            
+
             // here we explicitly want to refresh the cert, so we don't want it cached
-            acmeClient.ResetCachedCertificate(setupInfo.NodeSetupInfos.Keys);
-            
+            var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
+            acmeClient.ResetCachedCertificate(cacheKeys);
+
             var challengeResult = await InitialLetsEncryptChallenge(setupInfo,acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
