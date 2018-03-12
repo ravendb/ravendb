@@ -1382,6 +1382,14 @@ namespace Raven.Server.ServerWide
                     }, null);
                 }
 
+                var onValueChanged = ValueChanged;
+                if (onValueChanged != null)
+                {
+                    TaskExecutor.Execute(_ =>
+                    {
+                        onValueChanged.Invoke(this, (lastIncludedIndex, "InstallUpdatedServerCertificateCommand"));
+                    }, null);
+                }
                 context.Transaction.Commit();
             }
 
