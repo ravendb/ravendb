@@ -326,7 +326,7 @@ namespace Raven.Server
                 }
 
                 // same certificate, but now we need to see if we are need to auto update it
-                var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow()).TotalDays;
+                var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
                 if (remainingDays > 30)
                     return; // nothing to do, the certs are the same and we have enough time
 
