@@ -131,7 +131,7 @@ namespace Raven.Server.Commercial
             // here we explicitly want to refresh the cert, so we don't want it cached
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
-            
+
             var challengeResult = await InitialLetsEncryptChallenge(setupInfo,acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
@@ -256,7 +256,7 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        private static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls, out License license)
+        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls, out License license)
         {
             byte[] certBytes = null;
             byte[] clientCertBytes = null;
