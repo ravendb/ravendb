@@ -203,7 +203,7 @@ class certificates extends viewModelBase {
 
         const maybeWarnTask = $.Deferred<void>();
         
-        if (model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
+        if (this.model().mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
             this.confirmationMessage("Did you forget about assigning database privileges?",
             "Leaving the database privileges section empty is going to prevent users from accessing the database.",
             ["I want to assign privileges", "Save anyway"],
