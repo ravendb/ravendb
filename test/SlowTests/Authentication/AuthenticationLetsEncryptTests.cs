@@ -24,14 +24,16 @@ namespace SlowTests.Authentication
 {
     public partial class AuthenticationLetsEncryptTests : ClusterTestBase
     {
-        [SetupWizardFact]
+        [NightlyBuildFact]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
+            UseNewLocalServer();
+
             var acmeStaging = "https://acme-staging.api.letsencrypt.org/directory";
             Server.Configuration.Core.AcmeUrl = acmeStaging;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 
-            var domain = "RavenCertTest"; //change domain before PR so that first claim will be by the scratch machine license
+            var domain = "RavenClusterTest" +  Environment.MachineName.Replace("-", "");
             string email;
             string rootDomain;
 
@@ -105,7 +107,7 @@ namespace SlowTests.Authentication
                 }
             }
 
-            // Finished the setup wizard, need to restart the server. (TODO add restart server option to tests infrastructure)
+            // Finished the setup wizard, need to restart the server. 
             // Since cannot restart we'll create a new server loaded with the new certificate and settings and use the server cert to connect to it
 
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
@@ -130,10 +132,11 @@ namespace SlowTests.Authentication
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
                 [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeStaging
             };
-            
+
+            Server.Dispose();
+
             DoNotReuseServer(customSettings);
             UseNewLocalServer();
-            Servers = new List<RavenServer>{_localServer};
 
             using (var store = GetDocumentStore(new Options
             {
@@ -156,7 +159,7 @@ namespace SlowTests.Authentication
 
                 await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
-                mre.Wait(TimeSpan.FromMinutes(2));
+                mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2));
 
                 Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
             }
