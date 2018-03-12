@@ -593,11 +593,11 @@ namespace Raven.Server.ServerWide
                             if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
                             {
                                 if (Server.Certificate?.Certificate?.NotAfter != null &&
-                                    (Server.Certificate.Certificate.NotAfter - DateTime.Now).Days > 3)
+                                    (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
                                 {
                                     if (Logger.IsOperationsEnabled)
                                         Logger.Operations($"Node {NodeTag}: Not all nodes have confirmed the certificate replacement. " +
-                                                          $"We still have {(Server.Certificate.Certificate.NotAfter - DateTime.Now).Days} days until expiration. " +
+                                                          $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
                                                           "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
                                                           "If you wish to force replacing the certificate just for the nodes that are up, please set 'ReplaceImmediately' to true.");
                                     return; // we still have time for all the nodes to update themselves 
@@ -616,11 +616,11 @@ namespace Raven.Server.ServerWide
                             {
                                 NotificationCenter.Add(AlertRaised.Create(
                                     null,
-                                    "Unable to replace server certificate",
-                                    "Cluster wanted to install updated server certificate, but no path has been configured in settings.json",
-                                    AlertType.Certificates_ReplaceError,
+                                    "Unable to refresh server certificate",
+                                    "Cluster wanted to install updated server certificate, but no path has been configured",
+                                    AlertType.ClusterTopologyWarning,
                                     NotificationSeverity.Error,
-                                    "Cluster.Certificate.Replace.Error"));
+                                    "Cluster.Certificate.Install.Error"));
                                 return;
                             }
 
@@ -642,14 +642,6 @@ namespace Raven.Server.ServerWide
                             }
 
                             Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
-
-                            NotificationCenter.Add(AlertRaised.Create(
-                                null,
-                                "Successful certificate replacement",
-                                $"The server certificate was replaced on node {NodeTag}.",
-                                AlertType.Certificates_ReplaceSuccess,
-                                NotificationSeverity.Success,
-                                "Cluster.Certificate.Replace.Success"));
 
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations($"Node {NodeTag}: Server certificate replaced successfully.");
