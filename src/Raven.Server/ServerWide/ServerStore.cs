@@ -593,11 +593,11 @@ namespace Raven.Server.ServerWide
                             if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
                             {
                                 if (Server.Certificate?.Certificate?.NotAfter != null &&
-                                    (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
+                                    (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
                                 {
                                     if (Logger.IsOperationsEnabled)
                                         Logger.Operations($"Node {NodeTag}: Not all nodes have confirmed the certificate replacement. " +
-                                                          $"We still have {(Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays} until expiration. " +
+                                                          $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} until expiration. " +
                                                           "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
                                                           "If you wish to force replacing the certificate just for the nodes that are up, please set 'ReplaceImmediately' to true.");
                                     return; // we still have time for all the nodes to update themselves 
