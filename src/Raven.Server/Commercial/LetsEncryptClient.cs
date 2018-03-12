@@ -455,16 +455,26 @@ namespace Raven.Server.Commercial
 
                     request.Content = new StringContent(json, Encoding.UTF8, "application/json");
                 }
+
                 HttpResponseMessage response;
-                try
+                var retries = 5;
+                do
                 {
-                    response = await _client.SendAsync(request, token).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
+                    try
+                    {
+                        await Task.Delay(1000, token);
+                        response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("acme request failed.", e);
+                    }
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        break;
+                    }
+                } while (retries-- > 0);
 
                 RememberNonce(response);
 
