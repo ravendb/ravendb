@@ -145,10 +145,22 @@ namespace Raven.Database.Raft.Storage
 
                     WriteClusterDocumentToSnapshot(jsonTextWriter, accessor, Constants.Cluster.ClusterReplicationStateDocumentKey);
 
+                    WriteDatabaseDocumentsToSnapshot(accessor, jsonTextWriter);
+
                     jsonTextWriter.WriteEndObject();
 
                 });
 
+            }
+        }
+
+        private static void WriteDatabaseDocumentsToSnapshot(IStorageActionsAccessor accessor, JsonTextWriter jsonTextWriter)
+        {
+            var databaseDocuments = accessor.Documents.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, 0, int.MaxValue, null);
+            foreach (var dbDoc in databaseDocuments)
+            {
+                jsonTextWriter.WritePropertyName(dbDoc.Key);
+                dbDoc.ToJson().WriteTo(jsonTextWriter);
             }
         }
 
