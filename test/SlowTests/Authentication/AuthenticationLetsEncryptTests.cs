@@ -24,18 +24,20 @@ namespace SlowTests.Authentication
 {
     public partial class AuthenticationLetsEncryptTests : ClusterTestBase
     {
-        [Fact]
-        public async Task CanGetLetsEncryptCertificate()
+        [SetupWizardFact]
+        public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             var acmeStaging = "https://acme-staging.api.letsencrypt.org/directory";
             Server.Configuration.Core.AcmeUrl = acmeStaging;
-            var domain = "RavenCertTest";
+            Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
+
+            var domain = "RavenCertTest"; //change domain before PR so that first claim will be by the scratch machine license
             string email;
             string rootDomain;
 
             Server.ServerStore.EnsureNotPassive();
             var license = Server.ServerStore.LoadLicense();
-
+            
             using (var store = GetDocumentStore())
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -78,7 +80,6 @@ namespace SlowTests.Authentication
 
             X509Certificate2 serverCert;
             string firstServerCertThumbprint;
-            X509Certificate2 clientCert;
             BlittableJsonReaderObject settingsJsonObject;
 
             using (var store = GetDocumentStore())
@@ -95,7 +96,7 @@ namespace SlowTests.Authentication
 
                 try
                 {
-                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCert, out clientCert, out _, out _);
+                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCert, out _, out _, out _);
                     firstServerCertThumbprint = serverCert.Thumbprint;
                 }
                 catch (Exception e)
@@ -104,7 +105,9 @@ namespace SlowTests.Authentication
                 }
             }
 
-            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePath), out string certPath);
+            // Finished the setup wizard, need to restart the server. (TODO add restart server option to tests infrastructure)
+            // Since cannot restart we'll create a new server loaded with the new certificate and settings and use the server cert to connect to it
+
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail), out string letsEncryptEmail);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
@@ -153,7 +156,7 @@ namespace SlowTests.Authentication
 
                 await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
-                Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromSeconds(10) : TimeSpan.FromMinutes(5)));
+                mre.Wait(TimeSpan.FromMinutes(2));
 
                 Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
             }
