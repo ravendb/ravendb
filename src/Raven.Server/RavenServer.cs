@@ -43,6 +43,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Https;
@@ -68,6 +69,8 @@ namespace Raven.Server
         public readonly RavenConfiguration Configuration;
 
         public Timer ServerMaintenanceTimer;
+
+        public SystemTime Time = new SystemTime();
 
         public readonly ServerStore ServerStore;
 
@@ -323,7 +326,7 @@ namespace Raven.Server
                 }
 
                 // same certificate, but now we need to see if we are need to auto update it
-                var remainingDays = (currentCertificate.Certificate.NotAfter - DateTime.Now).TotalDays;
+                var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
                 if (remainingDays > 30)
                     return; // nothing to do, the certs are the same and we have enough time
 

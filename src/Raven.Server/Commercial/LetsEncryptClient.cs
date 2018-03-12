@@ -315,7 +315,14 @@ namespace Raven.Server.Commercial
 
             private void RememberNonce(HttpResponseMessage response)
             {
-                _nonce = response.Headers.GetValues("Replay-Nonce").First();
+                try
+                {
+                    _nonce = response.Headers.GetValues("Replay-Nonce").First();
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Cannot remember nonce", e);
+                }
             }
 
             public async Task<RegistrationResponse> RegisterAsync(NewRegistrationRequest request, CancellationToken token = default (CancellationToken))
@@ -449,7 +456,25 @@ namespace Raven.Server.Commercial
                     request.Content = new StringContent(json, Encoding.UTF8, "application/json");
                 }
 
-                var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                HttpResponseMessage response;
+                var retries = 5;
+                do
+                {
+                    try
+                    {
+                        await Task.Delay(1000, token);
+                        response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("acme request failed.", e);
+                    }
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        break;
+                    }
+                } while (retries-- > 0);
 
                 RememberNonce(response);
 
