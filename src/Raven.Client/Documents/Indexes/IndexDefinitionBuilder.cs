@@ -118,7 +118,10 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public IndexDefinitionBuilder(string indexName = null)
         {
-            _indexName = indexName ?? GetType().FullName;
+            _indexName = indexName ?? DocumentConventions.DefaultGetCollectionName(GetType());
+            if (_indexName.Length > 256)
+                throw new ArgumentException("The index name is limited to 256 characters, but was: " + _indexName, nameof(indexName));
+
             Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
             StoresStrings = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
