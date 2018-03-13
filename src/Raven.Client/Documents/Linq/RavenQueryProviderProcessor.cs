@@ -1841,13 +1841,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
-                        if (field.Expression is UnaryExpression
-                            || field.Expression is LabelExpression
-                            || (field.Expression is MemberExpression member && HasComputation(member) == false))
+                        if (TryGetMemberExpression(field.Expression, out var member) && HasComputation(member) == false)
                         {
-                            var expression = LinqPathProvider.GetMemberExpression(field.Expression);
-                            var renamedField = GetSelectPathOrConstantValue(expression);
-
+                            var renamedField = GetSelectPathOrConstantValue(member);
                             AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
                             continue;
                         }
@@ -2228,7 +2224,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return js;
         }
 
-        private bool HasComputation(MemberExpression memberExpression)
+        private static bool HasComputation(MemberExpression memberExpression)
         {
             var cur = memberExpression;
 
@@ -2262,6 +2258,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 cur = cur.Expression as MemberExpression;
             }
             return false;
+        }
+
+        private static bool TryGetMemberExpression(Expression expression, out MemberExpression member)
+        {
+            if (expression is UnaryExpression unaryExpression)
+                return TryGetMemberExpression(unaryExpression.Operand, out member);
+
+            if (expression is LambdaExpression lambdaExpression)
+                return TryGetMemberExpression(lambdaExpression.Body, out member);
+
+            member = expression as MemberExpression;
+            return member != null;
         }
 
         private void VisitSelectAfterGroupBy(Expression operand, Expression elementSelectorPath)
