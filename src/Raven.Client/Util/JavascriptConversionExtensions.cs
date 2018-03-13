@@ -394,7 +394,7 @@ namespace Raven.Client.Util
                                     writer.Write(".map");
                                     context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 }
-                                writer.Write(".reduce(function(a, b) { return Math.max(a, b);})");
+                                writer.Write(".reduce(function(a, b) { return Raven_Max(a, b);})");
                                 return;
 
                             }
@@ -411,7 +411,7 @@ namespace Raven.Client.Util
                                     writer.Write(".map");
                                     context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 }
-                                writer.Write(".reduce(function(a, b) { return Math.min(a, b);})");
+                                writer.Write(".reduce(function(a, b) { return Raven_Min(a, b);})");
                                 return;
 
                             }

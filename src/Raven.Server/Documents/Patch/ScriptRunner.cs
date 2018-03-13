@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Esprima.Ast;
@@ -135,6 +136,8 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("regex", new ClrFunctionInstance(ScriptEngine, Regex));
 
                 ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, ExplodeArgs));
+                ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, Raven_Min));
+                ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
@@ -153,6 +156,78 @@ namespace Raven.Server.Documents.Patch
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
                 }
+            }
+
+            private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
+            {
+                void Swap()
+                {
+                    var tmp = args[1];
+                    args[1] = args[0];
+                    args[0] = tmp;
+                }
+
+                // this is basically the same as Math.min / Math.max, but 
+                // can also be applied to strings, numbers and nulls
+                
+                if (args.Length != 2)
+                    throw new ArgumentException(caller + "must be called with exactly two arguments");
+
+                switch (args[0].Type)
+                {
+                    case Jint.Runtime.Types.None:
+                    case Jint.Runtime.Types.Undefined:
+                    case Jint.Runtime.Types.Null:
+                        // null sorts lowers, so that is fine (either the other one is null or
+                        // already higher than us).
+                        break;
+                    case Jint.Runtime.Types.Boolean:
+                    case Jint.Runtime.Types.Number:
+                        var a = Jint.Runtime.TypeConverter.ToNumber(args[0]);
+                        var b = Jint.Runtime.TypeConverter.ToNumber(args[1]);
+                        if (a > b)
+                            Swap();
+                        break;
+                    case Jint.Runtime.Types.String:
+                        switch (args[1].Type)
+                        {
+                            case Jint.Runtime.Types.None:
+                            case Jint.Runtime.Types.Undefined:
+                            case Jint.Runtime.Types.Null:
+                                Swap();// a value is bigger than no value
+                                break;
+                            case Jint.Runtime.Types.Boolean:
+                            case Jint.Runtime.Types.Number:
+                                // if the string value is a number that is smaller than 
+                                // the numeric value, because Math.min(true, "-2") works :-(
+                                if (double.TryParse(args[0].AsString(), out double d) == false ||
+                                    d > Jint.Runtime.TypeConverter.ToNumber(args[1]))
+                                {
+                                    Swap();
+                                }
+                                break;
+                            case Jint.Runtime.Types.String:
+                                if (string.Compare(args[0].AsString(), args[1].AsString()) > 0)
+                                    Swap();
+                                break;
+                        }
+                        break;
+                    case Jint.Runtime.Types.Object:
+                        throw new ArgumentException(caller + " cannot be called on an object");
+                }
+
+            }
+            
+            private JsValue Raven_Max(JsValue self, JsValue[] args)
+            {
+                GenericSortTwoElementArray(args);
+                return args[1];
+            }
+
+            private JsValue Raven_Min(JsValue self, JsValue[] args)
+            {
+                GenericSortTwoElementArray(args);
+                return args[0];
             }
 
             private JsValue IncludeDoc(JsValue self, JsValue[] args)
