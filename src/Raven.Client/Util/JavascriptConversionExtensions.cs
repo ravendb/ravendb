@@ -1123,14 +1123,14 @@ namespace Raven.Client.Util
                                 writer.Write("new Date(253402297199999)");
                                 break;
                             case "Now":
-                                writer.Write("Date.now()");
+                                writer.Write("new Date(Date.now())");
                                 break;
                             case "UtcNow":
                                 writer.Write(
-                                    @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date()).getTime()");
+                                    @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date())");
                                 break;
                             case "Today":
-                                writer.Write("new Date().setHours(0,0,0,0)");
+                                writer.Write("new Date(new Date().setHours(0,0,0,0))");
                                 break;
                         }
                     }
