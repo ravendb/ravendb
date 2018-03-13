@@ -443,20 +443,21 @@ namespace Raven.Server.Documents
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 25961 ||
                         state.StringBuffer[18] != (byte)'d')
                     {
-                        if (reader.Read() == false)
-                        {
-                            _state = State.ReadingLastModified;
-                            {
-                                aboutToReadPropertyName = false;
-                                return true;
-                            }
-                        }
-                        if (state.CurrentTokenType != JsonParserToken.String)
-                            ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
-                        LastModified = ReadDateTime(state, reader);
+                        aboutToReadPropertyName = true;
+                        return true;
                     }
 
-                    goto case -1;
+                    if (reader.Read() == false)
+                    {
+                        _state = State.ReadingLastModified;
+                        aboutToReadPropertyName = false;
+                        return true;
+                    }
+
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
+                    LastModified = ReadDateTime(state, reader);
+                    break;
                 case 21: //Raven-Expiration-Date
                     if (*(long*)state.StringBuffer != 8666383010116297042 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 7957695015158966640 ||
