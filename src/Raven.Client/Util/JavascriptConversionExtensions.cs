@@ -825,7 +825,16 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(memberExpression))
                 {
-                    writer.Write(parameter);
+                    if (memberExpression.Type == typeof(DateTime))
+                    {
+                        writer.Write("new Date(Date.parse(");
+                        writer.Write(parameter);
+                        writer.Write("))");
+                    }
+                    else
+                    {
+                        writer.Write(parameter);
+                    }
                 }
             }
         }
