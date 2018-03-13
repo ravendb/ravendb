@@ -380,7 +380,7 @@ namespace Raven.Client.Documents.Linq
 
             while (cur != null)
             {
-                switch (cur.Expression.NodeType)
+                switch (cur.Expression?.NodeType)
                 {
                     case ExpressionType.Call:
                     case ExpressionType.Invoke:
@@ -402,6 +402,7 @@ namespace Raven.Client.Documents.Linq
                     case ExpressionType.Block:
                     case ExpressionType.Conditional:
                     case ExpressionType.ArrayIndex:
+                    case null:
 
                         throw new ArgumentException("Not supported computation: " + memberExpression +
                                                     ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");

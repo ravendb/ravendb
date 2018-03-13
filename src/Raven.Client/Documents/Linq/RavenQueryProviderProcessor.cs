@@ -2228,13 +2228,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return js;
         }
 
-        private bool HasComputation(MemberExpression memberExpression)
+        private static bool HasComputation(MemberExpression memberExpression)
         {
             var cur = memberExpression;
 
             while (cur != null)
             {
-                switch (cur.Expression.NodeType)
+                switch (cur.Expression?.NodeType)
                 {
                     case ExpressionType.Call:
                     case ExpressionType.Invoke:
@@ -2256,7 +2256,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     case ExpressionType.Block:
                     case ExpressionType.Conditional:
                     case ExpressionType.ArrayIndex:
-
+                    case null:
                         return true;
                 }
                 cur = cur.Expression as MemberExpression;
