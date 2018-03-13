@@ -64,9 +64,6 @@ namespace Raven.Server.Documents.Patch
                 var engine = new Engine(options =>
                 {
                     options.MaxStatements(1).LimitRecursion(1);
-                    options.LocalTimeZone(TimeZoneInfo.Utc);
-
-
                 });
                 engine.Execute(script);
             }
