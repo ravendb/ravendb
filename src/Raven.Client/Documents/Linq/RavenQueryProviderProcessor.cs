@@ -2187,6 +2187,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var extensions = new JavascriptConversionExtension[]
             {
+                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
@@ -2205,7 +2206,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NullableSupport.Instance,
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
-                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
                 MemberInitAsJson.ForAllTypes
             };
