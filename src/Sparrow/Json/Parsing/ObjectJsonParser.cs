@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
@@ -571,7 +572,8 @@ namespace Sparrow.Json.Parsing
 
         public string GenerateErrorState()
         {
-            return string.Empty;
+            var last = _elements.LastOrDefault();
+            return last?.ToString() ?? string.Empty;
         }
     }
 }
