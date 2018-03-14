@@ -1,7 +1,8 @@
 param(
     $Repo = "ravendb/ravendb",
     $ArtifactsDir = "..\artifacts",
-    [switch]$DryRun = $False)
+    [switch]$DryRun = $False,
+    [switch]$RemoveImages = $False)
 
 $ErrorActionPreference = "Stop"
 
@@ -47,6 +48,15 @@ function PushImagesToDockerHub($imageTags) {
     }
 }
 
+function RemoveImages($imageTags) {
+    write-host "Removing images."
+    foreach ($tag in $imageTags) {
+        write-host "Remove $tag"
+        docker rmi "$tag"
+        CheckLastExitCode
+    }
+}
+
 function PushImagesDryRun($imageTags) {
     write-host "DRY RUN: Pushing images."
     foreach ($tag in $imageTags) {
@@ -71,3 +81,7 @@ function GetImageTags($repo, $version) {
 $version = GetVersionFromArtifactName
 $tags = GetImageTags $Repo $version
 PushImages $tags
+
+if ($RemoveImages) {
+    RemoveImages $tags
+}
