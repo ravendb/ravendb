@@ -1,18 +1,24 @@
 function CleanDir ( $dir ) {
     write-host "Cleaning $dir..."
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $dir
-    if (-Not (Test-Path -path $dir)) {
+    if (Test-Path -path $dir) {
+        Remove-Item -Recurse -Force $dir
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
 }
-function CleanBinDirs ([string[]] $srcDirs) {
+function CleanSrcDirs ([string[]] $srcDirs) {
     foreach ($dir in $srcDirs) {
         CleanBinDir $dir
+        CleanObjDir $dir
     }
 }
 function CleanBinDir ( $srcDir ) {
     $binDir = [io.path]::Combine($srcDir, "bin");
     CleanDir $binDir
+} 
+
+function CleanObjDir ( $srcDir ) {
+    $objDir = [io.path]::Combine($srcDir, "obj");
+    CleanDir $objDir
 } 
 
 function CleanFiles ( $dir ) {
