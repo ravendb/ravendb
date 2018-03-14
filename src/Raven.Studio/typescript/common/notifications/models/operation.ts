@@ -17,6 +17,7 @@ class operation extends abstractNotification {
     startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();
     duration: KnockoutComputed<string>;
+    durationInSeconds: KnockoutComputed<number>;
 
     isCompleted: KnockoutComputed<boolean>;
     isCanceled: KnockoutComputed<boolean>;
@@ -78,14 +79,22 @@ class operation extends abstractNotification {
         });
 
         this.duration = ko.pureComputed(() => {
-            const start = this.startTime();
-            const end = this.endTime();
-
-            // Adjust studio-server time difference if we are 'in progress' 
-            const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
-
-            return generalUtils.formatAsTimeSpan(endTime.diff(start));
+            return generalUtils.formatAsTimeSpan(this.getDuration());
         });
+
+        this.durationInSeconds = ko.pureComputed(() => {
+            return this.getDuration() / 1000;
+        });
+    }
+
+    private getDuration() {
+        const start = this.startTime();
+        const end = this.endTime();
+
+        // Adjust studio-server time difference if we are 'in progress' 
+        const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
+
+        return endTime.diff(start);
     }
 }
 

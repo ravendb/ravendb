@@ -9,6 +9,7 @@ class bulkInsertDetails extends abstractOperationDetails {
 
     progress: KnockoutObservable<Raven.Client.Documents.Operations.BulkInsertProgress>;
     result: KnockoutObservable<Raven.Client.Documents.Operations.BulkOperationResult>;
+    processingSpeed: KnockoutComputed<string>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -25,6 +26,16 @@ class bulkInsertDetails extends abstractOperationDetails {
 
         this.result = ko.pureComputed(() => {
             return this.op.status() === "Completed" ? this.op.result() as Raven.Client.Documents.Operations.BulkOperationResult : null;
+        });
+
+        this.processingSpeed = ko.pureComputed(() => {
+            const progress = this.progress();
+            const processingSpeed = this.calculateProcessingSpeed(progress.Processed);
+            if (processingSpeed === 0) {
+                return "N/A";
+            }
+
+            return `${processingSpeed.toLocaleString()} docs / sec`;
         });
     }
 
