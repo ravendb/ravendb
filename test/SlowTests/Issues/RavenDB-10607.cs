@@ -19,6 +19,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
             public string Name { get; set; }
             public int? Depth { get; set; }
+            public int? Depth2 { get; set; }
         }
 
         [Fact]
@@ -94,6 +95,47 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, result.Count);
                     Assert.Equal(2, result[0].Depth);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseCount3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Location
+                    {
+                        LocationParents = new List<string>
+                        {
+                            "locations/10", "locations/20"
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from location in session.Query<Location>()
+                        select new Result
+                        {
+                            Id = location.Id,
+                            Depth = location.LocationParents.Count,
+                            Depth2 = location.LocationParents.Count(),
+                            Name = location.Name
+                        };
+
+                    Assert.Equal("from Locations as location select { Id : id(location), " +
+                                 "Depth : location.LocationParents.length, Depth2 : location.LocationParents.length, Name : location.Name }"
+                        , query.ToString());
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(2, result[0].Depth);
+                    Assert.Equal(2, result[0].Depth2);
                 }
             }
         }
