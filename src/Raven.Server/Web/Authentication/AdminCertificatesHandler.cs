@@ -530,7 +530,9 @@ namespace Raven.Server.Web.Authentication
             var clientCert = feature?.Certificate;
 
             if (clientCert == null)
-                return Task.CompletedTask;
+            {
+                return NoContent();
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
