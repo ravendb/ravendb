@@ -16,7 +16,7 @@
     "jquery-fullscreen": "^1.1.4",
     "eonasdan-bootstrap-datetimepicker": "bootstrap3-datetimepicker#^4.17.37",
     "bootstrap-contextmenu": "^0.3.4",
-    "bootstrap-multiselect": "^0.9.13",
+    "bootstrap-multiselect": "0.9.13",
     "bootstrap-select": "^1.9.4",
     "Durandal": "durandal#^2.1.0",
     "jszip-utils": "^0.0.2",
