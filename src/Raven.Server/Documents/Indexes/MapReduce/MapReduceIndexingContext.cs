@@ -42,6 +42,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public unsafe void StoreNextMapResultId()
         {
+            if (MapPhaseTree.Llt.Environment.Options.IsCatastrophicFailureSet)
+                return; // avoid re-throwing it
+
             using (MapPhaseTree.DirectAdd(LastMapResultIdKey, sizeof(long), out byte* ptr))
                 *(long*)ptr = NextMapResultId;
         }

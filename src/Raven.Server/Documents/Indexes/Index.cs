@@ -542,7 +542,7 @@ namespace Raven.Server.Documents.Indexes
             if (Configuration.Disabled)
                 return;
 
-            if (State == IndexState.Disabled)
+            if (State == IndexState.Disabled || State == IndexState.Error)
                 return;
 
             SetState(State);
@@ -952,8 +952,11 @@ namespace Raven.Server.Documents.Indexes
 
                                 try
                                 {
-                                    var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
-                                    HandleIndexFailureInformation(failureInformation);
+                                    using (_environment.Options.SkipCatastrophicFailureAssertion()) // we really want to store errors
+                                    {
+                                        var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                        HandleIndexFailureInformation(failureInformation);
+                                    }
                                 }
                                 catch (VoronUnrecoverableErrorException vuee)
                                 {
@@ -1259,7 +1262,10 @@ namespace Raven.Server.Documents.Indexes
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
             try
             {
-                SetState(IndexState.Error);
+                using (_environment.Options.SkipCatastrophicFailureAssertion()) // we really want to store Error state
+                {
+                    SetState(IndexState.Error);
+                }
             }
             catch (Exception exception)
             {
