@@ -179,6 +179,7 @@ select new
                     .IndexStore
                     .GetIndexes()
                     .OfType<MapReduceIndex>()
+                    .OrderByDescending(x => x.Name)
                     .ToList();
 
                 Assert.Equal(IndexType.MapReduce, indexes[0].Type);
