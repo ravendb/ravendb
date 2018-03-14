@@ -27,6 +27,9 @@ namespace Voron
         public const string RecyclableJournalFileNamePrefix = "recyclable-journal";
 
         private ExceptionDispatchInfo _catastrophicFailure;
+
+        [ThreadStatic]
+        private static bool _skipCatastrophicFailureAssertion;
         private readonly CatastrophicFailureNotification _catastrophicFailureNotification;
 
         public VoronPathSetting TempPath { get; }
@@ -207,9 +210,24 @@ namespace Voron
             _catastrophicFailureNotification.RaiseNotificationOnce(exception.SourceException);
         }
 
+        public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
+
         internal void AssertNoCatastrophicFailure()
         {
-            _catastrophicFailure?.Throw(); // force re-throw of error
+            if (_catastrophicFailure == null)
+                return;
+
+            if (_skipCatastrophicFailureAssertion)
+                return;
+
+            _catastrophicFailure.Throw(); // force re-throw of error
+        }
+
+        public IDisposable SkipCatastrophicFailureAssertion()
+        {
+            _skipCatastrophicFailureAssertion = true;
+
+            return new DisposableAction(() => { _skipCatastrophicFailureAssertion = false; });
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)

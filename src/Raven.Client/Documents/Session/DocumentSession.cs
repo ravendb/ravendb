@@ -5,11 +5,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
@@ -137,7 +139,20 @@ namespace Raven.Client.Documents.Session
 
         public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
-            if (PendingLazyOperations.Count == 0)
+            var requests = new List<GetRequest>();
+            for (int i = 0; i < PendingLazyOperations.Count; i++)
+            {
+                var req = PendingLazyOperations[i].CreateRequest(Context);
+                if (req == null)
+                {
+                    PendingLazyOperations.RemoveAt(i);
+                    i--; // so we'll recheck this index
+                    continue;
+                }
+                requests.Add(req);
+            }
+
+            if (requests.Count == 0)
                 return new ResponseTimeInformation();
 
             try
@@ -148,7 +163,7 @@ namespace Raven.Client.Documents.Session
 
                 var responseTimeDuration = new ResponseTimeInformation();
 
-                while (ExecuteLazyOperationsSingleStep(responseTimeDuration))
+                while (ExecuteLazyOperationsSingleStep(responseTimeDuration, requests))
                 {
                     Thread.Sleep(100);
                 }
@@ -171,10 +186,9 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
+        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, 
+            List<GetRequest> requests)
         {
-            //WIP - Not final
-            var requests = PendingLazyOperations.Select(x => x.CreateRequest(Context)).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             RequestExecutor.Execute(multiGetCommand, Context, sessionInfo: SessionInfo);

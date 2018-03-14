@@ -562,7 +562,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
                 {
-                    field.SetValue(cached.LazyStringReader?.GetTextReaderFor(lazyValue) ?? cached.BlittableObjectReader.GetTextReaderFor(blittableValue));
+                    field.SetValue(lazyValue != null
+                        ? cached.LazyStringReader.GetTextReaderFor(lazyValue)
+                        : cached.BlittableObjectReader.GetTextReaderFor(blittableValue));
                 }
                 else
                 {

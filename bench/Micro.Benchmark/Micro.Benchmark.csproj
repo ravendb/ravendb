@@ -13,7 +13,7 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.10.12" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.13" />
     <PackageReference Include="xunit" Version="2.4.0-beta.1.build3958" />
   </ItemGroup>
   <ItemGroup>
