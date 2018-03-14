@@ -26,6 +26,14 @@
     <EmbeddedResource Include="Data\insert.sql" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
     <EmbeddedResource Include="Data\RavenDB_10958.json" />
+    <EmbeddedResource Include="Data\mssql.northwind.create.sql" />
+    <EmbeddedResource Include="Data\mssql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\mysql.northwind.create.sql" />
+    <EmbeddedResource Include="Data\mysql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\mssql.basic.create.sql" />
+    <EmbeddedResource Include="Data\mssql.basic.insert.sql" />
+    <EmbeddedResource Include="Data\mysql.basic.create.sql" />
+    <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />

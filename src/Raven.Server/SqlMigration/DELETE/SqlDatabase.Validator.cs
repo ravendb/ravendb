@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Operations.Migration;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -9,6 +8,7 @@ namespace Raven.Server.SqlMigration
 {
     public partial class SqlDatabase
     {
+        /* TODO
         public class Validator
         {
             public readonly List<SqlMigrationImportResult.Error> Errors;
@@ -228,6 +228,6 @@ namespace Raven.Server.SqlMigration
                 if (count < table.PrimaryKeys.Count)
                     AddError(SqlMigrationImportResult.Error.ErrorType.InvalidQuery, $"Query for table '{table.Name}' must select all primary keys", table.Name);
             }
-        }
+        }*/
     }
 }

@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
-using Raven.Client.Documents.Operations.Migration;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -40,10 +39,6 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, GetConflictsResult> GetConflictsResult = GenerateJsonDeserializationRoutine<GetConflictsResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetDocumentsResult> GetDocumentsResult = GenerateJsonDeserializationRoutine<GetDocumentsResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, SqlMigrationSchemaResult> SqlSchemaResult = GenerateJsonDeserializationRoutine<SqlMigrationSchemaResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, SqlMigrationImportResult> SqlMigrationResult = GenerateJsonDeserializationRoutine<SqlMigrationImportResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
 

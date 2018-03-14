@@ -76,6 +76,25 @@ create table Product (
    constraint PK_PRODUCT primary key (Id)
 )
 
+/*==============================================================*/
+/* Table: Category                                              */
+/*==============================================================*/
+create table Category (
+   Id                   int                  identity,
+   Name			        nvarchar(30)	     not null,
+   constraint PK_CATEGORY primary key (Id)
+)
+
+
+/*==============================================================*/
+/* Table: ProductCategory                                       */
+/*==============================================================*/
+create table ProductCategory (
+   ProductId              int                  not null,
+   CategoryId             int                  not null,
+   constraint PK_PRODUCT_CATEGORY primary key (ProductId, CategoryId)
+)
+
 
 /*==============================================================*/
 /* Table: Photo                                              */
@@ -104,7 +123,6 @@ alter table Details
    add constraint FK_Details_REFERENCE_ORDERITEM foreign key (OrderId, ProductId)
       references OrderItem(OrderId, ProductId)
 
-
 alter table OrderItem
    add constraint FK_ORDERITE_REFERENCE_PRODUCT foreign key (ProductId)
       references Product (Id)
@@ -124,5 +142,11 @@ alter table Photo
    add constraint FK_ORDERITE_REFERENCE_CUSTOMER3 foreign key (InPic2)
       references Customer (Id)
 
-
+ALTER TABLE ProductCategory
+    ADD CONSTRAINT FK_PROD_CAT_REF_PROD FOREIGN KEY (ProductId)
+      REFERENCES Product (Id)
+      
+ALTER TABLE ProductCategory
+    ADD CONSTRAINT FK_PROD_CAT_REF_CAT FOREIGN KEY (CategoryId)
+        REFERENCES Category(Id)
 
