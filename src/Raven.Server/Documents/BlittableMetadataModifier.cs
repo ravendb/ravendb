@@ -43,6 +43,7 @@ namespace Raven.Server.Documents
 
         private readonly FastList<AllocatedMemoryData> _allocations = new FastList<AllocatedMemoryData>();
 
+        private const string LegacyLastModified = "Raven-Last-Modified";
         private const string LegacyRevisionState = "Historical";
         private const string LegacyHasRevisionsDocumentState = "Current";
 
@@ -54,13 +55,13 @@ namespace Raven.Server.Documents
             return flags;
         }
 
-        private unsafe DateTime ReadDateTime(JsonParserState state, IJsonParser reader)
+        private unsafe DateTime ReadDateTime(JsonParserState jsonParserState, IJsonParser reader, State state)
         {
-            var str = CreateLazyStringValueFromParserState(state);
+            var str = CreateLazyStringValueFromParserState(jsonParserState);
 
             var result = LazyStringParser.TryParseDateTime(str.Buffer, str.Size, out DateTime dt, out DateTimeOffset _);
             if (result != LazyStringParser.Result.DateTime)
-                ThrowInvalidLastModifiedProperty(str, reader);
+                ThrowInvalidLastModifiedProperty(state, str, reader);
 
             return dt;
         }
@@ -89,6 +90,7 @@ namespace Raven.Server.Documents
             ReadingId,
             ReadingFlags,
             ReadingLastModified,
+            ReadingLegacyLastModified,
             ReadingChangeVector,
             ReadingFirstEtagOfLegacyRevision,
             ReadingEtag,
@@ -239,10 +241,8 @@ namespace Raven.Server.Documents
                         if (reader.Read() == false)
                         {
                             _state = State.IgnoreProperty;
-                            {
-                                aboutToReadPropertyName = false;
-                                return true;
-                            }
+                            aboutToReadPropertyName = false;
+                            return true;
                         }
                         if (state.CurrentTokenType == JsonParserToken.StartArray ||
                             state.CurrentTokenType == JsonParserToken.StartObject)
@@ -261,10 +261,8 @@ namespace Raven.Server.Documents
                     if (reader.Read() == false)
                     {
                         _state = State.ReadingId;
-                        {
-                            aboutToReadPropertyName = false;
-                            return true;
-                        }
+                        aboutToReadPropertyName = false;
+                        return true;
                     }
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state, reader);
@@ -286,10 +284,8 @@ namespace Raven.Server.Documents
                             if (reader.Read() == false)
                             {
                                 _state = State.ReadingFirstEtagOfLegacyRevision;
-                                {
-                                    aboutToReadPropertyName = false;
-                                    return true;
-                                }
+                                aboutToReadPropertyName = false;
+                                return true;
                             }
                             if (state.CurrentTokenType != JsonParserToken.String)
                                 ThrowExpectedFieldTypeOfString("@etag", state, reader);
@@ -306,10 +302,8 @@ namespace Raven.Server.Documents
                         if (reader.Read() == false)
                         {
                             _state = State.ReadingEtag;
-                            {
-                                aboutToReadPropertyName = false;
-                                return true;
-                            }
+                            aboutToReadPropertyName = false;
+                            return true;
                         }
 
                         if (state.CurrentTokenType != JsonParserToken.String)
@@ -331,10 +325,8 @@ namespace Raven.Server.Documents
                     if (reader.Read() == false)
                     {
                         _state = State.ReadingFlags;
-                        {
-                            aboutToReadPropertyName = false;
-                            return true;
-                        }
+                        aboutToReadPropertyName = false;
+                        return true;
                     }
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state, reader);
@@ -374,10 +366,8 @@ namespace Raven.Server.Documents
                             if (reader.Read() == false)
                             {
                                 _state = State.ReadingChangeVector;
-                                {
-                                    aboutToReadPropertyName = false;
-                                    return true;
-                                }
+                                aboutToReadPropertyName = false;
+                                return true;
                             }
                             if (state.CurrentTokenType != JsonParserToken.String)
                                 ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.ChangeVector, state, reader);
@@ -393,22 +383,18 @@ namespace Raven.Server.Documents
                             if (reader.Read() == false)
                             {
                                 _state = State.ReadingLastModified;
-                                {
-                                    aboutToReadPropertyName = false;
-                                    return true;
-                                }
+                                aboutToReadPropertyName = false;
+                                return true;
                             }
                             if (state.CurrentTokenType != JsonParserToken.String)
                                 ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
-                            LastModified = ReadDateTime(state, reader);
+                            LastModified = ReadDateTime(state, reader, State.ReadingLastModified);
                             break;
                         }
                     }
 
-                    {
-                        aboutToReadPropertyName = true;
-                        return true;
-                    }
+                    aboutToReadPropertyName = true;
+                    return true;
                 case 15: //Raven-Read-Only
                     if (*(long*)state.StringBuffer != 7300947898092904786 ||
                         *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
@@ -433,10 +419,8 @@ namespace Raven.Server.Documents
                     var collection = _metadataCollections;
                     state.StringBuffer = collection.AllocatedMemoryData.Address;
                     state.StringSize = collection.Size;
-                    {
-                        aboutToReadPropertyName = true;
-                        return true;
-                    }
+                    aboutToReadPropertyName = true;
+                    return true;
                 case 19: //Raven-Last-Modified
                     if (*(long*)state.StringBuffer != 7011028672080929106 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 7379539893622240371 ||
@@ -449,14 +433,14 @@ namespace Raven.Server.Documents
 
                     if (reader.Read() == false)
                     {
-                        _state = State.ReadingLastModified;
+                        _state = State.ReadingLegacyLastModified;
                         aboutToReadPropertyName = false;
                         return true;
                     }
 
                     if (state.CurrentTokenType != JsonParserToken.String)
-                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
-                    LastModified = ReadDateTime(state, reader);
+                        ThrowExpectedFieldTypeOfString(LegacyLastModified, state, reader);
+                    LastModified = ReadDateTime(state, reader, State.ReadingLegacyLastModified);
                     break;
                 case 21: //Raven-Expiration-Date
                     if (*(long*)state.StringBuffer != 8666383010116297042 ||
@@ -471,10 +455,8 @@ namespace Raven.Server.Documents
                     var expires = _metadataExpires;
                     state.StringBuffer = expires.AllocatedMemoryData.Address;
                     state.StringSize = expires.Size;
-                    {
-                        aboutToReadPropertyName = true;
-                        return true;
-                    }
+                    aboutToReadPropertyName = true;
+                    return true;
                 case 23: //Raven-Document-Revision
                     if (*(long*)state.StringBuffer != 8017583188798234962 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
@@ -519,10 +501,8 @@ namespace Raven.Server.Documents
                     {
                         _verifyStartArray = isReplicationHistory;
                         _state = isReplicationHistory ? State.IgnoreArray : State.IgnoreProperty;
-                        {
-                            aboutToReadPropertyName = false;
-                            return true;
-                        }
+                        aboutToReadPropertyName = false;
+                        return true;
                     }
 
                     // Raven-Replication-History is an array
@@ -536,10 +516,8 @@ namespace Raven.Server.Documents
                             if (reader.Read() == false)
                             {
                                 _state = State.IgnoreArray;
-                                {
-                                    aboutToReadPropertyName = false;
-                                    return true;
-                                }
+                                aboutToReadPropertyName = false;
+                                return true;
                             }
                         } while (state.CurrentTokenType != JsonParserToken.EndArray);
                     }
@@ -584,10 +562,8 @@ namespace Raven.Server.Documents
                     if (reader.Read() == false)
                     {
                         _state = isRevisionStatusProperty ? State.IgnoreRevisionStatusProperty : State.IgnoreProperty;
-                        {
-                            aboutToReadPropertyName = false;
-                            return true;
-                        }
+                        aboutToReadPropertyName = false;
+                        return true;
                     }
 
                     if (state.CurrentTokenType == JsonParserToken.StartArray ||
@@ -689,12 +665,13 @@ namespace Raven.Server.Documents
                     Flags = ReadFlags(state, reader);
                     break;
                 case State.ReadingLastModified:
+                case State.ReadingLegacyLastModified:
                     if (reader.Read() == false)
                         return false;
 
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
-                    LastModified = ReadDateTime(state, reader);
+                    LastModified = ReadDateTime(state, reader, _state);
                     break;
                 case State.ReadingChangeVector:
                     if (reader.Read() == false)
@@ -742,9 +719,10 @@ namespace Raven.Server.Documents
             throw new InvalidDataException($"Cannot parse the value of property @metadata.@flags: {str}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
-        private void ThrowInvalidLastModifiedProperty(LazyStringValue str, IJsonParser reader)
+        private void ThrowInvalidLastModifiedProperty(State state, LazyStringValue str, IJsonParser reader)
         {
-            throw new InvalidDataException($"Cannot parse the value of property @metadata.@last-modified: {str}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
+            var field = state == State.ReadingLastModified ? Constants.Documents.Metadata.LastModified : LegacyLastModified;
+            throw new InvalidDataException($"Cannot parse the value of property @metadata.{field}: {str}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
         private void ThrowInvalidEtagType(JsonParserState state, IJsonParser reader)
