@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <RuntimeFrameworkVersion>2.0.5</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.0.6</RuntimeFrameworkVersion>
     <AssemblyName>TypingsGenerator</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>TypingsGenerator</PackageId>
