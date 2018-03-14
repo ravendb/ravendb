@@ -276,24 +276,30 @@ namespace Raven.Server
         {
             try
             {
-                CertificateHolder newCertificate = null;
+                CertificateHolder newCertificate;
                 try
                 {
                     newCertificate = LoadCertificate();
+                    if (newCertificate == null)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!");
+
+                        ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            "Server certificate",
+                            "Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!",
+                            AlertType.Certificates_ReplaceError,
+                            NotificationSeverity.Error,
+                            "Cluster.Certificate.Replace.Error"));
+                        return;
+                    }
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Tried to load certificate as part of refresh check, but got an error!", e);
+                    throw new InvalidOperationException("Tried to load certificate as part of refresh check, but got an error!", e);
                 }
-
-                if (newCertificate == null)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Tried to load certificate as part of refresh check, but got a null back, but got a valid certificate on startup!");
-                    return;
-                }
-
+                
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
@@ -313,9 +319,7 @@ namespace Raven.Server
                 using (context.OpenReadTransaction())
                 {
                     var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
-                    if (certUpdate != null
-                        && certUpdate.TryGet("Thumbprint", out string thumbprint)
-                        && thumbprint != currentCertificate.Certificate.Thumbprint)
+                    if (certUpdate != null)
                     {
                         // we are already in the process of updating the certificate, so we need
                         // to nudge all the nodes in the cluster in case we have a node that didn't
@@ -337,14 +341,12 @@ namespace Raven.Server
                 
                 if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
                 {
-                    var alert = AlertRaised.Create(
+                    ServerStore.NotificationCenter.Add(AlertRaised.Create(
                         null,
-                        "Certificate Renewal Warning",
+                        "Server certificate",
                         "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.",
                         AlertType.Certificates_DeveloperLetsEncryptRenewal,
-                        NotificationSeverity.Warning);
-
-                    ServerStore.NotificationCenter.Add(alert);
+                        NotificationSeverity.Warning));
 
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations("It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.");
@@ -357,9 +359,7 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Failed to update certificate from Lets Encrypt", e);
-                    return;
+                    throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
                 }
 
                 await StartCertificateReplicationAsync(newCertificate.Certificate, "Updated Let's Encrypt Certificate", false);
@@ -367,7 +367,16 @@ namespace Raven.Server
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failure when trying to refresh certificate", e);
+                    Logger.Operations("Failed to replace the server certificate.", e);
+
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    "Server certificate",
+                    "Failed to replace the server certificate.",
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Error,
+                    "Cluster.Certificate.Replace.Error",
+                    new ExceptionDetails(e)));
             }
         }
 
@@ -380,18 +389,36 @@ namespace Raven.Server
             // However, if we have less than 3 days for renewing the cert or if 
             // replaceImmediately is true, we'll replace immediately.
 
-            // we first register it as a valid cluster node certificate in the cluster
-            await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
-
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Node {ServerStore.NodeTag}: Received new certificate, starting certificate replication.");
-
-            var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
-            await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
+            try
             {
-                Certificate = base64Cert,
-                ReplaceImmediately = replaceImmediately
-            });
+                // we first register it as a valid cluster node certificate in the cluster
+                await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Got new certificate from Lets Encrypt! Starting certificate replication.");
+
+                var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
+
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
+                {
+                    Certificate = base64Cert,
+                    ReplaceImmediately = replaceImmediately
+                });
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to start certificate replication.", e);
+
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    "Server certificate",
+                    "Failed to start certificate replication.",
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Error,
+                    "Cluster.Certificate.Replace.Error",
+                    new ExceptionDetails(e)));
+            }
         }
 
         private async Task<CertificateHolder> RenewLetsEncryptCertificate(CertificateHolder existing)
