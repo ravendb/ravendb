@@ -27,14 +27,14 @@ function BuildServer ( $srcDir, $outDir, $target, $debug ) {
 function BuildClient ( $srcDir ) {
     write-host "Building Client"
     & dotnet build /p:SourceLinkCreate=true --no-incremental `
-                --configuration "Release" $srcDir;
+        --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
 function BuildTestDriver ( $srcDir ) {
     write-host "Building TestDriver"
     & dotnet build /p:SourceLinkCreate=true --no-incremental `
-                --configuration "Release" $srcDir;
+        --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
@@ -48,6 +48,29 @@ function BuildSparrow ( $srcDir ) {
     CheckLastExitCode
 }
 
+function NpmInstall () {
+    write-host "Doing npm install..."
+    $NPM_INSTALL_RETRIES = 3
+
+    foreach ($i in 1..$NPM_INSTALL_RETRIES) {
+        try {
+            & npm install
+            CheckLastExitCode
+
+            break;
+        }
+        catch {
+            write-host "Error doing npm install..."
+            if ($i -ge $NPM_INSTALL_RETRIES) {
+                throw $_.Exception
+            }
+
+            write-host "Retrying npm install..."
+        }
+    }
+
+}
+
 function BuildStudio ( $srcDir, $version ) {
     write-host "Building Studio..."
 
@@ -56,8 +79,7 @@ function BuildStudio ( $srcDir, $version ) {
     try {
         Set-Location $srcDir
 
-        & npm install
-        CheckLastExitCode
+        NpmInstall
 
         Write-Host "Update version.json..."
         $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
