@@ -617,13 +617,13 @@ namespace Raven.Server.Documents
             if (ignoreNotRelevant == false && databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
                 databaseIsBeenDeleted == false)
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
-            return CreateConfiguration(databaseName, databaseRecord);
+            return CreateConfiguration(databaseRecord);
         }
 
-        protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)
+        protected RavenConfiguration CreateConfiguration(DatabaseRecord record)
         {
             Debug.Assert(_serverStore.Disposed == false);
-            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
+            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, record.DatabaseName, ResourceType.Database);
 
             foreach (var setting in record.Settings)
                 config.SetSetting(setting.Key, setting.Value);
