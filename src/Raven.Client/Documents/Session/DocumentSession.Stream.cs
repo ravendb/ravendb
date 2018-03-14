@@ -70,10 +70,12 @@ namespace Raven.Client.Documents.Session
 
             while (enumerator.MoveNext())
             {
-                var json = enumerator.Current;
-                query.InvokeAfterStreamExecuted(json);
+                using (var json = enumerator.Current)
+                {
+                    query.InvokeAfterStreamExecuted(json);
 
-                yield return CreateStreamResult<T>(json, fieldsToFetch);
+                    yield return CreateStreamResult<T>(json, fieldsToFetch);
+                }
             }
         }
 
@@ -126,9 +128,10 @@ namespace Raven.Client.Documents.Session
             {
                 while (result.MoveNext())
                 {
-                    var json = result.Current;
-
-                    yield return CreateStreamResult<T>(json, null);
+                    using (var json = result.Current)
+                    {
+                        yield return CreateStreamResult<T>(json, null);
+                    }
                 }
             }
         }
