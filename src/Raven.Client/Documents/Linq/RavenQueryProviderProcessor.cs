@@ -2183,10 +2183,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var extensions = new JavascriptConversionExtension[]
             {
+                JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                 new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.DictionarySupport(),
-                JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                 JavascriptConversionExtensions.InvokeSupport.Instance,
                 JavascriptConversionExtensions.DateTimeSupport.Instance,
