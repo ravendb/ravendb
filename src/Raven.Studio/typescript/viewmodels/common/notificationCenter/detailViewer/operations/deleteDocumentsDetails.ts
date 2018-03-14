@@ -9,6 +9,8 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
     progress: KnockoutObservable<Raven.Client.Documents.Operations.DeterminateProgress>;
     result: KnockoutObservable<Raven.Client.Documents.Operations.BulkOperationResult>;
+    processingSpeed: KnockoutComputed<string>;
+    estimatedTimeLeft: KnockoutComputed<string>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -25,6 +27,21 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
         this.result = ko.pureComputed(() => {
             return this.op.status() === "Completed" ? this.op.result() as Raven.Client.Documents.Operations.BulkOperationResult : null;
+        });
+
+        this.processingSpeed = ko.pureComputed(() => {
+            const progress = this.progress();
+            const processingSpeed = this.calculateProcessingSpeed(progress.Processed);
+            if (processingSpeed === 0) {
+                return "N/A";
+            }
+
+            return `${processingSpeed.toLocaleString()} docs / sec`;
+        });
+
+        this.estimatedTimeLeft = ko.pureComputed(() => {
+            const progress = this.progress();
+            return this.getEstimatedTimeLeftFormatted(progress.Processed, progress.Total);
         });
     }
 
