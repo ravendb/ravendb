@@ -23,7 +23,7 @@ fi
 
 eval 
 
-if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.1\.[4-9]$ ]] ; then
+if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.1\.[1-9][0-9]{2}$ ]] ; then
     echo ".NET Core SDK 2.1.4 (or newer) not found. Installing.."
     
     if [ -z "$CURL_CMD" ]; then
@@ -39,7 +39,7 @@ if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.1\.[4-9]$ ]] ; then
     fi
     
     sudo apt-get update
-    sudo apt-get install -y dotnet-sdk-2.1.4
+    sudo apt-get install -y dotnet-sdk-2.1.101
     
     mkdir ./dotnet_tmp
     cd ./dotnet_tmp
@@ -48,7 +48,7 @@ if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.1\.[4-9]$ ]] ; then
     cd ..
     sudo rm -rf ./dotnet_tmp
 else
-    echo ".NET Core SDK 2.1.4 (or newer) is installed."
+    echo ".NET Core SDK 2.1.101 (or newer) is installed."
 fi
 
 if [ -z "$POWERSHELL_CMD" ] ; then
