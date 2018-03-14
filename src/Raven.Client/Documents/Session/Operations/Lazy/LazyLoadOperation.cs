@@ -32,7 +32,10 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
             var queryBuilder = new StringBuilder("?");
             _includes.ApplyIfNotNull(include => queryBuilder.AppendFormat("&include={0}", include));
-            idsToCheckOnServer.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
+            var hasItems = idsToCheckOnServer.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
+
+            if (hasItems == false)
+                return null; // no need to hit the server
 
             return new GetRequest
             {

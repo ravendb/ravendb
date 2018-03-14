@@ -11,6 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
@@ -59,7 +60,21 @@ namespace Raven.Client.Documents.Session
 
         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default(CancellationToken))
         {
-            if (PendingLazyOperations.Count == 0)
+            var requests = new List<GetRequest>();
+            for (int i = 0; i < PendingLazyOperations.Count; i++)
+            {
+                var req = PendingLazyOperations[i].CreateRequest(Context);
+                if (req == null)
+                {
+                    PendingLazyOperations.RemoveAt(i);
+                    i--; // so we'll recheck this index
+                    continue;
+                }
+                requests.Add(req);
+            }
+
+
+            if (requests.Count == 0)
                 return new ResponseTimeInformation();
 
             try
@@ -70,7 +85,7 @@ namespace Raven.Client.Documents.Session
 
                 var responseTimeDuration = new ResponseTimeInformation();
 
-                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token).ConfigureAwait(false))
+                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests).WithCancellation(token).ConfigureAwait(false))
                 {
                     await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
                 }
@@ -93,9 +108,8 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
+        private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests)
         {
-            var requests = PendingLazyOperations.Select(x => x.CreateRequest(Context)).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: SessionInfo).ConfigureAwait(false);

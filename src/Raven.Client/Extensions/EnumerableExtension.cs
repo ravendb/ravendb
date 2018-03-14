@@ -7,14 +7,17 @@ namespace Raven.Client.Extensions
 {
     internal static class EnumerableExtension
     {
-        public static void ApplyIfNotNull<T>(this IEnumerable<T> self, Action<T> action)
+        public static bool ApplyIfNotNull<T>(this IEnumerable<T> self, Action<T> action)
         {
             if (self == null)
-                return;
+                return false;
+            var hasItems = false;
             foreach (var item in self)
             {
+                hasItems = true;
                 action(item);
             }
+            return hasItems;
         }
 
         public static bool ContentEquals<TValue>(IEnumerable<TValue> x, IEnumerable<TValue> y)
