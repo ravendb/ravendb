@@ -650,7 +650,6 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
                 if (delCmd.Name.StartsWith("db/"))
                 {
@@ -659,15 +658,20 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                using (Slice.From(context.Allocator, delCmd.Name, out Slice _))
-                using (Slice.From(context.Allocator, delCmd.Name.ToLowerInvariant(), out Slice keyNameLowered))
-                {
-                    items.DeleteByKey(keyNameLowered);
-                }
+                DeleteItem(context, delCmd.Name);
             }
             finally
             {
                 NotifyValueChanged(context, type, index);
+            }
+        }
+
+        public void DeleteItem(TransactionOperationContext context, string name)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, name.ToLowerInvariant(), out Slice keyNameLowered))
+            {
+                items.DeleteByKey(keyNameLowered);
             }
         }
 
