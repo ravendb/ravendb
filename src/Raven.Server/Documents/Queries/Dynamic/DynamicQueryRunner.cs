@@ -229,6 +229,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             switch (matchResult.MatchType)
             {
                 case DynamicQueryMatchType.Complete:
+                case DynamicQueryMatchType.CompleteButIdle:
                     index = _indexStore.GetIndex(matchResult.IndexName);
                     return true;
                 case DynamicQueryMatchType.Partial:

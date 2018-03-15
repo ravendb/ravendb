@@ -39,6 +39,11 @@ namespace SlowTests.Issues
                     await database.QueryRunner.ExecuteQuery(new IndexQueryServerSide("from Users where LastName = 'Arek'"), context, null,
                         OperationCancelToken.None);
                 }
+
+                var sameIndex = database.IndexStore.GetIndex(autoIndex.Name);
+
+                Assert.Same(autoIndex, sameIndex);
+                Assert.Equal(IndexState.Normal, sameIndex.State);
             }
         }
 
