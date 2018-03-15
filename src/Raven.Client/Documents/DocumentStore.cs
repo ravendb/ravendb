@@ -184,6 +184,9 @@ namespace Raven.Client.Documents
         {
             AssertInitialized();
 
+            database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use SetRequestTimeout without a default database defined " +
+                                                                                     "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
+
             var requestExecutor = GetRequestExecutor(database);
             var oldTimeout = requestExecutor.DefaultTimeout;
             requestExecutor.DefaultTimeout = timeout;
@@ -248,7 +251,9 @@ namespace Raven.Client.Documents
         public override IDisposable DisableAggressiveCaching(string database = null)
         {
             AssertInitialized();
-            var re = GetRequestExecutor(database ?? Database);
+            database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use DisableAggressiveCaching without a default database defined " +
+                                                                                   "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
+            var re = GetRequestExecutor(database);
             var old = re.AggressiveCaching.Value;
             re.AggressiveCaching.Value = null;
             return new DisposableAction(() => re.AggressiveCaching.Value = old);
@@ -290,7 +295,8 @@ namespace Raven.Client.Documents
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null)
         {
             AssertInitialized();
-            database = database ?? Database;
+            database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use AggressivelyCache and AggressivelyCacheFor without a default database defined " +
+                                                                                     "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
             if (_aggressiveCachingUsed == false)
             {
                 ListenToChangesAndUpdateTheCache(database);
