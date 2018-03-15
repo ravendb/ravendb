@@ -154,14 +154,14 @@ class appUrl {
     static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
         const collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const docIdUrlPart = id ? "&id=" + encodeURI(id) : "";
+        const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
         return "#databases/edit?" + collectionPart + databaseUrlPart + docIdUrlPart;
     }
 
     static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);        
-        const docIdUrlPart = "&id=" + encodeURI(id);
+        const docIdUrlPart = "&id=" + encodeURIComponent(id);
         return "#databases/edit?" + databaseUrlPart + revisionPart + docIdUrlPart;
     }
 
