@@ -217,6 +217,9 @@ namespace Raven.Server.Smuggler.Documents
 
             void OnSkipped(long skipped)
             {
+                if (type == DatabaseItemType.Documents)
+                    result.Documents.SkippedCount = skipped;
+
                 if (skipped % 10000 != 0)
                     return;
 
