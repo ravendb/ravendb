@@ -576,18 +576,27 @@ namespace Raven.Server.ServerWide
                     try
                     {
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
                         {
-                            var cert = Cluster.GetItem(context, "server/cert");
-                            if (cert == null)
-                                return; // was already processed?
-                            if (cert.TryGet("Confirmations", out int confirmations) == false)
-                                throw new InvalidOperationException("Expected to get confirmations count");
+                            BlittableJsonReaderObject cert;
+                            int nodesInCluster;
+                            int confirmations;
+                            bool replaceImmediately;
 
-                            if (cert.TryGet("ReplaceImmediately", out bool replaceImmediately) == false)
-                                throw new InvalidOperationException("Expected to get `ReplaceImmediately` property");
+                            using (context.OpenReadTransaction())
+                            {
+                                cert = Cluster.GetItem(context, "server/cert");
+                                if (cert == null)
+                                    return; // was already processed?
+                                if (cert.TryGet("Confirmations", out confirmations) == false)
+                                    throw new InvalidOperationException("Expected to get confirmations count");
 
-                            if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
+                                if (cert.TryGet("ReplaceImmediately", out replaceImmediately) == false)
+                                    throw new InvalidOperationException("Expected to get `ReplaceImmediately` property");
+
+                                nodesInCluster = GetClusterTopology(context).AllNodes.Count;
+                            }
+
+                            if (nodesInCluster > confirmations && replaceImmediately == false)
                             {
                                 if (Server.Certificate?.Certificate?.NotAfter != null &&
                                     (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
@@ -614,9 +623,20 @@ namespace Raven.Server.ServerWide
                             if (cert.TryGet("Certificate", out string certBase64) == false ||
                                 cert.TryGet("Thumbprint", out string certThumbprint) == false)
                                 throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate and Thumbprint properties");
-
+                        
                             if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
-                                return;// already replaced it, nothing to do
+                            {
+                                if (nodesInCluster > confirmations)
+                                    // I already replaced it, but not all nodes confirmed
+                                    // we'll keep it around for now and retry in one hour
+                                    return;
+
+                                // I replaced it as did everyone else, we can safely delete the "server/cert" doc now
+                                using (context.OpenWriteTransaction())
+                                    Cluster.DeleteItem(context, "server/cert");
+
+                                return;
+                            }
 
                             // and now we have to replace the cert...
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
