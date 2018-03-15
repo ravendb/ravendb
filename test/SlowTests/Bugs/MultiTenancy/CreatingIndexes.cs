@@ -24,11 +24,15 @@ namespace SlowTests.Bugs.MultiTenancy
         {
 
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
+                ModifyDocumentStore = documentStore => documentStore.Database = "Test"
+            }))
+            {
+                Assert.Equal("Test", store.Database);
+
                 var doc = new DatabaseRecord("Test");
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
-                store.Database = "Test";
 
                 var indexDefinition = new IndexDefinitionBuilder<Test, Test>("TestIndex")
                                                         {

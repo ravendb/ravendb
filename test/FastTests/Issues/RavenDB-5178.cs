@@ -1,6 +1,4 @@
-﻿using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Xunit;
+﻿using Xunit;
 
 namespace FastTests.Issues
 {
@@ -9,22 +7,17 @@ namespace FastTests.Issues
         [NonLinuxFact]
         public void CanUsePathLongerThan260Chars()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+
+            var longName = "LongDatabaseName_" + new string('z', 100);
+
+            using (var store = GetDocumentStore(new Options
             {
-                var longName = "LongDatabaseName_" + new string('z', 100);
-
-                var doc = new DatabaseRecord(longName);
-
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
-
-                using (EnsureDatabaseDeletion(doc.DatabaseName, store))
-                {
-                    store.Database = longName;
-
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
-
-                    Assert.Equal(db.Name, longName);
-                }
+                ModifyDatabaseName = _ => longName
+            }))
+            {
+                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                Assert.Equal(db.Name, longName);
             }
         }
     }
