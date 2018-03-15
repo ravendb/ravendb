@@ -632,9 +632,11 @@ namespace Raven.Server.ServerWide
                                     return;
 
                                 // I replaced it as did everyone else, we can safely delete the "server/cert" doc now
-                                using (context.OpenWriteTransaction())
+                                using (var tx = context.OpenWriteTransaction())
+                                {
                                     Cluster.DeleteItem(context, "server/cert");
-
+                                    tx.Commit();
+                                }
                                 return;
                             }
 
