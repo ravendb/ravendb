@@ -12,4 +12,8 @@ if ([string]::IsNullOrEmpty($env:RAVEN_ARGS) -eq $False) {
     $COMMAND = "$COMMAND $($env:RAVEN_ARGS)"
 }
 
-Invoke-Expression -Command "$COMMAND";
+try {
+    Invoke-Expression "$COMMAND"
+} finally {
+    exit $LASTEXITCODE
+}

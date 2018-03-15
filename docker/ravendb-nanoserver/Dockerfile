@@ -18,4 +18,4 @@ WORKDIR C:/ravendb/Server
 
 ADD https://ravendb-docker.s3.amazonaws.com/vcruntime140.dll C:/RavenDB/Server
 
-CMD powershell -c 'C:\run-raven.ps1'
+CMD [ "powershell", "-File", "C:\\run-raven.ps1" ]
