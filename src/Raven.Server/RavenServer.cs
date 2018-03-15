@@ -277,18 +277,19 @@ namespace Raven.Server
             try
             {
                 CertificateHolder newCertificate;
+                var msg = "Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!";
                 try
                 {
                     newCertificate = LoadCertificate();
                     if (newCertificate == null)
                     {
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!");
+                            Logger.Operations(msg);
 
                         ServerStore.NotificationCenter.Add(AlertRaised.Create(
                             null,
                             "Server certificate",
-                            "Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!",
+                            msg,
                             AlertType.Certificates_ReplaceError,
                             NotificationSeverity.Error,
                             "Cluster.Certificate.Replace.Error"));
@@ -322,8 +323,9 @@ namespace Raven.Server
                     if (certUpdate != null)
                     {
                         // we are already in the process of updating the certificate, so we need
-                        // to nudge all the nodes in the cluster in case we have a node that didn't
-                        // confirm to us but the time to replace has already passed.
+                        // to nudge all the nodes in the cluster to check the replacement state.
+                        // If a node confirmed but failed with the actual replacement (e.g. file permissions)
+                        // this will make sure it will try again in the next round (1 hour).
                         await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
                         return;
                     }
@@ -341,15 +343,16 @@ namespace Raven.Server
                 
                 if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
                 {
+                    msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
                     ServerStore.NotificationCenter.Add(AlertRaised.Create(
                         null,
                         "Server certificate",
-                        "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.",
+                        msg,
                         AlertType.Certificates_DeveloperLetsEncryptRenewal,
                         NotificationSeverity.Warning));
 
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations("It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.");
+                        Logger.Operations(msg);
                     return;
                 }
 
@@ -366,13 +369,14 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
+                var msg = "Failed to replace the server certificate.";
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to replace the server certificate.", e);
+                    Logger.Operations(msg, e);
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
                     "Server certificate",
-                    "Failed to replace the server certificate.",
+                    msg,
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     "Cluster.Certificate.Replace.Error",
@@ -407,13 +411,14 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
+                var msg = "Failed to start certificate replication.";
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to start certificate replication.", e);
+                    Logger.Operations(msg, e);
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
                     "Server certificate",
-                    "Failed to start certificate replication.",
+                    msg,
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     "Cluster.Certificate.Replace.Error",
