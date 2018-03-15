@@ -1511,6 +1511,7 @@ namespace Raven.Server.Documents.Indexes
                     var changeType = GetIndexChangeType(state, oldState);
                     if (changeType != IndexChangeTypes.None)
                     {
+                        // HandleIndexChange is going to be called here
                         DocumentDatabase.Changes.RaiseNotifications(new IndexChange
                         {
                             Name = Name,
@@ -1564,12 +1565,12 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Enable()
         {
-            if (State != IndexState.Disabled)
+            if (State != IndexState.Disabled && State != IndexState.Error)
                 return;
 
             using (DrainRunningQueries())
             {
-                if (State != IndexState.Disabled)
+                if (State != IndexState.Disabled && State != IndexState.Error)
                     return;
 
                 SetState(IndexState.Normal);
