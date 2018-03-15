@@ -463,14 +463,14 @@ namespace FastTests
             } while (debug == false || Debugger.IsAttached);
         }
 
-        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
+        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079, string database = null)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
 
             var urls = documentStore.Urls;
 
-            var databaseNameEncoded = Uri.EscapeDataString(documentStore.Database);
+            var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
             var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
             OpenBrowser(documentsPage);// start the server
@@ -478,7 +478,7 @@ namespace FastTests
             do
             {
                 Thread.Sleep(500);
-            } while (documentStore.Commands().Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+            } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
 
         protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)

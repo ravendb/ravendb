@@ -40,7 +40,7 @@ namespace FastTests
             public DatabaseCommands(IDocumentStore store, string databaseName)
             {
                 _store = store ?? throw new ArgumentNullException(nameof(store));
-                Session = (InMemoryDocumentSessionOperations)_store.OpenSession();
+                Session = (InMemoryDocumentSessionOperations)_store.OpenSession(databaseName);
                 RequestExecutor = store.GetRequestExecutor(databaseName);
 
                 _returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out Context);
