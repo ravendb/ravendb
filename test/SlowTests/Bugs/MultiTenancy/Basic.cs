@@ -108,11 +108,17 @@ namespace SlowTests.Bugs.MultiTenancy
         public void OpenSessionUsesSpecifiedDefaultDatabase()
         {
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
+                ModifyDocumentStore = documentStore =>
+                {
+                    documentStore.Database = "Northwind";
+                }
+            }))
+            {
+                Assert.Equal("Northwind", store.Database);
                 var doc = new DatabaseRecord("Northwind");
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
-                store.Database = "Northwind";
 
                 string userId;
 
