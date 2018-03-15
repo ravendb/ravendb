@@ -18,9 +18,15 @@ namespace SlowTests.Issues
         public void Should_be_able_to_query_tenant_without_default_database_set()
         {
             var database = GetDatabaseName();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Database = null;
+                ModifyDocumentStore = documentStore =>
+                {
+                    documentStore.Database = null;
+                }
+            }))
+            {
+                Assert.Null(store.Database);
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
 
                 using (EnsureDatabaseDeletion(database, store))
