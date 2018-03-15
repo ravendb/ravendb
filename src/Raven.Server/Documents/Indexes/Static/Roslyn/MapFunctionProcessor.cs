@@ -36,7 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 RecurseRewriter.Instance,
                 SpatialFieldRewriter.Instance,
                 CoalesceRewriter.Instance,
-                InitializerExpressionRewriter.Instance
+                InitializerExpressionRewriter.Instance,
+                NullRewriter.Instance
             })
             {
                 node = rewriter.Visit(node);

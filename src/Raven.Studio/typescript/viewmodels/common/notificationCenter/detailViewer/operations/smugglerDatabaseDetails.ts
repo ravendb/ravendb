@@ -99,7 +99,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                     item.hasSkippedCount = false;
                     item.readCount = "-";
                     item.erroredCount = "-";
-                    item.skippedCount = "-";
+                    item.skippedCount = item.skippedCount || "-";
 
                     if (item.hasAttachments) {
                         const attachments = item.attachments;
