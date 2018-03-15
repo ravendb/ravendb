@@ -18,7 +18,8 @@ namespace Raven.Client.Documents.Operations
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
-            _requestExecutor = store.GetRequestExecutor(databaseName);
+            if (_databaseName != null)
+                _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
         public OperationExecutor ForDatabase(string databaseName)
@@ -63,6 +64,8 @@ namespace Raven.Client.Documents.Operations
 
         private IDisposable GetContext(out JsonOperationContext context)
         {
+            if (_requestExecutor == null)
+                throw new InvalidOperationException("Cannot use Operations without a database defined, did you forget to call ForDatabase?");
             return _requestExecutor.ContextPool.AllocateOperationContext(out context);
         }
     }
