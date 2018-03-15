@@ -151,13 +151,16 @@ class index {
         this.canBeResumed = ko.pureComputed(() => {
             const localStatusIsNotDisabled = this.status() !== "Disabled";
             const inPausedState = this.isPausedState();
-            return localStatusIsNotDisabled && inPausedState;
+            const errored = this.isErrorState();
+            return localStatusIsNotDisabled && inPausedState && !errored;
         });
         this.canBeDisabled = ko.pureComputed(() => {
             return !this.isDisabledState();
         });
         this.canBeEnabled = ko.pureComputed(() => {
-            return this.isDisabledState();
+            const disabled = this.isDisabledState();
+            const errored = this.isErrorState(); 
+            return disabled || errored;
         });
 
         this.isFaulty = ko.pureComputed(() => {
