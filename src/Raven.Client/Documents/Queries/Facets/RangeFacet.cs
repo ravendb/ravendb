@@ -91,8 +91,9 @@ namespace Raven.Client.Documents.Queries.Facets
             }
 
             var operation = (BinaryExpression)expr.Body;
+            var leftExpression = SkipConvertExpressions(operation.Left);
 
-            if (operation.Left is MemberExpression me)
+            if (leftExpression is MemberExpression me)
             {
                 var fieldName = GetFieldName(prefix, me);
                 var subExpressionValue = ParseSubExpression(operation);
@@ -100,13 +101,18 @@ namespace Raven.Client.Documents.Queries.Facets
                 return expression;
             }
 
-            if (!(operation.Left is BinaryExpression left) || 
-                !(operation.Right is BinaryExpression right) || 
+            var rightExpression = SkipConvertExpressions(operation.Right);
+
+            if (!(leftExpression is BinaryExpression left) || 
+                !(rightExpression is BinaryExpression right) || 
                 operation.NodeType != ExpressionType.AndAlso)
                 throw new InvalidOperationException($"Range can be only specified using: '&&'. Cannot use: '{operation.NodeType}'");
 
-            if (!(left.Left is MemberExpression leftMember) || 
-                !(right.Left is MemberExpression rightMember))
+            leftExpression = SkipConvertExpressions(left.Left);
+            rightExpression = SkipConvertExpressions(right.Left);
+
+            if (!(leftExpression is MemberExpression leftMember) || 
+                !(rightExpression is MemberExpression rightMember))
             {
                 throw new InvalidOperationException("Expressions on both sides of '&&' must point to range field. E.g. x => x.Age > 18 && x.Age < 99");
             }
@@ -214,6 +220,18 @@ namespace Raven.Client.Documents.Queries.Facets
             throw new InvalidOperationException(string.Format("Unable to parse expression: {0} {1} {2}",
                              me.GetType().Name, me.NodeType, me.Member));
 
+        }
+
+        private static Expression SkipConvertExpressions(Expression expression)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.ConvertChecked:
+                case ExpressionType.Convert:
+                    return SkipConvertExpressions(((UnaryExpression)expression).Operand);
+                default:
+                    return expression;
+            }
         }
 
         private static object ParseUnaryExpression(UnaryExpression expression)
