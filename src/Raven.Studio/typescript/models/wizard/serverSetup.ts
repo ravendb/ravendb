@@ -144,7 +144,15 @@ class serverSetup {
                 return this.continueSetup().serverUrl();
             case "Unsecured":
                 const portPart = this.unsecureSetup().port() || '8080';
-                return "http://" + this.unsecureSetup().ip().ip() + ':' + portPart;
+                const addressToUse = this.unsecureSetup().ip().ip();
+                let resultUrl;
+                if (addressToUse === "0.0.0.0") {
+                    resultUrl = `http://${document.location.host}`;
+                } else {
+                    resultUrl = "http://" + addressToUse + ':' + portPart;
+                }
+
+                return resultUrl;
                 
             case "LetsEncrypt":
                 return "https://a." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
