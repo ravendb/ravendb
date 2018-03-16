@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Session
         {
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {
-                return new Lazy<Dictionary<string, T>>(() => ids.ToDictionary(x => x, Load<T>));
+                return new Lazy<Dictionary<string, T>>(() => Load<T>(ids));
             }
             var loadOperation = new LoadOperation(this)
                 .ByIds(ids)
