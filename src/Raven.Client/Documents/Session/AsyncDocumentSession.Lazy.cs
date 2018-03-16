@@ -207,6 +207,11 @@ namespace Raven.Client.Documents.Session
 
         public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default(CancellationToken))
         {
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return new Lazy<Task<Dictionary<string, T>>>(() => LoadAsync<T>(ids, token));
+            }
+
             var loadOperation = new LoadOperation(this).ByIds(ids).WithIncludes(includes);
             var lazyOp = new LazyLoadOperation<T>(this, loadOperation).ByIds(ids).WithIncludes(includes);
             return AddLazyOperation(lazyOp, onEval, token);
