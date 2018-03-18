@@ -214,6 +214,12 @@ namespace Raven.Client.Json
                 case LazyNumberValue lazyNumber:
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
                     break;
+                case DateTime dt:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat());
+                    break;
+                case DateTimeOffset dto:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.UtcDateTime.GetDefaultRavenFormat());
+                    break;
                 case IDictionary<string, string> dics:
                     WriteDictionary(dics);
                     break;
