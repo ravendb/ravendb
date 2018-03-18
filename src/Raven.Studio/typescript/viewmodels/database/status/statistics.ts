@@ -4,6 +4,7 @@ import getIndexesStatsCommand = require("commands/database/index/getIndexesStats
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
+import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 
 import statsModel = require("models/database/stats/statistics");
 
@@ -14,6 +15,8 @@ class statistics extends viewModelBase {
 
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;
+
+    dataLocation = ko.observable<string>();
 
     constructor() {
         super();
@@ -48,10 +51,16 @@ class statistics extends viewModelBase {
 
         const indexesStatsTask = new getIndexesStatsCommand(db)
             .execute();
+        
+        const dbDataLocationTask = new getStorageReportCommand(db)
+            .execute();
 
-        return $.when<any>(dbStatsTask, indexesStatsTask)
-            .done(([dbStats]: [Raven.Client.Documents.Operations.DatabaseStatistics], [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]]) => {
+        return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask)
+            .done(([dbStats]: [Raven.Client.Documents.Operations.DatabaseStatistics], 
+                   [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]], 
+                   [dbLocation]: [storageReportDto]) => {
                 this.processStatsResults(dbStats, indexesStats);
+                this.dataLocation(dbLocation.BasePath)
                 });
     }
 
