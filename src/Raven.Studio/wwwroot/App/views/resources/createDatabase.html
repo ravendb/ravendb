@@ -15,7 +15,7 @@
                 <div class="modal-settings-panel">
                     <div class="modal-settings-panel-main">
                         <div class="form-group" data-bind="validationElement: databaseModel.name">
-                            <h3>NAME</h3>
+                            <h3>NAME<i class="required"></i></h3>
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
                         </div>
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
@@ -74,7 +74,7 @@
 
 <script type="text/html" id="create-db-legacy-migration">
     <div data-bind="with: databaseModel.legacyMigration">
-        <h3>Data source configuration</h3>
+        <h3>Data Source Configuration</h3>
 
         <div class="bg-info margin-bottom">
             <div class="padding">
@@ -227,7 +227,7 @@
 
 <script type="text/html" id="create-db-restore">
     <div data-bind="with: databaseModel.restore">
-        <h3>Backup source configuration</h3>
+        <h3>Backup Source Configuration</h3>
         <div class="form-group row" data-bind="validationElement: backupDirectory">
             <div class="col-md-4">
                 <label class="control-label">Backup directory</label>
@@ -264,20 +264,30 @@
 
 <script type="text/html" id="create-db-path">
     <div data-bind="with: databaseModel.path">
-        <h3>Path configuration</h3>
+        <h3>Path Configuration</h3>
         <div class="form-group row" data-bind="validationElement: dataPath">
             <div class="col-md-4">
                 <label class="control-label">Path</label>
             </div>
             <div class="col-md-8">
-                <input type="text" class="form-control" data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() }" />
+                <input type="text" class="form-control"
+                       data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }"
+                       title="Enter location for the database files."/>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-sm-12">
+                <p class="text-info bg-info padding padding-sm">
+                    The data files will be created in:<br/>
+                    <strong><small data-bind="text: $root.databaseLocationShowing"></small></strong>
+                </p>
             </div>
         </div>
     </div>
 </script>
 
 <script type="text/html" id="create-db-replication">
-    <h3>Replication configuration</h3>
+    <h3>Replication Configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group" style="min-height: 62px">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
@@ -335,7 +345,7 @@
 </script>
 
 <script type="text/html" id="create-db-encryption">
-    <h3>Encryption configuration</h3>
+    <h3>Encryption Configuration</h3>
         <div data-bind="with: encryptionSection">
             <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
         </div>
