@@ -39,28 +39,7 @@ namespace Voron.Util.Settings
 
         public string ToFullPath()
         {
-            var path = Environment.ExpandEnvironmentVariables(_path);
-
-            if (PlatformDetails.RunningOnPosix == false && path.StartsWith(@"\") == false ||
-                PlatformDetails.RunningOnPosix && path.StartsWith(@"/") == false) // if relative path
-                path = Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
-
-            var result = Path.IsPathRooted(path)
-                ? path
-                : Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
-
-            if (result.Length >= 260 && 
-                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                result.StartsWith(@"\\?\") == false)
-                result = @"\\?\" + result;
-
-            if (result.EndsWith(@"\") || result.EndsWith("/"))
-                result = result.TrimEnd('\\', '/');
-
-            if (PlatformDetails.RunningOnPosix)
-                return PosixHelper.FixLinuxPath(result);
-
-            return Path.GetFullPath(result); // it will unify directory separators
+            return PathUtil.ToFullPath(_path, _baseDataDir?.FullPath);
         }
 
         public override string ToString()
@@ -84,6 +63,35 @@ namespace Voron.Util.Settings
         public override int GetHashCode()
         {
             return FullPath.GetHashCode();
+        }
+    }
+
+    public class PathUtil
+    {
+        public static string ToFullPath(string inputPath, string baseDataDirFullPath)
+        {
+            var path = Environment.ExpandEnvironmentVariables(inputPath);
+
+            if (PlatformDetails.RunningOnPosix == false && path.StartsWith(@"\") == false ||
+                PlatformDetails.RunningOnPosix && path.StartsWith(@"/") == false) // if relative path
+                path = Path.Combine(baseDataDirFullPath ?? AppContext.BaseDirectory, path);
+
+            var result = Path.IsPathRooted(path)
+                ? path
+                : Path.Combine(baseDataDirFullPath ?? AppContext.BaseDirectory, path);
+
+            if (result.Length >= 260 && 
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                result.StartsWith(@"\\?\") == false)
+                result = @"\\?\" + result;
+
+            if (result.EndsWith(@"\") || result.EndsWith("/"))
+                result = result.TrimEnd('\\', '/');
+
+            if (PlatformDetails.RunningOnPosix)
+                return PosixHelper.FixLinuxPath(result);
+
+            return Path.GetFullPath(result); // it will unify directory separators
         }
     }
 }

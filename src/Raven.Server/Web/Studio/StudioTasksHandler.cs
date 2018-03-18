@@ -4,14 +4,54 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions;
+using Raven.Server.Config;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Web.Studio
 {
     public class StudioTasksHandler : RequestHandler
     {
+        // return the calculated full data directory for the database before it is created according to the name & path supplied
+        [RavenAction("/studio-tasks/full-data-direcory", "GET", AuthorizationStatus.ValidUser)]
+        public Task FullDataDirectory()
+        {
+            var path = GetStringQueryString("path", required: false);
+            var name = GetStringQueryString("name", required: false);
+            
+            var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
+            
+            // 1. Used as default when both Name & Path are Not defined
+            var result = baseDataDirectory; 
+          
+            // 2. Path defined, Path overrides any given Name
+            if (string.IsNullOrEmpty(path) == false)
+            {
+                result = PathUtil.ToFullPath(path, baseDataDirectory);
+            }
+
+            // 3. Name defined, No path 
+            else if (string.IsNullOrEmpty(name) == false)
+            {
+                // 'Databases' prefix is added...
+                result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
+            }
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("FullPath");
+                writer.WriteString(result);
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+        
         [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser)]
         public Task Format()
         {
