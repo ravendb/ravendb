@@ -340,8 +340,6 @@ namespace Voron.Impl.Journal
             if (hashIsValid == false)
             {
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed",
-                    null);
                 return false;
             }
 
