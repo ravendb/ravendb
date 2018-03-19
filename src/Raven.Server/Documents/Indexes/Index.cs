@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-                options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+                options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
                 options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
                 options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Indexes
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-            options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+            options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
 
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
@@ -2740,7 +2740,7 @@ namespace Raven.Server.Documents.Indexes
                         DocumentDatabase.CatastrophicFailureNotification);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                    srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                    srcOptions.OnRecoveryError += (s, e) => DocumentDatabase.HandleOnIndexRecoveryError(Name, s, e);
                     srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                     srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
@@ -2754,7 +2754,7 @@ namespace Raven.Server.Documents.Indexes
                             DocumentDatabase.CatastrophicFailureNotification))
                     {
                         compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                        compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                        compactOptions.OnRecoveryError += (s, e) => DocumentDatabase.HandleOnIndexRecoveryError(Name, s, e);
                         compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
