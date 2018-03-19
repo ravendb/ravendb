@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes
             CreateIndexInternal(index);
         }
 
-        private static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
+        internal static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
         {
             var mapFields = definition
                 .MapFields

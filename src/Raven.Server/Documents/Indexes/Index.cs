@@ -16,6 +16,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -283,6 +284,34 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    if (environment.NextWriteTransactionId == 2 && TryFindIndexDefinition(name, documentDatabase.ReadDatabaseRecord(), out var staticDef, out var autoDef))
+                    {
+                        // initial transaction creating the schema hasn't completed
+                        // let's try to create it again
+
+                        environment.Dispose();
+
+                        if (staticDef != null)
+                        {
+                            switch (staticDef.Type)
+                            {
+                                case IndexType.Map:
+                                    return MapIndex.CreateNew(staticDef, documentDatabase);
+                                case IndexType.MapReduce:
+                                    return MapReduceIndex.CreateNew(staticDef, documentDatabase);
+                            }
+                        }
+                        else
+                        {
+                            var definition = IndexStore.CreateAutoDefinition(autoDef);
+
+                            if (definition is AutoMapIndexDefinition)
+                                return AutoMapIndex.CreateNew((AutoMapIndexDefinition)definition, documentDatabase);
+                            if (definition is AutoMapReduceIndexDefinition)
+                                return AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definition, documentDatabase);
+                        }
+                    }
+                    
                     throw new IndexOpenException(
                         $"Could not read index type from storage in '{path}'. This indicates index data file corruption.",
                         e);
@@ -2930,6 +2959,34 @@ namespace Raven.Server.Documents.Indexes
 
                 return new SpatialField(name, new SpatialOptions());
             });
+        }
+
+        private static bool TryFindIndexDefinition(string directoryName, DatabaseRecord record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)
+        {
+            foreach (var index in record.Indexes)
+            {
+                if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                {
+                    staticDef = index.Value;
+                    autoDef = null;
+                    return true;
+                }
+            }
+
+            foreach (var index in record.AutoIndexes)
+            {
+                if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                {
+                    autoDef = index.Value;
+                    staticDef = null;
+                    return true;
+                }
+            }
+
+            staticDef = null;
+            autoDef = null;
+            
+            return false;
         }
 
         protected struct QueryDoneRunning : IDisposable
