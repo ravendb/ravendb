@@ -264,16 +264,7 @@ namespace Raven.Server.Documents.Indexes
                 documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
             try
             {
-                options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-                options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
-                options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
-                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
-                options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
-                options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
+                InitializeOptions(options, documentDatabase, name);
 
                 environment = LayoutUpdater.OpenEnvironment(options);
 
@@ -427,18 +418,23 @@ namespace Raven.Server.Documents.Indexes
                 : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
 
+            InitializeOptions(options, documentDatabase, name);
+
+            return options;
+        }
+
+        private static void InitializeOptions(StorageEnvironmentOptions options, DocumentDatabase documentDatabase, string name)
+        {
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
-
+            options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
-            options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-            options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
+            options.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            return options;
         }
 
         internal ExitWriteLock DrainRunningQueries()
