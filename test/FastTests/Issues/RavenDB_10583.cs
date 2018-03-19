@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -44,11 +43,13 @@ namespace FastTests.Issues
                                     ShouldBeTrue = test
                                 };
 
-                    Assert.Equal("declare function output(x) {\r\n\tvar test = x.Value===\"Value1\";\r\n\treturn { ShouldBeTrue : test };\r\n}\r\nfrom Articles as x select output(x)", query.ToString());
+                    var expectedQuery =
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = x.Value===\"Value1\";{Environment.NewLine}\treturn {{ ShouldBeTrue : test }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)";
+
+                    Assert.Equal(expectedQuery, query.ToString());
 
                     var result = query.ToList();
                     Assert.Equal(true, result[0].ShouldBeTrue);
-
                 }
             }
         }
@@ -79,11 +80,13 @@ namespace FastTests.Issues
                                     ShouldBeTrue = test
                                 };
 
-                    Assert.Equal("declare function output(x) {\r\n\tvar test = x.Value===0;\r\n\treturn { ShouldBeTrue : test };\r\n}\r\nfrom Articles as x select output(x)", query.ToString());
+                    var expectedQuery =
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = x.Value===0;{Environment.NewLine}\treturn {{ ShouldBeTrue : test }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)";
+
+                    Assert.Equal(expectedQuery, query.ToString());
 
                     var result = query.ToList();
                     Assert.Equal(true, result[0].ShouldBeTrue);
-
                 }
             }
         }
