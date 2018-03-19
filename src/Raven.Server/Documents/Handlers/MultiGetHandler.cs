@@ -84,6 +84,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WritePropertyName(resultProperty);
                         writer.Flush();
 
+                        httpContext.Response.StatusCode = 0;
                         httpContext.Request.Headers.Clear();
                         httpContext.Response.Headers.Clear();
                         httpContext.Request.QueryString = new QueryString(query);
