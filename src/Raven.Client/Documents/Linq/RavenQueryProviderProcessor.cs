@@ -2104,11 +2104,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (_aliasKeywords.Contains(alias))
             {
-                alias = "'" + alias + "'";
+                if (_insideLet > 0)
+                {
+                    //RavenDB-9624 if the from-alias is a reserved word 
+                    //and we have a 'let' statment in the query, then we cannot quote the alias
+                    AppendLineToOutputFunction(alias, "__ravenDefaultAlias");
+                    alias = "__ravenDefaultAlias";
+                }
+                else
+                {
+                    alias = "'" + alias + "'";
+                }
             }
+
             _fromAlias = alias;
             _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
-            var id = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType)?.Name ?? "Id";
         }
 
         private string TranslateSelectBodyToJs(Expression expression)
