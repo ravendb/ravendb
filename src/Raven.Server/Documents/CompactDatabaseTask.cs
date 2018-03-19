@@ -46,7 +46,7 @@ namespace Raven.Server.Documents
             {
                 src.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
                 src.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-                src.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+                src.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;
                 src.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 src.TimeToSyncAfterFlashInSec = (int)configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 src.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
                         new CatastrophicFailureNotification(exception => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
                     {
                         dst.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-                        dst.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+                        dst.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;
                         dst.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                         dst.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
                         dst.TimeToSyncAfterFlashInSec = (int)configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
