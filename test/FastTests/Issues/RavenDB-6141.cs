@@ -20,8 +20,10 @@ namespace FastTests.Issues
             _emptySettingsDir = NewDataPath(prefix: nameof(RavenDB_6141));
             _emptySettingFile = Path.Combine(_emptySettingsDir, "settings.json");
 
-            if (!Directory.Exists(_emptySettingsDir))
-                Directory.CreateDirectory(_emptySettingsDir);
+            if (Directory.Exists(_emptySettingsDir))
+                IOExtensions.DeleteDirectory(_emptySettingsDir);
+
+            Directory.CreateDirectory(_emptySettingsDir);
 
             using (var f = File.CreateText(_emptySettingFile))
                 f.Write("{}");
