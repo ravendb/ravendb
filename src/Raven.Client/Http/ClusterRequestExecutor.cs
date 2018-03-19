@@ -16,11 +16,7 @@ namespace Raven.Client.Http
 
         protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls) : base(null, certificate, conventions, initialUrls)
         {
-            // Here we are explicitly ignoring trust issues in the case of ClusterRequestExecutor.
-            // this is because we don't actually require trust, we just use the certificate
-            // as a way to authenticate. Either we encounter the same server certificate which we already  
-            // trust, or the admin is going to tell us which specific certs we can trust.
-            ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
+           
         }
 
         [Obsolete("Not supported", error: true)]
