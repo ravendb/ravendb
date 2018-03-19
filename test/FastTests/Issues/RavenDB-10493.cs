@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -37,7 +36,10 @@ namespace FastTests.Issues
                                     DateTimeMaxValue = DateTime.MaxValue
                                 };
 
-                    Assert.Equal("declare function output(x) {\r\n\tvar test = 1;\r\n\treturn { DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999) };\r\n}\r\nfrom Articles as x select output(x)", query.ToString());
+                    var expectedQuery =
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999) }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)";
+
+                    Assert.Equal(expectedQuery, query.ToString());
 
                     var result = query.ToList();
                     
@@ -47,7 +49,6 @@ namespace FastTests.Issues
                     var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
                     var val = (DateTime.MaxValue - result[0].DateTimeMaxValue).TotalSeconds;
                     Assert.True(Math.Abs(val) < (epsilon));
-
                 }                              
             }
         }
