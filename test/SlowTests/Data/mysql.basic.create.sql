@@ -30,3 +30,36 @@ ALTER TABLE `order_item`
 ALTER TABLE `order_item`
   ADD CONSTRAINT `order_fk_ref2` FOREIGN KEY (`product_id`) REFERENCES `product` (`p_id`);
 
+
+
+
+CREATE TABLE `actor` (
+    a_id    INT(11) NOT NULL AUTO_INCREMENT,
+    name    varchar(200)   NOT NULL,
+    photo   varbinary(10)  NULL,
+    PRIMARY KEY (`a_id`)
+) ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+CREATE TABLE movie (
+    m_id    INT(11) NOT NULL AUTO_INCREMENT,
+    name  varchar(200) NOT NULL,
+    `file`   varbinary(10) NULL,
+    PRIMARY KEY (`m_id`)
+) ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+CREATE TABLE actor_movie (
+    a_id INT NOT NULL,
+    m_id INT NOT NULL,
+    PRIMARY KEY (`a_id`, `m_id`)
+) ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+ALTER TABLE actor_movie 
+    ADD CONSTRAINT FK_ACTOR FOREIGN KEY (a_id)
+        REFERENCES `actor` (a_id);
+        
+ALTER TABLE actor_movie 
+    ADD CONSTRAINT FK_MOVIE FOREIGN KEY (m_id)
+        REFERENCES `movie` (m_id) ;
