@@ -69,7 +69,7 @@ namespace Raven.Server.SqlMigration.MySQL
             return "select * from " + QuoteTable(collection.SourceTableName);
         }
 
-        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, string[] attachmentColumns,
+        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, HashSet<string> attachmentColumns,
             MySqlConnection connection)
         {
             using (var cmd = new MySqlCommand(tableQuery, connection))
@@ -87,10 +87,12 @@ namespace Raven.Server.SqlMigration.MySQL
 
                 while (reader.Read())
                 {
-                    var migrationDocument = new SqlMigrationDocument(null);
-                    migrationDocument.Object = ExtractFromReader(reader, columnNames);
-                    migrationDocument.SpecialColumnsValues = ExtractFromReader(reader, specialColumns);
-                    migrationDocument.Attachments = ExtractAttachments(reader, attachmentColumns);
+                    var migrationDocument = new SqlMigrationDocument(null)
+                    {
+                        Object = ExtractFromReader(reader, columnNames),
+                        SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
+                        Attachments = ExtractAttachments(reader, attachmentColumns)
+                    };
                     yield return migrationDocument;
                 }
             }
@@ -291,7 +293,8 @@ namespace Raven.Server.SqlMigration.MySQL
                 return new EmbeddedObjectValue
                 {
                     Object = ExtractFromReader(reader, refInfo.TargetDocumentColumns),
-                    SpecialColumnsValues = ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames)
+                    SpecialColumnsValues = ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames),
+                    Attachments = ExtractAttachments(reader, refInfo.TargetAttachmentColumns)
                 };
             });
         }
@@ -305,21 +308,25 @@ namespace Raven.Server.SqlMigration.MySQL
             {
                 var objectProperties = new DynamicJsonArray();
                 var specialProperties = new List<DynamicJsonValue>();
+                var attachments = new List<Dictionary<string, byte[]>>();
                 while (reader.Read())
                 {
                     objectProperties.Add(ExtractFromReader(reader, refInfo.TargetDocumentColumns));
+                    attachments.Add(ExtractAttachments(reader, refInfo.TargetAttachmentColumns));
                     
                     if (refInfo.ChildReferences != null)
                     {
                         // fill only when used
-                        specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));                        
+                        specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));    
+                        
                     }
                 }
 
                 return new EmbeddedArrayValue
                 {
                     ArrayOfNestedObjects = objectProperties,
-                    SpecialColumnsValues = specialProperties
+                    SpecialColumnsValues = specialProperties,
+                    Attachments = attachments
                 };
             });
         }
