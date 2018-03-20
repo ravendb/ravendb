@@ -7,6 +7,61 @@ using Sparrow.Utils;
 
 namespace Sparrow.Platform.Posix
 {
+    public class SmapsReaderResults
+    {
+        public string ResultString;
+        public long Size;
+        public long Rss;
+        public long SharedClean;
+        public long SharedDirty;
+        public long PrivateClean;
+        public long PrivateDirty;
+    }
+    
+    public interface ISmapsReaderResultAction
+    {
+        void Add(SmapsReaderResults results);
+    }
+
+    public struct SmapsReaderJsonResults : ISmapsReaderResultAction
+    {
+        private DynamicJsonArray _dja;
+
+        public void Add(SmapsReaderResults results)
+        {
+            var djv = new DynamicJsonValue
+            {
+                ["File"] = results.ResultString,
+                ["Size"] = Sizes.Humane(results.Size),
+                ["Rss"] = Sizes.Humane(results.Rss),
+                ["SharedClean"] = Sizes.Humane(results.SharedClean),
+                ["SharedDirty"] = Sizes.Humane(results.SharedDirty),
+                ["PrivateClean"] = Sizes.Humane(results.PrivateClean),
+                ["PrivateDirty"] = Sizes.Humane(results.PrivateDirty),
+                ["TotalClean"] = results.SharedClean + results.PrivateClean,
+                ["TotalCleanHumanly"] = Sizes.Humane(results.SharedClean + results.PrivateClean),
+                ["TotalDirty"] = results.SharedDirty + results.PrivateDirty,
+                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty)
+            };
+            if (_dja == null)
+                _dja = new DynamicJsonArray();
+            _dja.Add(djv);
+        }
+
+        public DynamicJsonArray ReturnResults()
+        {
+            return _dja;
+        }
+    }
+    
+    public struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
+    {
+        public void Add(SmapsReaderResults results)
+        {
+        // currently we do not use these results with SmapsReaderNoAllocResults so we do not store them
+        }
+    }
+    
     public class SmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
@@ -17,6 +72,7 @@ namespace Sparrow.Platform.Posix
 
         private const int BufferSize = 4096;
         private readonly byte[][] _smapsBuffer = {new byte[BufferSize], new byte[BufferSize]};
+        private readonly SmapsReaderResults _smapsReaderResults = new SmapsReaderResults();
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
@@ -51,10 +107,10 @@ namespace Sparrow.Platform.Posix
             return read;
         }
 
-        public (long Rss, long SharedClean, long PrivateClean, DynamicJsonArray Json) CalculateMemUsageFromSmaps()
+        public (long Rss, long SharedClean, long PrivateClean, T SmapsResults) CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
         {
             var state = SearchState.None;
-            var dja = new DynamicJsonArray();
+            var smapResultsObject = new T();
 
             using (var currentProcess = Process.GetCurrentProcess())
             using (var fileStream = new FileStream($"/proc/{currentProcess.Id}/smaps", FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -68,7 +124,7 @@ namespace Sparrow.Platform.Posix
                 {
                     if (read == 0)
                     {
-                        return (tmpRss, tmpSharedClean, tmpPrivateClean, dja);
+                        return (tmpRss, tmpSharedClean, tmpPrivateClean, smapResultsObject);
                     }
 
                     var switchBuffer = false;
@@ -319,21 +375,15 @@ namespace Sparrow.Platform.Posix
                                 resultString.EndsWith(".buffers") == false)
                                 continue;
 
-                            var djv = new DynamicJsonValue
-                            {
-                                ["File"] = resultString,
-                                ["Size"] = Sizes.Humane(valSize),
-                                ["Rss"] = Sizes.Humane(valRss),
-                                ["SharedClean"] = Sizes.Humane(valSharedClean),
-                                ["SharedDirty"] = Sizes.Humane(valSharedDirty),
-                                ["PrivateClean"] = Sizes.Humane(valPrivateClean),
-                                ["PrivateDirty"] = Sizes.Humane(valPrivateDirty),
-                                ["TotalClean"] = valSharedClean + valPrivateClean,
-                                ["TotalCleanHumanly"] = Sizes.Humane(valSharedClean + valPrivateClean),
-                                ["TotalDirty"] = valSharedDirty + valPrivateDirty,
-                                ["TotalDirtyHumanly"] = Sizes.Humane(valSharedDirty + valPrivateDirty)
-                            };
-                            dja.Add(djv);
+                            _smapsReaderResults.ResultString = resultString;
+                            _smapsReaderResults.Size = valSize;
+                            _smapsReaderResults.Rss = valRss;
+                            _smapsReaderResults.SharedClean = valSharedClean;
+                            _smapsReaderResults.SharedDirty = valSharedDirty;
+                            _smapsReaderResults.PrivateClean = valPrivateClean;
+                            _smapsReaderResults.PrivateDirty = valPrivateDirty;
+
+                            smapResultsObject.Add(_smapsReaderResults);
                         }
                         else
                         {
@@ -351,7 +401,7 @@ namespace Sparrow.Platform.Posix
                     }
                 }
 
-                return (tmpRss, tmpSharedClean, tmpPrivateClean, dja);
+                return (tmpRss, tmpSharedClean, tmpPrivateClean, smapResultsObject);
             }
         }
 
