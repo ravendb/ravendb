@@ -236,7 +236,7 @@ namespace Raven.Server.SqlMigration.MsSQL
             return "select * from " + QuoteTable(collection.SourceTableName);
         }
 
-        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, string[] attachmentColumns,
+        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, HashSet<string> attachmentColumns,
             SqlConnection connection)
         {
             using (var cmd = new SqlCommand(tableQuery, connection))
@@ -302,7 +302,8 @@ namespace Raven.Server.SqlMigration.MsSQL
 
                 return new EmbeddedObjectValue {
                     Object = ExtractFromReader(reader, refInfo.TargetDocumentColumns),
-                    SpecialColumnsValues = ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames)
+                    SpecialColumnsValues = ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames),
+                    Attachments = ExtractAttachments(reader, refInfo.TargetAttachmentColumns)
                 };
             });
         }
@@ -316,21 +317,24 @@ namespace Raven.Server.SqlMigration.MsSQL
             {
                 var objectProperties = new DynamicJsonArray();
                 var specialProperties = new List<DynamicJsonValue>();
+                var attachments = new List<Dictionary<string, byte[]>>();
                 while (reader.Read())
                 {
                     objectProperties.Add(ExtractFromReader(reader, refInfo.TargetDocumentColumns));
+                    attachments.Add(ExtractAttachments(reader, refInfo.TargetAttachmentColumns));
                     
                     if (refInfo.ChildReferences != null)
                     {
                         // fill only when used
-                        specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));                        
+                        specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));
                     }
                 }
 
                 return new EmbeddedArrayValue
                 {
                     ArrayOfNestedObjects = objectProperties,
-                    SpecialColumnsValues = specialProperties
+                    SpecialColumnsValues = specialProperties,
+                    Attachments = attachments
                 };
             });
         }

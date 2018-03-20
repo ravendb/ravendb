@@ -19,6 +19,7 @@ namespace Raven.Server.SqlMigration.Model
         public IDataProvider<object> DataProvider {get; set; }
         public HashSet<string> TargetSpecialColumnsNames { get; set; }
         public HashSet<string> TargetDocumentColumns { get; set; }
+        public HashSet<string> TargetAttachmentColumns { get; set; }
         
         public ReferenceType Type { get; set; }
         

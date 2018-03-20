@@ -7,5 +7,6 @@ namespace Raven.Server.SqlMigration.Model
     {
         public DynamicJsonArray ArrayOfNestedObjects { get; set; }
         public List<DynamicJsonValue> SpecialColumnsValues { get; set; }
+        public List<Dictionary<string, byte[]>> Attachments { get; set; }
     }
 }
