@@ -8,7 +8,7 @@ create table "order" (
 
 create table order_item (  
    oi_id                int                  IDENTITY,
-   order_id             int                  NOT NULL,
+   order_id             int                  NULL,
    product_id           INT                  NOT NULL,
    price            decimal(12,2)        not null default 0,
    constraint PK_ORDERITEM primary key (oi_id)

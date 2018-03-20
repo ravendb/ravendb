@@ -563,10 +563,127 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
+        
+        
+        [Theory]
+        [InlineData(MigrationProvider.MsSQL)]
+        [InlineData(MigrationProvider.MySQL)]
+        public async Task CanHandleMissingParentEmbed(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                
+                ExecuteSqlQuery(provider, connectionString, "update order_item set order_id = null");
+                
+                using (var store = GetDocumentStore())
+                {
+                    var collection = new RootCollection
+                    {
+                        SourceTableName = "order_item",
+                        Name = "OrderItems",
+                        NestedCollections = new List<EmbeddedCollection>
+                        {
+                            new EmbeddedCollection
+                            {
+                                SourceTableName = "order",
+                                Name = "Order"
+                            }
+                        }
+                    };
+
+                    var db = await GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            collection
+                        }
+                    };
+
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        await driver.Migrate(settings, schema, db, context);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var orderItem = session.Load<JObject>("OrderItems/10");
+
+                        Assert.NotNull(orderItem);
+                        Assert.True(orderItem.ContainsKey("Order"));
+                        Assert.Equal(JTokenType.Null, orderItem["Order"].Type);
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(MigrationProvider.MsSQL)]
+        [InlineData(MigrationProvider.MySQL)]
+        public async Task CanHandleMissingParentLink(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                
+                ExecuteSqlQuery(provider, connectionString, "update order_item set order_id = null");
+                
+                
+                using (var store = GetDocumentStore())
+                {
+                    var orderItemCollection = new RootCollection
+                    {
+                        SourceTableName = "order_item",
+                        Name = "OrderItems",
+                        LinkedCollections = new List<LinkedCollection>
+                        {
+                            new LinkedCollection
+                            {
+                                Name = "ParentOrder",
+                                SourceTableName = "order"
+                            }
+                        }
+                    };
+
+                    var orderCollection = new RootCollection
+                    {
+                        SourceTableName = "order",
+                        Name = "Orders"
+                    };
+
+                    var db = await GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            orderItemCollection,
+                            orderCollection
+                        }
+                    };
+
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        await driver.Migrate(settings, schema, db, context);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var orderItem = session.Load<JObject>("OrderItems/10");
+
+                        Assert.NotNull(orderItem);
+                        Assert.True(orderItem.ContainsKey("ParentOrder"));
+                        Assert.Equal(JTokenType.Null, orderItem["ParentOrder"].Type);
+                    }
+                }
+            }
+        }
 
         //TODO: link + missing target colleciton should throw 
-
-        //TODO: one-to-one test
         //TODO: skip test if db is not available 
     }
 }

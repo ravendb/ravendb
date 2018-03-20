@@ -21,9 +21,43 @@ namespace SlowTests.Server.Documents.SqlMigration
             {
                 con.Open();
             }
+
             return local;
         });
-        
+
+        protected void ExecuteSqlQuery(MigrationProvider provider, string connectionString, string query)
+        {
+            switch (provider)
+            {
+                case MigrationProvider.MySQL:
+                {
+                    using (var connection = new MySqlConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var cmd = new MySqlCommand(query, connection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    break;
+                }
+                case MigrationProvider.MsSQL:
+                    using (var connection = new SqlConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var cmd = new SqlCommand(query, connection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    break;
+                default:
+                    throw new InvalidOperationException("Unable to run query. Unsupported provider: " + provider);
+            }
+        }
+
         protected DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, string dataSet = "northwind", bool includeData = true)
         {
             switch (provider)
@@ -36,7 +70,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     throw new InvalidOperationException("Unhandled provider: " + provider);
             }
         }
-        
+
         private DisposableAction WithMsSqlDatabase(out string connectionString, string dataSet, bool includeData = true)
         {
             var databaseName = "SqlTest_" + Guid.NewGuid();
@@ -53,11 +87,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                     dbCommand.ExecuteNonQuery();
                 }
             }
-            
+
             using (var dbConnection = new SqlConnection(connectionString))
             {
                 dbConnection.Open();
-                
+
                 var assembly = Assembly.GetExecutingAssembly();
 
                 using (var dbCommand = dbConnection.CreateCommand())
@@ -114,11 +148,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                     dbCommand.ExecuteNonQuery();
                 }
             }
-            
+
             using (var dbConnection = new MySqlConnection(connectionString))
             {
                 dbConnection.Open();
-                
+
                 var assembly = Assembly.GetExecutingAssembly();
 
                 using (var dbCommand = dbConnection.CreateCommand())

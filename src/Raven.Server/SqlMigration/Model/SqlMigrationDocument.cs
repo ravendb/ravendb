@@ -35,7 +35,7 @@ namespace Raven.Server.SqlMigration.Model
             {
                 return context.ReadObject(Object, Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
-            catch (Exception e) //TODO: do we want this?
+            catch (Exception e)
             {
                 throw new InvalidOperationException($"Cannot build document from table '{TableName}'. Document ID: {Id}", e);
             }
