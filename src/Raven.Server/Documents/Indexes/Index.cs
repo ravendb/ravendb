@@ -2627,30 +2627,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
-                _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0);
-                if (_batchStopped == false)
-                {
-                    var msg = $"Halting processing of batch after {count:#,#;;0} and waiting because of low memory, other indexes are currently completing and index {Name} will wait for them to complete";
-                    stats.RecordMapCompletedReason(msg);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info(msg);
-                    var timeout = _indexStorage.DocumentDatabase.Configuration.Indexing.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan;
-
-                    while (true)
-                    {
-                        _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(
-                            timeout,
-                            _indexingProcessCancellationTokenSource.Token);
-                        if (_batchStopped)
-                            break;
-
-                        if (_lowMemoryFlag.IsRaised() == false)
-                            break;
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a low memory condition in action...");
-                    };
-                }
+                HandleStoppedBatchesConcurrently(stats, count);
 
                 stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
                 return false;
@@ -2727,6 +2704,40 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return true;
+        }
+
+        private void HandleStoppedBatchesConcurrently(IndexingStatsScope stats, int count)
+        {
+            if (_batchStopped)
+            {
+                // already stopped by MapDocuments, HandleReferences or CleanupDeletedDocuments
+                return;
+            }
+
+            _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0);
+            if (_batchStopped)
+                return;
+
+            var message = $"Halting processing of batch after {count:#,#;;0} and waiting because of low memory, other indexes are currently completing and index {Name} will wait for them to complete";
+            stats.RecordMapCompletedReason(message);
+            if (_logger.IsInfoEnabled)
+                _logger.Info(message);
+            var timeout = _indexStorage.DocumentDatabase.Configuration.Indexing.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan;
+
+            while (true)
+            {
+                _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(
+                    timeout,
+                    _indexingProcessCancellationTokenSource.Token);
+                if (_batchStopped)
+                    break;
+
+                if (_lowMemoryFlag.IsRaised() == false)
+                    break;
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a low memory condition in action...");
+            }
         }
 
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result)
