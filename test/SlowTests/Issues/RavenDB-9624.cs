@@ -572,15 +572,15 @@ from Orders as o load o.Company as _function, _function.EmployeesIds as _var[] s
                     var query = from o in session.Query<Order>()
                                 select new
                                 {
-                                    Update = o.Company,
+                                    Load = o.Company,
                                     Include = o.Employee
                                 };
 
                     var result = query.ToList();
 
-                    Assert.Equal("from Orders select Company as 'Update', Employee as 'Include'", query.ToString());
+                    Assert.Equal("from Orders select Company as 'Load', Employee as 'Include'", query.ToString());
 
-                    Assert.Equal("companies/1-A", result[0].Update);
+                    Assert.Equal("companies/1-A", result[0].Load);
                     Assert.Equal("employees/1-A", result[0].Include);
                 }
             }
