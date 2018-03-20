@@ -61,7 +61,6 @@ namespace Raven.Client.Documents.Linq
             "AS",
             "SELECT",
             "WHERE",
-            "LOAD",
             "GROUP",
             "ORDER",
             "INCLUDE",
@@ -69,6 +68,7 @@ namespace Raven.Client.Documents.Linq
         };
         private List<string> _projectionParameters { get; set; }
 
+        private int _aliasesCount;
 
         private readonly LinqPathProvider _linqPathProvider;
         /// <summary>
@@ -2002,12 +2002,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         ? innerMemberExpression.Member.Name
                         : string.Empty;
 
-                if (param == "<>h__TransparentIdentifier0")
+                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith("__ravenDefaultAlias") || _aliasKeywords.Contains(param))
                 {
-                    //the load argument was defined in a previous let statment, i.e :
-                    //  let detailId = "details/1-A" 
-                    //  let deatil = session.Load<Detail>(detailId)
-                    //  ...
+                    // (1) the load argument was defined in a previous let statment, i.e :
+                    //     let detailId = "details/1-A" 
+                    //     let deatil = session.Load<Detail>(detailId)
+                    //     ...
+                    // (2) OR the from-alias was a reserved word and we have a let statment,
+                    //     so we changed it to "__ravenDefaultAlias".
+                    //     the load-argument might be a path with respect to the original from-alias name.
+                    // (3) OR the parameter name of the load argument is a reserved word
+					//     that was defined in a previous let statment, i.e : 
+                    //     let update = session.Load<Order>("orders/1-A")
+                    //     let employee = session.Load<Employee>(update.Employee)
+
                     //so we use js load() method (inside output function) instead of using a LoadToken
 
                     AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
@@ -2027,6 +2035,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 _loadTokens = new List<LoadToken>();
             }
+
+            name = RenameAliasIfNeeded(name);
 
             var indexOf = arg.IndexOf('.');
             if (indexOf != -1)
@@ -2097,28 +2107,40 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _declareBuilder = new StringBuilder();
             }
 
+            name = RenameAliasIfReservedInJs(name);
+
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);
         }
 
         private void AddFromAlias(string alias)
         {
-            if (_aliasKeywords.Contains(alias))
+            _fromAlias = RenameAliasIfNeeded(alias);
+            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
+        }
+
+        private string RenameAliasIfNeeded(string alias)
+        {
+            if (_aliasKeywords.Contains(alias) == false)
+                return RenameAliasIfReservedInJs(alias);
+
+            if (_insideLet > 0)
             {
-                if (_insideLet > 0)
-                {
-                    //RavenDB-9624 if the from-alias is a reserved word 
-                    //and we have a 'let' statment in the query, then we cannot quote the alias
-                    AppendLineToOutputFunction(alias, "__ravenDefaultAlias");
-                    alias = "__ravenDefaultAlias";
-                }
-                else
-                {
-                    alias = "'" + alias + "'";
-                }
+                var newAlias = $"__ravenDefaultAlias{_aliasesCount++}";
+                AppendLineToOutputFunction(alias, newAlias);
+                return newAlias;
+            }
+            
+            return "'" + alias + "'";            
+        }
+
+        private static string RenameAliasIfReservedInJs(string alias)
+        {
+            if (JavascriptConversionExtensions.ReservedWordsSupport.JsReservedWords.Contains(alias))
+            {
+                return "_" + alias;
             }
 
-            _fromAlias = alias;
-            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
+            return alias;
         }
 
         private string TranslateSelectBodyToJs(Expression expression)
@@ -2198,6 +2220,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
+                JavascriptConversionExtensions.ReservedWordsSupport.Instance,
                 JavascriptConversionExtensions.InvokeSupport.Instance,
                 JavascriptConversionExtensions.DateTimeSupport.Instance,
                 JavascriptConversionExtensions.NullCoalescingSupport.Instance,
@@ -2505,6 +2528,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
+            if (_aliasKeywords.Contains(alias))
+            {
+                alias = "'" + alias + "'";
+            }
+
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
             if (identityProperty != null && identityProperty.Name == field)
             {
