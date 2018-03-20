@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Asn1;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow;
@@ -137,7 +136,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var result = new SmapsReader().CalculateMemUsageFromSmaps();
+                var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
                 var djv = new DynamicJsonValue
                 {
                     ["Totals"] = new DynamicJsonValue
@@ -151,7 +150,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),
                         ["TotalCleanHumanly"] = Sizes.Humane(result.SharedClean + result.PrivateClean)
                     },
-                    ["Details"] = result.Json
+                    ["Details"] = result.SmapsResults.ReturnResults()
                 };
 
                 using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
