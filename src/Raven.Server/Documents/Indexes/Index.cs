@@ -296,10 +296,10 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var definition = IndexStore.CreateAutoDefinition(autoDef);
 
-                            if (definition is AutoMapIndexDefinition)
-                                return AutoMapIndex.CreateNew((AutoMapIndexDefinition)definition, documentDatabase);
-                            if (definition is AutoMapReduceIndexDefinition)
-                                return AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definition, documentDatabase);
+                            if (definition is AutoMapIndexDefinition autoMapDef)
+                                return AutoMapIndex.CreateNew(autoMapDef, documentDatabase);
+                            if (definition is AutoMapReduceIndexDefinition autoMapReduceDef)
+                                return AutoMapReduceIndex.CreateNew(autoMapReduceDef, documentDatabase);
                         }
                     }
                     
