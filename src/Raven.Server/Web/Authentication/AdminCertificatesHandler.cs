@@ -765,10 +765,10 @@ namespace Raven.Server.Web.Authentication
         public Task ForceRenew()
         {
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
-                throw new InvalidOperationException("Cannot force renew the let's encrypt server certificate. This server wasn't set up using the let's encrypt setup mode.");
+                throw new InvalidOperationException("Cannot force renew for this server certificate. This server wasn't set up using the Let's Encrypt setup mode.");
 
             if (Server.Certificate.Certificate == null)
-                throw new InvalidOperationException("Cannot force renew the let's encrypt server certificate. The server certificate is not loaded.");
+                throw new InvalidOperationException("Cannot force renew this Let's Encrypt server certificate. The server certificate is not loaded.");
 
             try
             {
@@ -776,11 +776,10 @@ namespace Raven.Server.Web.Authentication
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to force renew the let's encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
+                throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -804,9 +803,8 @@ namespace Raven.Server.Web.Authentication
             {
                 throw new InvalidOperationException("Failed to trigger a certificate refresh cycle", e);
             }
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            return Task.CompletedTask;
+            
+            return NoContent();
         }
 
         [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin)]

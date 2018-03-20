@@ -65,13 +65,16 @@
                                 <div>
                                     <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
                                 </div>
-                                <div title="This certificate is currently used by server for incoming HTTPS connections" class="label label-info"
-                                    data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint()) ">
+                                <div title="This certificate is currently used by the server for incoming HTTPS connections" class="label label-info"
+                                    data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">
                                     server certificate
                                 </div>
                             </a>
                             <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
                             </div>
+                        </div>
+                        <div data-bind="visible: $root.showRenewCertificateButton(Thumbprints)">
+                            <button class="btn btn-default btn-sm" data-bind="click: _.partial($root.renewServerCertificate)" title="Renew this server certificate">Renew</button>
                         </div>
                         <div class="expiration flex-noshrink">
                             <small data-bind="attr: { class: expirationClass }">
@@ -198,7 +201,9 @@
                                     <span data-bind="visible: $index() === 0">Thumbprint</span>
                                 </label>
                                 <input class="form-control" type="text" data-bind="value: $data" disabled>
-                                <button type="button" data-bind="click: $root.copyThumbprint" class="btn btn-default"><i class="icon-copy"></i></button>
+                                <button type="button" data-bind="click: $root.copyThumbprint" class="btn btn-default" title="Copy to clipboard">
+                                    <i class="icon-copy"></i>
+                                </button>
                             </div>
                             <!-- /ko -->
                             <div class="" data-bind="visible: mode() === 'replace'">
