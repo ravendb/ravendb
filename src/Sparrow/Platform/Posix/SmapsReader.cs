@@ -56,31 +56,11 @@ namespace Sparrow.Platform.Posix
     
     public struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
     {
-        private SmapsReaderResults[] _results;
-        private int _resultsSize;
-
         public void Add(SmapsReaderResults results)
         {
-            if (_results == null)
-            {
-                _resultsSize = 0;
-                _results = new SmapsReaderResults[16];
-            }
-
-            if (_results.Length == _resultsSize)
-            {
-                Array.Resize(ref _results, Math.Min(_results.Length * 2, 512));
-            }
-            
-            _results[_resultsSize++] = results;
-        }
-        
-        public SmapsReaderResults[] ReturnResults()
-        {
-            Array.Resize(ref _results, _resultsSize);
-            return _results;
-        }
-    }
+            // currently we do not use these results with SmapsReaderNoAllocResults so we do not store them
+        }        
+     }
     
     public class SmapsReader
     {
