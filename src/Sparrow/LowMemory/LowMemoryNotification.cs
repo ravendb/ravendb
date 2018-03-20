@@ -4,6 +4,7 @@ using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -313,8 +314,9 @@ namespace Sparrow.LowMemory
 
             var memInfo = MemoryInformation.GetMemoryInfo();
 
-            var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
-            var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared);
+        var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
+
+            var availableMem = (memInfo.AvailableMemory + new Size(result.SharedClean, SizeUnit.Bytes));
 
             // We consider low memory only if we don't have enough free pyhsical memory or
             // the commited memory size if larger than our pyhsical memory.
