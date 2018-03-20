@@ -2528,7 +2528,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
-            if (_aliasKeywords.Contains(alias))
+            if (alias.Equals("load", StringComparison.OrdinalIgnoreCase) || 
+                _aliasKeywords.Contains(alias))
             {
                 alias = "'" + alias + "'";
             }
