@@ -47,7 +47,7 @@ namespace FastTests.Issues
 
             // actual configuration is created in the following manner
 
-            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server), "foo",
+            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server, _emptySettingFile), "foo",
                 ResourceType.Database);
 
             config.Initialize();
