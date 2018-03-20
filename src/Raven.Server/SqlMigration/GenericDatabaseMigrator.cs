@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,21 +35,23 @@ namespace Raven.Server.SqlMigration
 
                         InitializeDataProviders(references, referencesConnection);
 
+                        var attachmentColumns = FindAttachmentColumns(settings, tableSchema);
+                        
                         try
                         {
-                            foreach (var doc in EnumerateTable(GetQueryForCollection(collectionToImport), specialColumns, enumerationConnection))
+                            foreach (var doc in EnumerateTable(GetQueryForCollection(collectionToImport), specialColumns, attachmentColumns, enumerationConnection))
                             {
                                 doc.TableName = collectionToImport.SourceTableName;
                                 doc.SetCollection(collectionToImport.Name);
 
                                 var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
-
+                                
                                 FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references);
 
                                 var docBlittable = patcher.Patch(doc.ToBllitable(context));
                                 //TODO: support for throw skip
 
-                                await writer.InsertDocument(docBlittable, id, null); //TODO: pass attachments
+                                await writer.InsertDocument(docBlittable, id, doc.Attachments);
                             }
                         }
                         finally
@@ -58,6 +61,13 @@ namespace Raven.Server.SqlMigration
                     }
                 }
             }
+        }
+        
+        private string[] FindAttachmentColumns(MigrationSettings settings, TableSchema tableSchema)
+        {
+            return settings.BinaryToAttachment
+                ? tableSchema.Columns.Where(x => x.Type == ColumnType.Binary).Select(x => x.Name).ToArray()
+                : new string[0];
         }
 
         private void FillDocumentFields(DynamicJsonValue value, DynamicJsonValue specialColumns, List<ReferenceInformation> references)
@@ -237,6 +247,23 @@ namespace Raven.Server.SqlMigration
 
             return result;
         }
+        
+        protected Dictionary<string, byte[]> ExtractAttachments(IDataReader reader, string[] attachmentColumns)
+        {
+            var result = new Dictionary<string, byte[]>();
+         
+            foreach (var attachmentColumn in attachmentColumns)
+            {
+                var value = reader[attachmentColumn];
+                if (value != null)
+                {
+                    result[attachmentColumn] = (byte[]) value;
+                }
+            }
+            
+            return result;
+        }
+
 
         private TableSchema GetSchemaForTable(string name, DatabaseSchema dbSchema)
         {
@@ -302,7 +329,7 @@ namespace Raven.Server.SqlMigration
 
         protected abstract string GetQueryForCollection(RootCollection collection);
 
-        protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, TConnection connection);
+        protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, string[] attachmentColumns, TConnection connection);
 
         protected abstract IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
         protected abstract IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, TConnection connection);

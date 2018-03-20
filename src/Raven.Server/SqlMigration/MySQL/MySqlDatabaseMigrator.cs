@@ -69,7 +69,8 @@ namespace Raven.Server.SqlMigration.MySQL
             return "select * from " + QuoteTable(collection.SourceTableName);
         }
 
-        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, MySqlConnection connection)
+        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, string[] attachmentColumns,
+            MySqlConnection connection)
         {
             using (var cmd = new MySqlCommand(tableQuery, connection))
             using (var reader = cmd.ExecuteReader())
@@ -78,7 +79,7 @@ namespace Raven.Server.SqlMigration.MySQL
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
                     var columnName = reader.GetName(i);
-                    if (specialColumns.Contains(columnName) == false)
+                    if (specialColumns.Contains(columnName) == false && attachmentColumns.Contains(columnName) == false)
                     {
                         columnNames.Add(columnName);
                     }
@@ -89,6 +90,7 @@ namespace Raven.Server.SqlMigration.MySQL
                     var migrationDocument = new SqlMigrationDocument(null);
                     migrationDocument.Object = ExtractFromReader(reader, columnNames);
                     migrationDocument.SpecialColumnsValues = ExtractFromReader(reader, specialColumns);
+                    migrationDocument.Attachments = ExtractAttachments(reader, attachmentColumns);
                     yield return migrationDocument;
                 }
             }

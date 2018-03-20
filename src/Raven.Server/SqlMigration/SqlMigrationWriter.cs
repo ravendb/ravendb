@@ -41,11 +41,10 @@ namespace Raven.Server.SqlMigration
                 Id = id
             });
 
-            /* TODO
             foreach (var attachment in attachments)
             {
                 var memoryStream = new MemoryStream(attachment.Value);
-                var stream = _command.AttachmentStreamsTempFile.StartNewStream();
+                var stream = _command.AttachmentStreamsTempFile.StartNewStream(); 
 
                 _toDispose.Add(memoryStream);
                 _toDispose.Add(stream);
@@ -53,7 +52,7 @@ namespace Raven.Server.SqlMigration
                 var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream
                 {
                     Stream = stream,
-                    Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(_context, memoryStream, stream, _context.DocumentDatabase.DatabaseShutdown)
+                    Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(_context, memoryStream, stream, _context.DocumentDatabase.DatabaseShutdown) //TODO: do we need it?
                 };
 
                 stream.Flush();
@@ -67,7 +66,7 @@ namespace Raven.Server.SqlMigration
                     ContentType = "",
                     Name = attachment.Key
                 });
-            }*/
+            }
 
             if (_commands.Count >= _batchSize)
                 await FlushCommands();

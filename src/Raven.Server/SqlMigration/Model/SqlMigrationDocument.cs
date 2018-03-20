@@ -12,6 +12,7 @@ namespace Raven.Server.SqlMigration.Model
         public string Collection { get; set; }
         public DynamicJsonValue SpecialColumnsValues { get; set; }
         public DynamicJsonValue Object { get; set; }
+        public Dictionary<string, byte[]> Attachments;
 
         public SqlMigrationDocument(string tableName)
         {
