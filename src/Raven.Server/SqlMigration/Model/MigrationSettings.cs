@@ -4,7 +4,7 @@ namespace Raven.Server.SqlMigration.Model
 {
     public class MigrationSettings
     {
-        /* TODO
+        /* TODO ml054
          public bool BinaryToAttachment { get; set; } = true;
             */
         public List<RootCollection> Collections { get; set; }

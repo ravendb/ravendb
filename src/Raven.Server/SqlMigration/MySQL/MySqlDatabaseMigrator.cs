@@ -278,11 +278,12 @@ namespace Raven.Server.SqlMigration.MySQL
             var query = "select * from " + QuoteTable(refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
-            return new MySqlPreparedStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
+            return new MySqlStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
             {
                 if (reader.Read() == false)
                 {
-                    throw new InvalidOperationException("Excepted at least single result."); //TODO: better exception
+                    // parent object is null
+                    return new EmbeddedObjectValue();
                 }
 
                 return new EmbeddedObjectValue
@@ -298,7 +299,7 @@ namespace Raven.Server.SqlMigration.MySQL
             var query = "select * from " + QuoteTable(refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
-            return new MySqlPreparedStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
+            return new MySqlStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
             {
                 var objectProperties = new DynamicJsonArray();
                 var specialProperties = new List<DynamicJsonValue>();
@@ -326,7 +327,7 @@ namespace Raven.Server.SqlMigration.MySQL
             var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceTableName)
                         + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
-            return new MySqlPreparedStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
+            return new MySqlStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
             {
                 var result = new DynamicJsonArray();
                 while (reader.Read())

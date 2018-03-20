@@ -149,7 +149,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
             foreach (var kvp in referentialConstraints)
             {
-                string fkTableName = null, pkTableName = null;
+                string fkTableName = null, pkTableName;
                 var fkColumnsName = new List<string>();
 
                 using (var cmd = new SqlCommand(SelectKeyColumnUsageWhereConstraintName, connection))
@@ -266,7 +266,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                         + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
 
-            return new MsSqlPreparedStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
+            return new MsSqlStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
             {
                 var result = new DynamicJsonArray();
                 while (reader.Read())
@@ -289,11 +289,12 @@ namespace Raven.Server.SqlMigration.MsSQL
             var query = "select * from " + QuoteTable(refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
-            return new MsSqlPreparedStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
+            return new MsSqlStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
             {
                 if (reader.Read() == false)
                 {
-                    throw new InvalidOperationException("Excepted at least single result."); //TODO:
+                    // parent object is null
+                    return new EmbeddedObjectValue();
                 }
 
                 return new EmbeddedObjectValue {
@@ -308,7 +309,7 @@ namespace Raven.Server.SqlMigration.MsSQL
             var query = "select * from " + QuoteTable(refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
-            return new MsSqlPreparedStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
+            return new MsSqlStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
             {
                 var objectProperties = new DynamicJsonArray();
                 var specialProperties = new List<DynamicJsonValue>();

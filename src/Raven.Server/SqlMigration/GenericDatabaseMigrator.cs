@@ -83,13 +83,15 @@ namespace Raven.Server.SqlMigration
                         break;
                     case ReferenceType.ObjectEmbed:
                         var embeddedObjectValue = (EmbeddedObjectValue)refInfo.DataProvider.Provide(specialColumns);
-                        value[refInfo.PropertyName] = embeddedObjectValue.Object;
-
-                        if (refInfo.ChildReferences != null)
+                        value[refInfo.PropertyName] = embeddedObjectValue?.Object; // fill in value or null
+                        
+                        if (embeddedObjectValue != null)
                         {
-                            FillDocumentFields(embeddedObjectValue.Object, embeddedObjectValue.SpecialColumnsValues, refInfo.ChildReferences);
+                            if (refInfo.ChildReferences != null)
+                            {
+                                FillDocumentFields(embeddedObjectValue.Object, embeddedObjectValue.SpecialColumnsValues, refInfo.ChildReferences);
+                            }
                         }
-
                         break;
                     case ReferenceType.ArrayLink:
                         var arrayWithLinks = (DynamicJsonArray)refInfo.DataProvider.Provide(specialColumns);
@@ -178,7 +180,7 @@ namespace Raven.Server.SqlMigration
 
             if (outgoingReference != null && incomingReference != null)
             {
-                throw new NotSupportedException(); //TODO: one-to-one mapping?
+                throw new NotSupportedException();
             }
 
             if (outgoingReference == null && incomingReference == null)
@@ -259,6 +261,12 @@ namespace Raven.Server.SqlMigration
 
         protected string GenerateDocumentId(string collection, object[] values)
         {
+            foreach (var t in values)
+            {
+                if (t == null)
+                    return null;
+            }
+
             return collection + "/" + string.Join("/", values);
         }
 

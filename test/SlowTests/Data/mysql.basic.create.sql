@@ -15,7 +15,7 @@ DEFAULT CHARACTER SET = utf8;
 
 CREATE TABLE `order_item` (
     `oi_id`  INT (11) NOT NULL AUTO_INCREMENT,
-    `order_id`  INT NOT NULL,
+    `order_id`  INT NULL,
     `product_id` INT NOT NULL,
     `price`  DECIMAL (12,2) NOT NULL DEFAULT 0,
     PRIMARY KEY (`oi_id`),
