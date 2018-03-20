@@ -789,6 +789,35 @@ namespace Raven.Client.Util
             }
         }
 
+        public class ReservedWordsSupport : JavascriptConversionExtension
+        {
+            public static readonly ReservedWordsSupport Instance = new ReservedWordsSupport();
+
+            public static readonly List<string> JsReservedWords = new List<string>{
+                "function", "debugger", "delete", "export","extends",
+                "import", "instanceof", "super","var", "with", "load"
+            };
+
+            private ReservedWordsSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is ParameterExpression parameterExpression) || JsReservedWords.Contains(parameterExpression.Name) == false)
+                    return;
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(parameterExpression))
+                {
+                    writer.Write("_");
+                    writer.Write(parameterExpression);
+                }
+            }
+        }
+
         public class WrappedConstantSupport<T> : JavascriptConversionExtension
         {
             private readonly IAbstractDocumentQuery<T> _documentQuery;
@@ -953,7 +982,13 @@ namespace Raven.Client.Util
                             writer.Write(".");
 
                         }
-                        writer.Write($"{member.Member.Name}");
+
+                        var name = member.Member.Name;
+                        if (ReservedWordsSupport.JsReservedWords.Contains(name))
+                        {
+                            name = "_" + name;
+                        }
+                        writer.Write(name);
                     }
 
                 }
@@ -972,6 +1007,11 @@ namespace Raven.Client.Util
                             writer.Write(parameter.Name.Substring(2));
                             writer.Write(".");
                             name = name.Replace("<>h__TransparentIdentifier", "h__TransparentIdentifier");
+                        }
+
+                        if (ReservedWordsSupport.JsReservedWords.Contains(name))
+                        {
+                            name = "_" + name;
                         }
 
                         writer.Write($"{name}");
