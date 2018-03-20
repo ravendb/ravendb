@@ -760,8 +760,9 @@ namespace Sparrow
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
-                    AllocateExternalSegment(_allocationBlockSize);
+                    var tmp = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                    AllocateExternalSegment(tmp);
+                    _allocationBlockSize = tmp;
                 }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
