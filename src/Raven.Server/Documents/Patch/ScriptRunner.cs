@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Patch
 
                 // this is basically the same as Math.min / Math.max, but 
                 // can also be applied to strings, numbers and nulls
-                
+
                 if (args.Length != 2)
                     throw new ArgumentException(caller + "must be called with exactly two arguments");
 
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
             }
-            
+
             private JsValue Raven_Max(JsValue self, JsValue[] args)
             {
                 GenericSortTwoElementArray(args);
@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
-                
+
                 return new JsValue(args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
             }
 
@@ -628,7 +628,7 @@ namespace Raven.Server.Documents.Patch
 
             private static JsValue ScalarToRawString(JsValue self2, JsValue[] args)
             {
-                if (args.Length != 2)                
+                if (args.Length != 2)
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
 
@@ -680,14 +680,14 @@ namespace Raven.Server.Documents.Patch
 
                 if (propertyIndex == -1)
                 {
-                    return  new JsValue(new ObjectInstance(selfInstance.Engine)
+                    return new JsValue(new ObjectInstance(selfInstance.Engine)
                     {
                         Extensible = true
                     });
                 }
 
                 BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                selfInstance.Blittable.GetPropertyByIndex(propertyIndex,ref propDetails);
+                selfInstance.Blittable.GetPropertyByIndex(propertyIndex, ref propDetails);
                 var value = propDetails.Value;
 
                 switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
@@ -696,18 +696,18 @@ namespace Raven.Server.Documents.Patch
                         return JsValue.Null;
                     case BlittableJsonToken.Boolean:
                         return new JsValue((bool)propDetails.Value);
-                    case BlittableJsonToken.Integer:  
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
-                    case BlittableJsonToken.LazyNumber:                                                
+                    case BlittableJsonToken.Integer:
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                    case BlittableJsonToken.LazyNumber:
                         return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
                     case BlittableJsonToken.String:
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
                     case BlittableJsonToken.CompressedString:
-                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
                     default:
                         throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
-                }            
-            }           
+                }
+            }
 
             private JsValue CmpXchangeInternal(string key)
             {
@@ -768,7 +768,7 @@ namespace Raven.Server.Documents.Patch
                     throw CreateFullError(e);
                 }
                 finally
-                {                    
+                {
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
@@ -777,14 +777,16 @@ namespace Raven.Server.Documents.Patch
 
             internal void ReleaseAllocations()
             {
-                for (var i=0; i< _objectInstances.Count; i++)
+                for (var i = 0; i < _objectInstances.Count; i++)
                 {
                     _objectInstances[i].Dispose();
                 }
+
+                _objectInstances.Clear();
             }
 
-            private List<BlittableObjectInstance> _objectInstances = new List<BlittableObjectInstance>();
-            
+            private readonly List<BlittableObjectInstance> _objectInstances = new List<BlittableObjectInstance>();
+
             private static JsonOperationContext ThrowArgumentNull()
             {
                 throw new ArgumentNullException("jsonCtx");
