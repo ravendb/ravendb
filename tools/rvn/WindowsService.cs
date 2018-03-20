@@ -255,7 +255,7 @@ namespace rvn
                     if (argsForService.Any(x => x.StartsWith("--service-name")) == false)
                     {
                         argsForService.Add("--service-name");
-                        argsForService.Add(_serviceName);
+                        argsForService.Add($"\"{_serviceName}\"");
                     }
 
                     serviceCommandResult = $"{serviceCommandResult} {string.Join(" ", argsForService)}";
