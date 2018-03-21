@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -13,9 +14,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
+                var nl = Environment.NewLine;
+
                 var input = new User
                 {
-                    Name = "THIS IS EVIL STRING\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\nTHIS IS EVIL STRING"
+                    Name = $"THIS IS EVIL STRING{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}{nl}THIS IS EVIL STRING"
                 };
 
                 using (var session = store.OpenSession())
