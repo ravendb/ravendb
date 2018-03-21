@@ -314,10 +314,14 @@ namespace Sparrow.LowMemory
 
             var memInfo = MemoryInformation.GetMemoryInfo();
 
-        var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
+            var availableMem = memInfo.AvailableMemory;
 
-            var availableMem = (memInfo.AvailableMemory + new Size(result.SharedClean, SizeUnit.Bytes));
-
+            if (PlatformDetails.RunningOnPosix)
+            {
+                var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
+                availableMem += new Size(result.SharedClean, SizeUnit.Bytes);
+            }
+            
             // We consider low memory only if we don't have enough free pyhsical memory or
             // the commited memory size if larger than our pyhsical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
