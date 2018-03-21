@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -136,28 +137,42 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var result = new SmapsReader(new []{new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
-                var djv = new DynamicJsonValue
+                var buffers = new[]
                 {
-                    ["Totals"] = new DynamicJsonValue
-                    {
-                        ["WorkingSet"] = result.Rss,
-                        ["SharedClean"] = result.SharedClean,
-                        ["PrivateClean"] = result.PrivateClean,
-                        ["TotalClean"] = result.SharedClean + result.PrivateClean,
-                        ["RssHumanly"] = Sizes.Humane(result.Rss),
-                        ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
-                        ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),
-                        ["TotalCleanHumanly"] = Sizes.Humane(result.SharedClean + result.PrivateClean)
-                    },
-                    ["Details"] = result.SmapsResults.ReturnResults()
+                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize),
+                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize)
                 };
-
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                try
                 {
-                    context.Write(write, djv);
+                    var result = new SmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Totals"] = new DynamicJsonValue
+                        {
+                            ["WorkingSet"] = result.Rss,
+                            ["SharedClean"] = result.SharedClean,
+                            ["PrivateClean"] = result.PrivateClean,
+                            ["TotalClean"] = result.SharedClean + result.PrivateClean,
+                            ["RssHumanly"] = Sizes.Humane(result.Rss),
+                            ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
+                            ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),
+                            ["TotalCleanHumanly"] = Sizes.Humane(result.SharedClean + result.PrivateClean)
+                        },
+                        ["Details"] = result.SmapsResults.ReturnResults()
+                    };
+
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, djv);
+                    }
+
+                    return Task.CompletedTask;
                 }
-                return Task.CompletedTask;
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffers[0]);
+                    ArrayPool<byte>.Shared.Return(buffers[1]);
+                }
             }
         }
 

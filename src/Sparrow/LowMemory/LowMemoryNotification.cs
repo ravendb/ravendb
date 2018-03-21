@@ -130,8 +130,7 @@ namespace Sparrow.LowMemory
         private float _commitChargeThreshold;
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
-        private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
-    private static readonly SmapsReader SmapsReader = new SmapsReader(new []{new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]});
+        private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);    
 
         public LowMemoryNotification(Size lowMemoryThreshold, float commitChargeThreshold)
         {
@@ -327,7 +326,8 @@ namespace Sparrow.LowMemory
         {
             if (PlatformDetails.RunningOnLinux)
             {
-                var result = SmapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
+                var smapsReader = new SmapsReader(new []{new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]});
+                var result = smapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
                 memInfo.AvailableMemory.Add(result.SharedClean, SizeUnit.Bytes);
                 sharedCleanInBytes = result.SharedClean;
             }
