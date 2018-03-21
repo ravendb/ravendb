@@ -849,25 +849,25 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(lng);
                 if (o is BlittableJsonReaderArray bjra)
                 {
-                    var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
                     var args = new JsValue[1];
                     for (var i = 0; i < bjra.Length; i++)
                     {
-                        var value = TranslateToJs(ScriptEngine, context, bjra[i]);
-                        args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
-                        ScriptEngine.Array.PrototypeObject.Push(jsArray, args);
+                        var value = TranslateToJs(engine, context, bjra[i]);
+                        args[0] = value as JsValue ?? JsValue.FromObject(engine, value);
+                        engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;
                 }
                 if (o is List<object> list)
                 {
-                    var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
                     var args = new JsValue[1];
                     for (var i = 0; i < list.Count; i++)
                     {
-                        var value = TranslateToJs(ScriptEngine, context, list[i]);
-                        args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
-                        ScriptEngine.Array.PrototypeObject.Push(jsArray, args);
+                        var value = TranslateToJs(engine, context, list[i]);
+                        args[0] = value as JsValue ?? JsValue.FromObject(engine, value);
+                        engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;
                 }
