@@ -231,7 +231,7 @@ namespace Sparrow.LowMemory
             RunLowMemoryHandlers(LowMemoryState);
         }
 
-        private int CheckMemoryStatus()
+        internal int CheckMemoryStatus()
         {
             int timeout;
             bool isLowMemory;
