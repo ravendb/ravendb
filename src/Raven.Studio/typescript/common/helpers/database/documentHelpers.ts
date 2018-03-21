@@ -197,6 +197,7 @@ class documentHelpers {
     }
 
     private static findSchemaDefaultValue(documents: Array<any>, property: string): any {
+        documents = documents.filter(x => x);
         for (let i = 0; i < documents.length; i++) {
             if (!(property in documents[i])) {
                 return undefined;
