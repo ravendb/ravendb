@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
@@ -40,7 +41,7 @@ namespace SlowTests.Issues
                                     CheckGroup5 = x.Quantity != null ? x.Quantity : 0,
                                 }; 
                     
-                    Assert.Equal("declare function output(x) {\r\n\tvar test = 1;\r\n\treturn { CheckGroup : ((x.Quantity!=null?x.Quantity:0)!==0?2:3)===2?1:0, CheckGroup1 : (x.Quantity==null?1:2)===1?1:2, CheckGroup2 : x.Quantity!=null?x.Quantity:0, CheckGroup3 : x.Quantity!=null?x.Quantity:0, CheckGroup4 : (x.Quantity!=null?x.Quantity:0)!==0?2:3, CheckGroup5 : x.Quantity!=null?x.Quantity:0 };\r\n}\r\nfrom Articles as x select output(x)", query.ToString());
+                    Assert.Equal($"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ CheckGroup : ((x.Quantity!=null?x.Quantity:0)!==0?2:3)===2?1:0, CheckGroup1 : (x.Quantity==null?1:2)===1?1:2, CheckGroup2 : x.Quantity!=null?x.Quantity:0, CheckGroup3 : x.Quantity!=null?x.Quantity:0, CheckGroup4 : (x.Quantity!=null?x.Quantity:0)!==0?2:3, CheckGroup5 : x.Quantity!=null?x.Quantity:0 }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)", query.ToString());
 
                     var result = query.ToList();
                     
