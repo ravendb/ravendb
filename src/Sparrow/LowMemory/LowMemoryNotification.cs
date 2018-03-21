@@ -304,6 +304,7 @@ namespace Sparrow.LowMemory
                 _clearInactiveHandlersCounter = 0;
                 ClearInactiveHandlers();
             }
+
             foreach (var stats in NativeMemory.ThreadAllocations.Values)
             {
                 if (stats.IsThreadAlive() == false)
@@ -313,20 +314,31 @@ namespace Sparrow.LowMemory
             }
 
             var memInfo = MemoryInformation.GetMemoryInfo();
+            var isLowMemory = IsLowMemory(memInfo, out _);
 
-            var availableMem = memInfo.AvailableMemory;
+            // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
+            memStats = (memInfo.AvailableMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
+            return isLowMemory;
+        }
 
+        public bool IsLowMemory(MemoryInfoResult memInfo, out long sharedCleanInBytes)
+        {
             if (PlatformDetails.RunningOnLinux)
             {
                 var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
-                availableMem += new Size(result.SharedClean, SizeUnit.Bytes);
+                memInfo.AvailableMemory.Add(result.SharedClean, SizeUnit.Bytes);
+                sharedCleanInBytes = result.SharedClean;
             }
-            
+            else
+            {
+                sharedCleanInBytes = 0;
+            }
+
             // We consider low memory only if we don't have enough free pyhsical memory or
             // the commited memory size if larger than our pyhsical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
-            var isLowMemory = availableMem < _lowMemoryThreshold;
+            var isLowMemory = memInfo.AvailableMemory < _lowMemoryThreshold;
 
             if (PlatformDetails.RunningOnPosix == false)
             {
@@ -335,7 +347,6 @@ namespace Sparrow.LowMemory
                 isLowMemory |= memInfo.TotalCommittableMemory <= commitChargePlusMinSizeToKeepFree;
             }
 
-            memStats = (availableMem, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 

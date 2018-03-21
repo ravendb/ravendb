@@ -64,20 +64,23 @@ namespace Raven.Server.Dashboard
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var workingSet = PlatformDetails.RunningOnLinux == false
-                        ? currentProcess.WorkingSet64 
-                        : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+                var memInfo = MemoryInformation.GetMemoryInfo();
+                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, out var sharedCleanInBytes);
+                var workingSet = PlatformDetails.RunningOnLinux
+                    ? MemoryInformation.GetRssMemoryUsage(currentProcess.Id) - sharedCleanInBytes
+                    : currentProcess.WorkingSet64;
 
-                var memoryInfoResult = MemoryInformation.GetMemoryInfo();
                 var cpuInfo = CpuUsage.Calculate();
 
                 var machineResources = new MachineResources
                 {
-                    TotalMemory = memoryInfoResult.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
-                    SystemCommitLimit = memoryInfoResult.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
-                    CommitedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
+                    TotalMemory = memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                    AvailableMemory = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
+                    SystemCommitLimit = memInfo.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
+                    CommitedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                     ProcessMemoryUsage = workingSet,
                     IsProcessMemoryRss = PlatformDetails.RunningOnPosix,
+                    IsLowMemory = isLowMemory,
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
                     ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
                 };
