@@ -316,7 +316,7 @@ namespace Sparrow.LowMemory
 
             var availableMem = memInfo.AvailableMemory;
 
-            if (PlatformDetails.RunningOnPosix)
+            if (PlatformDetails.RunningOnLinux)
             {
                 var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
                 availableMem += new Size(result.SharedClean, SizeUnit.Bytes);
