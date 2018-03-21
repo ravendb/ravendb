@@ -38,7 +38,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, RequestBodyStream(), Database, ServerStore);
                 }
-                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
+                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) || 
+                    contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
                     await ParseMultipart(context, command);
                 }
