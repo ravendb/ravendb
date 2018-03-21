@@ -70,8 +70,8 @@ namespace Sparrow.Platform.Posix
         // Size, Rss, Shared_Clean, Private_Clean, Shared_Dirty, Private_Dirty and in order to finish reading a file data : Locked
         // Each must have with white-space delimiters a value, delimiter, "kB"
 
-        private const int BufferSize = 4096;
-        private readonly byte[][] _smapsBuffer = {new byte[BufferSize], new byte[BufferSize]};
+        public const int BufferSize = 4096;
+        private readonly byte[][] _smapsBuffer;
         private readonly SmapsReaderResults _smapsReaderResults = new SmapsReaderResults();
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
@@ -100,6 +100,11 @@ namespace Sparrow.Platform.Posix
             PrivateDirty
         }
 
+        public SmapsReader(byte[][] smapsBuffer)
+        {
+            _smapsBuffer = smapsBuffer;
+        }
+        
         private int ReadFromFile(Stream fileStream, int bufferIndex)
         {
             var read = fileStream.Read(_smapsBuffer[bufferIndex], 0, _smapsBuffer[bufferIndex].Length);
@@ -109,6 +114,10 @@ namespace Sparrow.Platform.Posix
 
         public (long Rss, long SharedClean, long PrivateClean, T SmapsResults) CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
         {
+            _endOfBuffer[0] = 0;
+            _endOfBuffer[1] = 0;
+            _currentBuffer = 0;
+            
             var state = SearchState.None;
             var smapResultsObject = new T();
 
@@ -407,7 +416,7 @@ namespace Sparrow.Platform.Posix
 
         private static void ThrowOnNullString()
         {
-            throw new InvalidDataException($"Got term 'Locked' (end of single mapping data) with no filename (in 'resultString') after rw-s");
+            throw new InvalidDataException("Got term 'Locked' (end of single mapping data) with no filename (in 'resultString') after rw-s");
         }
 
         private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
