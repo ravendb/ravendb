@@ -1,4 +1,7 @@
-﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
+
+import sqlTable = require("models/database/tasks/sql/sqlTable");
+import sqlColumn = require("./sqlColumn");
 
 class sqlMigration {
     
@@ -21,6 +24,8 @@ class sqlMigration {
     
     mySqlValidationGroup: KnockoutValidationGroup;
     
+    tables = ko.observableArray<sqlTable>([]); 
+    
     constructor() {
         //TODO: add validation etc, 
         //TODO: remember password in MySQL is not required
@@ -36,6 +41,19 @@ class sqlMigration {
             default:
                 return type;
         }
+    }
+    
+    onSchemaUpdated(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema) {
+        const mapping = _.map(dbSchema.Tables, (tableDto, tableName) => {
+            const table = new sqlTable();
+            
+            table.name(tableName);
+            table.columns(tableDto.Columns.map(columnDto => new sqlColumn(columnDto)));
+            
+            return table;
+        });
+        
+        this.tables(mapping);
     }
     
     getConnectionString() {

@@ -72,7 +72,7 @@
                             <div class="flex-grow">
                                 <input class="form-control"
                                        data-bind="textInput: sourceDatabaseName"
-                                       placeholder="Database name to import">
+                                       placeholder="Database name">
                             </div>
                         </div>
                     </div>
@@ -85,11 +85,22 @@
                 <hr/>
                 <div class="form-group">
                     <div class="col-sm-10">
-                        <button class="btn btn-primary" type="submit"><span class="icon-import"></span> <span>Continue</span>
+                        <button class="btn btn-primary" type="submit" 
+                                data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }">
+                            <span class="icon-import"></span> <span>Continue</span>
                         </button>
                     </div>
                 </div>
             </form>
+            
+            
+            <div data-bind="foreach: model.tables">
+                <h3 data-bind="text: name"></h3>
+                
+                <ul data-bind="foreach: columns">
+                    <li data-bind="text: name + ' (' + type + ')'"></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
