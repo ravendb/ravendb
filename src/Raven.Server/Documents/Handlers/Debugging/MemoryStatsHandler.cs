@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var result = new SmapsReader().CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                var result = new SmapsReader(new []{new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
                 var djv = new DynamicJsonValue
                 {
                     ["Totals"] = new DynamicJsonValue
