@@ -25,7 +25,7 @@ namespace SlowTests.Tests.Queries
                 using (var s = store.OpenSession())
                 {
                     var xml =
-                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<__Root__>\r\n  <_STD s=\"DateTime\" t=\"System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\" /> <dateTime xmlns=\"http://schemas.microsoft.com/2003/10/Serialization/\">2009-01-14T23:00:57.087Z</dateTime> </__Root__>";
+                        $"<?xml version=\"1.0\" encoding=\"utf-8\"?>{Environment.NewLine}<__Root__>{Environment.NewLine}  <_STD s=\"DateTime\" t=\"System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\" /> <dateTime xmlns=\"http://schemas.microsoft.com/2003/10/Serialization/\">2009-01-14T23:00:57.087Z</dateTime> </__Root__>";
                     var guid = Guid.NewGuid().ToString();
 
                     var s1 = s.Query<Item>()
