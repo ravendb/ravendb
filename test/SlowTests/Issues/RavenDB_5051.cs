@@ -23,6 +23,8 @@ namespace SlowTests.Issues
                     Name = c.Name
                 }"));
 
+                //\r\n line terminators are expected regardless of the OS type.
+                //The underlying SyntaxFactory and Formatter classes and will produce \r\n.
                 Assert.Equal("from c in docs.Companies\r\nselect new\r\n{\r\n    Name = c.Name\r\n}", result.Expression);
             }
         }

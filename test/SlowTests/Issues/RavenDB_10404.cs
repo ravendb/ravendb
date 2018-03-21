@@ -75,9 +75,9 @@ namespace SlowTests.Issues
                                 Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
                                 Assert.Equal(IndexType.MapReduce, indexStats.Type);
 
-                                Assert.Equal("from result in results\r\ngroup result by result.Company \r\ninto g\r\nselect new\r\n{\r\n\tCompany = g.Key,\r\n\tCount = g.Sum(x => x.Count),\r\n\tTotal = g.Sum(x => x.Total)\r\n}", indexDefinition.Reduce);
+                                Assert.Equal($"from result in results{Environment.NewLine}group result by result.Company {Environment.NewLine}into g{Environment.NewLine}select new{Environment.NewLine}{{{Environment.NewLine}\tCompany = g.Key,{Environment.NewLine}\tCount = g.Sum(x => x.Count),{Environment.NewLine}\tTotal = g.Sum(x => x.Total){Environment.NewLine}}}", indexDefinition.Reduce);
                                 Assert.Equal(1, indexDefinition.Maps.Count);
-                                Assert.Equal("from order in docs.Orders\r\nselect new\r\n{\r\n    order.Company,\r\n    Count = 1,\r\n    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))\r\n}", indexDefinition.Maps.First());
+                                Assert.Equal($"from order in docs.Orders{Environment.NewLine}select new{Environment.NewLine}{{{Environment.NewLine}    order.Company,{Environment.NewLine}    Count = 1,{Environment.NewLine}    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount)){Environment.NewLine}}}", indexDefinition.Maps.First());
 
                                 Assert.Null(indexDefinition.OutputReduceToCollection);
 
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                                 Assert.Equal(IndexType.Map, indexStats.Type);
 
                                 Assert.Equal(1, indexDefinition.Maps.Count);
-                                Assert.Equal("from order in docs.Orders\r\nselect new\r\n{\r\n    order.Employee,\r\n    order.Company,\r\n    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))\r\n}", indexDefinition.Maps.First());
+                                Assert.Equal($"from order in docs.Orders{Environment.NewLine}select new{Environment.NewLine}{{{Environment.NewLine}    order.Employee,{Environment.NewLine}    order.Company,{Environment.NewLine}    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount)){Environment.NewLine}}}", indexDefinition.Maps.First());
 
                                 Assert.Null(indexDefinition.OutputReduceToCollection);
 
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                                 Assert.Equal(IndexType.Map, indexStats.Type);
 
                                 Assert.Equal(1, indexDefinition.Maps.Count);
-                                Assert.Equal("from p in docs.Products\r\nselect new\r\n{\r\n    p.Name,\r\n    p.Category,\r\n    p.Supplier,\r\n    p.PricePerUnit\r\n}", indexDefinition.Maps.First());
+                                Assert.Equal($"from p in docs.Products{Environment.NewLine}select new{Environment.NewLine}{{{Environment.NewLine}    p.Name,{Environment.NewLine}    p.Category,{Environment.NewLine}    p.Supplier,{Environment.NewLine}    p.PricePerUnit{Environment.NewLine}}}", indexDefinition.Maps.First());
 
                                 Assert.Null(indexDefinition.OutputReduceToCollection);
 

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using FastTests;
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
                     {
                         Address = new Address
                         {
-                            Country = "hello\r\nthere"
+                            Country = $"hello{Environment.NewLine}there"
                         }
                     });
                     s.SaveChanges();
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
                     Query = "from PersonWithAddresses as u select { Self: u }"
                 }));
 
-                Assert.DoesNotContain("\r\n", result);
+                Assert.DoesNotContain(Environment.NewLine, result);
             }
         }
 
