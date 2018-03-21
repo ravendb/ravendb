@@ -113,8 +113,9 @@ class editIndex extends viewModelBase {
         })
     }
 
-    canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
-        const indexToEditName = unescapedIndexToEditName ? decodeURIComponent(unescapedIndexToEditName) : undefined;
+    canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
+        const indexToEditName = indexToEdit || undefined;
+        
         super.canActivate(indexToEditName);
 
         const db = this.activeDatabase();
@@ -257,8 +258,7 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private editExistingIndex(unescapedIndexName: string) {
-        const indexName = decodeURIComponent(unescapedIndexName);
+    private editExistingIndex(indexName: string) {
         this.originalIndexName = indexName;
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
