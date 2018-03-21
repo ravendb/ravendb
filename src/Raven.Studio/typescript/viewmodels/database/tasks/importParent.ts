@@ -34,6 +34,14 @@ class importParent extends viewModelBase {
                     tabName: "From CSV file",
                     nav: true,
                     dynamicHash: appUrl.forCurrentDatabase().importCollectionFromCsv
+                },
+                {
+                    route: 'databases/tasks/import/sql',
+                    moduleId: 'viewmodels/database/tasks/importDatabaseFromSql',
+                    title: 'Import from SQL Database',
+                    tabName: "From SQL",
+                    nav: true,
+                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromSql
                 }
             ])
             .buildNavigationModel();
