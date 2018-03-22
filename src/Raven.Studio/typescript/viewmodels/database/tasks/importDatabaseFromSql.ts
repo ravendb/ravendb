@@ -11,6 +11,8 @@ class importCollectionFromSql extends viewModelBase {
     
     model = new sqlMigration();
     
+    inFirstStep = ko.observable<boolean>(true);
+    
     databases = ko.observableArray<string>([]); //TODO: fetch this on databases focus
     
     validationGroup: KnockoutValidationGroup;    
@@ -54,6 +56,7 @@ class importCollectionFromSql extends viewModelBase {
             .execute()
             .done(schema => {
                 this.model.onSchemaUpdated(schema);
+                this.inFirstStep(false);
             })
             .always(() => this.spinners.schema(false));
             

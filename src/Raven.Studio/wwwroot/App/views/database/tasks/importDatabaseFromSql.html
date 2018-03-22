@@ -1,7 +1,7 @@
 <div class="importDatabase">
     <div class="panel">
         <div class="panel-body">
-            <form class="flex-form" data-bind="submit: nextStep">
+            <form class="flex-form" data-bind="submit: nextStep, collapse: inFirstStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>
                 <div class="row">
                     <div class="col-sm-8 col-lg-6 margin-top" data-bind="with: model">
@@ -92,10 +92,18 @@
                 </div>
             </form>
             <div data-bind="foreach: model.tables">
-                <h3 data-bind="text: name"></h3>
+                <div class="checkbox" data-placement="left">
+                    <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
+                    <label data-bind="text: name, attr: { for: 'table_' + $index() }"></label>
+                </div>
+                
+                <div>Document ID: <span data-bind="text: documentIdTemplate"></span></div>
+                
                 <ul data-bind="foreach: columns">
                     <li data-bind="text: name + ' (' + type + ')'"></li>
                 </ul>
+                
+                <!-- TODO: list relashioships -->
             </div>
         </div>
     </div>
