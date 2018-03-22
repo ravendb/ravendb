@@ -2012,7 +2012,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     //     so we changed it to "__ravenDefaultAlias".
                     //     the load-argument might be a path with respect to the original from-alias name.
                     // (3) OR the parameter name of the load argument is a reserved word
-					//     that was defined in a previous let statment, i.e : 
+                    //     that was defined in a previous let statment, i.e : 
                     //     let update = session.Load<Order>("orders/1-A")
                     //     let employee = session.Load<Employee>(update.Employee)
 
@@ -2129,8 +2129,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AppendLineToOutputFunction(alias, newAlias);
                 return newAlias;
             }
-            
-            return "'" + alias + "'";            
+
+            return "'" + alias + "'";
         }
 
         private static string RenameAliasIfReservedInJs(string alias)
@@ -2528,7 +2528,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
-            if (alias.Equals("load", StringComparison.OrdinalIgnoreCase) ||
+            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
                 _aliasKeywords.Contains(alias))
             {
                 alias = "'" + alias + "'";
