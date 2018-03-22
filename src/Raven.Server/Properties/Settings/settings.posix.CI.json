@@ -1,6 +1,6 @@
 ﻿{
   "ServerUrl": "http://localhost:8080",
   "RunInMemory": false,
-  "Storage.TempPath": "/tmp/RavenDB/Storage",
-  "Indexing.TempPath": "/tmp/RavenDB/Indexing"
+  "Storage.TempPath": "/mnt/c/tmp/RavenDB/Storage",
+  "Indexing.TempPath": "/mnt/c/tmp/RavenDB/Indexing"
 }
