@@ -58,22 +58,23 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        protected DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, string dataSet = "northwind", bool includeData = true)
+        protected DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
         {
             switch (provider)
             {
                 case MigrationProvider.MySQL:
-                    return WithMySqlDatabase(out connectionString, dataSet, includeData);
+                    return WithMySqlDatabase(out connectionString, out schemaName, dataSet, includeData);
                 case MigrationProvider.MsSQL:
-                    return WithMsSqlDatabase(out connectionString, dataSet, includeData);
+                    schemaName = "dbo";
+                    return WithMsSqlDatabase(out connectionString, out string databaseName, dataSet, includeData);
                 default:
                     throw new InvalidOperationException("Unhandled provider: " + provider);
             }
         }
 
-        private DisposableAction WithMsSqlDatabase(out string connectionString, string dataSet, bool includeData = true)
+        private DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
-            var databaseName = "SqlTest_" + Guid.NewGuid();
+            databaseName = "SqlTest_" + Guid.NewGuid();
             connectionString = SqlEtlTests.MasterDatabaseConnection.Value + $";Initial Catalog={databaseName}";
 
             using (var connection = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
@@ -111,6 +112,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                     }
                 }
             }
+            
+            var dbName = databaseName;
 
             return new DisposableAction(() =>
             {
@@ -123,7 +126,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         var dropDatabaseQuery = "IF EXISTS(select * from sys.databases where name= '{0}') " +
                                                 "ALTER DATABASE [{0}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
                                                 "IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE [{0}]";
-                        dbCommand.CommandText = string.Format(dropDatabaseQuery, databaseName);
+                        dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
 
                         dbCommand.ExecuteNonQuery();
                     }
@@ -131,9 +134,9 @@ namespace SlowTests.Server.Documents.SqlMigration
             });
         }
 
-        protected DisposableAction WithMySqlDatabase(out string connectionString, string dataSet, bool includeData = true)
+        protected DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
-            var databaseName = "SqlTest_" + Guid.NewGuid();
+            databaseName = "sql_test_" + Guid.NewGuid();
             var rawConnectionString = MySqlDatabaseConnection.Value;
             connectionString = rawConnectionString + $";database=\"{databaseName}\"";
 
@@ -173,6 +176,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
 
+            string dbName = databaseName;
             return new DisposableAction(() =>
             {
                 using (var con = new MySqlConnection(rawConnectionString))
@@ -182,7 +186,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (var dbCommand = con.CreateCommand())
                     {
                         var dropDatabaseQuery = "DROP DATABASE `{0}`";
-                        dbCommand.CommandText = string.Format(dropDatabaseQuery, databaseName);
+                        dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
 
                         dbCommand.ExecuteNonQuery();
                     }

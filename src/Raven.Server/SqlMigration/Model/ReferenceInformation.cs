@@ -9,6 +9,7 @@ namespace Raven.Server.SqlMigration.Model
     {
         public string PropertyName { get; set; }
         
+        public string SourceSchema { get; set; }
         public string SourceTableName { get; set; }
         
         public List<string> SourcePrimaryKeyColumns { get; set; }

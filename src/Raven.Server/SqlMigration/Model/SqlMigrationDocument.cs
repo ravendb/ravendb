@@ -8,15 +8,13 @@ namespace Raven.Server.SqlMigration.Model
     public class SqlMigrationDocument
     {
         public string Id { get; set; }
-        public string TableName { get; set; }
         public string Collection { get; set; }
         public DynamicJsonValue SpecialColumnsValues { get; set; }
         public DynamicJsonValue Object { get; set; }
         public Dictionary<string, byte[]> Attachments;
 
-        public SqlMigrationDocument(string tableName)
+        public SqlMigrationDocument()
         {
-            TableName = tableName;
             SpecialColumnsValues = new DynamicJsonValue();
             Object = new DynamicJsonValue();
         }
@@ -38,7 +36,7 @@ namespace Raven.Server.SqlMigration.Model
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Cannot build document from table '{TableName}'. Document ID: {Id}", e);
+                throw new InvalidOperationException($"Cannot build document with ID: {Id}", e);
             }
         }
     }   

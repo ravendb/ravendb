@@ -6,6 +6,7 @@ namespace Raven.Server.SqlMigration.Schema
 {
     public class TableReference : IDynamicJson
     {
+        public string Schema { get; set; }
         public string Table { get; set; }
         public List<string> Columns { get; set; } = new List<string>();
 
@@ -14,6 +15,7 @@ namespace Raven.Server.SqlMigration.Schema
             return new DynamicJsonValue
             {
                 [nameof(Table)] = Table,
+                [nameof(Schema)] = Schema,
                 [nameof(Columns)] = TypeConverter.ToBlittableSupportedType(Columns)
             };
         }
