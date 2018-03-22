@@ -1,5 +1,4 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
-
 import sqlTable = require("models/database/tasks/sql/sqlTable");
 import sqlColumn = require("./sqlColumn");
 
@@ -26,10 +25,41 @@ class sqlMigration {
     
     tables = ko.observableArray<sqlTable>([]); 
     
-    constructor() {
-        //TODO: add validation etc, 
-        //TODO: remember password in MySQL is not required
+    constructor() {       
+        this.initValidation();   
+        
+        //TODO: remember password in MySQL is not required        
         //TODO: use proper validation group based on database type 
+    }
+
+    initValidation() {
+        
+        this.sqlServer.connectionString.extend({
+                required: true
+            });
+        
+        this.mySql.server.extend({
+            required: true
+        });
+
+        this.mySql.username.extend({
+            required: true
+        });
+        
+        this.sourceDatabaseName.extend({
+            required: true
+        });
+        
+        this.sqlServerValidationGroup = ko.validatedObservable({
+            connectionString: this.sqlServer.connectionString,
+            sourceDatabaseName: this.sourceDatabaseName
+        });
+
+        this.mySqlValidationGroup = ko.validatedObservable({
+            server: this.mySql.server,
+            username: this.mySql.username,            
+            sourceDatabaseName: this.sourceDatabaseName
+        });
     }
 
     labelForProvider(type: Raven.Server.SqlMigration.MigrationProvider) {
@@ -62,8 +92,6 @@ class sqlMigration {
         // server=127.0.0.1;uid=root;pwd=123;database=ABC
         return "Data Source=MARCIN-WIN\\INSERTNEXO;Integrated Security=True;Initial Catalog=SqlTest_bfebf597-9916-499b-a2c8-45aa702f77aa";
     }
-    
 }
-
 
 export = sqlMigration;
