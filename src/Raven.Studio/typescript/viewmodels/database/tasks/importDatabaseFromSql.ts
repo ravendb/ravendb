@@ -12,10 +12,8 @@ class importCollectionFromSql extends viewModelBase {
     model = new sqlMigration();
     
     databases = ko.observableArray<string>([]); //TODO: fetch this on databases focus
-
-    validationGroup = ko.validatedObservable({
-        //TODO
-    });
+    
+    validationGroup: KnockoutValidationGroup;    
 
     constructor() {
         super();
@@ -24,11 +22,23 @@ class importCollectionFromSql extends viewModelBase {
     }
 
     private setupValidation() {
-        //TODO: validate connection string, database name etc.
+        this.validationGroup = this.model.sqlServerValidationGroup;
+        
+        this.model.databaseType.subscribe(newValue => {
+            if (newValue === "MsSQL") {
+                this.validationGroup = this.model.sqlServerValidationGroup;
+            } 
+            else {
+                this.validationGroup = this.model.mySqlValidationGroup;
+            }
+        });
     }
     
-    nextStep() {
-        //TODO: validate !
+    nextStep() {        
+        if (!this.isValid(this.validationGroup)) {
+            return false;
+        }
+        
         const connectionString = this.model.getConnectionString(); 
         console.log("using connection string:" + connectionString);
         console.log("using driver = " + this.model.databaseType());
@@ -49,8 +59,6 @@ class importCollectionFromSql extends viewModelBase {
             
         //TODO: finish
     }
-
-
 }
 
 export = importCollectionFromSql; 
