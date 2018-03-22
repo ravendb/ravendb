@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        internal Dictionary<string, LuceneSuggestionIndexWriter> EnsureSuggestionIndexWriter(IState state)
+        internal Dictionary<string, LuceneSuggestionIndexWriter> EnsureSuggestionIndexWriter(IState state, Analyzer searchAnalyzer)
         {
             if (_suggestionsIndexWriters != null)
                 return _suggestionsIndexWriters;
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                     var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
                                         snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
-                                        _index._indexStorage.DocumentDatabase, state);
+                                        _index._indexStorage.DocumentDatabase, state, searchAnalyzer);
 
                     _suggestionsIndexWriters[field] = writer;
                 }
