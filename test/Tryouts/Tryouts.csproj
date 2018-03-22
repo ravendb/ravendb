@@ -18,6 +18,11 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Lambda2Js.Signed.Custom">
+      <HintPath>..\..\libs\Lambda2Js.Signed.Custom.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
     <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
