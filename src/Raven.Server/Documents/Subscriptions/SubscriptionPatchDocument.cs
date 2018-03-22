@@ -48,34 +48,40 @@ function execute(doc, args){{
 
         public override bool Equals(object obj)
         {
-            if (obj is SubscriptionPatchDocument other)
-                return Equals(other);
-            return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((SubscriptionPatchDocument)obj);
         }
 
-        public bool Equals(SubscriptionPatchDocument obj)
+        public bool Equals(SubscriptionPatchDocument other)
         {
-            if (DeclaredFunctions.Length != obj.DeclaredFunctions.Length)
+            if (DeclaredFunctions.Length != other.DeclaredFunctions.Length)
+                return false;
+
+            if (Script != other.Script)
                 return false;
 
             for (var index = 0; index < DeclaredFunctions.Length; index++)
             {
-                if (DeclaredFunctions[index] != obj.DeclaredFunctions[index])
+                if (DeclaredFunctions[index] != other.DeclaredFunctions[index])
                     return false;
             }
 
-            return obj.Script != Script;
+            return true;
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                int hashCode = Script.GetHashCode();
+                int hashCode = Script != null ? Script.GetHashCode() : 0;
                 foreach (var function in DeclaredFunctions)
-                {
-                    hashCode = (hashCode * 397) ^ (function.GetHashCode());
-                }
+                    hashCode = (hashCode * 397) ^ function.GetHashCode();
+
                 return hashCode;
             }
         }
