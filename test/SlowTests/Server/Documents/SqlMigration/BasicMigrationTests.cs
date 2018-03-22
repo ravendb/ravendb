@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanMigrateSkipOnParent(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -27,6 +27,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var collection = new RootCollection
                     {
                         SourceTableName = "order",
+                        SourceTableSchema = schemaName,
                         Name = "Orders"
                     };
 
@@ -70,7 +71,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanMigrateEmbedOnParent(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -78,12 +79,14 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var collection = new RootCollection
                     {
                         SourceTableName = "order",
+                        SourceTableSchema = schemaName,
                         Name = "Orders",
                         NestedCollections = new List<EmbeddedCollection>
                         {
                             new EmbeddedCollection
                             {
                                 SourceTableName = "order_item",
+                                SourceTableSchema = schemaName,
                                 Name = "Items"
                             }
                         }
@@ -136,7 +139,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanMigrateLinkOnParent(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -144,12 +147,14 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var ordersCollection = new RootCollection
                     {
                         SourceTableName = "order",
+                        SourceTableSchema = schemaName,
                         Name = "Orders",
                         LinkedCollections = new List<LinkedCollection>
                         {
                             new LinkedCollection
                             {
                                 SourceTableName = "order_item",
+                                SourceTableSchema = schemaName,
                                 Name = "Items"
                             }
                         }
@@ -158,6 +163,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var orderItemsCollection = new RootCollection
                     {
                         SourceTableName = "order_item",
+                        SourceTableSchema = schemaName,
                         Name = "OrderItems"
                     };
 
@@ -204,7 +210,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanMigrateSkipOnChild(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -212,6 +218,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var collection = new RootCollection
                     {
                         SourceTableName = "order_item",
+                        SourceTableSchema = schemaName,
                         Name = "OrderItems"
                     };
 
@@ -255,7 +262,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanMigrateEmbedOnChild(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -263,12 +270,14 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var collection = new RootCollection
                     {
                         SourceTableName = "order_item",
+                        SourceTableSchema = schemaName,
                         Name = "OrderItems",
                         NestedCollections = new List<EmbeddedCollection>
                         {
                             new EmbeddedCollection
                             {
                                 SourceTableName = "order",
+                                SourceTableSchema = schemaName,
                                 Name = "Order"
                             }
                         }
@@ -321,7 +330,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanMigrateLinkOnChild(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -329,13 +338,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var orderItemCollection = new RootCollection
                     {
                         SourceTableName = "order_item",
+                        SourceTableSchema = schemaName,
                         Name = "OrderItems",
                         LinkedCollections = new List<LinkedCollection>
                         {
                             new LinkedCollection
                             {
                                 Name = "ParentOrder",
-                                SourceTableName = "order"
+                                SourceTableName = "order",
+                                SourceTableSchema = schemaName,
                             }
                         }
                     };
@@ -343,6 +354,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var orderCollection = new RootCollection
                     {
                         SourceTableName = "order",
+                        SourceTableSchema = schemaName,
                         Name = "Orders"
                     };
 
@@ -400,7 +412,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task NestedEmbedding(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -408,18 +420,21 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var collection = new RootCollection
                     {
                         SourceTableName = "order",
+                        SourceTableSchema = schemaName,
                         Name = "Orders",
                         NestedCollections = new List<EmbeddedCollection>
                         {
                             new EmbeddedCollection
                             {
                                 SourceTableName = "order_item",
+                                SourceTableSchema = schemaName,
                                 Name = "Items",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
                                     new EmbeddedCollection
                                     {
                                         SourceTableName = "product",
+                                        SourceTableSchema = schemaName,
                                         Name = "Product"
                                     }
                                 }
@@ -485,7 +500,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task LinkInsideEmbed(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -499,18 +514,21 @@ namespace SlowTests.Server.Documents.SqlMigration
                             new RootCollection
                             {
                                 SourceTableName = "order",
+                                SourceTableSchema = schemaName,
                                 Name = "Orders",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
                                     new EmbeddedCollection
                                     {
                                         SourceTableName = "order_item",
+                                        SourceTableSchema = schemaName,
                                         Name = "Items",
                                         LinkedCollections = new List<LinkedCollection>
                                         {
                                             new LinkedCollection
                                             {
                                                 SourceTableName = "product",
+                                                SourceTableSchema = schemaName,
                                                 Name = "Product"
                                             }
                                         }
@@ -520,6 +538,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                             new RootCollection
                             {
                                 SourceTableName = "product",
+                                SourceTableSchema = schemaName,
                                 Name = "Products"
                             }
                         }
@@ -570,7 +589,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanHandleMissingParentEmbed(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 
@@ -581,12 +600,14 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var collection = new RootCollection
                     {
                         SourceTableName = "order_item",
+                        SourceTableSchema = schemaName,
                         Name = "OrderItems",
                         NestedCollections = new List<EmbeddedCollection>
                         {
                             new EmbeddedCollection
                             {
                                 SourceTableName = "order",
+                                SourceTableSchema = schemaName,
                                 Name = "Order"
                             }
                         }
@@ -625,7 +646,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task CanHandleMissingParentLink(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 
@@ -637,13 +658,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var orderItemCollection = new RootCollection
                     {
                         SourceTableName = "order_item",
+                        SourceTableSchema = schemaName,
                         Name = "OrderItems",
                         LinkedCollections = new List<LinkedCollection>
                         {
                             new LinkedCollection
                             {
                                 Name = "ParentOrder",
-                                SourceTableName = "order"
+                                SourceTableName = "order",
+                                SourceTableSchema = schemaName
                             }
                         }
                     };
@@ -651,6 +674,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     var orderCollection = new RootCollection
                     {
                         SourceTableName = "order",
+                        SourceTableSchema = schemaName,
                         Name = "Orders"
                     };
 

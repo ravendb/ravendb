@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task SimplePatch(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -29,6 +29,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                             new RootCollection
                             {
                                 SourceTableName = "order",
+                                SourceTableSchema = schemaName,
                                 Name = "Orders",
                                 Patch = "this.NewField = 5;"
                             }
@@ -55,7 +56,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Fact] //TODO: use theory
         public async Task PatchCanAccessNestedObjects()
         {
-            using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, "basic"))
+            using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.MsSQL, connectionString);
                 using (var store = GetDocumentStore())
@@ -69,6 +70,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                             new RootCollection
                             {
                                 SourceTableName = "order",
+                                SourceTableSchema = schemaName,
                                 Name = "Orders",
                                 Patch = "this.JsTotal = this.Items.map(x => x.price).reduce((acc, cur) => acc + cur, 0)",
                                 NestedCollections = new List<EmbeddedCollection>
@@ -76,6 +78,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                                     new EmbeddedCollection
                                     {
                                         SourceTableName = "order_item",
+                                        SourceTableSchema = schemaName,
                                         Name = "Items"
                                     }
                                 }

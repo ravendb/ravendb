@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task Attachments(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -34,18 +34,21 @@ namespace SlowTests.Server.Documents.SqlMigration
                             new RootCollection
                             {
                                 SourceTableName = "actor",
+                                SourceTableSchema = schemaName,
                                 Name = "Actors",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
                                     new EmbeddedCollection
                                     {
                                         SourceTableName = "actor_movie",
+                                        SourceTableSchema = schemaName,
                                         Name = "Movies",
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
                                             new EmbeddedCollection
                                             {
                                                 SourceTableName = "movie",
+                                                SourceTableSchema = schemaName,
                                                 Name = "Movie"
                                             }
                                         }
@@ -83,7 +86,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         [InlineData(MigrationProvider.MySQL)]
         public async Task BinaryAsNoAttachment(MigrationProvider provider)
         {
-            using (WithSqlDatabase(provider, out var connectionString, "basic"))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
@@ -98,18 +101,21 @@ namespace SlowTests.Server.Documents.SqlMigration
                             new RootCollection
                             {
                                 SourceTableName = "actor",
+                                SourceTableSchema = schemaName,
                                 Name = "Actors",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
                                     new EmbeddedCollection
                                     {
                                         SourceTableName = "actor_movie",
+                                        SourceTableSchema = schemaName,
                                         Name = "Movies",
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
                                             new EmbeddedCollection
                                             {
                                                 SourceTableName = "movie",
+                                                SourceTableSchema = schemaName,
                                                 Name = "Movie"
                                             }
                                         }

@@ -417,3 +417,5 @@ interface resourceStyleMap {
 
 
 type checkbox = "unchecked" | "some_checked" | "checked";
+
+type sqlMigrationAction = "skip" | "embed" | "link";

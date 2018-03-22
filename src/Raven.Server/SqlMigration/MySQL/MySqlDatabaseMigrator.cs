@@ -12,11 +12,11 @@ namespace Raven.Server.SqlMigration.MySQL
     {
         public const string SelectColumns = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE from information_schema.COLUMNS where TABLE_SCHEMA = @schema";
 
-        public const string SelectPrimaryKeys = "select TABLE_NAME, COLUMN_NAME from information_schema.KEY_COLUMN_USAGE " +
+        public const string SelectPrimaryKeys = "select TABLE_NAME, COLUMN_NAME, TABLE_SCHEMA from information_schema.KEY_COLUMN_USAGE " +
                                                 "where TABLE_SCHEMA = @schema and CONSTRAINT_NAME = 'PRIMARY' " +
                                                 "order by ORDINAL_POSITION";
 
-        public const string SelectReferantialConstraints = "select CONSTRAINT_NAME, REFERENCED_TABLE_NAME " +
+        public const string SelectReferantialConstraints = "select UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, REFERENCED_TABLE_NAME " +
                                                            "from information_schema.REFERENTIAL_CONSTRAINTS " +
                                                            "where UNIQUE_CONSTRAINT_SCHEMA = @schema ";
 
@@ -37,9 +37,9 @@ namespace Raven.Server.SqlMigration.MySQL
             return $"`{columnName}`";
         }
 
-        protected override string QuoteTable(string tableName)
+        protected override string QuoteTable(string schema, string tableName)
         {
-            return $"`{tableName}`";
+            return $"`{schema}`.`{tableName}`";
         }
 
         public override DatabaseSchema FindSchema()
@@ -48,12 +48,12 @@ namespace Raven.Server.SqlMigration.MySQL
             {
                 var schema = new DatabaseSchema
                 {
-                    Name = connection.Database
+                    CatalogName = connection.Database
                 };
 
-                FindTableNames(connection, schema.Tables);
-                FindPrimaryKeys(connection, schema.Tables);
-                FindForeignKeys(connection, schema.Tables);
+                FindTableNames(connection, schema);
+                FindPrimaryKeys(connection, schema);
+                FindForeignKeys(connection, schema);
 
                 return schema;
             }
@@ -66,7 +66,7 @@ namespace Raven.Server.SqlMigration.MySQL
                 return collection.SourceTableQuery;
             }
 
-            return "select * from " + QuoteTable(collection.SourceTableName);
+            return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName);
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, HashSet<string> attachmentColumns,
@@ -87,7 +87,7 @@ namespace Raven.Server.SqlMigration.MySQL
 
                 while (reader.Read())
                 {
-                    var migrationDocument = new SqlMigrationDocument(null)
+                    var migrationDocument = new SqlMigrationDocument()
                     {
                         Object = ExtractFromReader(reader, columnNames),
                         SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
@@ -98,7 +98,7 @@ namespace Raven.Server.SqlMigration.MySQL
             }
         }
 
-        private void FindTableNames(MySqlConnection connection, Dictionary<string, TableSchema> tables)
+        private void FindTableNames(MySqlConnection connection, DatabaseSchema dbSchema)
         {
             using (var cmd = new MySqlCommand(SelectColumns, connection))
             {
@@ -108,12 +108,17 @@ namespace Raven.Server.SqlMigration.MySQL
                 {
                     while (reader.Read())
                     {
-                        var tableName = GetTableNameFromReader(reader);
-
-                        if (tables.TryGetValue(tableName, out var tableSchema) == false)
+                        var schemaAndTableName = GetTableNameFromReader(reader);
+                        var tableSchema = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
+                        
+                        if (tableSchema == null)
                         {
-                            tableSchema = new TableSchema();
-                            tables[tableName] = tableSchema;
+                            tableSchema = new TableSchema
+                            {
+                                Schema = schemaAndTableName.Schema,
+                                TableName = schemaAndTableName.TableName
+                            };
+                            dbSchema.Tables.Add(tableSchema);
                         }
 
                         tableSchema.Columns.Add(new TableColumn
@@ -176,7 +181,7 @@ namespace Raven.Server.SqlMigration.MySQL
         }
 
         // Please notice it doesn't return PR for tables that doesn't referece PR using FK
-        private void FindPrimaryKeys(MySqlConnection connection, Dictionary<string, TableSchema> tables)
+        private void FindPrimaryKeys(MySqlConnection connection, DatabaseSchema dbSchema)
         {
             using (var cmd = new MySqlCommand(SelectPrimaryKeys, connection))
             {
@@ -186,19 +191,17 @@ namespace Raven.Server.SqlMigration.MySQL
                 {
                     while (reader.Read())
                     {
-                        var tableName = GetTableNameFromReader(reader);
-                        if (tables.TryGetValue(tableName, out var tableSchema))
-                        {
-                            tableSchema.PrimaryKeyColumns.Add(reader["COLUMN_NAME"].ToString());
-                        }
+                        var schemaAndTableName = GetTableNameFromReader(reader);
+                        var tableSchema = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
+                        tableSchema?.PrimaryKeyColumns.Add(reader["COLUMN_NAME"].ToString());
                     }
                 }
             }
         }
 
-        private void FindForeignKeys(MySqlConnection connection, Dictionary<string, TableSchema> tables)
+        private void FindForeignKeys(MySqlConnection connection, DatabaseSchema dbSchema)
         {
-            var referentialConstraints = new Dictionary<string, string>();
+            var referentialConstraints = new Dictionary<string, (string Schema, string Table)>();
 
             using (var cmd = new MySqlCommand(SelectReferantialConstraints, connection))
             {
@@ -207,13 +210,14 @@ namespace Raven.Server.SqlMigration.MySQL
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
-                        referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["REFERENCED_TABLE_NAME"].ToString());
+                        referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), 
+                            (reader["UNIQUE_CONSTRAINT_SCHEMA"].ToString(), reader["REFERENCED_TABLE_NAME"].ToString()));
                 }
             }
 
             foreach (var kvp in referentialConstraints)
             {
-                string fkTableName = null, pkTableName = null;
+                (string Schema, string TableName) fkSchemaAndTableName = default, pkSchemaAndTableName;
                 var fkColumnsName = new List<string>();
 
                 using (var cmd = new MySqlCommand(SelectKeyColumnUsageWhereConstraintName, connection))
@@ -225,33 +229,33 @@ namespace Raven.Server.SqlMigration.MySQL
                     {
                         while (reader.Read())
                         {
-                            fkTableName = GetTableNameFromReader(reader);
+                            fkSchemaAndTableName = GetTableNameFromReader(reader);
                             fkColumnsName.Add(reader["COLUMN_NAME"].ToString());
                         }
                     }
                 }
 
-                var pkTable = tables
-                    .SingleOrDefault(x => x.Key == kvp.Value);
+                var pkTable = dbSchema.GetTable(kvp.Value.Schema, kvp.Value.Table);
 
-                if (pkTable.Value == null)
+                if (pkTable == null)
                 {
-                    throw new InvalidOperationException("Can not find table: " + kvp.Value);
+                    throw new InvalidOperationException("Can not find table: " + kvp.Value.Schema + "." + kvp.Value.Table);
                 }
 
-                pkTable.Value.References.Add(new TableReference
+                pkTable.References.Add(new TableReference
                 {
                     Columns = fkColumnsName,
-                    Table = fkTableName
+                    Schema = fkSchemaAndTableName.Schema,
+                    Table = fkSchemaAndTableName.TableName
                 });
             }
         }
 
-        private static string GetTableNameFromReader(MySqlDataReader reader)
+        private static (string Schema, string TableName) GetTableNameFromReader(MySqlDataReader reader)
         {
-            return reader["TABLE_NAME"].ToString();
+            return (reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
         }
-
+        
         protected override MySqlConnection OpenConnection()
         {
             MySqlConnection connection;
@@ -279,7 +283,7 @@ namespace Raven.Server.SqlMigration.MySQL
 
         protected override IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, MySqlConnection connection)
         {
-            var query = "select * from " + QuoteTable(refInfo.SourceTableName)
+            var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
             return new MySqlStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
@@ -301,7 +305,7 @@ namespace Raven.Server.SqlMigration.MySQL
 
         protected override IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, MySqlConnection connection)
         {
-            var query = "select * from " + QuoteTable(refInfo.SourceTableName)
+            var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
             return new MySqlStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
@@ -333,7 +337,7 @@ namespace Raven.Server.SqlMigration.MySQL
 
         protected override IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, MySqlConnection connection)
         {
-            var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceTableName)
+            var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                         + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
             return new MySqlStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>

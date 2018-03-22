@@ -39,9 +39,9 @@ namespace Raven.Server.SqlMigration.MsSQL
             return $"[{columnName}]";
         }
 
-        protected override string QuoteTable(string tableName)
+        protected override string QuoteTable(string schema, string tableName)
         {
-            return $"[{tableName}]";
+            return $"[{schema}].[{tableName}]";
         }
 
         public override DatabaseSchema FindSchema()
@@ -50,32 +50,38 @@ namespace Raven.Server.SqlMigration.MsSQL
             {
                 var schema = new DatabaseSchema
                 {
-                    Name = connection.Database
+                    CatalogName = connection.Database
                 };
 
-                FindTableNames(connection, schema.Tables);
-                FindPrimaryKeys(connection, schema.Tables);
-                FindForeignKeys(connection, schema.Tables);
+                FindTableNames(connection, schema);
+                FindPrimaryKeys(connection, schema);
+                FindForeignKeys(connection, schema);
 
                 return schema;
             }
         }
 
-        private void FindTableNames(SqlConnection connection, Dictionary<string, TableSchema> tables)
+        private void FindTableNames(SqlConnection connection, DatabaseSchema dbSchema)
         {
             using (var cmd = new SqlCommand(SelectColumns, connection))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
                 {
-                    var tableName = GetTableNameFromReader(reader);
+                    var schemaAndTableName = GetTableNameFromReader(reader);
 
-                    if (tables.TryGetValue(tableName, out var tableSchema) == false)
+                    var tableSchema = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
+                    
+                    if (tableSchema == null)
                     {
-                        tableSchema = new TableSchema();
-                        tables[tableName] = tableSchema;
+                        tableSchema = new TableSchema
+                        {
+                            Schema = schemaAndTableName.Schema,
+                            TableName = schemaAndTableName.TableName
+                        };
+                        dbSchema.Tables.Add(tableSchema);
                     }
-
+                    
                     tableSchema.Columns.Add(new TableColumn
                     {
                         Name = reader["COLUMN_NAME"].ToString(),
@@ -121,23 +127,21 @@ namespace Raven.Server.SqlMigration.MsSQL
         }
 
         // Please notice it doesn't return PR for tables that doesn't referece PR using FK
-        private void FindPrimaryKeys(SqlConnection connection, Dictionary<string, TableSchema> tables)
+        private void FindPrimaryKeys(SqlConnection connection, DatabaseSchema dbSchema)
         {
             using (var cmd = new SqlCommand(SelectPrimaryKeys, connection))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
                 {
-                    var tableName = GetTableNameFromReader(reader);
-                    if (tables.TryGetValue(tableName, out var tableSchema))
-                    {
-                        tableSchema.PrimaryKeyColumns.Add(reader["COLUMN_NAME"].ToString());
-                    }
+                    var schemaAndTableName = GetTableNameFromReader(reader);
+                    var table = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
+                    table?.PrimaryKeyColumns.Add(reader["COLUMN_NAME"].ToString());
                 }
             }
         }
 
-        private void FindForeignKeys(SqlConnection connection, Dictionary<string, TableSchema> tables)
+        private void FindForeignKeys(SqlConnection connection, DatabaseSchema dbSchema)
         {
             var referentialConstraints = new Dictionary<string, string>();
 
@@ -150,7 +154,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
             foreach (var kvp in referentialConstraints)
             {
-                string fkTableName = null, pkTableName;
+                (string Schema, string TableName) fkSchemaAndTableName = default, pkSchemaAndTableName;
                 var fkColumnsName = new List<string>();
 
                 using (var cmd = new SqlCommand(SelectKeyColumnUsageWhereConstraintName, connection))
@@ -161,7 +165,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                     {
                         while (reader.Read())
                         {
-                            fkTableName = GetTableNameFromReader(reader);
+                            fkSchemaAndTableName = GetTableNameFromReader(reader);
                             fkColumnsName.Add(reader["COLUMN_NAME"].ToString());
                         }
                     }
@@ -175,7 +179,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                     {
                         if (reader.Read())
                         {
-                            pkTableName = GetTableNameFromReader(reader);
+                            pkSchemaAndTableName = GetTableNameFromReader(reader);
                         }
                         else
                         {
@@ -185,20 +189,20 @@ namespace Raven.Server.SqlMigration.MsSQL
                     }
                 }
 
-                var pkTable = tables
-                    .SingleOrDefault(x => x.Key == pkTableName);
+                var pkTable = dbSchema.GetTable(pkSchemaAndTableName.Schema, pkSchemaAndTableName.TableName);
 
-                pkTable.Value.References.Add(new TableReference
+                pkTable.References.Add(new TableReference
                 {
                     Columns = fkColumnsName,
-                    Table = fkTableName
+                    Schema = fkSchemaAndTableName.Schema,
+                    Table = fkSchemaAndTableName.TableName
                 });
             }
         }
 
-        private static string GetTableNameFromReader(SqlDataReader reader)
+        private static (string Schema, string TableName) GetTableNameFromReader(SqlDataReader reader)
         {
-            return reader["TABLE_NAME"].ToString();
+            return (reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
         }
 
         protected override SqlConnection OpenConnection()
@@ -233,7 +237,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                 return collection.SourceTableQuery;
             }
 
-            return "select * from " + QuoteTable(collection.SourceTableName);
+            return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName);
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, HashSet<string> attachmentColumns,
@@ -254,7 +258,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
                 while (reader.Read())
                 {
-                    var migrationDocument = new SqlMigrationDocument(null);
+                    var migrationDocument = new SqlMigrationDocument();
                     migrationDocument.Object = ExtractFromReader(reader, columnNames);
                     migrationDocument.SpecialColumnsValues = ExtractFromReader(reader, specialColumns);
                     migrationDocument.Attachments = ExtractAttachments(reader, attachmentColumns);
@@ -265,7 +269,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
         protected override IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, SqlConnection connection)
         {
-            var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceTableName)
+            var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                         + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
 
@@ -289,7 +293,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
         protected override IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, SqlConnection connection)
         {
-            var query = "select * from " + QuoteTable(refInfo.SourceTableName)
+            var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
             return new MsSqlStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
@@ -310,7 +314,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
         protected override IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, SqlConnection connection)
         {
-            var query = "select * from " + QuoteTable(refInfo.SourceTableName)
+            var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
 
             return new MsSqlStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>

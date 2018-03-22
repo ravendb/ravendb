@@ -1,6 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
+import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
+import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -20,6 +22,7 @@ class importCollectionFromSql extends viewModelBase {
     constructor() {
         super();
 
+        this.bindToCurrentInstance("onActionClicked");
         this.setupValidation();
     }
 
@@ -61,6 +64,17 @@ class importCollectionFromSql extends viewModelBase {
             .always(() => this.spinners.schema(false));
             
         //TODO: finish
+    }
+    
+    migrate() {
+        const dto = this.model.toDto();
+        new migrateSqlDatabaseCommand(this.activeDatabase(), dto)
+            .execute();
+        //TODO: operation id + watch
+    }
+    
+    onActionClicked(reference: sqlReference, action: sqlMigrationAction) {
+        reference.action(action);
     }
 }
 

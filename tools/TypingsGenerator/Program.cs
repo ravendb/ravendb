@@ -373,10 +373,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CounterOperationType));
        
             // sql migration
-            scripter.AddType(typeof(MigrationSettings));
             scripter.AddType(typeof(DatabaseSchema));
             scripter.AddType(typeof(MigrationProvider));
-            scripter.AddType(typeof(SourceSqlDatabase));
+            scripter.AddType(typeof(MigrationRequest));
 
             return scripter;
         }

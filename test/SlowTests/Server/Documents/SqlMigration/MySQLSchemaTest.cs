@@ -25,11 +25,11 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Fact]
         public void CanFetchSchema()
         {
-            using (WithSqlDatabase(MigrationProvider.MySQL, out var connectionString, includeData: false))
+            using (WithSqlDatabase(MigrationProvider.MySQL, out var connectionString, out string schemaName, includeData: false))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.MySQL, connectionString);
                 var schema = driver.FindSchema();
-                Assert.NotNull(schema.Name);
+                Assert.NotNull(schema.CatalogName);
 
                 Assert.Equal(21, schema.Tables.Count);
 
@@ -37,19 +37,19 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 var tables = schema.Tables;
 
-                var noPkTable = tables.First(x => x.Key == "nopktable");
+                var noPkTable = tables.First(x => x.TableName == "nopktable");
                 Assert.NotNull(noPkTable);
 
-                Assert.Equal(new[] {"id"}, noPkTable.Value.Columns.Select(x => x.Name).ToList());
-                Assert.Equal(0, noPkTable.Value.PrimaryKeyColumns.Count);
+                Assert.Equal(new[] {"id"}, noPkTable.Columns.Select(x => x.Name).ToList());
+                Assert.Equal(0, noPkTable.PrimaryKeyColumns.Count);
 
                 // validate Order Table
-                var orderTable = tables.First(x => x.Key == "orders");
+                var orderTable = tables.First(x => x.TableName == "orders");
 
-                Assert.Equal(20, orderTable.Value.Columns.Count);
-                Assert.Equal(new[] {"id"}, orderTable.Value.PrimaryKeyColumns);
+                Assert.Equal(20, orderTable.Columns.Count);
+                Assert.Equal(new[] {"id"}, orderTable.PrimaryKeyColumns);
 
-                var orderReferences = orderTable.Value.References;
+                var orderReferences = orderTable.References;
                 Assert.Equal(3, orderReferences.Count);
                 Assert.Equal(
                     new[]
@@ -61,10 +61,10 @@ namespace SlowTests.Server.Documents.SqlMigration
                     orderReferences.Select(x => x.Table + " -> (" + string.Join(",", x.Columns) + ")").ToList());
 
                 // validate employee_privileges (2 columns in PK)
-                var employeePrivileges = tables.First(x => x.Key == "employee_privileges");
-                Assert.Equal(new[] {"employee_id", "privilege_id"}, employeePrivileges.Value.PrimaryKeyColumns);
+                var employeePrivileges = tables.First(x => x.TableName == "employee_privileges");
+                Assert.Equal(new[] {"employee_id", "privilege_id"}, employeePrivileges.PrimaryKeyColumns);
 
-                Assert.True(tables.All(x => x.Value.Columns.All(y => y.Type != ColumnType.Unsupported)));
+                Assert.True(tables.All(x => x.Columns.All(y => y.Type != ColumnType.Unsupported)));
             }
         }
     }

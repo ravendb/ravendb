@@ -91,19 +91,41 @@
                     </div>
                 </div>
             </form>
-            <div data-bind="foreach: model.tables">
-                <div class="checkbox" data-placement="left">
-                    <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
-                    <label data-bind="text: name, attr: { for: 'table_' + $index() }"></label>
+            <div data-bind="if: !inFirstStep()">
+                
+                <button class="btn btn-primary" data-bind="click: $root.migrate">Migrate</button>
+                
+                <div data-bind="foreach: model.tables">
+                    <div class="checkbox" data-placement="left">
+                        <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
+                        <label data-bind="text: name, attr: { for: 'table_' + $index() }"></label>
+                    </div>
+                    
+                    <div>Document ID: <span data-bind="text: documentIdTemplate"></span></div>
+                    
+                    <div>Properties:</div>
+                    <ul data-bind="foreach: columns">
+                        <li data-bind="text: name + ' (' + type + ')'"></li>
+                    </ul>
+                    
+                    <div>References:</div>
+                    
+                    <ul data-bind="foreach: references">
+                        <li>
+                            <span data-bind="text: name"></span> | 
+                            <span data-bind="text: columns.join(', ')"></span> | 
+                            <span data-bind="text: targetTable.tableName"></span> | 
+                            <span data-bind="text: type"></span> 
+                            
+                            <div class="btn-group">
+                                <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
+                                <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
+                                <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
+                            </div>
+                            
+                        </li>
+                    </ul>
                 </div>
-                
-                <div>Document ID: <span data-bind="text: documentIdTemplate"></span></div>
-                
-                <ul data-bind="foreach: columns">
-                    <li data-bind="text: name + ' (' + type + ')'"></li>
-                </ul>
-                
-                <!-- TODO: list relashioships -->
             </div>
         </div>
     </div>

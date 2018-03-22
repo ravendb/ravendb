@@ -26,8 +26,8 @@ namespace Raven.Server.SqlMigration
             {
                 foreach (var collectionToImport in settings.Collections)
                 {
-                    var tableSchema = GetSchemaForTable(collectionToImport.SourceTableName, dbSchema);
-                    var specialColumns = FindSpecialColumns(collectionToImport.SourceTableName, dbSchema);
+                    var tableSchema = GetSchemaForTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName, dbSchema);
+                    var specialColumns = FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName, dbSchema);
 
                     using (var patcher = new JsPatcher(collectionToImport, context))
                     {
@@ -41,7 +41,6 @@ namespace Raven.Server.SqlMigration
                         {
                             foreach (var doc in EnumerateTable(GetQueryForCollection(collectionToImport), specialColumns, attachmentColumns, enumerationConnection))
                             {
-                                doc.TableName = collectionToImport.SourceTableName;
                                 doc.SetCollection(collectionToImport.Name);
 
                                 var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
@@ -202,11 +201,11 @@ namespace Raven.Server.SqlMigration
         private ReferenceInformation CreateReference(AbstractCollection destinationCollection, DatabaseSchema dbSchema, CollectionWithReferences sourceCollection,
             List<RootCollection> allCollections, MigrationSettings migrationSettings)
         {
-            var sourceSchema = GetSchemaForTable(sourceCollection.SourceTableName, dbSchema);
-            var destinationSchema = GetSchemaForTable(destinationCollection.SourceTableName, dbSchema);
+            var sourceSchema = GetSchemaForTable(sourceCollection.SourceTableSchema, sourceCollection.SourceTableName, dbSchema);
+            var destinationSchema = GetSchemaForTable(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, dbSchema);
 
-            var outgoingReference = sourceSchema.References.SingleOrDefault(x => x.Table == destinationCollection.SourceTableName);
-            var incomingReference = destinationSchema.References.SingleOrDefault(x => x.Table == sourceCollection.SourceTableName);
+            var outgoingReference = sourceSchema.FindReference(destinationCollection);
+            var incomingReference = destinationSchema.FindReference(sourceCollection);
 
             if (outgoingReference != null && incomingReference != null)
             {
@@ -218,7 +217,7 @@ namespace Raven.Server.SqlMigration
                 throw new InvalidOperationException("Unable to resolve reference: " + sourceCollection.SourceTableName + " -> " + destinationCollection.SourceTableName);
             }
 
-            var specialColumns = FindSpecialColumns(destinationCollection.SourceTableName, dbSchema);
+            var specialColumns = FindSpecialColumns(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, dbSchema);
             var attachmentColumns = FindAttachmentColumns(migrationSettings, destinationSchema);
             var documentColumns = destinationSchema.Columns
                 .Where(x => x.Type != ColumnType.Unsupported)
@@ -231,6 +230,7 @@ namespace Raven.Server.SqlMigration
             {
                 SourcePrimaryKeyColumns = sourceSchema.PrimaryKeyColumns,
                 SourceTableName = destinationCollection.SourceTableName,
+                SourceSchema = destinationCollection.SourceTableSchema,
                 TargetPrimaryKeyColumns = destinationSchema.PrimaryKeyColumns,
                 PropertyName = destinationCollection.Name,
                 ForeignKeyColumns = incomingReference != null ? incomingReference.Columns : outgoingReference.Columns,
@@ -254,16 +254,16 @@ namespace Raven.Server.SqlMigration
             return referenceInformation;
         }
 
-        protected HashSet<string> FindSpecialColumns(string tableName, DatabaseSchema dbSchema)
+        protected HashSet<string> FindSpecialColumns(string tableSchema, string tableName, DatabaseSchema dbSchema)
         {
-            var mainSchema = GetSchemaForTable(tableName, dbSchema);
+            var mainSchema = GetSchemaForTable(tableSchema, tableName, dbSchema);
 
             var result = new HashSet<string>();
             mainSchema.PrimaryKeyColumns.ForEach(x => result.Add(x));
 
-            foreach (var fkCandidate in dbSchema.Tables.Values)
+            foreach (var fkCandidate in dbSchema.Tables)
             foreach (var tableReference in fkCandidate.References
-                .Where(x => x.Table == tableName))
+                .Where(x => x.Table == tableName && x.Schema == tableSchema))
             {
                 tableReference.Columns.ForEach(x => result.Add(x));
             }
@@ -288,14 +288,10 @@ namespace Raven.Server.SqlMigration
         }
 
 
-        private TableSchema GetSchemaForTable(string name, DatabaseSchema dbSchema)
+        private TableSchema GetSchemaForTable(string tableSchema, string tableName, DatabaseSchema dbSchema)
         {
-            if (dbSchema.Tables.TryGetValue(name, out var tableSchema) == false)
-            {
-                throw new ArgumentException("Cannot find table " + name + " in database schema");
-            }
-
-            return tableSchema;
+            return dbSchema.Tables.FirstOrDefault(x => x.Schema == tableSchema && x.TableName == tableName)
+                ?? throw new ArgumentException("Cannot find table " + QuoteTable(tableSchema, tableName) + " in database schema");
         }
 
         public static object[] GetColumns(DynamicJsonValue columns, List<string> columnsToUse)
@@ -358,7 +354,7 @@ namespace Raven.Server.SqlMigration
         protected abstract IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, TConnection connection);
         protected abstract IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
 
-        protected abstract string QuoteTable(string tableName);
+        protected abstract string QuoteTable(string schema, string tableName);
         protected abstract string QuoteColumn(string columnName);
 
         protected IDataProvider<string> CreateObjectLinkDataProvider(ReferenceInformation refInfo)
