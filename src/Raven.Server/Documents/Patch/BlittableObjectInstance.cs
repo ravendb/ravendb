@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Patch
             private readonly BlittableObjectInstance _parent;
             private readonly string _property;
             private JsValue _value;
-            public bool Changed;
+            public bool Changed;            
 
             public override string ToString()
             {
@@ -84,6 +84,7 @@ namespace Raven.Server.Documents.Patch
                 _parent = parent;
                 _property = property;
                 var index = _parent.Blittable?.GetPropertyIndex(_property);
+                
                 if (index == null || index == -1)
                 {
                     if (_parent.LuceneDocument != null)
@@ -93,22 +94,22 @@ namespace Raven.Server.Documents.Patch
                         var values = _parent.LuceneDocument.GetValues(property, _parent.LuceneState);
                         if (fieldType.IsArray)
                         {
-                            Value = JsValue.FromObject(_parent.Engine, values);
+                            _value = JsValue.FromObject(_parent.Engine, values);
                         }
                         else if (values.Length == 1)
                         {
-                            Value = fieldType.IsJson
+                            _value = fieldType.IsJson
                                 ? new JsonParser(_parent.Engine).Parse(values[0])
                                 : new JsValue(values[0]);
                         }
                         else
                         {
-                            Value = JsValue.Undefined;
+                            _value = JsValue.Undefined;
                         }
                     }
                     else
                     {
-                        Value = JsValue.Undefined;
+                        _value = JsValue.Undefined;
                     }
                 }
                 else

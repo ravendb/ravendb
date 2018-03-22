@@ -439,6 +439,9 @@ namespace Raven.Server.Documents.Patch
                 if (ShouldFilterProperty(filterProperties, propertyName))
                     continue;
 
+                if (modificationKvp.Value.Changed == false)
+                    continue;
+
                 _writer.WritePropertyName(propertyName);
                 var blittableObjectProperty = modificationKvp.Value;
                 WriteJsonValue(obj, isRoot, propertyName, blittableObjectProperty.Value);
