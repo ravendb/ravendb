@@ -22,25 +22,11 @@ class importCollectionFromSql extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onActionClicked");
-        this.setupValidation();
-    }
-
-    private setupValidation() {
-        this.validationGroup = this.model.sqlServerValidationGroup;
-        
-        this.model.databaseType.subscribe(newValue => {
-            if (newValue === "MsSQL") {
-                this.validationGroup = this.model.sqlServerValidationGroup;
-            } 
-            else {
-                this.validationGroup = this.model.mySqlValidationGroup;
-            }
-        });
+        this.bindToCurrentInstance("onActionClicked");        
     }
     
     nextStep() {        
-        if (!this.isValid(this.validationGroup)) {
+        if (!this.isValid(this.model.getValidationGroup())) {
             return false;
         }
         

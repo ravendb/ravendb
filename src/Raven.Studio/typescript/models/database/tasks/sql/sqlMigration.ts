@@ -61,6 +61,7 @@ class sqlMigration {
         this.mySqlValidationGroup = ko.validatedObservable({
             server: this.mySql.server,
             username: this.mySql.username,            
+            password: this.mySql.password,
             sourceDatabaseName: this.sourceDatabaseName
         });
     }
@@ -113,11 +114,24 @@ class sqlMigration {
     }
     
     getConnectionString() {
-        //TODO: generate based on collected settings
-        // for mySQL it will something like: - remember about escaping 
-        // server=127.0.0.1;uid=root;pwd=123;database=ABC
-        //return "Data Source=MARCIN-WIN\\INSERTNEXO;Integrated Security=True;Initial Catalog=SqlTest_bfebf597-9916-499b-a2c8-45aa702f77aa";
-        return "Data Source=MARCIN-WIN\\INSERTNEXO;Integrated Security=True;Initial Catalog=Nexo_Marcin";
+        switch (this.databaseType()) {
+            case "MySQL":
+                let mySQLConnectionString = `server='${this.escape(this.mySql.server())}';` +
+                                            `uid='${this.escape(this.mySql.username())}'\;` +
+                                            `database='${this.escape(this.sourceDatabaseName())}'`;
+                if (this.mySql.password()) {
+                    mySQLConnectionString += `\;pwd='${this.escape(this.mySql.password())}'`;
+                } 
+                return mySQLConnectionString;
+                
+            case "MsSQL":
+                // Append initial catalog. For now we don't take it from the connection string.
+                let msSQLConnectionString = `${this.sqlServer.connectionString()}\;Initial Catalog='${this.escape(this.sourceDatabaseName())}'`;
+                return msSQLConnectionString;
+                
+            default:
+                throw new Error(`Database type - ${this.databaseType} - is not supported`);
+        }
     }
     
     toDto(): Raven.Server.SqlMigration.Model.MigrationRequest {
@@ -134,6 +148,23 @@ class sqlMigration {
                     .map(x => x.toDto())
             }
         } as Raven.Server.SqlMigration.Model.MigrationRequest;
+    }
+
+    getValidationGroup(): KnockoutValidationGroup {
+        switch (this.databaseType()) {
+            case "MySQL":
+                return this.mySqlValidationGroup;
+
+            case "MsSQL":
+                return this.sqlServerValidationGroup;
+
+            default:
+                throw new Error(`Database type - ${this.databaseType()} - is not supported`);
+        }
+    }
+    
+    private escape(inputString: string) {
+        return inputString.replace("'", "''");
     }
 }
 
