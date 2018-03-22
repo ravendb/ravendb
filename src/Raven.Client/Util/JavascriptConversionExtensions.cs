@@ -86,10 +86,35 @@ namespace Raven.Client.Util
                 None,
                 Key,
                 Value,
-                KeyValue
+                KeyValue,
+                Map
             }
 
             private DictionaryInnerCall _innerCallExpected;
+
+            private string _paramName = string.Empty;
+
+            private void HandleMap(JavascriptConversionContext context, MethodCallExpression mce)
+            {
+                if (mce.Arguments.Count < 2 || !(mce.Arguments[1] is LambdaExpression lambda))
+                    return;
+
+                _paramName = lambda.Parameters[0]?.Name;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                using (writer.Operation(lambda))
+                {
+                    writer.Write("Object.map(");
+                    context.Visitor.Visit(mce.Arguments[0]);
+                    writer.Write(", function(v, k){ return ");
+                    context.Visitor.Visit(lambda.Body);
+                    writer.Write(";})");
+
+                    _innerCallExpected = default;
+                    _paramName = string.Empty;
+                }
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -133,7 +158,7 @@ namespace Raven.Client.Util
                     && callNode.Arguments.Count > 0
                     && typeof(IDictionary).IsAssignableFrom(callNode.Arguments[0].Type))
                 {
-                    if (_innerCallExpected == default(DictionaryInnerCall))
+                    if (_innerCallExpected == default)
                     {
                         // If not given, decide on method name if we should shorten:
                         switch (callNode.Method.Name)
@@ -144,18 +169,22 @@ namespace Raven.Client.Util
                             case "Count":
                                 _innerCallExpected = DictionaryInnerCall.Key;
                                 break;
+                            case "Select":
+                                _innerCallExpected = DictionaryInnerCall.Map;
+                                HandleMap(context, callNode);
+                                return;
                         }
                     }
                 }
 
                 // Now we translate the memberExpression
-                if(_innerCallExpected != default(DictionaryInnerCall)
-                    && context.Node != null
+                if (_innerCallExpected != default
+                    && _innerCallExpected != DictionaryInnerCall.Map
                     && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
                 {
                     context.PreventDefault();
                     var currentCall = _innerCallExpected;
-                    _innerCallExpected = default(DictionaryInnerCall);
+                    _innerCallExpected = default;
 
                     var writer = context.GetWriter();
                     using (writer.Operation(context.Node))
@@ -185,6 +214,25 @@ namespace Raven.Client.Util
 
                             writer.Write("})");
                         }
+                    }
+                }
+
+                if (_innerCallExpected == DictionaryInnerCall.Map 
+                    && context.Node is MemberExpression memberExpression
+                    && memberExpression.Member.Name.In("Value", "Key"))
+                {
+                    var p = GetParameter(memberExpression);
+
+                    if (p?.Name == _paramName 
+                        && p?.Type.GenericTypeArguments.Length > 0  
+                        && p.Type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+                    {
+                        context.PreventDefault();
+                        var writer = context.GetWriter();
+                        using (writer.Operation(memberExpression))
+                        {
+                            writer.Write(memberExpression.Member.Name == "Value" ? "v" : "k");
+                        }                      
                     }
                 }
             }
@@ -1910,7 +1958,7 @@ namespace Raven.Client.Util
                 if (!(member.Expression is MemberExpression innerMember))
                     return;
 
-                var p = GetParameter(innerMember);
+                var p = GetParameter(innerMember)?.Name;
 
                 if (p != null && p.StartsWith("<>h__TransparentIdentifier")
                     && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
@@ -1926,16 +1974,17 @@ namespace Raven.Client.Util
                     }
                 }
             }
-
-            public static string GetParameter(MemberExpression expression)
-            {
-                while (expression.Expression is MemberExpression memberExpression)
-                {
-                    expression = memberExpression;
-                }
-
-                return (expression.Expression as ParameterExpression)?.Name;
-            }
         }
+
+        public static ParameterExpression GetParameter(MemberExpression expression)
+        {
+            while (expression.Expression is MemberExpression memberExpression)
+            {
+                expression = memberExpression;
+            }
+
+            return expression.Expression as ParameterExpression;
+        }
+
     }
 }

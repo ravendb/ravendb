@@ -91,3 +91,15 @@ if (!String.prototype.format) {
         });
     };
 }
+
+//map on objects
+Object.map = function (o, f, ctx) {
+    ctx = ctx || this;
+    var result = [];
+    Object.keys(o).forEach(function(k) {
+        result.push(f.call(ctx, o[k], k));
+    });
+    return result;
+};
+
+
