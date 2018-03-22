@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_10770:RavenTestBase
+    public class RavenDB_10770 : RavenTestBase
     {
         public class Document
         {
@@ -98,11 +96,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                ParallelOptions options = new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = 10
-                };
-                Parallel.For(0, 1000, options, Body);
+                Parallel.For(0, 1000, RavenTestHelper.DefaultParallelOptions, Body);
             }
         }
     }
