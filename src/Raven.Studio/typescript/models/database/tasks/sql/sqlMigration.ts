@@ -78,7 +78,12 @@ class sqlMigration {
             const table = new sqlTable();
             
             table.name(tableName);
-            table.columns(tableDto.Columns.map(columnDto => new sqlColumn(columnDto)));
+            table.customCollection(tableName);
+            const columns = tableDto.Columns.map(columnDto => new sqlColumn(columnDto));
+            const primaryKeyColumns = columns.filter(c => _.includes(tableDto.PrimaryKeyColumns, c.name));
+            const documentColumns = _.without(columns, ...primaryKeyColumns);
+            table.columns(documentColumns);
+            table.primaryKeyColumns(primaryKeyColumns);
             
             return table;
         });
