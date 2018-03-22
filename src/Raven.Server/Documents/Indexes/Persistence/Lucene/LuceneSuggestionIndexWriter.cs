@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly string _field;
         private readonly LuceneVoronDirectory _directory;
-        private LowerCaseWhitespaceAnalyzer _analyzer = new LowerCaseWhitespaceAnalyzer();
+        private Analyzer _analyzer;
         private readonly SnapshotDeletionPolicy _indexDeletionPolicy;
         private readonly IndexWriter.MaxFieldLength _maxFieldLength;
         private readonly HashSet<string> _alreadySeen = new HashSet<string>();
@@ -34,13 +34,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
-        public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, DocumentDatabase database, IState state)
+        public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, DocumentDatabase database, IState state, Analyzer searchAnalyzer)
         {
             _directory = directory;
             _indexDeletionPolicy = snapshotter;
             _maxFieldLength = maxFieldLength;
             _field = field;
-
+            _analyzer = searchAnalyzer;
             _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(database.Name);
 
             RecreateIndexWriter(state);
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void CreateIndexWriter(IState state)
         {
-            _indexWriter = new IndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state)
+            _indexWriter = new IndexWriter(_directory, new LowerCaseWhitespaceAnalyzer(), _indexDeletionPolicy, _maxFieldLength, state)
             {
                 UseCompoundFile = false
             };
@@ -247,7 +247,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _indexSearcher = new IndexSearcher(_directory, true, state);
 
-            _analyzer = new LowerCaseWhitespaceAnalyzer();
         }
 
         private void DisposeIndexWriter(bool waitForMerges = true)

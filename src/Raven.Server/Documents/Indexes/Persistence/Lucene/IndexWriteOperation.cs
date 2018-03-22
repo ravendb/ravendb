@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
                 _writer = persistence.EnsureIndexWriter(_state);
 
-                _suggestionsWriters = persistence.EnsureSuggestionIndexWriter(_state);
+                _suggestionsWriters = persistence.EnsureSuggestionIndexWriter(_state, _analyzer);
                 _hasSuggestions = _suggestionsWriters.Count > 0;
                 
                 _locker = directory.MakeLock("writing-to-index.lock");
