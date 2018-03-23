@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                                     Detail = detail
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(u) {
 	var detailId = ""details/1-A"";
 	var name = u.Name;
