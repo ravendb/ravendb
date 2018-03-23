@@ -84,6 +84,8 @@ namespace FastTests.Server.Basic
 
                         foreach (var env in documentDatabase.GetAllStoragesEnvironment())
                             env.Environment.ResetLastWorkTime();
+
+                        documentDatabase.LastAccessTime = DateTime.MinValue;
                     }
                 }
 
@@ -93,7 +95,7 @@ namespace FastTests.Server.Basic
                 {
                     var name = "IdleOperations_CleanupResources_DB_" + i;
 
-                    if (i%2==1)
+                    if (i % 2 == 1)
                         Assert.True(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
                     else
                         Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));

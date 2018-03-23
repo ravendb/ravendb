@@ -81,7 +81,8 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
-            StartTime = SystemTime.UtcNow;
+            StartTime = Time.GetUtcNow();
+            LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
 
@@ -137,6 +138,8 @@ namespace Raven.Server.Documents
         public ServerStore ServerStore => _serverStore;
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
+
+        public DateTime LastAccessTime;
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
