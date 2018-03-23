@@ -23,6 +23,7 @@ namespace Voron.Impl.Paging
         public int? OriginalSize;
         public byte* Hash;
         public NativeMemory.ThreadStats AllocatingThread;
+        public bool SkipOnTxCommit;
     }
 
     public sealed unsafe class CryptoPager : AbstractPager
@@ -121,9 +122,11 @@ namespace Voron.Impl.Paging
             {
                 if (size == buffer.Size)
                 {
+                    // precaution
                     Memory.Set(buffer.Pointer, 0, size);
                     Memory.Set(buffer.Hash, 0, EncryptionBuffer.HashSizeInt);
 
+                    buffer.SkipOnTxCommit = false;
                     return buffer.Pointer;
                 }
 
@@ -258,6 +261,9 @@ namespace Voron.Impl.Paging
             var pageHash = stackalloc byte[EncryptionBuffer.HashSizeInt];
             foreach (var buffer in state.LoadedBuffers)
             {
+                if (buffer.Value.SkipOnTxCommit)
+                    continue;
+
                 if(Sodium.crypto_generichash(pageHash, EncryptionBuffer.HashSize, buffer.Value.Pointer, (ulong)buffer.Value.Size, null, UIntPtr.Zero) != 0)
                     ThrowInvalidHash();
 
@@ -307,7 +313,7 @@ namespace Voron.Impl.Paging
         {
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
-                // First page of a seperated section, returned with its original size.
+                // First page of a separated section, returned with its original size.
                 _encryptionBuffersPool.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread);
                 _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
             }
