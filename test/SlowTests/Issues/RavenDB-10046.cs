@@ -192,7 +192,7 @@ namespace SlowTests.Issues
                                     Company = RavenQuery.Load<Company>(myOrder.Company).Name,
                                 };
                     
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, $p0, $p1, $p2, $p3) {
 	var totalSpentOnOrder = function(order){return order.Lines.map(function(x){return x.PricePerUnit*x.Quantity*(1-$p0);}).reduce(function(a, b) { return a + b; }, 0);};
 	return { Sum : totalSpentOnOrder(o), Any : o.Lines.some(function(x){return x.ProductName===$p1;}), NestedQuery : o.Lines.filter(function(x){return x.PricePerUnit<$p2;}).map(function(y){return y.ProductName;}), Company : load($p3).Name };
