@@ -402,6 +402,9 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
+                        if (database.IsCompletedSuccessfully)
+                            database.Result.LastAccessTime = database.Result.Time.GetUtcNow();
+
                         return database;
                     }
                 }
@@ -641,7 +644,7 @@ namespace Raven.Server.Documents
             var envs = resource.GetAllStoragesEnvironment();
 
             long dbSize = 0;
-            var maxLastWork = DateTime.MinValue;
+            var maxLastWork = resource.LastAccessTime;
 
             foreach (var env in envs)
             {
