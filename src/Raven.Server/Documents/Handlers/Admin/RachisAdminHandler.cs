@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator)]
         public Task SuspendObserver()
         {
             SetupCORSHeaders();
@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator)]
         public Task TimeoutNow()
         {
             SetupCORSHeaders();
@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator)]
         public Task EnforceReelection()
         {
             SetupCORSHeaders();
@@ -563,7 +563,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.Operator)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -598,7 +598,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.Operator)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)
