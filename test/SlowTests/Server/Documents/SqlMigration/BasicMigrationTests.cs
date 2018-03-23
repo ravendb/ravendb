@@ -609,8 +609,6 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         //TODO: test with ORder: ShipmentAddress and Invoice Address
         
-        //TODO: test with Recursive Table: Group (Id, Name, ParentGroupId)
-        
         //TODO: link + missing target colleciton should throw 
         //TODO: skip test if db is not available 
     }

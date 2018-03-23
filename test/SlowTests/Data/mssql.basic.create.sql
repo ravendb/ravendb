@@ -62,4 +62,13 @@ ALTER TABLE actor_movie
         REFERENCES "movie" (m_id)        
 
 
+CREATE TABLE groups (
+   g_id   INT IDENTITY,
+   name nvarchar(20) NOT NULL,
+   parent_group_id INT NULL,
+   CONSTRAINT PK_GROUPS PRIMARY KEY (g_id)
+);
 
+ALTER TABLE groups 
+    ADD CONSTRAINT FK_PARENT_GROUP FOREIGN KEY (parent_group_id)
+        REFERENCES groups (g_id);
