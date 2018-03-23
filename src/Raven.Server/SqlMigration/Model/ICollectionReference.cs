@@ -11,5 +11,7 @@ namespace Raven.Server.SqlMigration.Model
         string Name { get; set; }
         
         List<string> Columns { get; set; }
+        
+        RelationType Type { get; set; }
     }
 }
