@@ -45,8 +45,8 @@ class importCollectionFromSql extends viewModelBase {
         new fetchSqlDatabaseSchemaCommand(this.activeDatabase(), schemaRequestDto)
             .execute()
             .done(schema => {
-                this.model.onSchemaUpdated(schema);
                 this.inFirstStep(false);
+                this.model.onSchemaUpdated(schema);
             })
             .always(() => this.spinners.schema(false));
             

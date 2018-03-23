@@ -35,11 +35,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies")
+                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies", new List<string> { "a_id"} )
                                     {
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection(schemaName, "movie", "Movie")
+                                            new EmbeddedCollection(schemaName, "movie", "Movie", new List<string> { "m_id" })
                                         }
                                     }
                                 }
@@ -91,11 +91,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies")
+                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies", new List<string> { "a_id" })
                                     {
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection(schemaName, "movie", "Movie")
+                                            new EmbeddedCollection(schemaName, "movie", "Movie", new List<string> { "m_id" })
                                         }
                                     }
                                 }

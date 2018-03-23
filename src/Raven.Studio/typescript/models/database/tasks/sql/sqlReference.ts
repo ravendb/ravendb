@@ -17,7 +17,7 @@ class sqlReference {
     
     constructor(targetTable: sqlTable, columns: string[], type: referenceType) {
         this.targetTable = targetTable;
-        this.name(targetTable.tableName);
+        this.name(columns.join("And")); //TODO: - consider using collection name by default ? 
         this.columns = columns;
         this.type = type;
         this.action(type === "oneToMany" ? 'skip' : 'link');
