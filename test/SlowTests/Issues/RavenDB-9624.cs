@@ -178,7 +178,7 @@ namespace SlowTests.Issues
                                     Sum = sum
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(__ravenDefaultAlias0) {
 	var order = __ravenDefaultAlias0;
 	var sum = order.Lines.map(function(l){return l.PricePerUnit*l.Quantity;}).reduce(function(a, b) { return a + b; }, 0);
@@ -255,7 +255,7 @@ from Orders as __ravenDefaultAlias0 where __ravenDefaultAlias0.Company = $p0 sel
                                     Employees = update.Select(e => e.FirstName).ToList()
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(__ravenDefaultAlias0) {
 	var order = __ravenDefaultAlias0;
 	var include = order.Company;
@@ -306,7 +306,7 @@ from Orders as __ravenDefaultAlias0 select output(__ravenDefaultAlias0)", query.
                                     Company = update.Name,
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, __ravenDefaultAlias0) {
 	var update = __ravenDefaultAlias0;
 	return { Company : update.Name };
@@ -357,7 +357,7 @@ from Orders as o load o.Company as __ravenDefaultAlias0 select output(o, __raven
                                     Company = update.Name,
                                     Employee = include.FirstName
                                 };
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, __ravenDefaultAlias0, __ravenDefaultAlias1) {
 	var update = __ravenDefaultAlias0;
 	var include = __ravenDefaultAlias1;
@@ -418,7 +418,7 @@ from Orders as o load o.Company as __ravenDefaultAlias0, o.Employee as __ravenDe
                                     Employees = employees.Select(e => e.FirstName).ToList()
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, __ravenDefaultAlias0) {
 	var update = __ravenDefaultAlias0;
 	var employees = load(update.EmployeesIds);
@@ -474,7 +474,7 @@ from Orders as o load o.Company as __ravenDefaultAlias0 select output(o, __raven
                                     Sum = function
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o) {
 	var _function = o.Lines.map(function(l){return l.PricePerUnit*l.Quantity;}).reduce(function(a, b) { return a + b; }, 0);
 	return { Sum : _function };
@@ -532,7 +532,7 @@ from Orders as o select output(o)", query.ToString());
                                     Number = super,
                                     Employees = var.Select(e => e.FirstName).ToList()
                                 };
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, _function, _var) {
 	var _super = _function.AccountsReceivable;
 	return { Company : _function, Number : _super, Employees : _var.map(function(e){return e.FirstName;}) };
