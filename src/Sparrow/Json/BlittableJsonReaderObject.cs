@@ -575,7 +575,7 @@ namespace Sparrow.Json
             long metadataSize = currentOffsetSize + currentPropertyIdSize + sizeof(byte);
             byte* metadataPtr = _metadataPtr;
 
-            int mid = comparer.LastFoundAt ?? (min + max) / 2;
+            int mid = (min + max) / 2;
             if (mid > max)
                 mid = max;
 

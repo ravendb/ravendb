@@ -96,7 +96,6 @@ namespace Sparrow.Json
 
         public int[] EscapePositions;
         public AllocatedMemoryData AllocatedMemoryData;
-        public int? LastFoundAt;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
@@ -929,6 +928,7 @@ namespace Sparrow.Json
             _buffer = buffer;
             _string = str;
             _length = -1;
+            EscapePositions = null;
             IsDisposed = false;
             AllocatedMemoryData = null;
         }
