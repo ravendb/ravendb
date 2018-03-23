@@ -63,3 +63,16 @@ ALTER TABLE actor_movie
 ALTER TABLE actor_movie 
     ADD CONSTRAINT FK_MOVIE FOREIGN KEY (m_id)
         REFERENCES `movie` (m_id) ;
+
+
+CREATE TABLE groups (
+    g_id INT (11) NOT NULL AUTO_INCREMENT,
+    name VARCHAR (20) NOT NULL,
+    parent_group_id INT NULL,
+    PRIMARY KEY (`g_id`)
+) ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+ALTER TABLE groups
+    ADD CONSTRAINT FK_GROUPS FOREIGN KEY (parent_group_id)
+        REFERENCES `groups` (g_id);
