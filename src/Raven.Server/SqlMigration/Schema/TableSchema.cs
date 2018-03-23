@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.Utils;
@@ -17,6 +18,12 @@ namespace Raven.Server.SqlMigration.Schema
         public List<string> PrimaryKeyColumns { get; set; } = new List<string>();
         
         public List<TableReference> References { get; set; } = new List<TableReference>();
+
+        public TableSchema(string schema, string tableName)
+        {
+            Schema = schema;
+            TableName = tableName;
+        }
 
         public DynamicJsonValue ToJson()
         {

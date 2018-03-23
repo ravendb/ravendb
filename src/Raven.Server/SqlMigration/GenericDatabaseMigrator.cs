@@ -53,6 +53,10 @@ namespace Raven.Server.SqlMigration
                                 await writer.InsertDocument(docBlittable, id, doc.Attachments);
                             }
                         }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Error during processing collection: " + collectionToImport, e);
+                        }
                         finally
                         {
                             DisposeDataProviders(references);

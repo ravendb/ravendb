@@ -24,12 +24,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var collection = new RootCollection
-                    {
-                        SourceTableName = "order",
-                        SourceTableSchema = schemaName,
-                        Name = "Orders"
-                    };
+                    var collection = new RootCollection(schemaName, "order", "Orders");
 
                     var db = await GetDocumentDatabaseInstanceFor(store);
 
@@ -76,19 +71,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var collection = new RootCollection
+                    var collection = new RootCollection(schemaName, "order", "Orders")
                     {
-                        SourceTableName = "order",
-                        SourceTableSchema = schemaName,
-                        Name = "Orders",
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection
-                            {
-                                SourceTableName = "order_item",
-                                SourceTableSchema = schemaName,
-                                Name = "Items"
-                            }
+                            new EmbeddedCollection(schemaName, "order_item", "Items")
                         }
                     };
 
@@ -144,28 +131,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var ordersCollection = new RootCollection
+                    var ordersCollection = new RootCollection(schemaName, "order", "Orders")
                     {
-                        SourceTableName = "order",
-                        SourceTableSchema = schemaName,
-                        Name = "Orders",
                         LinkedCollections = new List<LinkedCollection>
                         {
-                            new LinkedCollection
-                            {
-                                SourceTableName = "order_item",
-                                SourceTableSchema = schemaName,
-                                Name = "Items"
-                            }
+                            new LinkedCollection(schemaName, "order_item", "Items")
                         }
                     };
 
-                    var orderItemsCollection = new RootCollection
-                    {
-                        SourceTableName = "order_item",
-                        SourceTableSchema = schemaName,
-                        Name = "OrderItems"
-                    };
+                    var orderItemsCollection = new RootCollection(schemaName, "order_item", "OrderItems");
 
                     var db = await GetDocumentDatabaseInstanceFor(store);
 
@@ -215,12 +189,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var collection = new RootCollection
-                    {
-                        SourceTableName = "order_item",
-                        SourceTableSchema = schemaName,
-                        Name = "OrderItems"
-                    };
+                    var collection = new RootCollection(schemaName, "order_item", "OrderItems");
 
                     var db = await GetDocumentDatabaseInstanceFor(store);
 
@@ -267,19 +236,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var collection = new RootCollection
+                    var collection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
-                        SourceTableName = "order_item",
-                        SourceTableSchema = schemaName,
-                        Name = "OrderItems",
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection
-                            {
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName,
-                                Name = "Order"
-                            }
+                            new EmbeddedCollection(schemaName, "order", "Order")
                         }
                     };
 
@@ -335,28 +296,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var orderItemCollection = new RootCollection
+                    var orderItemCollection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
-                        SourceTableName = "order_item",
-                        SourceTableSchema = schemaName,
-                        Name = "OrderItems",
                         LinkedCollections = new List<LinkedCollection>
                         {
-                            new LinkedCollection
-                            {
-                                Name = "ParentOrder",
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName,
-                            }
+                            new LinkedCollection(schemaName, "order", "ParentOrder")
                         }
                     };
 
-                    var orderCollection = new RootCollection
-                    {
-                        SourceTableName = "order",
-                        SourceTableSchema = schemaName,
-                        Name = "Orders"
-                    };
+                    var orderCollection = new RootCollection(schemaName, "order", "Orders");
 
                     var db = await GetDocumentDatabaseInstanceFor(store);
 
@@ -417,26 +365,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var collection = new RootCollection
+                    var collection = new RootCollection(schemaName, "order", "Orders")
                     {
-                        SourceTableName = "order",
-                        SourceTableSchema = schemaName,
-                        Name = "Orders",
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection
+                            new EmbeddedCollection(schemaName, "order_item", "Items")
                             {
-                                SourceTableName = "order_item",
-                                SourceTableSchema = schemaName,
-                                Name = "Items",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection
-                                    {
-                                        SourceTableName = "product",
-                                        SourceTableSchema = schemaName,
-                                        Name = "Product"
-                                    }
+                                    new EmbeddedCollection(schemaName, "product", "Product")
                                 }
                             }
                         }
@@ -511,36 +448,20 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection
+                            new RootCollection(schemaName, "order", "Orders")
                             {
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName,
-                                Name = "Orders",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection
+                                    new EmbeddedCollection(schemaName, "order_item", "Items")
                                     {
-                                        SourceTableName = "order_item",
-                                        SourceTableSchema = schemaName,
-                                        Name = "Items",
                                         LinkedCollections = new List<LinkedCollection>
                                         {
-                                            new LinkedCollection
-                                            {
-                                                SourceTableName = "product",
-                                                SourceTableSchema = schemaName,
-                                                Name = "Product"
-                                            }
+                                            new LinkedCollection(schemaName, "product", "Product")
                                         }
                                     }
                                 }
                             },
-                            new RootCollection
-                            {
-                                SourceTableName = "product",
-                                SourceTableSchema = schemaName,
-                                Name = "Products"
-                            }
+                            new RootCollection(schemaName, "product", "Products")
                         }
                     };
 
@@ -597,19 +518,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                 
                 using (var store = GetDocumentStore())
                 {
-                    var collection = new RootCollection
+                    var collection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
-                        SourceTableName = "order_item",
-                        SourceTableSchema = schemaName,
-                        Name = "OrderItems",
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection
-                            {
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName,
-                                Name = "Order"
-                            }
+                            new EmbeddedCollection(schemaName, "order", "Order")
                         }
                     };
 
@@ -655,28 +568,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                 
                 using (var store = GetDocumentStore())
                 {
-                    var orderItemCollection = new RootCollection
+                    var orderItemCollection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
-                        SourceTableName = "order_item",
-                        SourceTableSchema = schemaName,
-                        Name = "OrderItems",
                         LinkedCollections = new List<LinkedCollection>
                         {
-                            new LinkedCollection
-                            {
-                                Name = "ParentOrder",
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName
-                            }
+                            new LinkedCollection(schemaName, "order", "ParentOrder")
                         }
                     };
 
-                    var orderCollection = new RootCollection
-                    {
-                        SourceTableName = "order",
-                        SourceTableSchema = schemaName,
-                        Name = "Orders"
-                    };
+                    var orderCollection = new RootCollection(schemaName, "order", "Orders");
 
                     var db = await GetDocumentDatabaseInstanceFor(store);
 

@@ -26,11 +26,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection
+                            new RootCollection(schemaName, "order", "Orders")
                             {
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName,
-                                Name = "Orders",
                                 Patch = "this.NewField = 5;"
                             }
                         }
@@ -67,20 +64,12 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection
+                            new RootCollection(schemaName, "order", "Orders")
                             {
-                                SourceTableName = "order",
-                                SourceTableSchema = schemaName,
-                                Name = "Orders",
                                 Patch = "this.JsTotal = this.Items.map(x => x.price).reduce((acc, cur) => acc + cur, 0)",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection
-                                    {
-                                        SourceTableName = "order_item",
-                                        SourceTableSchema = schemaName,
-                                        Name = "Items"
-                                    }
+                                    new EmbeddedCollection(schemaName, "order_item", "Items")
                                 }
                             }
                         }
