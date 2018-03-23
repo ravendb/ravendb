@@ -58,6 +58,8 @@ namespace Raven.Server.Web.Studio
                     var schema = dbDriver.FindSchema();
                     
                     await dbDriver.Migrate(migrationRequest.Settings, schema, Database, context);
+                    
+                    NoContentStatus();
                 }
             }
         }

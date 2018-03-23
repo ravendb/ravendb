@@ -74,19 +74,14 @@ namespace Raven.Server.SqlMigration.MsSQL
                     
                     if (tableSchema == null)
                     {
-                        tableSchema = new TableSchema
-                        {
-                            Schema = schemaAndTableName.Schema,
-                            TableName = schemaAndTableName.TableName
-                        };
+                        tableSchema = new TableSchema(schemaAndTableName.Schema, schemaAndTableName.TableName);
                         dbSchema.Tables.Add(tableSchema);
                     }
                     
-                    tableSchema.Columns.Add(new TableColumn
-                    {
-                        Name = reader["COLUMN_NAME"].ToString(),
-                        Type = MapColumnType(reader["DATA_TYPE"].ToString())
-                    });
+                    var columnName = reader["COLUMN_NAME"].ToString();
+                    var columnType = MapColumnType(reader["DATA_TYPE"].ToString());
+                    
+                    tableSchema.Columns.Add(new TableColumn(columnName, columnType));
                 }
             }
         }
@@ -191,11 +186,9 @@ namespace Raven.Server.SqlMigration.MsSQL
 
                 var pkTable = dbSchema.GetTable(pkSchemaAndTableName.Schema, pkSchemaAndTableName.TableName);
 
-                pkTable.References.Add(new TableReference
+                pkTable.References.Add(new TableReference(fkSchemaAndTableName.Schema, fkSchemaAndTableName.TableName)
                 {
-                    Columns = fkColumnsName,
-                    Schema = fkSchemaAndTableName.Schema,
-                    Table = fkSchemaAndTableName.TableName
+                    Columns = fkColumnsName
                 });
             }
         }

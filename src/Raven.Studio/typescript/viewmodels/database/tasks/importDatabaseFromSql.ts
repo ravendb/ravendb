@@ -3,6 +3,7 @@ import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
+import messagePublisher = require("common/messagePublisher");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -55,7 +56,8 @@ class importCollectionFromSql extends viewModelBase {
     migrate() {
         const dto = this.model.toDto();
         new migrateSqlDatabaseCommand(this.activeDatabase(), dto)
-            .execute();
+            .execute()
+            .done(() => messagePublisher.reportSuccess("OK!"));
         //TODO: operation id + watch
     }
     

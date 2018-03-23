@@ -31,26 +31,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                         BinaryToAttachment = true,
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection
+                            new RootCollection(schemaName, "actor", "Actors")
                             {
-                                SourceTableName = "actor",
-                                SourceTableSchema = schemaName,
-                                Name = "Actors",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection
+                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies")
                                     {
-                                        SourceTableName = "actor_movie",
-                                        SourceTableSchema = schemaName,
-                                        Name = "Movies",
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection
-                                            {
-                                                SourceTableName = "movie",
-                                                SourceTableSchema = schemaName,
-                                                Name = "Movie"
-                                            }
+                                            new EmbeddedCollection(schemaName, "movie", "Movie")
                                         }
                                     }
                                 }
@@ -98,26 +87,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                         BinaryToAttachment = false,
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection
+                            new RootCollection(schemaName, "actor", "Actors")
                             {
-                                SourceTableName = "actor",
-                                SourceTableSchema = schemaName,
-                                Name = "Actors",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection
+                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies")
                                     {
-                                        SourceTableName = "actor_movie",
-                                        SourceTableSchema = schemaName,
-                                        Name = "Movies",
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection
-                                            {
-                                                SourceTableName = "movie",
-                                                SourceTableSchema = schemaName,
-                                                Name = "Movie"
-                                            }
+                                            new EmbeddedCollection(schemaName, "movie", "Movie")
                                         }
                                     }
                                 }
