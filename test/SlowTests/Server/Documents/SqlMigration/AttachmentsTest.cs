@@ -35,11 +35,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies", new List<string> { "a_id"} )
+                                    new EmbeddedCollection(schemaName, "actor_movie", RelationType.OneToMany, new List<string> { "a_id"}, "Movies")
                                     {
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection(schemaName, "movie", "Movie", new List<string> { "m_id" })
+                                            new EmbeddedCollection(schemaName, "movie", RelationType.ManyToOne, new List<string> { "m_id" }, "Movie")
                                         }
                                     }
                                 }
@@ -91,11 +91,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "actor_movie", "Movies", new List<string> { "a_id" })
+                                    new EmbeddedCollection(schemaName, "actor_movie", RelationType.OneToMany, new List<string> { "a_id" }, "Movies")
                                     {
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection(schemaName, "movie", "Movie", new List<string> { "m_id" })
+                                            new EmbeddedCollection(schemaName, "movie", RelationType.ManyToOne, new List<string> { "m_id" }, "Movie")
                                         }
                                     }
                                 }

@@ -186,7 +186,7 @@ namespace Raven.Server.SqlMigration
             {
                 foreach (var embeddedCollection in sourceCollection.NestedCollections)
                 {
-                    var reference = CreateReference(embeddedCollection, dbSchema, sourceCollection, allCollections, migrationSettings);
+                    var reference = CreateReference(migrationSettings, dbSchema, allCollections, sourceCollection, embeddedCollection);
                     var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, allCollections, migrationSettings);
                     reference.ChildReferences = resolvedReferences.Count > 0 ? resolvedReferences : null;
                     result.Add(reference);
@@ -196,27 +196,24 @@ namespace Raven.Server.SqlMigration
             if (sourceCollection.LinkedCollections != null)
             {
                 foreach (var linkedCollection in sourceCollection.LinkedCollections)
-                    result.Add(CreateReference(linkedCollection, dbSchema, sourceCollection, allCollections, migrationSettings));
+                    result.Add(CreateReference(migrationSettings, dbSchema, allCollections, sourceCollection, linkedCollection));
             }
 
             return result;
         }
 
-        private ReferenceInformation CreateReference(ICollectionReference destinationCollection, DatabaseSchema dbSchema, AbstractCollection sourceCollection,
-            List<RootCollection> allCollections, MigrationSettings migrationSettings)
+        private ReferenceInformation CreateReference(MigrationSettings migrationSettings, DatabaseSchema dbSchema,
+            List<RootCollection> allCollections, AbstractCollection sourceCollection,
+            ICollectionReference destinationCollection)
         {
             var sourceSchema = GetSchemaForTable(sourceCollection.SourceTableSchema, sourceCollection.SourceTableName, dbSchema);
             var destinationSchema = GetSchemaForTable(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, dbSchema);
+            
+            var reference = destinationCollection.Type == RelationType.OneToMany 
+                            ? sourceSchema.FindReference((AbstractCollection) destinationCollection, destinationCollection.Columns)
+                            : destinationSchema.FindReference(sourceCollection, destinationCollection.Columns);
 
-            var outgoingReference = sourceSchema.FindReference((AbstractCollection) destinationCollection, destinationCollection.Columns);
-            var incomingReference = destinationSchema.FindReference(sourceCollection, destinationCollection.Columns);
-
-            if (outgoingReference != null && incomingReference != null && sourceSchema != destinationSchema)
-            {
-                throw new NotSupportedException();
-            }
-
-            if (outgoingReference == null && incomingReference == null)
+            if (reference == null)
             {
                 throw new InvalidOperationException("Unable to resolve reference: " + sourceCollection.SourceTableName + " -> " + destinationCollection.SourceTableName
                                                     + ". Columns: " + string.Join(", ", destinationCollection.Columns));
@@ -238,13 +235,13 @@ namespace Raven.Server.SqlMigration
                 SourceSchema = destinationCollection.SourceTableSchema,
                 TargetPrimaryKeyColumns = destinationSchema.PrimaryKeyColumns,
                 PropertyName = destinationCollection.Name,
-                ForeignKeyColumns = incomingReference != null ? incomingReference.Columns : outgoingReference.Columns,
+                ForeignKeyColumns = reference.Columns,
                 TargetDocumentColumns = documentColumns,
                 TargetSpecialColumnsNames = specialColumns,
                 TargetAttachmentColumns = attachmentColumns,
                 Type = (destinationCollection is EmbeddedCollection)
-                    ? (incomingReference != null ? ReferenceType.ObjectEmbed : ReferenceType.ArrayEmbed)
-                    : (incomingReference != null ? ReferenceType.ObjectLink : ReferenceType.ArrayLink),
+                    ? (destinationCollection.Type == RelationType.ManyToOne ? ReferenceType.ObjectEmbed : ReferenceType.ArrayEmbed)
+                    : (destinationCollection.Type == RelationType.ManyToOne ? ReferenceType.ObjectLink : ReferenceType.ArrayLink),
             };
 
             if (destinationCollection is LinkedCollection)
