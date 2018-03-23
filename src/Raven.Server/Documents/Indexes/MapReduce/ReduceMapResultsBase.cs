@@ -506,8 +506,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 try
                 {
-                    var unaggregatedBranch = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer,
-                        Constants.Storage.PageSize);
+                    var page = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
+                    var unaggregatedBranch = new TreePage(page.Pointer, Constants.Storage.PageSize);
 
                     using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
                     {
@@ -529,10 +529,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return false;
             }
 
-            var relatedPage = new TreePage(indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).DataPointer,
-                Constants.Storage.PageSize);
+            var relatedPage = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
+            var relatedTreePage = new TreePage(relatedPage.Pointer, Constants.Storage.PageSize);
 
-            throw new InvalidOperationException($"Couldn't find pre-computed results for existing page: {relatedPage}");
+            throw new InvalidOperationException($"Couldn't find pre-computed results for existing page: {relatedTreePage}");
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);
