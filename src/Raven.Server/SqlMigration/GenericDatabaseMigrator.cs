@@ -202,23 +202,24 @@ namespace Raven.Server.SqlMigration
             return result;
         }
 
-        private ReferenceInformation CreateReference(AbstractCollection destinationCollection, DatabaseSchema dbSchema, CollectionWithReferences sourceCollection,
+        private ReferenceInformation CreateReference(ICollectionReference destinationCollection, DatabaseSchema dbSchema, AbstractCollection sourceCollection,
             List<RootCollection> allCollections, MigrationSettings migrationSettings)
         {
             var sourceSchema = GetSchemaForTable(sourceCollection.SourceTableSchema, sourceCollection.SourceTableName, dbSchema);
             var destinationSchema = GetSchemaForTable(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, dbSchema);
 
-            var outgoingReference = sourceSchema.FindReference(destinationCollection);
-            var incomingReference = destinationSchema.FindReference(sourceCollection);
+            var outgoingReference = sourceSchema.FindReference((AbstractCollection) destinationCollection, destinationCollection.Columns);
+            var incomingReference = destinationSchema.FindReference(sourceCollection, destinationCollection.Columns);
 
-            if (outgoingReference != null && incomingReference != null)
+            if (outgoingReference != null && incomingReference != null && sourceSchema != destinationSchema)
             {
                 throw new NotSupportedException();
             }
 
             if (outgoingReference == null && incomingReference == null)
             {
-                throw new InvalidOperationException("Unable to resolve reference: " + sourceCollection.SourceTableName + " -> " + destinationCollection.SourceTableName);
+                throw new InvalidOperationException("Unable to resolve reference: " + sourceCollection.SourceTableName + " -> " + destinationCollection.SourceTableName
+                                                    + ". Columns: " + string.Join(", ", destinationCollection.Columns));
             }
 
             var specialColumns = FindSpecialColumns(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, dbSchema);

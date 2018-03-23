@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -37,9 +38,11 @@ namespace Raven.Server.SqlMigration.Schema
             };
         }
         
-        public TableReference FindReference(AbstractCollection collection)
+        public TableReference FindReference(AbstractCollection collection, List<string> columns)
         {
-            return References.SingleOrDefault(x => x.Table == collection.SourceTableName && x.Schema == collection.SourceTableSchema);
+            return References.FirstOrDefault(x => x.Table == collection.SourceTableName
+                                                   && x.Schema == collection.SourceTableSchema
+                                                   && EnumerableExtension.ContentEquals(x.Columns, columns));
         }
     }
 }

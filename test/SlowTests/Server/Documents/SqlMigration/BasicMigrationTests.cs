@@ -75,7 +75,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection(schemaName, "order_item", "Items")
+                            new EmbeddedCollection(schemaName, "order_item", "Items", new List<string> { "order_id" })
                         }
                     };
 
@@ -135,7 +135,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         LinkedCollections = new List<LinkedCollection>
                         {
-                            new LinkedCollection(schemaName, "order_item", "Items")
+                            new LinkedCollection(schemaName, "order_item", "Items", new List<string> { "order_id" })
                         }
                     };
 
@@ -240,7 +240,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection(schemaName, "order", "Order")
+                            new EmbeddedCollection(schemaName, "order", "Order", new List<string> { "order_id" })
                         }
                     };
 
@@ -300,7 +300,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         LinkedCollections = new List<LinkedCollection>
                         {
-                            new LinkedCollection(schemaName, "order", "ParentOrder")
+                            new LinkedCollection(schemaName, "order", "ParentOrder", new List<string> { "order_id" })
                         }
                     };
 
@@ -369,11 +369,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection(schemaName, "order_item", "Items")
+                            new EmbeddedCollection(schemaName, "order_item", "Items", new List<string> { "order_id" })
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "product", "Product")
+                                    new EmbeddedCollection(schemaName, "product", "Product", new List<string> { "product_id" })
                                 }
                             }
                         }
@@ -452,11 +452,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "order_item", "Items")
+                                    new EmbeddedCollection(schemaName, "order_item", "Items", new List<string> { "order_id"})
                                     {
                                         LinkedCollections = new List<LinkedCollection>
                                         {
-                                            new LinkedCollection(schemaName, "product", "Product")
+                                            new LinkedCollection(schemaName, "product", "Product", new List<string> { "product_id" })
                                         }
                                     }
                                 }
@@ -522,7 +522,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         NestedCollections = new List<EmbeddedCollection>
                         {
-                            new EmbeddedCollection(schemaName, "order", "Order")
+                            new EmbeddedCollection(schemaName, "order", "Order", new List<string> { "order_id" })
                         }
                     };
 
@@ -572,7 +572,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         LinkedCollections = new List<LinkedCollection>
                         {
-                            new LinkedCollection(schemaName, "order", "ParentOrder")
+                            new LinkedCollection(schemaName, "order", "ParentOrder", new List<string> { "order_id"})
                         }
                     };
 
@@ -607,6 +607,10 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
+        //TODO: test with ORder: ShipmentAddress and Invoice Address
+        
+        //TODO: test with Recursive Table: Group (Id, Name, ParentGroupId)
+        
         //TODO: link + missing target colleciton should throw 
         //TODO: skip test if db is not available 
     }

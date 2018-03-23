@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                                 Patch = "this.JsTotal = this.Items.map(x => x.price).reduce((acc, cur) => acc + cur, 0)",
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "order_item", "Items")
+                                    new EmbeddedCollection(schemaName, "order_item", "Items", new List<string> { "order_id" })
                                 }
                             }
                         }

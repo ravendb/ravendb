@@ -1,7 +1,7 @@
 <div class="importDatabase">
     <div class="panel">
         <div class="panel-body">
-            <form class="flex-form" data-bind="submit: nextStep, collapse: inFirstStep">
+            <form class="flex-form" data-bind="submit: nextStep, if: inFirstStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>
                 <div class="row">
                     <div class="col-sm-8 col-lg-6 margin-top" data-bind="with: model">

@@ -28,7 +28,8 @@ class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
                 return {
                     Name: x.name(),
                     SourceTableName: x.targetTable.tableName,
-                    SourceTableSchema: x.targetTable.tableSchema
+                    SourceTableSchema: x.targetTable.tableSchema,
+                    Columns: x.columns
                 } as Raven.Server.SqlMigration.Model.LinkedCollection; 
             });
         
