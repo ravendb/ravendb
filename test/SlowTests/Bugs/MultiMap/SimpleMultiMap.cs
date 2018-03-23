@@ -24,12 +24,14 @@ namespace SlowTests.Bugs.MultiMap
                 var indexDefinition = store.Maintenance.Send(new GetIndexOperation("CatsAndDogs"));
 
                 Assert.Equal(2, indexDefinition.Maps.Count);
-                Assert.Equal(LinuxTestUtils.Dos2Unix(@"docs.Cats.Select(cat => new {
+
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Cats.Select(cat => new {
     Name = cat.Name
-})"), indexDefinition.Maps.First());
-                Assert.Equal(LinuxTestUtils.Dos2Unix(@"docs.Dogs.Select(dog => new {
+})", indexDefinition.Maps.First());
+
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Dogs.Select(dog => new {
     Name = dog.Name
-})"), indexDefinition.Maps.Skip(1).First());
+})", indexDefinition.Maps.Skip(1).First());
             }
         }
 

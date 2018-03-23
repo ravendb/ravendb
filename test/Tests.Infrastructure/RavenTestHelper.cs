@@ -87,5 +87,11 @@ namespace FastTests
 
             Assert.Empty(errors.SelectMany(x => x.Errors));
         }
+
+        public static void AssertEqualRespectingNewLines(string expected, string actual)
+        {
+            var converted = expected.Replace("\r\n", Environment.NewLine);
+            Assert.Equal(converted, actual);
+        }
     }
 }

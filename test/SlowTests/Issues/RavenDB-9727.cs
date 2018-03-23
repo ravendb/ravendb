@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                                     Detail = detail
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(u) {
 	var detail = load(""details/{0}"".format(u.DetailShortId));
 	return { Name : u.Name, Detail : detail };
@@ -91,7 +91,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
                                     Detail = session.Load<Detail>(detailId)
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(u, $p0, $p1) {
 	var detailId = ""d{0}ta{1}ls{2}{3}-{4}"".format(u.Name[1], u.LastName[4], $p0, u.DetailShortId, $p1);
 	return { Name : u.Name, DetailId : detailId, Detail : load(detailId) };
@@ -139,7 +139,7 @@ from Users as u select output(u, $p0, $p1)", query.ToString());
                                     Detail = detail
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(u) {
 	var detailId = ""details/{0}"".format(u.DetailShortId);
 	var detail = load(detailId);
