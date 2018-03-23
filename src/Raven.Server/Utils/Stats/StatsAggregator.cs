@@ -19,11 +19,14 @@ namespace Raven.Server.Utils.Stats
             Id = id;
 
             var now = SystemTime.UtcNow;
-            if (lastStats == null)
+            var currentScope = lastStats?.Scope;
+            if (currentScope == null)
+            {
                 StartTime = now;
+            }
             else
             {
-                var lastCompleted = lastStats.StartTime.Add(lastStats.Scope.Duration);
+                var lastCompleted = lastStats.StartTime.Add(currentScope.Duration);
 
                 // due to different precision of DateTimes and Stopwatches we might have current date 
                 // smaller than completed one of the latest batch
