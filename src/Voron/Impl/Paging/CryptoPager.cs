@@ -254,11 +254,11 @@ namespace Voron.Impl.Paging
 
                 // Encrypt the local buffer, then copy the encrypted value to the pager
                 var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                EncryptPage(pageHeader);
+                var dataSize = EncryptPage(pageHeader);
 
                 var pagePointer = Inner.AcquirePagePointer(null, buffer.Key);
 
-                Memory.Copy(pagePointer, buffer.Value.Pointer, buffer.Value.Size);
+                Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
             }
 
         }
@@ -301,7 +301,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-        private void EncryptPage(PageHeader* page)
+        private int EncryptPage(PageHeader* page)
         {
             var num = page->PageNumber;
             var destination = (byte*)page;
@@ -313,7 +313,7 @@ namespace Voron.Impl.Paging
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = GetNumberOfPages(page) * Constants.Storage.PageSize;
 
                 var npub = (byte*)page + PageHeader.NonceOffset;
                 // here we generate 128(!) bits of random data, but xchacha20poly1305 needs
@@ -327,7 +327,7 @@ namespace Voron.Impl.Paging
                     destination + PageHeader.MacOffset,
                     &macLen,
                     (byte*)page + PageHeader.SizeOf,
-                    dataSize - PageHeader.SizeOf,
+                    (ulong)dataSize - PageHeader.SizeOf,
                     (byte*)page,
                     (ulong)PageHeader.NonceOffset,
                     null,
@@ -341,6 +341,8 @@ namespace Voron.Impl.Paging
 
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to encrypt page {num}, rc={rc}");
+
+                return dataSize;
             }
         }
 
