@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
@@ -114,12 +112,26 @@ namespace Voron.Impl.Paging
             return checked((overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
 
-        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
+        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null, bool handleOverwrite = false)
         {
-            // New page -> no need to read page, just allocate a new buffer
             var state = GetTransactionState(tx);
             var size = numberOfPages * Constants.Storage.PageSize;
-            var buffer = GetBufferAndAddToTxState(pageNumber, state, size);
+
+            if (handleOverwrite && state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
+            {
+                if (size == buffer.Size)
+                {
+                    Memory.Set(buffer.Pointer, 0, size);
+                    Memory.Set(buffer.Hash, 0, EncryptionBuffer.HashSizeInt);
+
+                    return buffer.Pointer;
+                }
+
+                ReturnBuffer(buffer);
+            }
+
+            // allocate new buffer
+            buffer = GetBufferAndAddToTxState(pageNumber, state, size);
 
             return buffer.Pointer;
         }
@@ -287,17 +299,23 @@ namespace Voron.Impl.Paging
                     continue;
                 }
 
-                if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize != 0)
-                {
-                    // First page of a seperated section, returned with its original size.
-                    _encryptionBuffersPool.Return(buffer.Value.Pointer, (int)buffer.Value.OriginalSize, buffer.Value.AllocatingThread);
-                    _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
-                    continue;
-                }
+                ReturnBuffer(buffer.Value);
+            }
+        }
 
+        private void ReturnBuffer(EncryptionBuffer buffer)
+        {
+            if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
+            {
+                // First page of a seperated section, returned with its original size.
+                _encryptionBuffersPool.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread);
+                _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+            }
+            else
+            {
                 // Normal buffers
-                _encryptionBuffersPool.Return(buffer.Value.Pointer, buffer.Value.Size, buffer.Value.AllocatingThread);
-                _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
+                _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
+                _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
             }
         }
 

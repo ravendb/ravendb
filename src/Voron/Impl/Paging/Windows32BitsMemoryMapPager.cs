@@ -236,7 +236,7 @@ namespace Voron.Impl.Paging
             return new Windows32Bit4KbBatchWrites(this);
         }
 
-        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
+        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null, bool handleOverwrite = false)
         {
             return AcquirePagePointer(tx, pageNumber, pagerState);
         }
