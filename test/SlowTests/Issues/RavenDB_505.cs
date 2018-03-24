@@ -14,7 +14,7 @@ namespace SlowTests.Issues
             {
                 var indexDefinition = new IndexDefinition
                 {
-                    Name = " test",
+                    Name = "test",
                     Maps = { "from d in docs select new {d.Name}" }
                 };
                 for (int i = 0; i < 10; i++)
