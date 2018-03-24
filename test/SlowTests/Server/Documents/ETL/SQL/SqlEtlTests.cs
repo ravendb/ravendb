@@ -25,7 +25,6 @@ using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Platform;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
@@ -34,56 +33,40 @@ namespace SlowTests.Server.Documents.ETL.SQL
     {
         public static readonly Lazy<string> MasterDatabaseConnection = new Lazy<string>(() =>
         {
-            var local = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
-            try
+            var cString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
+
+            if (TryConnect(cString))
+                return cString;
+
+            cString = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
+
+            if (TryConnect(cString))
+                return cString;
+
+            cString = Environment.GetEnvironmentVariable("RAVEN_MSSQL_CONNECTION_STRING");
+
+            if (TryConnect(cString))
+                return cString;
+
+            throw new InvalidOperationException("Use a valid connection");
+
+            bool TryConnect(string connectionString)
             {
-                using (var con = new SqlConnection(local))
-                {
-                    con.Open();
-                }
-                return local;
-            }
-            catch (Exception)
-            {
+                if (string.IsNullOrWhiteSpace(connectionString))
+                    return false;
+
                 try
                 {
-                    local = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
-                    using (var con = new SqlConnection(local))
+                    using (var connection = new SqlConnection(connectionString))
                     {
-                        con.Open();
+                        connection.Open();
                     }
-                    return local;
+
+                    return true;
                 }
-                catch
+                catch (Exception)
                 {
-                    try
-                    {
-                        local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=3";
-                        using (var con = new SqlConnection(local))
-                        {
-                            con.Open();
-                        }
-                        return local;
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            string path;
-                            if (PlatformDetails.RunningOnPosix)
-                                path = @"/tmp/sqlReplicationPassword.txt";
-                            else
-                                path = @"P:\Build\SqlReplicationPassword.txt";
-
-                            var readAllLines = File.ReadAllLines(path);
-                            return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Use a valid connection", e);
-                        }
-
-                    }
+                    return false;
                 }
             }
         });
@@ -111,7 +94,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders(orderData);
 ";
 
-        [NonLinuxFact]
+        [Fact]
         public async Task ReplicateMultipleBatches()
         {
             using (var store = GetDocumentStore())
@@ -223,7 +206,7 @@ CREATE DATABASE [SqlReplication-{store.Database}]
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task SimpleTransformation()
         {
             using (var store = GetDocumentStore())
@@ -265,7 +248,7 @@ CREATE DATABASE [SqlReplication-{store.Database}]
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task NullPropagation()
         {
             using (var store = GetDocumentStore())
@@ -311,7 +294,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task NullPropagation_WithExplicitNull()
         {
             using (var store = GetDocumentStore())
@@ -360,7 +343,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task RavenDB_3341()
         {
             using (var store = GetDocumentStore())
@@ -414,7 +397,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
             using (var store = GetDocumentStore())
@@ -456,7 +439,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -495,7 +478,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task RavenDB_3172()
         {
             using (var store = GetDocumentStore())
@@ -544,7 +527,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task WillLog()
         {
             using (var client = new ClientWebSocket())
@@ -593,7 +576,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task SimulationTest()
         {
             using (var store = GetDocumentStore())
@@ -668,7 +651,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task LoadingSingleAttachment()
         {
             using (var store = GetDocumentStore())
@@ -734,7 +717,7 @@ loadToOrders(orderData);
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task LoadingMultipleAttachments()
         {
             using (var store = GetDocumentStore())
@@ -795,7 +778,7 @@ for (var i = 0; i < attachments.length; i++)
                 }, new SqlConnectionString
                 {
                     Name = "test",
-                    ConnectionString =  GetConnectionString(store)
+                    ConnectionString = GetConnectionString(store)
                 });
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
@@ -814,7 +797,7 @@ for (var i = 0; i < attachments.length; i++)
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task LoadingNonExistingAttachmentWillStoreNull()
         {
             using (var store = GetDocumentStore())
@@ -865,7 +848,7 @@ loadToOrders(orderData);
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task LoadingFromMultipleCollections()
         {
             using (var store = GetDocumentStore())
@@ -896,7 +879,7 @@ loadToOrders(orderData);
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupSqlEtl(store, defaultScript, collections: new List<string> {"Orders", "FavouriteOrders" });
+                SetupSqlEtl(store, defaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -916,7 +899,7 @@ loadToOrders(orderData);
             }
         }
 
-        [NonLinuxFact]
+        [Fact]
         public async Task CanUseVarcharAndNVarcharFunctions()
         {
             using (var store = GetDocumentStore())
@@ -937,10 +920,10 @@ CREATE TABLE [dbo].[Users]
                     {
                         Name = "Joe Doń"
                     });
-                    
+
                     await session.SaveChangesAsync();
                 }
-                
+
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
                 AddEtl(store, new SqlEtlConfiguration()
@@ -975,7 +958,7 @@ loadToUsers(
                 }, new SqlConnectionString
                 {
                     Name = "test",
-                    ConnectionString =  GetConnectionString(store)
+                    ConnectionString = GetConnectionString(store)
                 });
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
