@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly string _field;
         private readonly LuceneVoronDirectory _directory;
-        private Analyzer _analyzer;
         private readonly SnapshotDeletionPolicy _indexDeletionPolicy;
         private readonly IndexWriter.MaxFieldLength _maxFieldLength;
         private readonly HashSet<string> _alreadySeen = new HashSet<string>();
@@ -34,13 +33,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
-        public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, DocumentDatabase database, IState state, Analyzer searchAnalyzer)
+        public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, DocumentDatabase database, IState state)
         {
             _directory = directory;
             _indexDeletionPolicy = snapshotter;
             _maxFieldLength = maxFieldLength;
             _field = field;
-            _analyzer = searchAnalyzer;
             _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(database.Name);
 
             RecreateIndexWriter(state);
@@ -115,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return doc;
         }
 
-        public void AddDocument(global::Lucene.Net.Documents.Document doc, IState state)
+        public void AddDocument(global::Lucene.Net.Documents.Document doc, Analyzer analyzer, IState state)
         {
             var fieldables = doc.GetFieldables(_field);
             if (fieldables == null)
@@ -154,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                 }
 
-                var tokenStream = _analyzer.ReusableTokenStream(_field, reader);
+                var tokenStream = analyzer.ReusableTokenStream(_field, reader);
                 while (tokenStream.IncrementToken())
                 {
                     var word = tokenStream.GetAttribute<ITermAttribute>().Term;
