@@ -48,7 +48,10 @@ namespace RachisTests
 
                 using (var session = store.OpenSession(databaseName))
                 {
-                    Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
+                    var e = Assert.Throws<RavenException>(() => session.Load<User>("users/1"));
+                    Assert.Contains("System.Net.Http.HttpRequestException: An error occurred while sending the request. ---> " +
+                                    "System.Net.Http.WinHttpException: A connection with the server could not be established"
+                                    , e.Message);
                 }
             }
         }
