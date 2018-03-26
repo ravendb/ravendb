@@ -606,10 +606,10 @@ namespace Raven.Client.Http
                     ThrowInvalidConcurrentSessionUsage(command.GetType().Name, sessionInfo);
 
                 if (_disableClientConfigurationUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag}\"");
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
 
                 if (_disableTopologyUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag}\"");
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
 
                 var sp = Stopwatch.StartNew();
                 HttpResponseMessage response = null;
