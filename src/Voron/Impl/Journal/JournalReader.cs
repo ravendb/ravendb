@@ -146,7 +146,7 @@ namespace Voron.Impl.Journal
                 _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
                 // We are going to overwrite the page, so we don't care about its current content
-                var pagePtr = _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination, handleOverwrite: true);
+                var pagePtr = _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 
                 var pageNumber = *(long*)(outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != pageNumber)
