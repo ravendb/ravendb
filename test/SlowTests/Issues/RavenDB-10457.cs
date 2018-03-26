@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                                     Prices = prices.ToList()
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(item) {
 	var prices = Object.map(item.PriceConfig, function(v, k){ return {Price:v.Item1,Quantity:v.Item2};});
 	return { Name : item.Name, Prices : prices };
@@ -82,7 +82,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                             Total = total.ToList()
                         };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(item) {
 	var total = Object.map(item.MusicCollection, function(v, k){ return v.map(function(x){return x.Quantity*x.Price;}).reduce(function(a, b) { return a + b; }, 0);});
 	return { Total : total };
@@ -167,7 +167,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                             AlbumsByArtists = artists.ToList()
                         };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(item) {
 	var artists = Object.map(item.MusicCollection, function(v, k){ return v.map(function(x){return {Title:x.Title,ReleaseDate:new Date(Date.parse(x.ReleaseDate))};});});
 	return { Name : item.Name, AlbumsByArtists : artists };
