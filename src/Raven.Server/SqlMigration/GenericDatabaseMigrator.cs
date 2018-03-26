@@ -202,13 +202,13 @@ namespace Raven.Server.SqlMigration
             var destinationSchema = dbSchema.GetTable(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);
             
             var reference = destinationCollection.Type == RelationType.OneToMany 
-                            ? sourceSchema.FindReference((AbstractCollection) destinationCollection, destinationCollection.Columns)
-                            : destinationSchema.FindReference(sourceCollection, destinationCollection.Columns);
+                            ? sourceSchema.FindReference((AbstractCollection) destinationCollection, destinationCollection.JoinColumns)
+                            : destinationSchema.FindReference(sourceCollection, destinationCollection.JoinColumns);
 
             if (reference == null)
             {
                 throw new InvalidOperationException("Unable to resolve reference: " + sourceCollection.SourceTableName + " -> " + destinationCollection.SourceTableName
-                                                    + ". Columns: " + string.Join(", ", destinationCollection.Columns));
+                                                    + ". Columns: " + string.Join(", ", destinationCollection.JoinColumns));
             }
 
             var specialColumns = dbSchema.FindSpecialColumns(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);

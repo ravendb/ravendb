@@ -104,8 +104,8 @@
                     <div>Document ID: <span data-bind="text: documentIdTemplate"></span></div>
                     
                     <div>Properties:</div>
-                    <ul data-bind="foreach: columns">
-                        <li data-bind="text: name + ' (' + type + ')'"></li>
+                    <ul data-bind="foreach: documentColumns">
+                        <li data-bind="text: propertyName() + ' (' + type + ')'"></li>
                     </ul>
                     
                     <div>References:</div>
@@ -113,7 +113,7 @@
                     <ul data-bind="foreach: references">
                         <li>
                             <span data-bind="text: name"></span> | 
-                            <span data-bind="text: columns.join(', ')"></span> | 
+                            <span data-bind="text: joinColumns.join(', ')"></span> | 
                             <span data-bind="text: targetTable.tableName"></span> | 
                             <span data-bind="text: type"></span> 
                             

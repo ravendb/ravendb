@@ -4,12 +4,12 @@ namespace Raven.Server.SqlMigration.Model
 {
     public class LinkedCollection : AbstractCollection, ICollectionReference
     {
-        public List<string> Columns { get; set; }
+        public List<string> JoinColumns { get; set; }
         public RelationType Type { get; set; }
         
-        public LinkedCollection(string sourceTableSchema, string sourceTableName, RelationType type, List<string> columns, string name) : base(sourceTableSchema, sourceTableName, name)
+        public LinkedCollection(string sourceTableSchema, string sourceTableName, RelationType type, List<string> joinColumns, string name) : base(sourceTableSchema, sourceTableName, name)
         {
-            Columns = columns;
+            JoinColumns = joinColumns;
             Type = type;
         }
     }

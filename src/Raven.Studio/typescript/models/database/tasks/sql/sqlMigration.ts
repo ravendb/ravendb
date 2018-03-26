@@ -7,8 +7,8 @@ class sqlMigration {
     
     static possibleProviders = ["MsSQL", "MySQL"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
-    databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
-    sourceDatabaseName = ko.observable<string>();
+    databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MySQL");
+    sourceDatabaseName = ko.observable<string>("sandbox");
     binaryToAttachment = ko.observable<boolean>(true);
     batchSize = ko.observable<number>(1000);
     
@@ -19,8 +19,8 @@ class sqlMigration {
     sqlServerValidationGroup: KnockoutValidationGroup;
     
     mySql = {
-        server: ko.observable<string>(),
-        username: ko.observable<string>(),
+        server: ko.observable<string>("127.0.0.1"),
+        username: ko.observable<string>("root"),
         password: ko.observable<string>() 
     };
     
@@ -74,6 +74,21 @@ class sqlMigration {
         }
     }
     
+    private findSpecialColumnNames(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema, tableSchema: string, tableName: string): string[] {
+        const result = [] as Array<string>;
+        const mainSchema = dbSchema.Tables.find(x => x.Schema === tableSchema && x.TableName === tableName);
+        
+        result.push(...mainSchema.PrimaryKeyColumns);
+        
+        dbSchema.Tables.forEach(fkCandidate => {
+            fkCandidate.References.filter(x => x.Schema === tableSchema && x.Table === x.Table).forEach(tableReference => {
+                result.push(...tableReference.Columns);
+            });
+        });
+        
+        return result;
+    }
+    
     onSchemaUpdated(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema) {
         const mapping = _.map(dbSchema.Tables, tableDto => {
             const table = new sqlTable();
@@ -82,15 +97,15 @@ class sqlMigration {
             table.tableSchema = tableDto.Schema;
             table.customCollection(tableDto.TableName);
             const columns = tableDto.Columns.map(columnDto => new sqlColumn(columnDto));
-            const primaryKeyColumns = columns.filter(c => _.includes(tableDto.PrimaryKeyColumns, c.name));
-            const documentColumns = _.without(columns, ...primaryKeyColumns);
-            table.columns(documentColumns);
+            const primaryKeyColumns = columns.filter(c => _.includes(tableDto.PrimaryKeyColumns, c.sqlName));
+            const specialColumnNames = this.findSpecialColumnNames(dbSchema, tableDto.Schema, tableDto.TableName);
+            const primaryKeyColumnNames = primaryKeyColumns.map(x => x.sqlName);
+            
+            table.documentColumns(columns.filter(c => !_.includes(specialColumnNames, c.sqlName) && !_.includes(primaryKeyColumnNames, c.sqlName)));
             table.primaryKeyColumns(primaryKeyColumns);
             
             return table;
         });
-        
-        //TODO: remove special columns
         
         // insert references
         _.map(dbSchema.Tables, tableDto => {
@@ -123,8 +138,7 @@ class sqlMigration {
                 
             case "MsSQL":
                 // Append initial catalog. For now we don't take it from the connection string.
-                let msSQLConnectionString = `${this.sqlServer.connectionString()}\;Initial Catalog='${this.escape(this.sourceDatabaseName())}'`;
-                return msSQLConnectionString;
+                return `${this.sqlServer.connectionString()}\;Initial Catalog='${this.escape(this.sourceDatabaseName())}'`;
                 
             default:
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);
