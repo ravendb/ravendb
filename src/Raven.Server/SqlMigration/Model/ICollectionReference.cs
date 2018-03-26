@@ -10,8 +10,10 @@ namespace Raven.Server.SqlMigration.Model
         
         string Name { get; set; }
         
-        List<string> Columns { get; set; }
+        List<string> JoinColumns { get; set; }
         
         RelationType Type { get; set; }
+        
+        Dictionary<string, string> ColumnsMapping { get; set; }
     }
 }

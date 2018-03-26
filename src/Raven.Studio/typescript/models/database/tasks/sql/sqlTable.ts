@@ -8,7 +8,7 @@ class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
     tableName: string;
     customCollection = ko.observable<string>();
     primaryKeyColumns = ko.observableArray<sqlColumn>([]);
-    columns = ko.observableArray<sqlColumn>([]);
+    documentColumns = ko.observableArray<sqlColumn>([]);
     checked = ko.observable<boolean>(true);
     references = ko.observableArray<sqlReference>([]);
     
@@ -16,7 +16,7 @@ class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
     
     constructor() {
         this.documentIdTemplate = ko.pureComputed(() => {
-            const templetePart = this.primaryKeyColumns().map(x => '{' + x.name + '}').join("/");
+            const templetePart = this.primaryKeyColumns().map(x => '{' + x.sqlName + '}').join("/");
             return this.customCollection() + "/" + templetePart;
         });
     }
@@ -29,9 +29,15 @@ class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
                     Name: x.name(),
                     SourceTableName: x.targetTable.tableName,
                     SourceTableSchema: x.targetTable.tableSchema,
-                    Columns: x.columns
+                    JoinColumns: x.joinColumns,
+                    Type: x.type
                 } as Raven.Server.SqlMigration.Model.LinkedCollection; 
             });
+        
+        const mapping = {} as dictionary<string>;
+        this.documentColumns().forEach(column => {
+            mapping[column.sqlName] = column.propertyName();
+        });
         
         return {
             SourceTableName: this.tableName,
@@ -40,7 +46,8 @@ class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
             Patch: null, //TODO:
             SourceTableQuery: null,  //TODO
             NestedCollections: [], //TODO
-            LinkedCollections:  linkedReferences
+            LinkedCollections:  linkedReferences,
+            ColumnsMapping: mapping
         } as Raven.Server.SqlMigration.Model.RootCollection;
     }
 }

@@ -4,12 +4,12 @@ namespace Raven.Server.SqlMigration.Model
 {
     public class EmbeddedCollection : CollectionWithReferences, ICollectionReference
     {
-        public List<string> Columns { get; set; }
+        public List<string> JoinColumns { get; set; }
         public RelationType Type { get; set; }
         
         public EmbeddedCollection(string sourceTableSchema, string sourceTableName, RelationType type, List<string> columns, string name) : base(sourceTableSchema, sourceTableName, name)
         {
-            Columns = columns;
+            JoinColumns = columns;
             Type = type;
         }
     }
