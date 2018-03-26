@@ -38,6 +38,7 @@ namespace Raven.Server.Dashboard
                 await WaitOrThrowOperationCanceled(_notificationsThrottle - timeSpan);
             }
 
+            byte[][] buffers = null;
             try
             {
                 if (CancellationToken.IsCancellationRequested)
@@ -51,9 +52,8 @@ namespace Raven.Server.Dashboard
                 {
                     var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
                     var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    buffers = new []{buffer1, buffer2};
                     smapsReader = new SmapsReader(new[] {buffer1, buffer2});
-                    ArrayPool<byte>.Shared.Return(buffer1);
-                    ArrayPool<byte>.Shared.Return(buffer2);   
                 }
                 var machineResources = GetMachineResources(smapsReader);
                 foreach (var watcher in _watchers)
@@ -66,6 +66,11 @@ namespace Raven.Server.Dashboard
             finally
             {
                 _lastSentNotification = DateTime.UtcNow;
+                if (buffers != null)
+                {
+                    ArrayPool<byte>.Shared.Return(buffers[0]);
+                    ArrayPool<byte>.Shared.Return(buffers[1]);
+                }
             }
         }
 
