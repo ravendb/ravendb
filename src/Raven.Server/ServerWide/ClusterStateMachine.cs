@@ -418,6 +418,8 @@ namespace Raven.Server.ServerWide
                     if (record.Topology.RelevantFor(removed))
                     {
                         record.Topology.RemoveFromTopology(removed);
+                        // Explict removing of the node means that we modify the replication factor
+                        record.Topology.ReplicationFactor = record.Topology.Count;
                     }
                     var updated = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
 
