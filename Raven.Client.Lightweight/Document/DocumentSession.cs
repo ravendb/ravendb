@@ -19,7 +19,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace Raven.Client.Document
 {
     /// <summary>
@@ -731,16 +730,14 @@ namespace Raven.Client.Document
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
-
-
-        public void SaveChanges()
+        public virtual void SaveChanges()
         {
             using (EntityToJson.EntitiesToJsonCachingScope())
             {
                 var data = PrepareForSaveChanges();
-
                 if (data.Commands.Count == 0)
                     return;
+
                 IncrementRequestCount();
                 LogBatch(data);
 

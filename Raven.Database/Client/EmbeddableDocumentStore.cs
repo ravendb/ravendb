@@ -324,6 +324,36 @@ namespace Raven.Client.Embedded
             return Inner.OpenSession(sessionOptions);
         }
 
+        public IAsyncDocumentSession OpenNagleAsyncSession()
+        {
+            return Inner.OpenNagleAsyncSession();
+        }
+
+        public IAsyncDocumentSession OpenNagleAsyncSession(string database)
+        {
+            return Inner.OpenNagleAsyncSession(database);
+        }
+
+        public IAsyncDocumentSession OpenNagleAsyncSession(OpenSessionOptions sessionOptions)
+        {
+            return Inner.OpenNagleAsyncSession(sessionOptions);
+        }
+
+        public IDocumentSession OpenNagleSession()
+        {
+            return Inner.OpenNagleSession();
+        }
+
+        public IDocumentSession OpenNagleSession(string database)
+        {
+            return Inner.OpenNagleSession(database);
+        }
+
+        public IDocumentSession OpenNagleSession(OpenSessionOptions sessionOptions)
+        {
+            return Inner.OpenNagleSession(sessionOptions);
+        }
+
         public IDatabaseCommands DatabaseCommands
         {
             get { return Inner.DatabaseCommands; }

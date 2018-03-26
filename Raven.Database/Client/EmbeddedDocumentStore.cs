@@ -304,6 +304,36 @@ namespace Raven.Database.Client
             return server.DocumentStore.OpenSession(sessionOptions);
         }
 
+        public IAsyncDocumentSession OpenNagleAsyncSession()
+        {
+            return server.DocumentStore.OpenNagleAsyncSession();
+        }
+
+        public IAsyncDocumentSession OpenNagleAsyncSession(string database)
+        {
+            return server.DocumentStore.OpenNagleAsyncSession(database);
+        }
+
+        public IAsyncDocumentSession OpenNagleAsyncSession(OpenSessionOptions sessionOptions)
+        {
+            return server.DocumentStore.OpenNagleAsyncSession(sessionOptions);
+        }
+
+        public IDocumentSession OpenNagleSession()
+        {
+            return server.DocumentStore.OpenNagleSession();
+        }
+
+        public IDocumentSession OpenNagleSession(string database)
+        {
+            return server.DocumentStore.OpenNagleSession(database);
+        }
+
+        public IDocumentSession OpenNagleSession(OpenSessionOptions sessionOptions)
+        {
+            return server.DocumentStore.OpenNagleSession(sessionOptions);
+        }
+
         /// <summary>
         ///     Gets the database commands.
         /// </summary>

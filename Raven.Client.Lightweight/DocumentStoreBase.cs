@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -19,6 +22,7 @@ using Raven.Client.Document;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Abstractions.Util.Encryptors;
+using SaveChangesData = Raven.Client.Document.InMemoryDocumentSessionOperations.SaveChangesData;
 
 namespace Raven.Client
 {
@@ -93,7 +97,15 @@ namespace Raven.Client
         public abstract IDocumentSession OpenSession(string database);
         public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
         public abstract IDatabaseCommands DatabaseCommands { get; }
-        
+
+        public abstract IAsyncDocumentSession OpenNagleAsyncSession();
+        public abstract IAsyncDocumentSession OpenNagleAsyncSession(string database);
+        public abstract IAsyncDocumentSession OpenNagleAsyncSession(OpenSessionOptions sessionOptions);
+
+        public abstract IDocumentSession OpenNagleSession();
+        public abstract IDocumentSession OpenNagleSession(string database);
+        public abstract IDocumentSession OpenNagleSession(OpenSessionOptions sessionOptions);
+
         /// <summary>
         /// Executes index creation.
         /// </summary>
