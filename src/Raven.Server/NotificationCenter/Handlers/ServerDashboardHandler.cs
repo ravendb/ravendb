@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Raven.Server.Dashboard;
 using Raven.Server.Routing;
 using Sparrow.Logging;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -22,7 +24,8 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                     try
                     {
-                        var machineResources = MachineResourcesNotificationSender.GetMachineResources();
+                        SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
+                        var machineResources = MachineResourcesNotificationSender.GetMachineResources(smapsReader);
                         await writer.WriteToWebSocket(machineResources.ToJson());
 
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
