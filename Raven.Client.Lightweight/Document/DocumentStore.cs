@@ -910,7 +910,7 @@ namespace Raven.Client.Document
             return changes == null ? new CompletedTask() : changes.ConnectionTask;
         }
 
-        public class NagleData
+        internal class NagleData
         {
             public InMemoryDocumentSessionOperations.SaveChangesData SaveChangesData { get; set; }
 
@@ -920,7 +920,7 @@ namespace Raven.Client.Document
         private readonly BlockingCollection<NagleData> nagleQueue = new BlockingCollection<NagleData>();
         private Task nagleWriterTask;
 
-        public Task<BatchResult[]> AddNagleData(InMemoryDocumentSessionOperations.SaveChangesData saveChangesData)
+        internal Task<BatchResult[]> AddNagleData(InMemoryDocumentSessionOperations.SaveChangesData saveChangesData)
         {
             InitializeNagleQueueWriterIfNeeded();
 
