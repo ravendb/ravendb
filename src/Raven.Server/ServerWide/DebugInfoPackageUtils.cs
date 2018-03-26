@@ -4,14 +4,22 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using Raven.Server.Routing;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide
 {
     public static class DebugInfoPackageUtils
     {
         public static readonly IReadOnlyList<RouteInformation> Routes =
-            RouteScanner.Scan(attr => attr.IsDebugInformationEndpoint &&
-                                      attr.Path.Contains("info-package") == false).Values.ToList();
+            RouteScanner.Scan(attr =>
+            {
+                var isDebugEndpoint = attr.IsDebugInformationEndpoint && attr.Path.Contains("info-package") == false;
+
+                if (isDebugEndpoint && attr.IsPosixSpecificEndpoint && PlatformDetails.RunningOnPosix == false)
+                    return false;
+
+                return isDebugEndpoint;
+            }).Values.ToList();
 
         public static string GetOutputPathFromRouteInformation(RouteInformation route, string prefix)
         {

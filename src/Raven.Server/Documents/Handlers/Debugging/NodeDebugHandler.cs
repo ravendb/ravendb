@@ -77,6 +77,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                write.WriteStartObject();
+                write.WritePropertyName("Result");
+
                 write.WriteStartArray();
                 while (tasks.Count > 0)
                 {
@@ -90,6 +93,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     write.Flush();
                 }
                 write.WriteEndArray();
+                write.WriteEndObject();
                 write.Flush();
             }
         }
