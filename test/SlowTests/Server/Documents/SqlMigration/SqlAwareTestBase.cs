@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using FastTests;
 using MySql.Data.MySqlClient;
 using Raven.Server.SqlMigration;
+using Raven.Server.SqlMigration.Model;
+using Raven.Server.SqlMigration.Schema;
 using SlowTests.Server.Documents.ETL.SQL;
 using Voron.Util;
 using DisposableAction = Raven.Client.Util.DisposableAction;
@@ -15,7 +19,6 @@ namespace SlowTests.Server.Documents.SqlMigration
     {
         public static readonly Lazy<string> MySqlDatabaseConnection = new Lazy<string>(() =>
         {
-            //TODO: use ENV variable to allow different values
             var local = @"server=127.0.0.1;uid=root;pwd=";
             using (var con = new MySqlConnection(local))
             {
@@ -24,6 +27,50 @@ namespace SlowTests.Server.Documents.SqlMigration
 
             return local;
         });
+
+
+        protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, MigrationSettings settings)
+        {
+            foreach (var collection in settings.Collections)
+            {
+                Map(collection);
+            }
+
+            void Map(AbstractCollection collection)
+            {
+                var tableSchema = dbSchema.Tables.First(x => x.Schema == collection.SourceTableSchema && x.TableName == collection.SourceTableName);
+                
+                var specialColumns = dbSchema.FindSpecialColumns(collection.SourceTableSchema, collection.SourceTableName);
+                var attachmentColumns = tableSchema.GetAttachmentColumns(settings.BinaryToAttachment);
+                
+                var mapping = tableSchema.Columns
+                    .Where(x => specialColumns.Contains(x.Name) == false && attachmentColumns.Contains(x.Name) == false)
+                    .Select(c => (c.Name, c.Name.First().ToString().ToUpper() + c.Name.Substring(1)))
+                    .ToDictionary(x => x.Name, x => x.Item2);
+
+                collection.ColumnsMapping = mapping;
+                
+                if (collection is CollectionWithReferences collectionWithRefs)
+                {
+                    if (collectionWithRefs.LinkedCollections != null)
+                    {
+                        foreach (var linkedCollection in collectionWithRefs.LinkedCollections)
+                        {
+                            Map(linkedCollection);
+                        }
+                    }
+
+                    if (collectionWithRefs.NestedCollections != null)
+                    {
+                        foreach (var embeddedCollection in collectionWithRefs.NestedCollections)
+                        {
+                            Map(embeddedCollection);
+                        }
+                    }
+                }
+                
+            }
+        }
 
         protected void ExecuteSqlQuery(MigrationProvider provider, string connectionString, string query)
         {

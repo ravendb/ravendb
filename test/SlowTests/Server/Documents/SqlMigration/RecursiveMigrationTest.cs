@@ -43,17 +43,18 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
                     using (var session = store.OpenSession())
                     {
                         var g1111 = session.Load<JObject>("Groups/53");
-                        Assert.Equal("G1.1.1.1", g1111["name"]);
+                        Assert.Equal("G1.1.1.1", g1111["Name"]);
                         var g111 = session.Load<JObject>(g1111["Parent"].ToString());
-                        Assert.Equal("G1.1.1", g111["name"]);
+                        Assert.Equal("G1.1.1", g111["Name"]);
                         var g11 = session.Load<JObject>(g111["Parent"].ToString());
-                        Assert.Equal("G1.1", g11["name"]);
+                        Assert.Equal("G1.1", g11["Name"]);
                     }
 
                     var collectionStatistics = store.Maintenance.Send(new GetCollectionStatisticsOperation());
@@ -91,6 +92,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -143,19 +145,20 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
                     using (var session = store.OpenSession())
                     {
                         var group = session.Load<JObject>("Groups/53");
-                        Assert.Equal("G1.1.1.1", group["name"]);
+                        Assert.Equal("G1.1.1.1", group["Name"]);
                         var parent = group["Parent"];
                         Assert.NotNull(parent);
-                        Assert.Equal("G1.1.1", parent["name"]);
+                        Assert.Equal("G1.1.1", parent["Name"]);
                         var grandparent = parent["Grandparent"];
                         Assert.NotNull(grandparent);
-                        Assert.Equal("G1.1", grandparent["name"]);
+                        Assert.Equal("G1.1", grandparent["Name"]);
                     }
 
                     var collectionStatistics = store.Maintenance.Send(new GetCollectionStatisticsOperation());

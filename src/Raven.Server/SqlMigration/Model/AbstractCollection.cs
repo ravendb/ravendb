@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.SqlMigration.Model
+﻿using System.Collections.Generic;
+
+namespace Raven.Server.SqlMigration.Model
 {
     public abstract class AbstractCollection
     {
@@ -8,8 +10,11 @@
         // SQL Table name
         public string SourceTableName { get; set; }
         
-        // RavenDB Collection name
+        // RavenDB Collection/Property name
         public string Name { get; set; }
+        
+        // SQL Column Name -> Document Id Property Name
+        public Dictionary<string, string> ColumnsMapping { get; set; }
 
 
         protected AbstractCollection(string sourceTableSchema, string sourceTableName, string name)

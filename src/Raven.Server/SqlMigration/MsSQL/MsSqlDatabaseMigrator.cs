@@ -81,7 +81,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                     var columnName = reader["COLUMN_NAME"].ToString();
                     var columnType = MapColumnType(reader["DATA_TYPE"].ToString());
                     
-                    tableSchema.Columns.Add(new TableColumn(columnName, columnType));
+                    tableSchema.Columns.Add(new TableColumn(columnType, columnName));
                 }
             }
         }
@@ -233,28 +233,20 @@ namespace Raven.Server.SqlMigration.MsSQL
             return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName);
         }
 
-        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, HashSet<string> specialColumns, HashSet<string> attachmentColumns,
-            SqlConnection connection)
+        protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
+            HashSet<string> specialColumns, HashSet<string> attachmentColumns, SqlConnection connection)
         {
             using (var cmd = new SqlCommand(tableQuery, connection))
             using (var reader = cmd.ExecuteReader())
             {
-                var columnNames = new List<string>();
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    var columnName = reader.GetName(i);
-                    if (specialColumns.Contains(columnName) == false && attachmentColumns.Contains(columnName) == false)
-                    {
-                        columnNames.Add(columnName);
-                    }
-                }
-
                 while (reader.Read())
                 {
-                    var migrationDocument = new SqlMigrationDocument();
-                    migrationDocument.Object = ExtractFromReader(reader, columnNames);
-                    migrationDocument.SpecialColumnsValues = ExtractFromReader(reader, specialColumns);
-                    migrationDocument.Attachments = ExtractAttachments(reader, attachmentColumns);
+                    var migrationDocument = new SqlMigrationDocument
+                    {
+                        Object = ExtractFromReader(reader, documentPropertiesMapping),
+                        SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
+                        Attachments = ExtractAttachments(reader, attachmentColumns)
+                    };
                     yield return migrationDocument;
                 }
             }

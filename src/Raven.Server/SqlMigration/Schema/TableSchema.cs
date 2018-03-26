@@ -44,5 +44,12 @@ namespace Raven.Server.SqlMigration.Schema
                                                    && x.Schema == collection.SourceTableSchema
                                                    && EnumerableExtension.ContentEquals(x.Columns, columns));
         }
+        
+        public HashSet<string> GetAttachmentColumns(bool binaryToAttachment)
+        {
+            return binaryToAttachment
+                ? Columns.Where(x => x.Type == ColumnType.Binary).Select(x => x.Name).ToHashSet()
+                : new HashSet<string>();
+        }
     }
 }

@@ -30,9 +30,6 @@ class sqlMigration {
     
     constructor() {       
         this.initValidation();   
-        
-        //TODO: remember password in MySQL is not required        
-        //TODO: use proper validation group based on database type 
     }
 
     initValidation() {
@@ -101,10 +98,10 @@ class sqlMigration {
             tableDto.References.forEach(referenceDto => {
                 const targetTable = mapping.find(x => x.tableName === referenceDto.Table && x.tableSchema === referenceDto.Schema);
                 
-                const oneToMany = new sqlReference(targetTable, referenceDto.Columns, "oneToMany");
+                const oneToMany = new sqlReference(targetTable, referenceDto.Columns, "OneToMany");
                 sourceTable.references.push(oneToMany);
                 
-                const manyToOne = new sqlReference(sourceTable, referenceDto.Columns, "manyToOne");
+                const manyToOne = new sqlReference(sourceTable, referenceDto.Columns, "ManyToOne");
                 targetTable.references.push(manyToOne);
             });
         });
