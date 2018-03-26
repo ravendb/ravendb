@@ -48,7 +48,7 @@ namespace RachisTests
 
                 using (var session = store.OpenSession(databaseName))
                 {
-                    Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
+                    Assert.Throws<RavenException>(() => session.Load<User>("users/1"));
                 }
             }
         }
