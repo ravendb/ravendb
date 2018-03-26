@@ -274,7 +274,7 @@ namespace Voron.Impl.Paging
             return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
 
-        public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null, bool handleOverwrite = false)
+        public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
             return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
