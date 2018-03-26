@@ -122,9 +122,8 @@ namespace Voron.Impl.Paging
             {
                 if (size == buffer.Size)
                 {
-                    // precaution
-                    Memory.Set(buffer.Pointer, 0, size);
-                    Memory.Set(buffer.Hash, 0, EncryptionBuffer.HashSizeInt);
+                    Sodium.sodium_memzero(buffer.Pointer, (UIntPtr)size);
+                    Sodium.sodium_memzero(buffer.Hash, (UIntPtr)EncryptionBuffer.HashSizeInt);
 
                     buffer.SkipOnTxCommit = false;
                     return buffer.Pointer;
