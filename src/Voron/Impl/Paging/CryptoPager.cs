@@ -113,12 +113,12 @@ namespace Voron.Impl.Paging
             return checked((overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
 
-        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null, bool handleOverwrite = false)
+        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
             var state = GetTransactionState(tx);
             var size = numberOfPages * Constants.Storage.PageSize;
 
-            if (handleOverwrite && state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
+            if (state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
             {
                 if (size == buffer.Size)
                 {
