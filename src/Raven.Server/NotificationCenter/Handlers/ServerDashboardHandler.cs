@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Dashboard;
@@ -21,10 +22,17 @@ namespace Raven.Server.NotificationCenter.Handlers
                 using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
                     var isValidFor = GetDatabaseAccessValidationFunc();
-
                     try
                     {
-                        SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
+                        SmapsReader smapsReader = null;
+                        if (PlatformDetails.RunningOnLinux)
+                        {
+                            var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                            var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                            smapsReader = new SmapsReader(new[] {buffer1, buffer2});
+                            ArrayPool<byte>.Shared.Return(buffer1);
+                            ArrayPool<byte>.Shared.Return(buffer2);   
+                        }
                         var machineResources = MachineResourcesNotificationSender.GetMachineResources(smapsReader);
                         await writer.WriteToWebSocket(machineResources.ToJson());
 
