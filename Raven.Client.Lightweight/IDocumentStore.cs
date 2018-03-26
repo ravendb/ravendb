@@ -134,6 +134,13 @@ namespace Raven.Client
         /// </summary>
         IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 
+        IAsyncDocumentSession OpenNagleAsyncSession();
+        IAsyncDocumentSession OpenNagleAsyncSession(string database);
+        IAsyncDocumentSession OpenNagleAsyncSession(OpenSessionOptions sessionOptions);
+        IDocumentSession OpenNagleSession();
+        IDocumentSession OpenNagleSession(string database);
+        IDocumentSession OpenNagleSession(OpenSessionOptions sessionOptions);
+
         /// <summary>
         /// Gets the database commands.
         /// </summary>

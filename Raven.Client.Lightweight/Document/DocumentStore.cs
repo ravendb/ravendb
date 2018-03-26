@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 
@@ -26,7 +27,7 @@ using Raven.Client.Document.Async;
 using Raven.Client.Metrics;
 using Raven.Client.Util;
 using System.Threading;
-
+using Raven.Abstractions.Commands;
 #if !DNXCORE50
 using Raven.Client.Document.DTC;
 #endif
@@ -286,6 +287,10 @@ namespace Raven.Client.Document
                 jsonRequestFactory.Dispose();
 
             WasDisposed = true;
+
+            nagleQueue.CompleteAdding();
+            nagleWriterTask?.Wait();
+
             var afterDispose = AfterDispose;
             if (afterDispose != null)
                 afterDispose(this, EventArgs.Empty);
@@ -340,6 +345,41 @@ namespace Raven.Client.Document
             try
             {
                 var session = new DocumentSession(options.Database, this, Listeners, sessionId,
+                    SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
+                {
+                    DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
+                };
+                AfterSessionCreated(session);
+                return session;
+            }
+            finally
+            {
+                currentSessionId = null;
+            }
+        }
+
+        public override IDocumentSession OpenNagleSession()
+        {
+            return OpenNagleSession(new OpenSessionOptions());
+        }
+
+        public override IDocumentSession OpenNagleSession(string database)
+        {
+            return OpenNagleSession(new OpenSessionOptions
+            {
+                Database = database
+            });
+        }
+
+        public override IDocumentSession OpenNagleSession(OpenSessionOptions options)
+        {
+            EnsureNotClosed();
+
+            var sessionId = Guid.NewGuid();
+            currentSessionId = sessionId;
+            try
+            {
+                var session = new NagleSession(options.Database, this, Listeners, sessionId,
                     SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
                 {
                     DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
@@ -778,6 +818,50 @@ namespace Raven.Client.Document
             return OpenAsyncSessionInternal(options);
         }
 
+        public override IAsyncDocumentSession OpenNagleAsyncSession()
+        {
+            return OpenNagleAsyncSession(new OpenSessionOptions());
+        }
+
+        public override IAsyncDocumentSession OpenNagleAsyncSession(string databaseName)
+        {
+            return OpenNagleAsyncSession(new OpenSessionOptions
+            {
+                Database = databaseName
+            });
+        }
+
+        public override IAsyncDocumentSession OpenNagleAsyncSession(OpenSessionOptions options)
+        {
+            return OpenNagleAsyncSessionInternal(options);
+        }
+
+        private IAsyncDocumentSession OpenNagleAsyncSessionInternal(OpenSessionOptions options)
+        {
+            AssertInitialized();
+            EnsureNotClosed();
+
+            var sessionId = Guid.NewGuid();
+            currentSessionId = sessionId;
+            try
+            {
+                var asyncDatabaseCommands = SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options);
+                if (AsyncDatabaseCommands == null)
+                    throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
+
+                var session = new NagleAsyncDocumentSession(options.Database, this, asyncDatabaseCommands, Listeners, sessionId)
+                {
+                    DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
+                };
+                AfterSessionCreated(session);
+                return session;
+            }
+            finally
+            {
+                currentSessionId = null;
+            }
+        }
+
         /// <summary>
         /// Called after dispose is completed
         /// </summary>
@@ -824,6 +908,174 @@ namespace Raven.Client.Document
             var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;
+        }
+
+        public class NagleData
+        {
+            public InMemoryDocumentSessionOperations.SaveChangesData SaveChangesData { get; set; }
+
+            public TaskCompletionSource<BatchResult[]> TaskCompletionSource = new TaskCompletionSource<BatchResult[]>();
+        }
+
+        private readonly BlockingCollection<NagleData> nagleQueue = new BlockingCollection<NagleData>();
+        private Task nagleWriterTask;
+
+        public Task<BatchResult[]> AddNagleData(InMemoryDocumentSessionOperations.SaveChangesData saveChangesData)
+        {
+            InitializeNagleQueueWriterIfNeeded();
+
+            var nagleData = new NagleData { SaveChangesData = saveChangesData };
+            nagleQueue.Add(nagleData);
+            return nagleData.TaskCompletionSource.Task;
+        }
+
+        private void InitializeNagleQueueWriterIfNeeded()
+        {
+         
+            if (nagleWriterTask != null)
+            {
+                EnsureNagleIsNotFaulted();
+                return;
+            }
+
+            lock (nagleQueue)
+            {
+                if (nagleWriterTask == null)
+                    nagleWriterTask = Task.Run(() => WriteNagleQueueToServer());
+            }
+
+            EnsureNagleIsNotFaulted();
+        }
+
+        private void EnsureNagleIsNotFaulted()
+        {
+            if (nagleWriterTask.IsCanceled || nagleWriterTask.IsFaulted)
+                nagleWriterTask.Wait(); // throw
+        }
+
+        private void WriteNagleQueueToServer()
+        {
+            while (nagleQueue.IsCompleted == false)
+            {
+                if (WasDisposed)
+                {
+                    ClearNagleQueueOnDispose();
+                    continue;
+                }
+
+                var nagleData = new List<NagleData>();
+                NagleData queueNagleData;
+                while (nagleQueue.TryTake(out queueNagleData))
+                {
+                    if (WasDisposed)
+                    {
+                        queueNagleData.TaskCompletionSource.TrySetCanceled();
+                        break;
+                    }
+
+                    nagleData.Add(queueNagleData);
+
+                    if (nagleData.Count >= Conventions.MaxItemsInNagleBatch)
+                        break;
+                }
+
+                if (nagleData.Count == 0)
+                    continue;
+
+                if (nagleQueue.IsAddingCompleted)
+                    continue;
+
+                FlushBatch(nagleData);
+            }
+        }
+
+        private void ClearNagleQueueOnDispose()
+        {
+            NagleData queueNagleData;
+            while (nagleQueue.TryTake(out queueNagleData))
+            {
+                queueNagleData.TaskCompletionSource.TrySetCanceled();
+            }
+        }
+
+        private void FlushBatch(List<NagleData> nagleData)
+        {
+            try
+            {
+                var commands = nagleData.SelectMany(x => x.SaveChangesData.Commands).ToList();
+                var batchOptions = GetMergedBatchOptions(nagleData.Select(x => x.SaveChangesData.Options));
+                var results = DatabaseCommands.Batch(commands, batchOptions);
+                var index = 0;
+
+                foreach (var data in nagleData)
+                {
+                    data.TaskCompletionSource.TrySetResult(results.Skip(index).Take(data.SaveChangesData.Commands.Count).ToArray());
+                    index += data.SaveChangesData.Commands.Count;
+                }
+            }
+            catch (Exception)
+            {
+                RunCommandsOneByOne(nagleData);
+            }
+        }
+
+        private void RunCommandsOneByOne(List<NagleData> nagleData)
+        {
+            foreach (var data in nagleData)
+            {
+                try
+                {
+                    var batchResults = DatabaseCommands.Batch(data.SaveChangesData.Commands, data.SaveChangesData.Options);
+                    if (batchResults == null)
+                        throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
+
+                    data.TaskCompletionSource.TrySetResult(batchResults);
+                }
+                catch (Exception exception)
+                {
+                    data.TaskCompletionSource.TrySetException(exception);
+                }
+            }
+        }
+
+        private static BatchOptions GetMergedBatchOptions(IEnumerable<BatchOptions> allOptions)
+        {
+            var batchOptions = new BatchOptions();
+            foreach (var option in allOptions)
+            {
+                if (option == null)
+                    continue;
+
+                batchOptions.WaitForReplicas |= option.WaitForReplicas;
+                batchOptions.NumberOfReplicasToWaitFor = Math.Max(batchOptions.NumberOfReplicasToWaitFor, option.NumberOfReplicasToWaitFor);
+                batchOptions.WaitForReplicasTimout =
+                    batchOptions.WaitForReplicasTimout > option.WaitForReplicasTimout
+                        ? batchOptions.WaitForReplicasTimout
+                        : option.WaitForReplicasTimout;
+                batchOptions.Majority |= option.Majority;
+                batchOptions.ThrowOnTimeoutInWaitForReplicas |= option.ThrowOnTimeoutInWaitForReplicas;
+
+                batchOptions.WaitForIndexes |= option.WaitForIndexes;
+                batchOptions.WaitForIndexesTimeout =
+                    batchOptions.WaitForIndexesTimeout > option.WaitForIndexesTimeout
+                        ? batchOptions.WaitForIndexesTimeout
+                        : option.WaitForIndexesTimeout;
+
+                batchOptions.ThrowOnTimeoutInWaitForIndexes |= option.ThrowOnTimeoutInWaitForIndexes;
+                if (option.WaitForSpecificIndexes != null)
+                {
+                    if (batchOptions.WaitForSpecificIndexes == null)
+                    {
+                        batchOptions.WaitForSpecificIndexes = option.WaitForSpecificIndexes;
+                    }
+                    else
+                    {
+                        batchOptions.WaitForSpecificIndexes.AddRange(option.WaitForSpecificIndexes);
+                    }
+                }
+            }
+
+            return batchOptions;
         }
     }
 }

@@ -102,6 +102,7 @@ namespace Raven.Client.Document
             AcceptGzipContent = true;
             RequestTimeSlaThresholdInMilliseconds = 100;
             TimeToWaitBetweenReplicationTopologyUpdates = TimeSpan.FromMinutes(5);
+            MaxItemsInNagleBatch = 256;
         }
 
         private IEnumerable<object> DefaultApplyReduceFunction(

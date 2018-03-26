@@ -29,7 +29,7 @@ namespace Raven.Client.Document.Async
     /// </summary>
     public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
     {
-        private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+        protected readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -919,7 +919,7 @@ namespace Raven.Client.Document.Async
         /// Begins the async save changes operation
         /// </summary>
         /// <returns></returns>
-        public async Task SaveChangesAsync(CancellationToken token = default (CancellationToken))
+        public virtual async Task SaveChangesAsync(CancellationToken token = default (CancellationToken))
         {
             await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
 

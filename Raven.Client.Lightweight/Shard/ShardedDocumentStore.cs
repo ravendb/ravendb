@@ -151,6 +151,36 @@ namespace Raven.Client.Shard
             return session;
         }
 
+        public override IAsyncDocumentSession OpenNagleAsyncSession()
+        {
+            throw new NotSupportedException("Sharded document store support the Nagle session");
+        }
+
+        public override IAsyncDocumentSession OpenNagleAsyncSession(string database)
+        {
+            throw new NotSupportedException("Sharded document store support the Nagle session");
+        }
+
+        public override IAsyncDocumentSession OpenNagleAsyncSession(OpenSessionOptions sessionOptions)
+        {
+            throw new NotSupportedException("Sharded document store support the Nagle session");
+        }
+
+        public override IDocumentSession OpenNagleSession()
+        {
+            throw new NotSupportedException("Sharded document store support the Nagle session");
+        }
+
+        public override IDocumentSession OpenNagleSession(string database)
+        {
+            throw new NotSupportedException("Sharded document store support the Nagle session");
+        }
+
+        public override IDocumentSession OpenNagleSession(OpenSessionOptions sessionOptions)
+        {
+            throw new NotSupportedException("Sharded document store support the Nagle session");
+        }
+
         private readonly AtomicDictionary<IDatabaseChanges> changes =
             new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
