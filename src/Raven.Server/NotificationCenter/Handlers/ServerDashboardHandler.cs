@@ -19,9 +19,11 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
+                using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool,
+                    ServerStore.ServerShutdown))
                 {
                     var isValidFor = GetDatabaseAccessValidationFunc();
+                    byte[][] buffers = null;
                     try
                     {
                         SmapsReader smapsReader = null;
@@ -29,10 +31,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                         {
                             var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
                             var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                            buffers = new[] {buffer1, buffer2};
                             smapsReader = new SmapsReader(new[] {buffer1, buffer2});
-                            ArrayPool<byte>.Shared.Return(buffer1);
-                            ArrayPool<byte>.Shared.Return(buffer2);   
                         }
+
                         var machineResources = MachineResourcesNotificationSender.GetMachineResources(smapsReader);
                         await writer.WriteToWebSocket(machineResources.ToJson());
 
@@ -49,6 +51,14 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         if (Logger.IsInfoEnabled)
                             Logger.Info("Failed to send the initial server dashboard data", e);
+                    }
+                    finally
+                    {
+                        if (buffers != null)
+                        {
+                            ArrayPool<byte>.Shared.Return(buffers[0]);
+                            ArrayPool<byte>.Shared.Return(buffers[1]);
+                        }
                     }
 
                     await writer.WriteNotifications(isValidFor);
