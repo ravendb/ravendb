@@ -1,20 +1,14 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 
-import sqlColumn = require("models/database/tasks/sql/sqlColumn");
-import sqlReference = require("models/database/tasks/sql/sqlReference");
+import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
 
-class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
-    tableSchema: string;
-    tableName: string;
+class rootSqlTable extends abstractSqlTable { 
     customCollection = ko.observable<string>();
-    primaryKeyColumns = ko.observableArray<sqlColumn>([]);
-    documentColumns = ko.observableArray<sqlColumn>([]);
     checked = ko.observable<boolean>(true);
-    references = ko.observableArray<sqlReference>([]);
-    
     documentIdTemplate: KnockoutComputed<string>;
     
     constructor() {
+        super();
         this.documentIdTemplate = ko.pureComputed(() => {
             const templetePart = this.primaryKeyColumns().map(x => '{' + x.sqlName + '}').join("/");
             return this.customCollection() + "/" + templetePart;
@@ -53,5 +47,5 @@ class sqlTable { //TODO: split to sqlRootTable and sqlInnerTable
 }
 
 
-export = sqlTable;
+export = rootSqlTable;
  

@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
-import sqlTable = require("models/database/tasks/sql/sqlTable");
+import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
+import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
+
 import sqlColumn = require("models/database/tasks/sql/sqlColumn");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 
@@ -26,7 +28,7 @@ class sqlMigration {
     
     mySqlValidationGroup: KnockoutValidationGroup;
     
-    tables = ko.observableArray<sqlTable>([]); 
+    tables = ko.observableArray<rootSqlTable>([]); 
     
     constructor() {       
         this.initValidation();   
@@ -91,7 +93,7 @@ class sqlMigration {
     
     onSchemaUpdated(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema) {
         const mapping = _.map(dbSchema.Tables, tableDto => {
-            const table = new sqlTable();
+            const table = new rootSqlTable();
             
             table.tableName = tableDto.TableName;
             table.tableSchema = tableDto.Schema;
