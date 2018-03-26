@@ -22,5 +22,22 @@ namespace Raven.Server.SqlMigration.Schema
         {
             return Tables.FirstOrDefault(x => x.Schema == schema && x.TableName == tableName);
         }
+        
+        public HashSet<string> FindSpecialColumns(string tableSchema, string tableName)
+        {
+            var mainSchema = GetTable(tableSchema, tableName);
+
+            var result = new HashSet<string>();
+            mainSchema.PrimaryKeyColumns.ForEach(x => result.Add(x));
+
+            foreach (var fkCandidate in Tables)
+            foreach (var tableReference in fkCandidate.References
+                .Where(x => x.Table == tableName && x.Schema == tableSchema))
+            {
+                tableReference.Columns.ForEach(x => result.Add(x));
+            }
+
+            return result;
+        }
     }
 }

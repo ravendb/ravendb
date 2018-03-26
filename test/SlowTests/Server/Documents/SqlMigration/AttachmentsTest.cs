@@ -50,6 +50,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
                     
@@ -106,6 +107,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
                     
@@ -113,14 +115,14 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         var actor32 = session.Load<JObject>("Actors/32");
                         Assert.Equal(0, session.Advanced.Attachments.GetNames(actor32).Length);
-                        Assert.Equal("MzI=", actor32["photo"]);
-                        Assert.Equal("MjE=", actor32["Movies"][0]["Movie"]["file"]);
-                        Assert.Equal("MjM=", actor32["Movies"][1]["Movie"]["file"]);
-                        Assert.Equal(JTokenType.Null, actor32["Movies"][2]["Movie"]["file"].Type);
+                        Assert.Equal("MzI=", actor32["Photo"]);
+                        Assert.Equal("MjE=", actor32["Movies"][0]["Movie"]["File"]);
+                        Assert.Equal("MjM=", actor32["Movies"][1]["Movie"]["File"]);
+                        Assert.Equal(JTokenType.Null, actor32["Movies"][2]["Movie"]["File"].Type);
                         
                         var actor34 = session.Load<JObject>("Actors/34");
                         Assert.Equal(0, session.Advanced.Attachments.GetNames(actor34).Length);
-                        Assert.Equal(JTokenType.Null, actor34["photo"].Type);
+                        Assert.Equal(JTokenType.Null, actor34["Photo"].Type);
                     }
                 }
             }

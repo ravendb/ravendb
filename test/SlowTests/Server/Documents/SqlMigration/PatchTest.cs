@@ -36,6 +36,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -78,6 +79,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 

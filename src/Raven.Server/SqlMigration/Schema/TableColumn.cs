@@ -7,18 +7,18 @@ namespace Raven.Server.SqlMigration.Schema
         public string Name { get; set; }
         public ColumnType Type { get; set; }
 
-        public TableColumn(string name, ColumnType type)
+        public TableColumn(ColumnType type, string name)
         {
-            Name = name;
             Type = type;
+            Name = name;
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Name)] = Name,
-                [nameof(Type)] = Type
+                [nameof(Type)] = Type,
+                [nameof(Name)] = Name
             };
         }
     }

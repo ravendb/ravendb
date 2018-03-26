@@ -2,8 +2,6 @@
 
 import sqlTable = require("./sqlTable");
 
-type referenceType = "oneToMany" | "manyToOne";
-
 class sqlReference {
     
     targetTable: sqlTable;
@@ -13,14 +11,14 @@ class sqlReference {
     action = ko.observable<sqlMigrationAction>();
     
     columns: string[];
-    type: referenceType;
+    type: Raven.Server.SqlMigration.Model.RelationType;
     
-    constructor(targetTable: sqlTable, columns: string[], type: referenceType) {
+    constructor(targetTable: sqlTable, columns: string[], type: Raven.Server.SqlMigration.Model.RelationType) {
         this.targetTable = targetTable;
         this.name(columns.join("And")); //TODO: - consider using collection name by default ? 
         this.columns = columns;
         this.type = type;
-        this.action(type === "oneToMany" ? 'skip' : 'link');
+        this.action(type === "OneToMany" ? 'skip' : 'link');
     }
 }
 

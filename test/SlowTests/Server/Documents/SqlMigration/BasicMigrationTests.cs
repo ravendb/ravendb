@@ -39,6 +39,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(3, order.Properties().Count());
 
                         Assert.Equal("Orders", order["@metadata"]["@collection"]);
-                        Assert.Equal(440, order["total"]);
+                        Assert.Equal(440, order["Total"]);
                         Assert.Equal("Orders/1", order["Id"]);
                     }
 
@@ -92,6 +93,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -104,14 +106,14 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, order.Properties().Count());
 
                         Assert.Equal("Orders", order["@metadata"]["@collection"]);
-                        Assert.Equal(440, order["total"]);
+                        Assert.Equal(440, order["Total"]);
                         Assert.Equal("Orders/1", order["Id"]);
                         var firstItem = order["Items"][0];
-                        Assert.Equal(110, firstItem["price"]);
+                        Assert.Equal(110, firstItem["Price"]);
                         Assert.Equal(1, firstItem.Count());
 
                         var secondItem = order["Items"][1];
-                        Assert.Equal(330, secondItem["price"]);
+                        Assert.Equal(330, secondItem["Price"]);
                         Assert.Equal(1, secondItem.Count());
                     }
 
@@ -155,6 +157,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -167,7 +170,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, order.Properties().Count());
 
                         Assert.Equal("Orders", order["@metadata"]["@collection"]);
-                        Assert.Equal(440, order["total"]);
+                        Assert.Equal(440, order["Total"]);
                         Assert.Equal("Orders/1", order["Id"]);
                         Assert.Equal("OrderItems/10", order["Items"][0]);
                         Assert.Equal("OrderItems/11", order["Items"][1]);
@@ -204,6 +207,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -216,7 +220,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(3, orderItem.Properties().Count());
 
                         Assert.Equal("OrderItems", orderItem["@metadata"]["@collection"]);
-                        Assert.Equal(110, orderItem["price"]);
+                        Assert.Equal(110, orderItem["Price"]);
                         Assert.Equal("OrderItems/10", orderItem["Id"]);
                     }
 
@@ -257,6 +261,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -269,12 +274,12 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, orderItem.Properties().Count());
 
                         Assert.Equal("OrderItems", orderItem["@metadata"]["@collection"]);
-                        Assert.Equal(110, orderItem["price"]);
+                        Assert.Equal(110, orderItem["Price"]);
                         Assert.Equal("OrderItems/10", orderItem["Id"]);
                         var nestedOrder = orderItem["Order"];
                         Assert.NotNull(nestedOrder);
                         Assert.Equal(1, nestedOrder.Count());
-                        Assert.Equal(440, nestedOrder["total"]);
+                        Assert.Equal(440, nestedOrder["Total"]);
 
                         var orderItem2 = session.Load<JObject>("OrderItems/11");
                         Assert.NotNull(orderItem2);
@@ -320,6 +325,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -332,7 +338,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, orderItem.Properties().Count());
 
                         Assert.Equal("OrderItems", orderItem["@metadata"]["@collection"]);
-                        Assert.Equal(110, orderItem["price"]);
+                        Assert.Equal(110, orderItem["Price"]);
                         Assert.Equal("Orders/1", orderItem["ParentOrder"]);
                         Assert.Equal("OrderItems/10", orderItem["Id"]);
 
@@ -344,7 +350,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, orderItem2.Properties().Count());
 
                         Assert.Equal("OrderItems", orderItem2["@metadata"]["@collection"]);
-                        Assert.Equal(330, orderItem2["price"]);
+                        Assert.Equal(330, orderItem2["Price"]);
                         Assert.Equal("Orders/1", orderItem2["ParentOrder"]);
                         Assert.Equal("OrderItems/11", orderItem2["Id"]);
                     }
@@ -392,6 +398,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -404,26 +411,26 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, order.Properties().Count());
 
                         Assert.Equal("Orders", order["@metadata"]["@collection"]);
-                        Assert.Equal(440, order["total"]);
+                        Assert.Equal(440, order["Total"]);
                         Assert.Equal("Orders/1", order["Id"]);
 
                         var firstItem = order["Items"][0];
-                        Assert.Equal(110, firstItem["price"]);
+                        Assert.Equal(110, firstItem["Price"]);
                         Assert.Equal(2, firstItem.Count());
 
                         var firstItemProduct = firstItem["Product"];
                         Assert.NotNull(firstItemProduct);
                         Assert.Equal(1, firstItemProduct.Count());
-                        Assert.Equal("Bread", firstItemProduct["name"]);
+                        Assert.Equal("Bread", firstItemProduct["Name"]);
 
                         var secondItem = order["Items"][1];
-                        Assert.Equal(330, secondItem["price"]);
+                        Assert.Equal(330, secondItem["Price"]);
                         Assert.Equal(2, secondItem.Count());
 
                         var secondItemProduct = secondItem["Product"];
                         Assert.NotNull(secondItemProduct);
                         Assert.Equal(1, secondItemProduct.Count());
-                        Assert.Equal("Milk", secondItemProduct["name"]);
+                        Assert.Equal("Milk", secondItemProduct["Name"]);
                     }
 
                     var collectionStatistics = store.Maintenance.Send(new GetCollectionStatisticsOperation());
@@ -468,6 +475,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -480,18 +488,18 @@ namespace SlowTests.Server.Documents.SqlMigration
                         Assert.Equal(4, order.Properties().Count());
 
                         Assert.Equal("Orders", order["@metadata"]["@collection"]);
-                        Assert.Equal(440, order["total"]);
+                        Assert.Equal(440, order["Total"]);
                         Assert.Equal("Orders/1", order["Id"]);
 
                         var firstItem = order["Items"][0];
-                        Assert.Equal(110, firstItem["price"]);
+                        Assert.Equal(110, firstItem["Price"]);
                         Assert.Equal(2, firstItem.Count());
 
                         var firstItemProduct = firstItem["Product"];
                         Assert.Equal("Products/100", firstItemProduct);
 
                         var secondItem = order["Items"][1];
-                        Assert.Equal(330, secondItem["price"]);
+                        Assert.Equal(330, secondItem["Price"]);
                         Assert.Equal(2, secondItem.Count());
 
                         var secondItemProduct = secondItem["Product"];
@@ -539,6 +547,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
@@ -592,6 +601,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }
 
