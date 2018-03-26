@@ -1276,7 +1276,7 @@ namespace Raven.Server.Commercial
                         Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be executed " +
                                   $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
                                   $"or by any other node because your current license " +
-                                  $"doesn't include the dynamic nodes distribution feature. " + Environment.NewLine +
+                                  $"doesn't include highly available tasks feature. " + Environment.NewLine +
                                   $"You can choose a different mentor node that will execute the task " +
                                   $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
                                   $"Upgrading the license will allow RavenDB to manage that automatically."
