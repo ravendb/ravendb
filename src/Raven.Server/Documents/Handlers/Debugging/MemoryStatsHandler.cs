@@ -37,13 +37,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
         
-        [RavenAction("/admin/debug/proc/status", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/proc/status", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true, IsPosixSpecificEndpoint = true)]
         public async Task PosixMemStatus()
         {
             await WriteFile("/proc/self/status");
         }
         
-        [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true, IsPosixSpecificEndpoint = true)]
         public async Task PosixMemInfo()
         {
             await WriteFile("/proc/meminfo");
