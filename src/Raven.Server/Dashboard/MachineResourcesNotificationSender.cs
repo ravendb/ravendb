@@ -9,6 +9,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.Dashboard
 {
@@ -44,7 +45,8 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var machineResources = GetMachineResources();
+                SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
+                var machineResources = GetMachineResources(smapsReader);
                 foreach (var watcher in _watchers)
                 {
                     // serialize to avoid race conditions
@@ -60,12 +62,12 @@ namespace Raven.Server.Dashboard
 
         
 
-        public static MachineResources GetMachineResources()
+        public static MachineResources GetMachineResources(SmapsReader smapsReader)
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 var memInfo = MemoryInformation.GetMemoryInfo();
-                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, out var sharedCleanInBytes);
+                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, out var sharedCleanInBytes, smapsReader);
                 var workingSet = PlatformDetails.RunningOnLinux
                     ? MemoryInformation.GetRssMemoryUsage(currentProcess.Id) - sharedCleanInBytes
                     : currentProcess.WorkingSet64;
