@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,7 +46,15 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
+                SmapsReader smapsReader = null;
+                if (PlatformDetails.RunningOnLinux)
+                {
+                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    smapsReader = new SmapsReader(new[] {buffer1, buffer2});
+                    ArrayPool<byte>.Shared.Return(buffer1);
+                    ArrayPool<byte>.Shared.Return(buffer2);   
+                }
                 var machineResources = GetMachineResources(smapsReader);
                 foreach (var watcher in _watchers)
                 {
@@ -67,7 +76,7 @@ namespace Raven.Server.Dashboard
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 var memInfo = MemoryInformation.GetMemoryInfo();
-                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, out var sharedCleanInBytes, smapsReader);
+                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, smapsReader, out var sharedCleanInBytes);
                 var workingSet = PlatformDetails.RunningOnLinux
                     ? MemoryInformation.GetRssMemoryUsage(currentProcess.Id) - sharedCleanInBytes
                     : currentProcess.WorkingSet64;

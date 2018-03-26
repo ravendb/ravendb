@@ -316,14 +316,14 @@ namespace Sparrow.LowMemory
             }
 
             var memInfo = MemoryInformation.GetMemoryInfo();
-            var isLowMemory = IsLowMemory(memInfo, out _, smapsReader);
+            var isLowMemory = IsLowMemory(memInfo, smapsReader, out _);
 
             // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
             memStats = (memInfo.AvailableMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 
-        public bool IsLowMemory(MemoryInfoResult memInfo, out long sharedCleanInBytes, SmapsReader smapsReader)
+        public bool IsLowMemory(MemoryInfoResult memInfo, SmapsReader smapsReader, out long sharedCleanInBytes)
         {
             if (PlatformDetails.RunningOnLinux)
             {
