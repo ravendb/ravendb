@@ -13,17 +13,20 @@ namespace Raven.Server.Routing
 
         public string Method { get; }
 
-
         public AuthorizationStatus RequiredAuthorization { get; set; }
 
         public bool SkipUsagesCount { get; set; }
 
-        public RavenActionAttribute(string path, string method, AuthorizationStatus requireAuth, bool isDebugInformationEndpoint = false)
+        public bool IsPosixSpecificEndpoint { get; set; }
+
+        public RavenActionAttribute(string path, string method, AuthorizationStatus requireAuth, bool isDebugInformationEndpoint = false,
+            bool isPosixSpecificEndpoint = false)
         {
             Path = path;
             Method = method;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
             RequiredAuthorization = requireAuth;
+            IsPosixSpecificEndpoint = isPosixSpecificEndpoint;
         }
     }
 

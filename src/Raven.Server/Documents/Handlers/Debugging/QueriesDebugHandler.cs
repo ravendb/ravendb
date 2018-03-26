@@ -50,12 +50,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var isFirst = true;
                 foreach (var index in indexes)
                 {
-                    writer.WritePropertyName(index.Name);
-                    writer.WriteStartArray();
-
                     if (isFirst == false)
                         writer.WriteComma();
                     isFirst = false;
+
+                    writer.WritePropertyName(index.Name);
+                    writer.WriteStartArray();
 
                     var isFirstInternal = true;
                     foreach (var query in index.CurrentlyRunningQueries)
