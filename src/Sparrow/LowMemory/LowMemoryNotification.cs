@@ -20,7 +20,7 @@ namespace Sparrow.LowMemory
         private const string NotificationThreadName = "Low memory notification thread";
         private readonly Logger _logger;
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
-
+        private SmapsReader _smapsReader;
         public enum LowMemReason
         {
             None = 0,
@@ -326,8 +326,9 @@ namespace Sparrow.LowMemory
         {
             if (PlatformDetails.RunningOnLinux)
             {
-                var smapsReader = new SmapsReader(new []{new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]});
-                var result = smapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
+                if (_smapsReader == null) // allocate only in linux
+                    _smapsReader = new SmapsReader(new []{new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]});
+                var result = _smapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
                 memInfo.AvailableMemory.Add(result.SharedClean, SizeUnit.Bytes);
                 sharedCleanInBytes = result.SharedClean;
             }
