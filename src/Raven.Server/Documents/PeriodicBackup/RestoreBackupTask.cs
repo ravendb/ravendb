@@ -27,6 +27,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Logging;
 using Voron.Impl.Backup;
+using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -478,7 +479,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             RestoreSettings restoreSettings = null;
 
-            using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            var voronBackupPath = new VoronPathSetting(backupPath);
+            var voronDataDirectory = new VoronPathSetting(dataDirectory);
+
+            using (var zip = ZipFile.Open(voronBackupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
                 foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
                 {
@@ -514,13 +518,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
 
                     var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
-                        ? dataDirectory
-                        : Path.Combine(dataDirectory, directory);
+                        ? voronDataDirectory
+                        : voronDataDirectory.Combine(directory);
 
                     BackupMethods.Full.Restore(
                         zipEntries,
                         restoreDirectory,
-                        restoreDirectory,
+                        journalDir: null,
                         onProgress: message =>
                         {
                             restoreResult.AddInfo(message);
