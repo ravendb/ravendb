@@ -207,6 +207,15 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                var clientCert = GetCurrentCertificate();
+
+                var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                auditLog.Info($"Database {name} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+            }
+
+
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -626,6 +635,14 @@ namespace Raven.Server.Web.System
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
                 var parameters = JsonDeserializationServer.Parameters.DeleteDatabasesParameters(json);
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Delete [{string.Join(", ", parameters.DatabaseNames)}] database from ({string.Join(", ", parameters.FromNodes)}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                }
 
                 if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                 {

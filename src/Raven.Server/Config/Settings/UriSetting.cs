@@ -19,5 +19,10 @@ namespace Raven.Server.Config.Settings
             if (Uri.TryCreate(uri, UriKind.RelativeOrAbsolute, out _) == false)
                 throw new ArgumentException($"{uri} is not a valid URI.");
         }
+
+        public override string ToString()
+        {
+            return UriValue;
+        }
     }
 }

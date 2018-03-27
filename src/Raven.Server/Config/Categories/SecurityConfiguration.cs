@@ -10,6 +10,18 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
+        [Description("The path to a folder where RavenDB will store the access audit logs")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.AuditLog.FolderPath", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting AuditLogPath { get; set; }
+
+        [Description("How far back we should retain audit log entries")]
+        [DefaultValue(365 * 24)]
+        [TimeUnit(TimeUnit.Hours)]
+        [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting AuditLogRetention { get; set; }
+
+
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
