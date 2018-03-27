@@ -20,5 +20,7 @@ namespace Raven.Server.Smuggler.Migration
         public List<string> FileSystemNames { get; set; }
 
         public bool Authorized { get; set; }
+
+        public bool IsLegacyOAuthToken { get; set; }
     }
 }
