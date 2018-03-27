@@ -732,7 +732,7 @@ namespace Raven.Server.Rachis
             {
                 Timeout.DisableTimeout();
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                using (var ctx = context.OpenWriteTransaction())
                 {
                     var clusterTopology = GetTopology(context);
                     if (clusterTopology.TopologyId == null ||
@@ -751,6 +751,7 @@ namespace Raven.Server.Rachis
                             Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
                         }
                         SwitchToSingleLeader(context);
+                        ctx.Commit();
                         return;
                     }
                 }
@@ -772,7 +773,7 @@ namespace Raven.Server.Rachis
             {
                 if (Log.IsInfoEnabled)
                 {
-                    Log.Info($"An error occured during switching to candidate state in term {currentTerm}.", e);
+                    Log.Info($"An error occurred during switching to candidate state in term {currentTerm}.", e);
                 }
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
