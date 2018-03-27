@@ -322,10 +322,16 @@ namespace Raven.Server.Config
                     var fileName = Guid.NewGuid().ToString("N");
                     var path = pathSettingValue.ToFullPath();
                     var fullPath = Path.Combine(path, fileName);
-                    var configurationKey = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
+
+                    var configEntry = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
                         .OrderBy(x => x.Order)
-                        .First()
-                        .Key;
+                        .First();
+
+                    if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly && 
+                        ResourceType==ResourceType.Database)
+                        continue;
+
+                    var configurationKey = configEntry.Key;
 
                     try
                     {
