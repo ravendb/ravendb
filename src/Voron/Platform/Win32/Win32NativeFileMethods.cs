@@ -12,6 +12,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Sparrow.Utils;
 using Voron.Exceptions;
 
 namespace Voron.Platform.Win32
@@ -131,27 +132,24 @@ namespace Voron.Platform.Win32
         {
             if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+                var exception = new Win32Exception(Marshal.GetLastWin32Error());
+
+                var filePath = GetFilePath();
+
+                throw new IOException($"Could not move the pointer of file {filePath}", exception);
             }
 
             if (SetEndOfFile(fileHandle) == false)
             {
                 var lastError = Marshal.GetLastWin32Error();
 
+                var filePath = GetFilePath();
+
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
-                    var filePath = new StringBuilder(256);
-
-                    while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity &&
-                           filePath.Capacity < 32767) // max unicode path length
-                    {
-                        filePath.EnsureCapacity(filePath.Capacity*2);
-                    }
-
-
                     long? freeSpaceAvailable = null;
-                    var fullFilePath = filePath.ToString();
-                    if(GetDiskFreeSpaceEx(Path.GetDirectoryName(fullFilePath),
+                    
+                    if(GetDiskFreeSpaceEx(Path.GetDirectoryName(filePath),
                         out _,
                         out _,
                         out var totalFreeAvailable))
@@ -159,16 +157,29 @@ namespace Voron.Platform.Win32
                         freeSpaceAvailable = (long)totalFreeAvailable;
                     }
 
-                    throw new DiskFullException(fullFilePath, length, freeSpaceAvailable);
+                    throw new DiskFullException(filePath, length, freeSpaceAvailable);
                 }
 
                 var exception = new Win32Exception(lastError);
 
                 if (lastError == (int) Win32NativeFileErrors.ERROR_NOT_READY ||
                     lastError == (int) Win32NativeFileErrors.ERROR_FILE_NOT_FOUND)
-                    throw new IOException("Could not set the file size because it is inaccessible", exception);
+                    throw new IOException($"Could not set the size of file {filePath} because it is inaccessible.", exception);
 
-                throw exception;
+                throw new IOException($"Could not set the size of file {filePath} to {Sizes.Humane(length)}", exception);
+            }
+
+            string GetFilePath()
+            {
+                var filePath = new StringBuilder(256);
+
+                while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity &&
+                       filePath.Capacity < 32767) // max unicode path length
+                {
+                    filePath.EnsureCapacity(filePath.Capacity * 2);
+                }
+
+                return filePath.ToString();
             }
         }
     }
