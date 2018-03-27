@@ -27,7 +27,7 @@ namespace Raven.Client.Document.Async
 
                 LogBatch(data);
 
-                var task = documentStore.AddNagleData(data);
+                var task = documentStore.AddNagleData(DatabaseName, data);
                 var result = await task.ConfigureAwait(false);
                 UpdateBatchResults(result, data);
             }
