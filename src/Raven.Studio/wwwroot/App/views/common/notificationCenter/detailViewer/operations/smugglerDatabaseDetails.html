@@ -50,7 +50,7 @@
                             <i class="icon-skip"></i> <span>Skipped</span>
                         </div>
                         <div class="status status-processing" data-bind="visible: stage === 'processing'">
-                            <span class="global-spinner spinner-sm"></span> <span>Processing</span>
+                            <span class="global-spinner spinner-sm"></span> <span data-bind="text: processingSpeedText"></span>
                         </div>
                         <div class="status status-waiting" data-bind="visible: stage === 'pending'">
                             <i class="icon-waiting"></i> <span>Pending</span>
