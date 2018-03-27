@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Migration.ApiKey;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -25,6 +26,8 @@ namespace Raven.Server.Smuggler.Migration
         private readonly string _serverUrl;
         private readonly HttpClient _httpClient;
         private readonly ServerStore _serverStore;
+        private readonly string _apiKey;
+        private readonly bool _enableBasicAuthenticationOverUnsecuredHttp;
         private MajorVersion _buildMajorVersion;
         private int _buildVersion;
 
@@ -37,7 +40,14 @@ namespace Raven.Server.Smuggler.Migration
 
             var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false);
             httpClientHandler.UseDefaultCredentials = false;
-            if (string.IsNullOrWhiteSpace(configuration.UserName) == false &&
+
+            if (string.IsNullOrWhiteSpace(configuration.ApiKey) == false)
+            {
+                Authenticator.GetApiKeyParts(configuration.ApiKey); // will throw if not in correct format
+                _apiKey = configuration.ApiKey;
+                _enableBasicAuthenticationOverUnsecuredHttp = configuration.EnableBasicAuthenticationOverUnsecuredHttp;
+            }
+            else if (string.IsNullOrWhiteSpace(configuration.UserName) == false &&
                 string.IsNullOrWhiteSpace(configuration.Password) == false)
             {
                 var domain = string.IsNullOrWhiteSpace(configuration.Domain) ? "\\" : configuration.Domain;
@@ -184,7 +194,7 @@ namespace Raven.Server.Smuggler.Migration
 
             try
             {
-                return await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, true ,_serverStore.ServerShutdown);
+                return await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, true, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, null, _serverStore.ServerShutdown);
             }
             catch (UnauthorizedAccessException)
             {
@@ -192,7 +202,7 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion, Reference<bool> authorized)
+        public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion, Reference<bool> authorized, Reference<bool> isLegacyOAuthToken = null)
         {
             authorized.Value = true;
             if (builMajorVersion == MajorVersion.Unknown)
@@ -202,7 +212,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 return builMajorVersion == MajorVersion.V4
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
-                    : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _serverStore.ServerShutdown);
+                    : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, isLegacyOAuthToken, _serverStore.ServerShutdown);
             }
             catch (UnauthorizedAccessException)
             {
@@ -245,6 +255,8 @@ namespace Raven.Server.Smuggler.Migration
                                 ServerUrl = _serverUrl,
                                 DatabaseName = databaseName,
                                 HttpClient = _httpClient,
+                                ApiKey = _apiKey,
+                                EnableBasicAuthenticationOverUnsecuredHttp = _enableBasicAuthenticationOverUnsecuredHttp,
                                 OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
                                 RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
                                 ImportRavenFs = databaseMigrationSettings.ImportRavenFs,
