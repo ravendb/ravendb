@@ -39,6 +39,7 @@ namespace Raven.Server.Rachis
                     return;
                 }
                 _timeoutHappened = onTimeout;
+
                 try
                 {
                     _timer.Change(TimeoutPeriod, TimeoutPeriod);
@@ -112,10 +113,8 @@ namespace Raven.Server.Rachis
                 {
                     if (_timeoutHappened == null)
                         return;
-               
 
                     _timeoutHappened?.Invoke();
-                    _timeoutHappened = null;
                 }
                 catch (ConcurrencyException)
                 {
