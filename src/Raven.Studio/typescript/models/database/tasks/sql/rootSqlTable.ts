@@ -2,8 +2,8 @@
 
 import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
 
-class rootSqlTable extends abstractSqlTable { 
-    customCollection = ko.observable<string>();
+class rootSqlTable extends abstractSqlTable {
+    collectionName = ko.observable<string>();
     checked = ko.observable<boolean>(true);
     documentIdTemplate: KnockoutComputed<string>;
     
@@ -11,7 +11,7 @@ class rootSqlTable extends abstractSqlTable {
         super();
         this.documentIdTemplate = ko.pureComputed(() => {
             const templetePart = this.primaryKeyColumns().map(x => '{' + x.sqlName + '}').join("/");
-            return this.customCollection() + "/" + templetePart;
+            return this.collectionName() + "/" + templetePart;
         });
     }
     
@@ -36,7 +36,7 @@ class rootSqlTable extends abstractSqlTable {
         return {
             SourceTableName: this.tableName,
             SourceTableSchema: this.tableSchema,
-            Name: this.customCollection(),
+            Name: this.collectionName(),
             Patch: null, //TODO:
             SourceTableQuery: null,  //TODO
             NestedCollections: [], //TODO

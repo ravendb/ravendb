@@ -10,7 +10,7 @@ class sqlMigration {
     static possibleProviders = ["MsSQL", "MySQL"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MySQL");
-    sourceDatabaseName = ko.observable<string>("sandbox");
+    sourceDatabaseName = ko.observable<string>("northwind");
     binaryToAttachment = ko.observable<boolean>(true);
     batchSize = ko.observable<number>(1000);
     
@@ -30,7 +30,7 @@ class sqlMigration {
     
     tables = ko.observableArray<rootSqlTable>([]); 
     
-    constructor() {       
+    constructor() {    
         this.initValidation();   
     }
 
@@ -97,7 +97,7 @@ class sqlMigration {
             
             table.tableName = tableDto.TableName;
             table.tableSchema = tableDto.Schema;
-            table.customCollection(tableDto.TableName);
+            table.collectionName(tableDto.TableName);
             const columns = tableDto.Columns.map(columnDto => new sqlColumn(columnDto));
             const primaryKeyColumns = columns.filter(c => _.includes(tableDto.PrimaryKeyColumns, c.sqlName));
             const specialColumnNames = this.findSpecialColumnNames(dbSchema, tableDto.Schema, tableDto.TableName);

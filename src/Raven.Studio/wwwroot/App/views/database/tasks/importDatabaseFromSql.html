@@ -1,7 +1,7 @@
-<div class="importDatabase">
-    <div class="panel">
+<div class="importDatabase absolute-fill flex-vertical">
+    <div class="panel" data-bind="if: inFirstStep, visible: inFirstStep">
         <div class="panel-body">
-            <form class="flex-form" data-bind="submit: nextStep, if: inFirstStep">
+            <form class="flex-form" data-bind="submit: nextStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>
                 <div class="row">
                     <div class="col-sm-8 col-lg-6 margin-top" data-bind="with: model">
@@ -91,22 +91,40 @@
                     </div>
                 </div>
             </form>
-            <div data-bind="if: !inFirstStep()">
-                
-                <div class="row">
-                    <div class="col-md-8">
+            
+        </div>
+    </div>
+    
+    <div class="row flex-row flex-grow flex-stretch-items" id="js-second-step" data-bind="if: !inFirstStep()">
+        <div class="col-sm-12 col-lg-8 flex-vertical">
+            <div class="flex-header flex-horizontal">
+                <div class="panel panel-default flex-grow no-margin">
+                    <div class="panel-body">
                         <button class="btn btn-primary" data-bind="click: $root.migrate">Migrate</button>
-                        <div data-bind="foreach: model.tables">
-                            <div class="checkbox" data-placement="left">
-                                <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
-                                <label data-bind="text: name, attr: { for: 'table_' + $index() }"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll flex-grow">
+                <div data-bind="foreach: $root.currentTables">
+                    <div class="panel">
+                        <div class="flex-horizontal padding padding-sm">
+                            <div>
+                                <div class="checkbox" data-placement="left">
+                                    <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
+                                    <label data-bind="text: collectionName, attr: { for: 'table_' + $index() }"></label>
+                                </div>
+                                <div><small>Document ID: <span data-bind="text: documentIdTemplate"></span></small></div>
+                            </div>
+                            <div class="flex-separator"></div>
+                            <div>
+                                <button class="btn btn-default">Filter / Transform</button>
                             </div>
                             
-                            <div>Document ID: <span data-bind="text: documentIdTemplate"></span></div>
-                            
+                        </div>
+                        <div class="panel-addon padding padding-sm">
                             <div>Properties:</div>
                             <ul data-bind="foreach: documentColumns">
-                                <li data-bind="text: propertyName() + ' (' + type + ')'"></li>
+                                <li class="prop" data-bind="text: propertyName() + ' (' + type + ')'"></li>
                             </ul>
                             
                             <div>References:</div>
@@ -119,20 +137,32 @@
                                     <span data-bind="text: type"></span> 
                                     
                                     <div class="btn-group">
-                                        <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
-                                        <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
-                                        <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
+                                                <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
+                                                <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
+                                                <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
                                     </div>
                                     
                                 </li>
                             </ul>
+                            
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        TODO: edit patch / query / test documents
+                </div>
+                
+            </div>
+            <div class="panel panel-default no-margin" data-bind="visible: $root.pageCount() > 1">
+                <div class="panel-body flex-horizontal">
+                    <div>Page <span data-bind="text: $root.currentPage() + 1"></span> <span data-bind="text: '(' + $root.currentLocationHumane() + ')'"></span></div>
+                    <div data-bind="foreach: _.range(0, $root.pageCount())">
+                        <button class="btn btn-sm" data-bind="text: $data + 1, click: _.partial($root.setCurrentPage, $data), css: { 'active': $root.currentPage() === $data }"></button>
                     </div>
                 </div>
             </div>
+            
+        </div>
+
+        <div class="col-sm-12 col-lg-4 flex-vertical">
+            TODO: edit patch / query / test documents
         </div>
     </div>
 </div>
