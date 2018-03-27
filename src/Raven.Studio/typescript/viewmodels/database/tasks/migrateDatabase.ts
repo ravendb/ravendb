@@ -32,6 +32,9 @@ class migrateDatabase extends viewModelBase {
 
         this.model.userName.subscribe(() => debouncedDetection(false));
         this.model.password.subscribe(() => debouncedDetection(false));
+        this.model.password.subscribe(() => debouncedDetection(false));
+        this.model.apiKey.subscribe(() => debouncedDetection(false));
+        this.model.enableBasicAuthenticationOverUnsecuredHttp.subscribe(() => debouncedDetection(false));
     }
 
     activate(args: any) {
@@ -63,17 +66,26 @@ class migrateDatabase extends viewModelBase {
             this.spinners.versionDetect(true);
         }
 
+        const userName = this.model.showWindowsCredentialInputs() ? this.model.userName() : "";
+        const password = this.model.showWindowsCredentialInputs() ? this.model.password() : "";
+        const domain = this.model.showWindowsCredentialInputs() ? this.model.domain() : "";
+        const apiKey = this.model.showApiKeyCredentialInputs() ? this.model.apiKey() : "";
+        const enableBasicAuthenticationOverUnsecuredHttp = this.model.showApiKeyCredentialInputs() ? this.model.enableBasicAuthenticationOverUnsecuredHttp() : false;
+
         const url = this.model.serverUrl();
-        new getRemoteServerVersionWithDatabasesCommand(url, this.model.userName(), this.model.password())
+        new getRemoteServerVersionWithDatabasesCommand(url, userName, password, domain,
+                apiKey, enableBasicAuthenticationOverUnsecuredHttp)
             .execute()
             .done(info => {
                 if (info.MajorVersion !== "Unknown") {
                     this.model.serverMajorVersion(info.MajorVersion);
+                    this.model.serverMajorVersion.clearError();
                     this.model.buildVersion(info.BuildVersion);
                     this.model.fullVersion(info.FullVersion);
                     this.model.databaseNames(info.DatabaseNames);
                     this.model.fileSystemNames(info.FileSystemNames);
                     this.model.authorized(info.Authorized);
+                    this.model.hasUnsecuredBasicAuthenticationOption(info.IsLegacyOAuthToken);
                     if (!info.Authorized) {
                         this.model.resourceName.valueHasMutated();
                     }
@@ -84,6 +96,7 @@ class migrateDatabase extends viewModelBase {
                     this.model.databaseNames([]);
                     this.model.fileSystemNames([]);
                     this.model.authorized(true);
+                    this.model.hasUnsecuredBasicAuthenticationOption(false);
                 }
             })
             .fail((response: JQueryXHR) => {
