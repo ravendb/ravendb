@@ -288,8 +288,11 @@ namespace Raven.Client.Document
 
             WasDisposed = true;
 
-            nagleQueue.CompleteAdding();
-            nagleWriterTask?.Wait();
+            foreach (var nagleTask in nagleTasks)
+            {
+                nagleTask.Value.Item2.CompleteAdding();
+                nagleTask.Value.Item1?.Wait();
+            }
 
             var afterDispose = AfterDispose;
             if (afterDispose != null)
@@ -917,61 +920,61 @@ namespace Raven.Client.Document
             public TaskCompletionSource<BatchResult[]> TaskCompletionSource = new TaskCompletionSource<BatchResult[]>();
         }
 
-        private readonly BlockingCollection<NagleData> nagleQueue = new BlockingCollection<NagleData>();
-        private Task nagleWriterTask;
+        private readonly ConcurrentDictionary<string, Tuple<Task, BlockingCollection<NagleData>>> nagleTasks = 
+            new ConcurrentDictionary<string, Tuple<Task, BlockingCollection<NagleData>>>();
 
-        internal Task<BatchResult[]> AddNagleData(InMemoryDocumentSessionOperations.SaveChangesData saveChangesData)
+        internal Task<BatchResult[]> AddNagleData(string databaseName, InMemoryDocumentSessionOperations.SaveChangesData saveChangesData)
         {
-            InitializeNagleQueueWriterIfNeeded();
+            var nagleQueue = GetNagleQueue(databaseName);
 
             var nagleData = new NagleData { SaveChangesData = saveChangesData };
             nagleQueue.Add(nagleData);
             return nagleData.TaskCompletionSource.Task;
         }
 
-        private void InitializeNagleQueueWriterIfNeeded()
+        private BlockingCollection<NagleData> GetNagleQueue(string databaseName)
         {
-         
-            if (nagleWriterTask != null)
+            var nagle = nagleTasks.GetOrAdd(databaseName ?? "<system>", x =>
             {
-                EnsureNagleIsNotFaulted();
-                return;
-            }
-
-            lock (nagleQueue)
-            {
-                if (nagleWriterTask == null)
-                    nagleWriterTask = Task.Run(() => WriteNagleQueueToServer());
-            }
-
-            EnsureNagleIsNotFaulted();
+                var nagleQueue = new BlockingCollection<NagleData>();
+                var nagleWriterTask = Task.Run(() => WriteNagleQueueToServer(nagleQueue, databaseName));
+                return new Tuple<Task, BlockingCollection<NagleData>>(nagleWriterTask, nagleQueue);
+            });
+            
+            EnsureNagleIsNotFaulted(nagle.Item1);
+            return nagle.Item2;
         }
 
-        private void EnsureNagleIsNotFaulted()
+        private static void EnsureNagleIsNotFaulted(Task nagleWriterTask)
         {
             if (nagleWriterTask.IsCanceled || nagleWriterTask.IsFaulted)
                 nagleWriterTask.Wait(); // throw
         }
 
-        private void WriteNagleQueueToServer()
+        private void WriteNagleQueueToServer(BlockingCollection<NagleData> nagleQueue, string databaseName)
         {
             while (nagleQueue.IsCompleted == false)
             {
                 if (WasDisposed)
                 {
-                    ClearNagleQueueOnDispose();
-                    continue;
+                    ClearNagleQueueOnDispose(nagleQueue);
+                    // no more work to do
+                    break;
                 }
 
                 var nagleData = new List<NagleData>();
                 NagleData queueNagleData;
-                while (nagleQueue.TryTake(out queueNagleData))
+                var timeout = int.MaxValue;
+                while (nagleQueue.TryTake(out queueNagleData, timeout))
                 {
                     if (WasDisposed)
                     {
                         queueNagleData.TaskCompletionSource.TrySetCanceled();
                         break;
                     }
+
+                    // already took a batch, don't wait for more batches
+                    timeout = 0;
 
                     nagleData.Add(queueNagleData);
 
@@ -985,11 +988,11 @@ namespace Raven.Client.Document
                 if (nagleQueue.IsAddingCompleted)
                     continue;
 
-                FlushBatch(nagleData);
+                FlushBatch(nagleData, databaseName);
             }
         }
 
-        private void ClearNagleQueueOnDispose()
+        private static void ClearNagleQueueOnDispose(BlockingCollection<NagleData> nagleQueue)
         {
             NagleData queueNagleData;
             while (nagleQueue.TryTake(out queueNagleData))
@@ -998,13 +1001,13 @@ namespace Raven.Client.Document
             }
         }
 
-        private void FlushBatch(List<NagleData> nagleData)
+        private void FlushBatch(List<NagleData> nagleData, string databaseName)
         {
             try
             {
                 var commands = nagleData.SelectMany(x => x.SaveChangesData.Commands).ToList();
                 var batchOptions = GetMergedBatchOptions(nagleData.Select(x => x.SaveChangesData.Options));
-                var results = DatabaseCommands.Batch(commands, batchOptions);
+                var results = DatabaseCommands.ForDatabase(databaseName).Batch(commands, batchOptions);
                 var index = 0;
 
                 foreach (var data in nagleData)
@@ -1015,17 +1018,17 @@ namespace Raven.Client.Document
             }
             catch (Exception)
             {
-                RunCommandsOneByOne(nagleData);
+                RunCommandsOneByOne(nagleData, databaseName);
             }
         }
 
-        private void RunCommandsOneByOne(List<NagleData> nagleData)
+        private void RunCommandsOneByOne(List<NagleData> nagleData, string databaseName)
         {
             foreach (var data in nagleData)
             {
                 try
                 {
-                    var batchResults = DatabaseCommands.Batch(data.SaveChangesData.Commands, data.SaveChangesData.Options);
+                    var batchResults = DatabaseCommands.ForDatabase(databaseName).Batch(data.SaveChangesData.Commands, data.SaveChangesData.Options);
                     if (batchResults == null)
                         throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
 

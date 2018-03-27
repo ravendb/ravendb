@@ -28,7 +28,7 @@ namespace Raven.Client.Document
                 IncrementRequestCount();
                 LogBatch(data);
 
-                var task = documentStore.AddNagleData(data);
+                var task = documentStore.AddNagleData(DatabaseName, data);
                 var batchResults = AsyncHelpers.RunSync(() => task);
                 if (batchResults == null)
                     throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");

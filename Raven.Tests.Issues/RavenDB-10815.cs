@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Client;
@@ -161,6 +164,50 @@ namespace Raven.Tests.Issues
                     var statistics = store.DatabaseCommands.GetStatistics();
                     // at least 1 edited document, 1 hilo document, at least 1 new document
                     Assert.True(statistics.CountOfDocuments >= 3);
+                }
+            }
+
+            [Fact]
+            public void TwoDatabasesNagleSession()
+            {
+                const string db1 = "db1";
+                const string db2 = "db2";
+                using (var store = NewRemoteDocumentStore())
+                {
+                    store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                    {
+                        Id = db1,
+                        Settings =
+                        {
+                            { "Raven/DataDir", NewDataPath() }
+                        }
+                    });
+                    store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                    {
+                        Id = db2,
+                        Settings =
+                        {
+                            { "Raven/DataDir", NewDataPath() }
+                        }
+                    });
+
+                    Parallel.For(0, 20, i =>
+                    {
+                        using (var session = i % 2 == 0 ? store.OpenNagleSession(db1) : store.OpenNagleSession(db2))
+                        {
+                            var entity1 = new Entity();
+                            session.Store(entity1);
+                            var entity2 = new Entity();
+                            session.Store(entity2);
+                            session.SaveChanges();
+                        }
+                    });
+
+                    var statistics = store.DatabaseCommands.ForDatabase(db1).GetStatistics();
+                    Assert.Equal(21, statistics.CountOfDocuments); // including the hilo document
+
+                    statistics = store.DatabaseCommands.ForDatabase(db2).GetStatistics();
+                    Assert.Equal(21, statistics.CountOfDocuments); // including the hilo document
                 }
             }
 
