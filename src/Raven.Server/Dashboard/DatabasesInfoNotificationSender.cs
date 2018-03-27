@@ -109,9 +109,9 @@ namespace Raven.Server.Dashboard
                         var indexingSpeedItem = new IndexingSpeedItem
                         {
                             Database = database.Name,
-                            IndexedPerSecond = database.Metrics.MapIndexes.IndexedPerSec.FiveSecondRate,
-                            MappedPerSecond = database.Metrics.MapReduceIndexes.MappedPerSec.FiveSecondRate,
-                            ReducedPerSecond = database.Metrics.MapReduceIndexes.ReducedPerSec.FiveSecondRate
+                            IndexedPerSecond = database.Metrics.MapIndexes.IndexedPerSec.OneSecondRate,
+                            MappedPerSecond = database.Metrics.MapReduceIndexes.MappedPerSec.OneSecondRate,
+                            ReducedPerSecond = database.Metrics.MapReduceIndexes.ReducedPerSec.OneSecondRate
                         };
                         indexingSpeed.Items.Add(indexingSpeedItem);
 
@@ -137,9 +137,9 @@ namespace Raven.Server.Dashboard
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = databaseName,
-                            RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.FiveSecondRate,
-                            WritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.FiveSecondRate,
-                            WriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.FiveSecondRate
+                            RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneSecondRate,
+                            WritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate,
+                            WriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
 
