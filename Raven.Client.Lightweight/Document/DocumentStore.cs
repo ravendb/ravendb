@@ -1040,11 +1040,18 @@ namespace Raven.Client.Document
 
         private static BatchOptions GetMergedBatchOptions(IEnumerable<BatchOptions> allOptions)
         {
-            var batchOptions = new BatchOptions();
+            BatchOptions batchOptions = null;
             foreach (var option in allOptions)
             {
                 if (option == null)
                     continue;
+
+                if (batchOptions == null)
+                {
+                    // first option
+                    batchOptions = option;
+                    continue;
+                }
 
                 batchOptions.WaitForReplicas |= option.WaitForReplicas;
                 batchOptions.NumberOfReplicasToWaitFor = Math.Max(batchOptions.NumberOfReplicasToWaitFor, option.NumberOfReplicasToWaitFor);
@@ -1062,16 +1069,16 @@ namespace Raven.Client.Document
                         : option.WaitForIndexesTimeout;
 
                 batchOptions.ThrowOnTimeoutInWaitForIndexes |= option.ThrowOnTimeoutInWaitForIndexes;
-                if (option.WaitForSpecificIndexes != null)
+                if (option.WaitForSpecificIndexes == null ||
+                    option.WaitForSpecificIndexes.Length == 0 ||
+                    batchOptions.WaitForSpecificIndexes == null ||
+                    batchOptions.WaitForSpecificIndexes.Length == 0)
                 {
-                    if (batchOptions.WaitForSpecificIndexes == null)
-                    {
-                        batchOptions.WaitForSpecificIndexes = option.WaitForSpecificIndexes;
-                    }
-                    else
-                    {
-                        batchOptions.WaitForSpecificIndexes.AddRange(option.WaitForSpecificIndexes);
-                    }
+                    batchOptions.WaitForSpecificIndexes = null;
+                }
+                else
+                {
+                    batchOptions.WaitForSpecificIndexes.AddRange(option.WaitForSpecificIndexes);
                 }
             }
 
