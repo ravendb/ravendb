@@ -4,6 +4,7 @@ using Xunit;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
+using Voron.Util.Settings;
 
 namespace FastTests.Voron.Backups
 {
@@ -14,7 +15,6 @@ namespace FastTests.Voron.Backups
             options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.ManualFlushing = true;
         }
-
 
         [Fact]
         public void CanBackupAndRestoreSmall()
@@ -51,9 +51,11 @@ namespace FastTests.Voron.Backups
 
             Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync within last minute
 
-            BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"));
+            var voronDataDir = new VoronPathSetting(DataDir);
 
-            BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
+            BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"));
+
+            BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
 
             var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
