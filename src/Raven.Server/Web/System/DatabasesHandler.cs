@@ -180,34 +180,49 @@ namespace Raven.Server.Web.System
             var serverUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("serverUrl");
             var userName = GetStringQueryString("userName", required: false);
             var password = GetStringQueryString("password", required: false);
+            var domain = GetStringQueryString("domain", required: false);
+            var apiKey = GetStringQueryString("apiKey", required: false);
+            var enableBasicAuthenticationOverUnsecuredHttp = GetBoolValueQueryString("enableBasicAuthenticationOverUnsecuredHttp", required: false);
             var migrator = new Migrator(new SingleDatabaseMigrationConfiguration
             {
                 ServerUrl = serverUrl,
                 UserName = userName,
-                Password = password
+                Password = password,
+                Domain = domain,
+                ApiKey = apiKey,
+                EnableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp ?? false
             }, ServerStore);
 
-            var buildInfo = await migrator.GetBuildInfo();
-            var authorized = new Reference<bool>();
-            var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion, authorized);
-            var fileSystemNames = await migrator.GetFileSystemNames(buildInfo.MajorVersion);
-            migrator.DisposeHttpClient(); // the http client isn't needed anymore
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            try
             {
-                var json = new DynamicJsonValue
+                var buildInfo = await migrator.GetBuildInfo();
+                var authorized = new Reference<bool>();
+                var isLegacyOAuthToken = new Reference<bool>();
+                var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion, authorized, isLegacyOAuthToken);
+                var fileSystemNames = await migrator.GetFileSystemNames(buildInfo.MajorVersion);
+            
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    [nameof(BuildInfoWithResourceNames.BuildVersion)] = buildInfo.BuildVersion,
-                    [nameof(BuildInfoWithResourceNames.ProductVersion)] = buildInfo.ProductVersion,
-                    [nameof(BuildInfoWithResourceNames.MajorVersion)] = buildInfo.MajorVersion,
-                    [nameof(BuildInfoWithResourceNames.FullVersion)] = buildInfo.FullVersion,
-                    [nameof(BuildInfoWithResourceNames.DatabaseNames)] = TypeConverter.ToBlittableSupportedType(databaseNames),
-                    [nameof(BuildInfoWithResourceNames.FileSystemNames)] = TypeConverter.ToBlittableSupportedType(fileSystemNames),
-                    [nameof(BuildInfoWithResourceNames.Authorized)] = authorized.Value
-                };
+                    var json = new DynamicJsonValue
+                    {
+                        [nameof(BuildInfoWithResourceNames.BuildVersion)] = buildInfo.BuildVersion,
+                        [nameof(BuildInfoWithResourceNames.ProductVersion)] = buildInfo.ProductVersion,
+                        [nameof(BuildInfoWithResourceNames.MajorVersion)] = buildInfo.MajorVersion,
+                        [nameof(BuildInfoWithResourceNames.FullVersion)] = buildInfo.FullVersion,
+                        [nameof(BuildInfoWithResourceNames.DatabaseNames)] = TypeConverter.ToBlittableSupportedType(databaseNames),
+                        [nameof(BuildInfoWithResourceNames.FileSystemNames)] = TypeConverter.ToBlittableSupportedType(fileSystemNames),
+                        [nameof(BuildInfoWithResourceNames.Authorized)] = authorized.Value,
+                        [nameof(BuildInfoWithResourceNames.IsLegacyOAuthToken)] = isLegacyOAuthToken.Value
+                    };
 
-                context.Write(writer, json);
-                writer.Flush();
+                    context.Write(writer, json);
+                    writer.Flush();
+                }
+            }
+            finally
+            {
+                migrator.DisposeHttpClient();
             }
         }
 
