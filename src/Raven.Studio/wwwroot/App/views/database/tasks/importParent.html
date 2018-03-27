@@ -1,4 +1,4 @@
-<div class="content-margin">
+<div class="content-margin flex-vertical">
     <div>
         <ul class="nav nav-tabs" data-bind="foreach: router.navigationModel">
             <li data-bind="css: { active: isActive }, visible: nav">
@@ -7,6 +7,6 @@
         </ul>
     </div>
 
-    <div data-bind="router: { cacheViews: false }">
+    <div class="flex-grow" data-bind="router: { cacheViews: false }">
     </div>
 </div>

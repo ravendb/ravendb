@@ -3,7 +3,7 @@
 import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
 
 class innerSqlTable extends abstractSqlTable { 
-    customCollection = ko.observable<string>();
+    propertyName = ko.observable<string>();
     
     toDto() {
         const linkedReferences = this.references()
@@ -26,7 +26,7 @@ class innerSqlTable extends abstractSqlTable {
         return {
             SourceTableName: this.tableName,
             SourceTableSchema: this.tableSchema,
-            Name: this.customCollection(),
+            Name: this.propertyName(),
             Patch: null, //TODO:
             SourceTableQuery: null,  //TODO
             NestedCollections: [], //TODO
