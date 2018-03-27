@@ -6,12 +6,15 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -101,9 +104,22 @@ namespace SlowTests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
+                var mre = new ManualResetEventSlim();
+
+                var changes = AsyncHelpers.RunSync(() => store.Changes().EnsureConnectedNow());
+                var observable = changes.ForAllIndexes();
+                AsyncHelpers.RunSync(() => observable.EnsureSubscribedNow());
+                observable.Subscribe(change =>
+                {
+                    if (change.Type == IndexChangeTypes.SideBySideReplace)
+                        mre.Set();
+                });
+
                 store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
+
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
                 using (var session = store.OpenSession())
                 {
@@ -155,9 +171,22 @@ namespace SlowTests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
+                var mre = new ManualResetEventSlim();
+
+                var changes = await store.Changes().EnsureConnectedNow();
+                var observable = changes.ForAllIndexes();
+                await observable.EnsureSubscribedNow();
+                observable.Subscribe(change =>
+                {
+                    if (change.Type == IndexChangeTypes.SideBySideReplace)
+                        mre.Set();
+                });
+
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
                 WaitForIndexing(store);
+
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
                 using (var session = store.OpenSession())
                 {
