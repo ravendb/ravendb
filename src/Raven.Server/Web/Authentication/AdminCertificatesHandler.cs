@@ -526,8 +526,7 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser)]
         public Task WhoAmI()
         {
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            var clientCert = feature?.Certificate;
+            var clientCert = GetCurrentCertificate();
 
             if (clientCert == null)
             {

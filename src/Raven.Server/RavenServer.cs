@@ -9,51 +9,51 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.DependencyInjection;
-using Raven.Client.Exceptions.Database;
-using Raven.Client.Json.Converters;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Json;
-using Raven.Server.Rachis;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
+using Raven.Server.Json;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server
 {
@@ -572,6 +572,7 @@ namespace Raven.Server
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
+            public int WrittenToAuditLog;
 
             public bool CanAccess(string db, bool requireAdmin)
             {
@@ -612,6 +613,8 @@ namespace Raven.Server
             public string WrongProtocolMessage;
 
             private AuthenticationStatus _status;
+
+            public AuthenticationStatus StatusForAudit => _status;
 
             public AuthenticationStatus Status
             {
@@ -768,6 +771,7 @@ namespace Raven.Server
         {
             try
             {
+                _tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 bool successfullyBoundToAtLeastOne = false;
                 var errors = new List<Exception>();
                 foreach (var ipAddress in GetListenIpAddresses(host))
@@ -894,7 +898,9 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = (int)Configuration.Cluster.TcpConnectionTimeout.AsTimeSpan.TotalMilliseconds;
 
                     Stream stream = tcpClient.GetStream();
-                    stream = await AuthenticateAsServerIfSslNeeded(stream);
+                    X509Certificate2 cert;
+
+                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
                     using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                     using (ctx.GetManagedBuffer(out var buffer))
@@ -939,10 +945,13 @@ namespace Raven.Server
                                         //In the case where we have missmatched version but the other side doesn't know how to handle it.
                                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
                                         {
+                                            if (_tcpAuditLog != null)
+                                                _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
+
                                             if (Logger.IsInfoEnabled)
                                             {
                                                 Logger.Info(
-                                                    $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason:{header.Info}");
+                                                    $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason: {header.Info}");
                                             }
 
                                             return;
@@ -969,16 +978,24 @@ namespace Raven.Server
 
                                 if (matchingVersion == false)
                                 {
+                                    if (_tcpAuditLog != null)
+                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because coudln't agree on a matching operation version for {header.Operation} on {header.DatabaseName}.");
+
                                     //Couldn't agree on tcp operation version, will drop the connection now.
                                     return;
                                 }
 
                                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
                                 //At this stage the error is not relevant.
-                                RespondToTcpConnection(stream, context, null, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, version);
+                                RespondToTcpConnection(stream, context, null,
+                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, 
+                                    version);
 
                                 if (authSuccessful == false)
                                 {
+                                    if (_tcpAuditLog != null)
+                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
+
                                     if (Logger.IsInfoEnabled)
                                     {
                                         Logger.Info(
@@ -989,6 +1006,9 @@ namespace Raven.Server
                                     return; // cannot proceed
                                 }
                             }
+
+                            if (_tcpAuditLog != null)
+                                _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
 
                             if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
@@ -1016,7 +1036,6 @@ namespace Raven.Server
                 }
             });
         }
-
         private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -1087,6 +1106,8 @@ namespace Raven.Server
         private SnmpWatcher _snmpWatcher;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
+        private Logger _tcpAuditLog;
+
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
         internal void SetCertificate(X509Certificate2 certificate, byte[] rawBytes, string password)
@@ -1218,7 +1239,7 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
+        private async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Certificate.Certificate != null)
             {
@@ -1231,12 +1252,13 @@ namespace Raven.Server
                     // SSL, because that generate a nicer error for the user to read then just aborted
                     // connection because SSL negotation failed.
                         true);
-                stream = sslStream;
 
                 await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, SslProtocols.Tls12, false);
+
+                return (sslStream, HttpsConnectionAdapter.ConvertToX509Certificate2(sslStream.RemoteCertificate));
             }
 
-            return stream;
+            return (stream, null);
         }
 
 

@@ -103,7 +103,7 @@ namespace Raven.Server.ServerWide
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
-            MemoryInformation.EnableEarlyOutOfMemoryChecks = true; 
+            MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
@@ -433,6 +433,57 @@ namespace Raven.Server.ServerWide
 
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Check(this);
+
+            ConfigureAuditLog();
+        }
+
+        private void ConfigureAuditLog()
+        {
+            if (Configuration.Security.AuditLogPath == null)
+                return;
+
+            if (Configuration.Security.AuthenticationEnabled == false)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("The audit log configuration 'Security.AuditLog.FolderPath' was specified, but the server is not running in a secured mode. Audit log disabled!");
+                return;
+            }
+
+            // we have to do this manually because LoggingSource will ignore errors
+            AssertCanWriteToAuditLogDirectory();
+
+            LoggingSource.AuditLog.SetupLogMode(
+                LogMode.Information,
+                Configuration.Security.AuditLogPath.FullPath,
+                Configuration.Security.AuditLogRetention.AsTimeSpan);
+
+            var auditLog = LoggingSource.AuditLog.GetLogger("ServerStartup", "Audit");
+            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.Certificate?.Subject} ({_server.Certificate?.Certificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
+        }
+
+        private void AssertCanWriteToAuditLogDirectory()
+        {
+            if (Directory.Exists(Configuration.Security.AuditLogPath.FullPath) == false)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Configuration.Security.AuditLogPath.FullPath);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Cannot create audit log directory: {Configuration.Security.AuditLogPath.FullPath}, treating this as a fatal error", e);
+                }
+            }
+            try
+            {
+                var testFile = Configuration.Security.AuditLogPath.Combine("write.test").FullPath;
+                File.WriteAllText(testFile, "test we can write");
+                File.Delete(testFile);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Cannot create new file in audit log directory: {Configuration.Security.AuditLogPath.FullPath}, treating this as a fatal error", e);
+            }
         }
 
         public void TriggerDatabases()
@@ -623,7 +674,7 @@ namespace Raven.Server.ServerWide
                             if (cert.TryGet("Certificate", out string certBase64) == false ||
                                 cert.TryGet("Thumbprint", out string certThumbprint) == false)
                                 throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate and Thumbprint properties");
-                        
+
                             if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
                             {
                                 if (nodesInCluster > confirmations)
@@ -659,7 +710,7 @@ namespace Raven.Server.ServerWide
 
                             var bytesToSave = Convert.FromBase64String(certBase64);
                             var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
-                            
+
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
                             {
                                 bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);

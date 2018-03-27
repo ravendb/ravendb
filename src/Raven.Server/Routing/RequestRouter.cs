@@ -19,6 +19,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Routing
 {
@@ -27,7 +28,7 @@ namespace Raven.Server.Routing
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
-
+        private readonly Logger _auditLog;
         public List<RouteInformation> AllRoutes;
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
@@ -36,6 +37,7 @@ namespace Raven.Server.Routing
             _ravenServer = ravenServer;
             _serverMetrics = ravenServer.Metrics;
             AllRoutes = new List<RouteInformation>(routes.Values);
+            _auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
         }
 
 
@@ -70,6 +72,12 @@ namespace Raven.Server.Routing
 
             if (handler == null)
             {
+                if(_auditLog != null)
+                {
+                    _auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
+                        $"(Cert: {context.Connection.ClientCertificate?.Subject} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
+                }
+
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
@@ -109,6 +117,29 @@ namespace Raven.Server.Routing
         private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+            if(_auditLog != null)
+            {
+                if(feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
+                {
+                    // only one thread will win it, technically, there can't really be threading
+                    // here, because there is a single connection, but better to be safe
+                    if(Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
+                    {
+                        if(feature.WrongProtocolMessage != null)
+                        {
+                            _auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                                $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
+                        }
+                        else
+                        {
+                            _auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                                $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
+                        }
+                    }
+                }
+            }
 
             var authenticationStatus = feature?.Status;
 

@@ -145,7 +145,7 @@ namespace Raven.Server.Https
             }
         }
 
-        private static X509Certificate2 ConvertToX509Certificate2(X509Certificate certificate)
+        public static X509Certificate2 ConvertToX509Certificate2(X509Certificate certificate)
         {
             if (certificate == null)
             {
