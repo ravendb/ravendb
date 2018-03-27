@@ -298,7 +298,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (recoverable.Count > 0)
                 {
                     var node = FindMostUpToDateNode(recoverable, dbName, current);
-                    topology.Rehabs.Remove(node);
+                    topology.Rehabs.Remove(node);   
                     topology.Members.Add(node);
 
                     RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
@@ -862,7 +862,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             if (_engine.LeaderTag != _server.NodeTag)
             {
-                throw new NotLeadingException("This node is no longer the leader, so we abort the delection command");
+                throw new NotLeadingException("This node is no longer the leader, so we abort the deletion command");
             }
             return _engine.PutAsync(cmd);
         }
