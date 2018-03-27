@@ -17,6 +17,7 @@ type smugglerListItem = {
     skippedCount: string;
     hasAttachments: boolean;
     attachments: attachmentsListItem;
+    processingSpeedText: string;
 }
 
 type attachmentsListItem = {
@@ -30,11 +31,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(false);
+    lastDocsCount = 0;
+    lastProcessingSpeedText = "Processing";
 
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
     messages: KnockoutComputed<Array<string>>;
     messagesJoined: KnockoutComputed<string>;
     previousProgressMessages: string[];
+    processingSpeed: KnockoutComputed<string>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
@@ -180,17 +184,34 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
         }
 
+        const isDocuments = name === "Documents";
+        let processingSpeedText = "Processing";
+        const skippedCount = isDocuments ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
+        if (isDocuments) {
+            const docsCount = item.ReadCount + skippedCount + item.ErroredCount;
+            if (docsCount === this.lastDocsCount) {
+                processingSpeedText = this.lastProcessingSpeedText;
+            } else {
+                this.lastDocsCount = docsCount;
+                const processingSpeed = this.calculateProcessingSpeed(item.ReadCount + skippedCount + item.ErroredCount);
+                if (processingSpeed > 0) {
+                    processingSpeedText = this.lastProcessingSpeedText = processingSpeed.toLocaleString() + " docs / sec";
+                }
+            }
+        }
+
         return {
             name: name,
             stage: stage,
             hasReadCount: true, // it will be reassigned in post-processing
             readCount: item.ReadCount.toLocaleString(),
-            hasSkippedCount: name === "Documents",
-            skippedCount: name === "Documents" ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
+            hasSkippedCount: isDocuments,
+            skippedCount: isDocuments ? skippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString(),
             hasAttachments: hasAttachments,
-            attachments: attachmentsItem
+            attachments: attachmentsItem,
+            processingSpeedText: processingSpeedText
         } as smugglerListItem;
     }
 
