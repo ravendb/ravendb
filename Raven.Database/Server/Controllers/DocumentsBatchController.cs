@@ -148,7 +148,6 @@ namespace Raven.Database.Server.Controllers
             var specificIndexes = new HashSet<string>(parts.Skip(2));
 
             Etag lastEtag = null;
-            var allIndexes = false;
             var modifiedCollections = new HashSet<string>();
             var deletedIds = new HashSet<string>();
             foreach (var batchResult in results)
@@ -163,7 +162,6 @@ namespace Raven.Database.Server.Controllers
                 var collection = batchResult.Metadata.Value<string>(Constants.RavenEntityName);
                 if (string.IsNullOrEmpty(collection))
                 {
-                    allIndexes = true;
                     continue;
                 }
                 modifiedCollections.Add(collection);
@@ -191,7 +189,7 @@ namespace Raven.Database.Server.Controllers
                     }
                 }
 
-                if (allIndexes && index.ViewGenerator.ForEntityNames.Count == 0
+                if (index.ViewGenerator.ForEntityNames.Count == 0
                     || index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
                 {
                     indexes.Add(index);
