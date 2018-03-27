@@ -17,6 +17,10 @@ namespace Raven.Server.Smuggler.Migration
 
         public HttpClient HttpClient { get; set; }
 
+        public string ApiKey { get; set; }
+
+        public bool EnableBasicAuthenticationOverUnsecuredHttp { get; set; }
+
         public DatabaseItemType OperateOnTypes { get; set; }
 
         public bool RemoveAnalyzers { get; set; }

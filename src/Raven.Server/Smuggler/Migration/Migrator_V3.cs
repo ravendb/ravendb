@@ -187,9 +187,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<Stream> GetRavenFsStream(string key)
         {
-            var url = $"{ServerUrl}/fs/{DatabaseName}/files/{Uri.EscapeDataString(key)}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/fs/{DatabaseName}/files/{Uri.EscapeDataString(key)}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                return responseMessage;
+            });
+            
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the file was deleted
@@ -226,9 +231,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<BlittableJsonReaderArray> GetRavenFsHeadersArray(string lastEtag, TransactionOperationContext context)
         {
-            var url = $"{ServerUrl}/fs/{DatabaseName}/streams/files?pageSize={RavenFsHeadersPageSize}&etag={lastEtag}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/fs/{DatabaseName}/streams/files?pageSize={RavenFsHeadersPageSize}&etag={lastEtag}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                return responseMessage;
+            });
+
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -275,14 +285,19 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<SmugglerResult> MigrateDatabase(string json, bool readLegacyEtag)
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/exportDatabase";
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, url)
+            var response = await RunWithAuthRetry(async () =>
             {
-                Content = content
-            };
+                var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/exportDatabase";
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = content
+                };
 
-            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                return responseMessage;
+            });
+
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -312,9 +327,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<long> GetOperationId()
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/next-operation-id";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/next-operation-id";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                return responseMessage;
+            });
+
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -383,22 +403,20 @@ namespace Raven.Server.Smuggler.Migration
                 };
 
                 return lastEtagsInfo;
-                //operationStateBlittable.Modifications = new DynamicJsonValue
-                //{
-                //    [nameof(ImportInfo.ServerUrl)] = ServerUrl,
-                //    [nameof(ImportInfo.DatabaseName)] = DatabaseName
-                //};
-                //var blittableCopy = context.ReadObject(operationStateBlittable, MigrationStateKey);
-                //return blittableCopy;
             }
         }
 
         private async Task<BlittableJsonReaderObject> GetOperationStatus(
             string databaseName, long operationId, TransactionOperationContext context)
         {
-            var url = $"{ServerUrl}/databases/{databaseName}/operation/status?id={operationId}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/databases/{databaseName}/operation/status?id={operationId}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                return responseMessage;
+            });
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the operation status was deleted before we could get it
