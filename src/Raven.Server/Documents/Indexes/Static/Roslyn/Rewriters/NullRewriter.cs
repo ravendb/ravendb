@@ -38,6 +38,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     ? conditionalExpressionSyntax.WhenTrue
                     : conditionalExpressionSyntax.WhenFalse;
 
+                if (toCheck.IsKind(SyntaxKind.ParenthesizedExpression))
+                    toCheck = ((ParenthesizedExpressionSyntax)toCheck).Expression;
+
                 if (toCheck.IsKind(SyntaxKind.CastExpression) == false)
                     return true;
             }
