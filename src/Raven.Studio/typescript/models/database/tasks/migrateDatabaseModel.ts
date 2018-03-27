@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-type authenticationMethod = "windows" | "none";
+type authenticationMethod = "none" | "apiKey" | "windows";
 
 class migrateDatabaseModel {
     serverUrl = ko.observable<string>();
@@ -18,6 +18,7 @@ class migrateDatabaseModel {
 
     authenticationMethod = ko.observable<authenticationMethod>("none");
     authorized = ko.observable(true);
+    hasUnsecuredBasicAuthenticationOption = ko.observable(false);
 
     serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>("Unknown");
     buildVersion = ko.observable<number>();
@@ -29,6 +30,8 @@ class migrateDatabaseModel {
     userName = ko.observable<string>();
     password = ko.observable<string>();
     domain = ko.observable<string>();
+    apiKey = ko.observable<string>();
+    enableBasicAuthenticationOverUnsecuredHttp = ko.observable<boolean>();
 
     serverMajorVersionNumber: KnockoutComputed<string>;
     isRavenDb: KnockoutComputed<boolean>;
@@ -37,6 +40,8 @@ class migrateDatabaseModel {
     ravenFsImport: KnockoutComputed<boolean>;
     resourceTypeName: KnockoutComputed<string>;
     showWindowsCredentialInputs: KnockoutComputed<boolean>;
+    showApiKeyCredentialInputs: KnockoutComputed<boolean>;
+    isUnsecuredBasicAuthentication: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
@@ -94,6 +99,8 @@ class migrateDatabaseModel {
             UserName: this.showWindowsCredentialInputs() ? this.userName() : null,
             Password: this.showWindowsCredentialInputs() ? this.password() : null, 
             Domain: this.showWindowsCredentialInputs() ? this.domain() : null, 
+            ApiKey: this.showApiKeyCredentialInputs() ? this.apiKey() : null, 
+            EnableBasicAuthenticationOverUnsecuredHttp: this.apiKey() ? this.enableBasicAuthenticationOverUnsecuredHttp() : false, 
             BuildMajorVersion: this.serverMajorVersion(),
             BuildVersion: this.buildVersion()
         };
@@ -162,12 +169,18 @@ class migrateDatabaseModel {
             return authMethod === "windows";
         });
 
-        this.authenticationMethod.subscribe((newValue) => {
-            if (newValue === "none") {
-                this.userName(null);
-                this.password(null);
-                this.domain(null);
+        this.showApiKeyCredentialInputs = ko.pureComputed(() => {
+            const authMethod = this.authenticationMethod();
+            return authMethod === "apiKey";
+        });
+
+        this.isUnsecuredBasicAuthentication = ko.pureComputed(() => {
+            const url = this.serverUrl();
+            if (!url) {
+                return false;
             }
+
+            return this.hasUnsecuredBasicAuthenticationOption() && url.toLowerCase().startsWith("http://");
         });
     }
     
@@ -199,6 +212,12 @@ class migrateDatabaseModel {
         this.password.extend({
             required: {
                 onlyIf: () => this.showWindowsCredentialInputs()
+            }
+        });
+
+        this.apiKey.extend({
+            required: {
+                onlyIf: () => this.showApiKeyCredentialInputs()
             }
         });
 

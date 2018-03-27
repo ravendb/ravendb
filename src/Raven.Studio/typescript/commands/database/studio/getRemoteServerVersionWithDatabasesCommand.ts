@@ -3,7 +3,9 @@ import endpoints = require("endpoints");
 
 class getRemoteServerVersionWithDatabasesCommand extends commandBase {
 
-    constructor(private serverUrl: string, private userName: string, private password: string) {
+    constructor(private serverUrl: string,
+        private userName: string, private password: string, private domain: string,
+        private apiKey: string, private enableBasicAuthenticationOverUnsecuredHttp: boolean) {
         super();
     }
 
@@ -11,7 +13,10 @@ class getRemoteServerVersionWithDatabasesCommand extends commandBase {
         const args = {
             serverUrl: this.serverUrl,
             userName: this.userName,
-            password: this.password
+            password: this.password,
+            domain: this.domain,
+            apiKey: this.apiKey,
+            enableBasicAuthenticationOverUnsecuredHttp: this.enableBasicAuthenticationOverUnsecuredHttp
         };
         
         const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(args);
