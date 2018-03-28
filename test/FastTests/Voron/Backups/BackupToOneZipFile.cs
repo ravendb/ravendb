@@ -19,8 +19,7 @@ namespace FastTests.Voron.Backups
         [Fact(Skip = "Should add database record to backup and restore")]
         public async Task FullBackupToOneZipFile()
         {
-            var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempFileName);
+            var tempFileName = NewDataPath(forceCreateDir: true);
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {

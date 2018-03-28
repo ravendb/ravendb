@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using Raven.Server.Utils;
 using Voron;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Voron.Storage
 {
     public class Files : FastTests.Voron.StorageTest
     {
-        
+
         [Fact]
         public void ByDefaultAllFilesShouldBeStoredInOneDirectory()
         {
@@ -49,7 +50,7 @@ namespace SlowTests.Voron.Storage
             using (var env = new StorageEnvironment(options))
             {
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
-                var scratchFileTemp = Path.Combine(DataDir +"Temp", StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFileTemp = Path.Combine(DataDir + "Temp", StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.False(File.Exists(scratchFile));
                 Assert.True(File.Exists(scratchFileTemp));
@@ -58,7 +59,7 @@ namespace SlowTests.Voron.Storage
 
         public override void Dispose()
         {
-            DeleteDirectory(DataDir+"Temp");
+            IOExtensions.DeleteDirectory(DataDir + "Temp");
 
             base.Dispose();
         }

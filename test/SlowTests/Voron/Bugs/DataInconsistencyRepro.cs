@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using FastTests.Voron;
 using SlowTests.Utils;
 using Voron;
 using Voron.Data.BTrees;
@@ -116,7 +117,7 @@ namespace SlowTests.Voron.Bugs
                         metadataReader.Read(etagFromMetadata, 0, 16);
 
                         var readEtag = new Guid(etagFromMetadata);
-                        
+
 
                         Assert.Equal(etag, readEtag);
 

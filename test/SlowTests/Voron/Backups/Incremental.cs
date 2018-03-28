@@ -16,17 +16,12 @@ namespace SlowTests.Voron.Backups
 {
     public class Incremental : FastTests.Voron.StorageTest
     {
-        IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
+        private readonly IncrementalBackupTestUtils _incrementalBackupTestUtils = new IncrementalBackupTestUtils();
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.IncrementalBackupEnabled = true;
             options.ManualFlushing = true;
-        }
-
-        public Incremental()
-        {
-            IncrementalBackupTestUtils.Clean();
         }
 
         [Fact]
@@ -49,12 +44,12 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.Restore(options, new[] { IncrementalBackupTestUtils.IncrementalBackupFile(0) });
+            BackupMethods.Incremental.Restore(options, new[] { _incrementalBackupTestUtils.IncrementalBackupFile(0) });
 
             using (var env = new StorageEnvironment(options))
             {
@@ -94,7 +89,7 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             using (var tx = Env.WriteTransaction())
             {
@@ -107,7 +102,7 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(1));
 
             using (var tx = Env.WriteTransaction())
             {
@@ -122,16 +117,16 @@ namespace SlowTests.Voron.Backups
 
             Env.FlushLogToDataFile(); // make sure that incremental backup will work even if we flushed journals to the data file
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(2));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(2));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0),
-                IncrementalBackupTestUtils.IncrementalBackupFile(1),
-                IncrementalBackupTestUtils.IncrementalBackupFile(2)
+                _incrementalBackupTestUtils.IncrementalBackupFile(0),
+                _incrementalBackupTestUtils.IncrementalBackupFile(1),
+                _incrementalBackupTestUtils.IncrementalBackupFile(2)
             });
 
             using (var env = new StorageEnvironment(options))
@@ -172,7 +167,7 @@ namespace SlowTests.Voron.Backups
 
             var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
-            var backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             Assert.Equal(usedPagesInJournal, backedUpPages);
 
@@ -191,17 +186,17 @@ namespace SlowTests.Voron.Backups
 
             var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
 
-            backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
+            backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(1));
 
             Assert.Equal(usedByLastTransaction, backedUpPages);
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0),
-                IncrementalBackupTestUtils.IncrementalBackupFile(1)
+                _incrementalBackupTestUtils.IncrementalBackupFile(0),
+                _incrementalBackupTestUtils.IncrementalBackupFile(1)
             });
 
             using (var env = new StorageEnvironment(options))
@@ -242,7 +237,7 @@ namespace SlowTests.Voron.Backups
 
             var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
-            var backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             Assert.Equal(usedPagesInJournal, backedUpPages);
 
@@ -253,17 +248,17 @@ namespace SlowTests.Voron.Backups
             var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
             Assert.Equal(0, usedByLastTransaction);
 
-            backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
+            backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(1));
 
             Assert.Equal(usedByLastTransaction, backedUpPages);
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0),
-                IncrementalBackupTestUtils.IncrementalBackupFile(1)
+                _incrementalBackupTestUtils.IncrementalBackupFile(0),
+                _incrementalBackupTestUtils.IncrementalBackupFile(1)
             });
 
             using (var env = new StorageEnvironment(options))
@@ -314,14 +309,14 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0)
+                _incrementalBackupTestUtils.IncrementalBackupFile(0)
             });
 
             using (var env = new StorageEnvironment(options))
@@ -380,14 +375,14 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0)
+                _incrementalBackupTestUtils.IncrementalBackupFile(0)
             });
 
             using (var env = new StorageEnvironment(options))
@@ -445,14 +440,14 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+            BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0)
+                _incrementalBackupTestUtils.IncrementalBackupFile(0)
             });
 
             using (var env = new StorageEnvironment(options))
@@ -475,7 +470,7 @@ namespace SlowTests.Voron.Backups
         public override void Dispose()
         {
             base.Dispose();
-            IncrementalBackupTestUtils.Clean();
+            _incrementalBackupTestUtils.Dispose();
         }
     }
 }

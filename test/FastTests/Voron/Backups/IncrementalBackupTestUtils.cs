@@ -4,28 +4,24 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
+using Raven.Server.Utils;
 
 namespace FastTests.Voron.Backups
 {
-    public class IncrementalBackupTestUtils
+    public class IncrementalBackupTestUtils : IDisposable
     {
-        public string IncrementalBackupFile(int n) =>
-            Path.Combine(DataDir, string.Format("voron-test.{0}-incremental-backup.zip", n));
+        public string IncrementalBackupFile(int n) => Path.Combine(_dataDir, string.Format("voron-test.{0}-incremental-backup.zip", n));
 
-        public string RestoredStoragePath => Path.Combine(DataDir, "incremental-backup-test.data");
+        public string RestoredStoragePath => Path.Combine(_dataDir, "incremental-backup-test.data");
 
-        public string DataDir = StorageTest.GenerateDataDir();
+        private readonly string _dataDir = RavenTestHelper.NewDataPath(nameof(IncrementalBackupTestUtils), 0, forceCreateDir: true);
 
-        public void Clean()
+        public void Dispose()
         {
-            foreach (var incBackupFile in Directory.EnumerateFiles(DataDir, "*incremental-backup.zip"))
-            {
-                File.Delete(incBackupFile);
-            }
-
-            if (Directory.Exists(RestoredStoragePath))
-                Directory.Delete(RestoredStoragePath, true);
-        } 
+            IOExtensions.DeleteDirectory(_dataDir);
+            IOExtensions.DeleteDirectory(RestoredStoragePath);
+        }
     }
 }

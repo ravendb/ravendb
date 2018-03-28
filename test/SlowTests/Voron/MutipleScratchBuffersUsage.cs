@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using FastTests.Voron;
 using Voron;
 using Voron.Global;
 using Xunit;
