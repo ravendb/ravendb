@@ -229,8 +229,8 @@ namespace Raven.Server.Documents.Queries
                         documents = Enumerable.Empty<Document>();
                     else
                     {
-                        documents = _isAllDocsCollection 
-                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults) 
+                        documents = _isAllDocsCollection
+                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults)
                             : _documents.GetDocuments(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
                     }
                 }
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Queries
                 private readonly ByteStringContext _allocator;
                 public string StartsWith;
 
-                public List<Slice> Ids { get; private set; }
+                public HashSet<Slice> Ids { get; private set; }
 
                 public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
                 {
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Queries
                 public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
                 {
                     if (Ids == null)
-                        Ids = new List<Slice>(); // this handles a case where IN is used with empty list
+                        Ids = new HashSet<Slice>(SliceComparer.Instance); // this handles a case where IN is used with empty list
 
                     if (fieldName is MethodExpression me && string.Equals("id", me.Name, StringComparison.OrdinalIgnoreCase))
                     {
@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (item is ValueExpression iv)
                             {
-                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv, distinct:true))
+                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv))
                                 {
                                     AddId(id.Value?.ToString());
                                 }
@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.Queries
                         key = Slices.Empty;
 
                     if (Ids == null)
-                        Ids = new List<Slice>();
+                        Ids = new HashSet<Slice>(SliceComparer.Instance);
 
                     Ids.Add(key);
                 }
