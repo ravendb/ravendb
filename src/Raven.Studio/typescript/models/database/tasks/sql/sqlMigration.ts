@@ -111,20 +111,29 @@ class sqlMigration {
         
         // insert references
         _.map(dbSchema.Tables, tableDto => {
-            const sourceTable = mapping.find(x => x.tableName === tableDto.TableName && x.tableSchema === tableDto.Schema);
+            const sourceTable = sqlMigration.findRootTable(mapping, tableDto.Schema, tableDto.TableName);
             tableDto.References.forEach(referenceDto => {
-                const targetTable = mapping.find(x => x.tableName === referenceDto.Table && x.tableSchema === referenceDto.Schema);
+                const targetTable = sqlMigration.findRootTable(mapping, referenceDto.Schema, referenceDto.Table);
                 
                 const oneToMany = new sqlReference(targetTable, referenceDto.Columns, "OneToMany");
                 sourceTable.references.push(oneToMany);
                 
                 const manyToOne = new sqlReference(sourceTable, referenceDto.Columns, "ManyToOne");
                 targetTable.references.push(manyToOne);
+                manyToOne.effectiveLinkTable(sourceTable);
             });
         });
         
         
         this.tables(mapping);
+    }
+    
+    static findRootTable(tables: Array<rootSqlTable>, tableSchema: string,  tableName: string) {
+        return tables.find(x => x.tableName === tableName && x.tableSchema === tableSchema);
+    }
+    
+    findRootTable(tableSchema: string,  tableName: string) {
+        return sqlMigration.findRootTable(this.tables(), tableSchema, tableName);
     }
     
     getConnectionString() {

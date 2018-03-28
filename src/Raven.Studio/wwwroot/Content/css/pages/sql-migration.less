@@ -1,0 +1,105 @@
+@raven-field-color: #a4f012;
+
+.sql-migration {
+    
+    .object-container [class^="icon-"] + span {
+        margin-left: 0;
+    }
+    
+    .raven-property-name {
+        color: @raven-field-color;
+    }
+    .panel-addon {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    
+    .btn-sm {
+        padding: 2px 8px;
+    }
+    
+    .checkbox {
+        label {
+            padding-top: 6px;
+        }
+    }
+    .panel-info {
+        .link-actions {
+            padding-left: 5px;
+            padding-right: 5px;
+            margin: 2px;
+            
+            .btn.btn-sm.active {
+                background-color: fade(@brand-info, 50%) !important;
+            }
+        }
+    }
+    
+    
+    .document-id {
+        padding: 4px;
+        padding-bottom: 0;
+    }
+    
+    .object-container {
+        padding: 20px 7.5px 20px 20px;
+        position: relative;
+        
+        &:before {
+            position: absolute;
+            content: '{';
+            top: 6px;
+            left: 7px;
+            opacity: 0.5;
+        }
+        &:after {
+            position: absolute;
+            content: '}';
+            bottom: 3px;
+            left: 7px;
+            opacity: 0.5;
+        }
+    }
+    
+    .array-container {
+        padding: 20px 7.5px 20px 20px;
+        position: relative;
+        
+        &:before {
+            position: absolute;
+            content: '[';
+            top: 6px;
+            left: 7px;
+            opacity: 0.5;
+        }
+        &:after {
+            position: absolute;
+            content: ']';
+            bottom: 3px;
+            left: 7px;
+            opacity: 0.5;
+        }
+        
+    }
+    
+    .with-top-label {
+        position: relative;
+        
+        &:before {
+            color: #63728a;
+            position: absolute;
+            left: 0;
+            top: -14px;
+            line-height: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            content: attr(data-label);
+        }
+    }
+    
+    .properties_table {
+        td {
+            padding-right: 5px;
+        }
+    }
+}
