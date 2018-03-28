@@ -5,7 +5,7 @@ import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 class leafMenuItem implements menuItem {
     title: string;
     tooltip: string;
-    nav: boolean;
+    nav: boolean | KnockoutObservable<boolean>;
     route: string | Array<string>;
     moduleId: string;
     hash: string;
@@ -14,7 +14,7 @@ class leafMenuItem implements menuItem {
     openAsDialog: boolean;
     path: KnockoutComputed<string>;
     parent: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
-    enabled: KnockoutObservable<boolean>;
+    enabled: KnockoutObservable<boolean> | KnockoutComputed<boolean>;
     type: menuItemType = "leaf";
     itemRouteToHighlight: string;
     alias: boolean;
@@ -27,13 +27,13 @@ class leafMenuItem implements menuItem {
         title: string,
         route: string | Array<string>,
         moduleId: string,
-        nav: boolean,
+        nav: boolean | KnockoutObservable<boolean>,
         tooltip?: string,
         hash?: string,
         dynamicHash?: dynamicHashType,
         css?: string,
         openAsDialog?: boolean,
-        enabled?: KnockoutObservable<boolean>;
+        enabled?: KnockoutObservable<boolean> | KnockoutComputed<boolean>;
         itemRouteToHighlight?: string;
         badgeData?: KnockoutObservable<number>;
         alias?: boolean;

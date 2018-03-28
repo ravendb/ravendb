@@ -83,7 +83,9 @@
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
-                            <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data)"><i class="icon-trash"></i></button>
+                            <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance)">
+                                <i class="icon-trash"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="panel-addon">
@@ -139,24 +141,24 @@
                                     <input type="text" class="form-control" data-bind="textInput: name">
                                 </div>
                             </div>
-    
                             <div class="form-group" data-bind="visible: mode() !== 'replace'">
                                 <label class="control-label">
-                                    Security clearance
+                                    Security Clearance
                                 </label>
                                 <div class="btn-group btn-block">
                                     <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" data-bind="enable: canEditClearance">
                                         <span data-bind="text: securityClearanceLabel"></span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu" data-bind="foreach: $data.constructor.securityClearanceTypes">
-                                        <li><a href="#" data-bind="text: label, click: _.partial($parent.setClearanceMode, value)"></a></li>
+                                        <li data-bind="visible: $root.canGenerateCertificateForSecurityClearanceType($data.value)">
+                                            <a href="#" data-bind="text: label, click: _.partial($parent.setClearanceMode, value)"></a>
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
-    
                             <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'replace', validationElement: certificateAsBase64">
                                 <label class="control-label certificate-file-label">
-                                    Certificate file
+                                    Certificate File
                                     <small data-bind="visible: mode() === 'upload'"><i class="icon-info text-info"></i></small>
                                 </label>
                                 <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
@@ -171,10 +173,9 @@
                                     <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
                                 </div>
                             </div>
-
                             <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'replace'">
                                 <label class="control-label">
-                                    Certificate passphrase
+                                    Certificate Passphrase
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase" >
                             </div>
@@ -222,8 +223,7 @@
                             </div>
                             <div data-bind="visible: mode() !== 'replace'">
                                 <hr />
-                                <h4>Database permissions</h4>
-                               
+                                <h4>Database Permissions</h4>                               
                                 <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
                                     <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
                                         <div class="dropdown btn-block">
@@ -265,7 +265,6 @@
                                         </a>
                                     </li>
                                 </ul>
-        
                                 <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
                                     <div>
                                         <i class="icon-info"></i>
@@ -275,7 +274,6 @@
                                     </div>
                                 </div>
                             </div>
-    
                             <div class="flex-horizontal margin-top">
                                 <div class="flex-separator"></div>
                                 <div>

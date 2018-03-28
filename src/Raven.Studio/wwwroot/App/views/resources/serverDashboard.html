@@ -1,7 +1,6 @@
 <div id="dashboard-container" class="content-margin">
     <div class="dashboard-items" data-bind="css: { 'no-databases': noDatabases }">
         <div class="flex-vertical dashboard-nodecpu">
-
             <div class="dashboard-item dashboard-node">
                 <div class="panel panel-default">
                     <div class="panel-body">
@@ -32,14 +31,11 @@
                     </div>
                 </div>
             </div>
-
-
-            <div class="dashboard-item dashboard-cpu-memory" data-bind="with: machineResourcesSection">
+            <div class="dashboard-item dashboard-cpu-memory" data-bind="with: machineResourcesSection, visible: accessManager.showCPUAndMemGraph">
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title"><i class="icon-processor"></i> <span>CPU & MEMORY</span> </h3>
                     </div>
-
                     <div class="panel-body">
                         <div class="infogrid">
                             <div class="infogrid-label" data-bind="with: resources">
@@ -62,7 +58,6 @@
                             </div>
                             <div class="infogrid-graph" >
                                 <div class="graph-container fix-size" id="cpuChart">
-                                    
                                 </div>
                             </div>
                             <div class="separator"></div>
@@ -90,7 +85,6 @@
                             </div>
                             <div class="infogrid-graph">
                                 <div class="graph-container fix-size" id="memoryChart">
-
                                 </div>
                             </div>
                         </div>
@@ -98,7 +92,6 @@
                 </div>
             </div>
         </div>
-
         <div class="dashboard-item dashboard-traffic" data-bind="with: trafficSection">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -130,7 +123,6 @@
                 </div>
             </div>
         </div>
-
         <div class="dashboard-item dashboard-databases" data-bind="with: databasesSection">
             <div class="panel panel-default ">
                 <div class="panel-heading">
@@ -152,10 +144,8 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
-
         <div class="dashboard-item dashboard-indexing" data-bind="with: indexingSpeedSection">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -163,7 +153,6 @@
                 </div>
                 <div class="panel-body flex-vertical">
                     <div class="flex-horizontal flex-stretch-items flex-grow">
-
                         <div class="infogrid margin-right margin-right-sm">
                             <div class="infogrid-label">
                                 <div># Docs indexed/s<br/>
@@ -196,12 +185,10 @@
                                 <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true"></virtual-grid>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
-
         <div class="dashboard-item dashboard-storage" data-bind="with: driveUsageSection">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -214,7 +201,6 @@
                                 Total dbs size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize())"></strong>
                             </div>
                             <div class="graph-container fix-size" id="storageChart">
-                                
                             </div>
                         </div>
                         <div class="flex-grow flex-vertical fix-size" data-bind="foreach: table">

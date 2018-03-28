@@ -1,9 +1,7 @@
 <div id="about-page" class="content-margin">
-
     <div class="row">
         <div class="col-lg-6 text-center">
             <i class="icon-logo text-primary"></i>
-
             <div class="flex-horizontal margin-bottom">
                 <div class="flex-grow"></div>
                 <table>
@@ -27,11 +25,9 @@
                     <span>Send feedback</span>
                 </a>
             </div>
-
             <div class="margin-top">
                 <small>Copyright © 2009 - 2018 Hibernating Rhinos. All rights reserved.</small>
             </div>
-
         </div>
         <div class="col-lg-6">
             <div class="panel padding padding-sm margin-bottom">
@@ -42,7 +38,6 @@
                     <div class="flex-grow license-info">
                         <div>
                             <h2>License information</h2>
-
                             <table>
                                 <tr>
                                     <th>Type</th>
@@ -59,11 +54,10 @@
                             </table>
                         </div>
                         <div data-bind="visible: registered" class="license-actions">
-                            
-                            <button class="btn btn-primary" data-bind="click: register">Replace License</button>
-                            
+                            <button class="btn btn-primary" data-bind="click: register, visible: accessManager.canReplaceLicense">Replace License</button>
                             <span class="force-license-update">
-                                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, css: { 'btn-spinner': spinners.forceLicenseUpdate }">
+                                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, 
+                                    css: { 'btn-spinner': spinners.forceLicenseUpdate }, visible: accessManager.canForceUpdate">
                                     <i class="icon-force"></i>
                                     <span>Force Update</span>
                                 </button>
@@ -73,8 +67,6 @@
                             <button class="btn btn-primary" data-bind="click: register">Register</button>
                         </div>
                     </div>
-                    
-
                 </div>
             </div>
             <div class="panel padding padding-sm">
@@ -84,24 +76,21 @@
                     </div>
                     <div class="flex-grow license-info">
                         <h2>Support plan</h2>
-
                         <table>
                             <tr>
                                 <th>Type</th>
                                 <td><span data-bind="text: supportLabel"></span></td>
                             </tr>
                         </table>
-                        <div class="license-actions">
+                        <div class="license-actions" data-bind="visible: accessManager.canUpgrade">
                             <a href="https://ravendb.net/support" target="_blank" class="btn btn-success" data-bind="visible: canUpgradeSupport">
                                 <i class="icon-support"></i>
                                 <span>Upgrade</span>
                             </a>
                         </div>
                     </div>
-                    
                 </div>
             </div>
         </div>
     </div>
-
 </div>
