@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using FastTests.Voron;
 using Voron;
 using Xunit;
 

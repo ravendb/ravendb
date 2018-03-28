@@ -6,6 +6,8 @@
 
 using System;
 using System.IO;
+using FastTests.Voron;
+using FastTests.Voron.Backups;
 using SlowTests.Utils;
 using Voron;
 using Voron.Global;
