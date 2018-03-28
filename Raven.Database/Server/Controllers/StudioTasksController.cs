@@ -795,26 +795,29 @@ for(var customFunction in customFunctions) {{
                     bool stale;
                     foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
                     {
-                        var conflicts = accessor
-                            .Documents
-                            .GetDocumentsWithIdStartingWith(documentId, 0, int.MaxValue, null)
-                            .Where(x => x.Key.Contains("/conflicts/"))
-                            .ToList();
+                        using (Database.DocumentLock.Lock())
+                        {
+                            var conflicts = accessor
+                                .Documents
+                                .GetDocumentsWithIdStartingWith(documentId, 0, int.MaxValue, null)
+                                .Where(x => x.Key.Contains("/conflicts/"))
+                                .ToList();
 
-                        KeyValuePair<JsonDocument, DateTime> local;
-                        KeyValuePair<JsonDocument, DateTime> remote;
-                        Database.GetConflictDocuments(conflicts, out local, out remote);
+                            KeyValuePair<JsonDocument, DateTime> local;
+                            KeyValuePair<JsonDocument, DateTime> remote;
+                            Database.GetConflictDocuments(conflicts, out local, out remote);
 
-                        var documentToSave = GetDocumentToSave(resolution, local, remote);
-                        if (documentToSave == null)
-                            continue;
+                            var documentToSave = GetDocumentToSave(resolution, local, remote);
+                            if (documentToSave == null)
+                                continue;
 
-                        documentToSave.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+                            documentToSave.Metadata.Remove(Constants.RavenReplicationConflictDocument);
 
-                        if (documentToSave.Metadata.Value<bool>(Constants.RavenDeleteMarker))
-                            Database.Documents.Delete(documentId, null, null);
-                        else
-                            Database.Documents.Put(documentId, null, documentToSave.DataAsJson, documentToSave.Metadata, null);
+                            if (documentToSave.Metadata.Value<bool>(Constants.RavenDeleteMarker))
+                                Database.Documents.Delete(documentId, null, null);
+                            else
+                                Database.Documents.Put(documentId, null, documentToSave.DataAsJson, documentToSave.Metadata, null);
+                        }
                     }
                 }
             }));
