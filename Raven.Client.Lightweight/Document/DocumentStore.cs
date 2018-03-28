@@ -290,8 +290,8 @@ namespace Raven.Client.Document
 
             foreach (var nagleTask in nagleTasks)
             {
-                nagleTask.Value.Item2.CompleteAdding();
-                nagleTask.Value.Item1?.Wait();
+                nagleTask.Value.Value.Item2.CompleteAdding();
+                nagleTask.Value.Value.Item1?.Wait();
             }
 
             var afterDispose = AfterDispose;
@@ -920,8 +920,8 @@ namespace Raven.Client.Document
             public TaskCompletionSource<BatchResult[]> TaskCompletionSource = new TaskCompletionSource<BatchResult[]>();
         }
 
-        private readonly ConcurrentDictionary<string, Tuple<Task, BlockingCollection<NagleData>>> nagleTasks = 
-            new ConcurrentDictionary<string, Tuple<Task, BlockingCollection<NagleData>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Tuple<Task, BlockingCollection<NagleData>>>> nagleTasks = 
+            new ConcurrentDictionary<string, Lazy<Tuple<Task, BlockingCollection<NagleData>>>>();
 
         internal Task<BatchResult[]> AddNagleData(string databaseName, InMemoryDocumentSessionOperations.SaveChangesData saveChangesData)
         {
@@ -934,15 +934,18 @@ namespace Raven.Client.Document
 
         private BlockingCollection<NagleData> GetNagleQueue(string databaseName)
         {
-            var nagle = nagleTasks.GetOrAdd(databaseName ?? "<system>", x =>
+            var nagle = nagleTasks.GetOrAdd(databaseName ?? "<system>", _ =>
             {
-                var nagleQueue = new BlockingCollection<NagleData>();
-                var nagleWriterTask = Task.Run(() => WriteNagleQueueToServer(nagleQueue, databaseName));
-                return new Tuple<Task, BlockingCollection<NagleData>>(nagleWriterTask, nagleQueue);
+                return new Lazy<Tuple<Task, BlockingCollection<NagleData>>>(() =>
+                {
+                    var nagleQueue = new BlockingCollection<NagleData>();
+                    var nagleWriterTask = Task.Run(() => WriteNagleQueueToServer(nagleQueue, databaseName));
+                    return new Tuple<Task, BlockingCollection<NagleData>>(nagleWriterTask, nagleQueue);
+                });
             });
             
-            EnsureNagleIsNotFaulted(nagle.Item1);
-            return nagle.Item2;
+            EnsureNagleIsNotFaulted(nagle.Value.Item1);
+            return nagle.Value.Item2;
         }
 
         private static void EnsureNagleIsNotFaulted(Task nagleWriterTask)
