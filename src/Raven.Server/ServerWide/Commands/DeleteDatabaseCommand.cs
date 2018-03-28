@@ -13,7 +13,6 @@ namespace Raven.Server.ServerWide.Commands
         public bool HardDelete;
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
-        public Dictionary<string, string> MentorChangeVector;
 
         public DeleteDatabaseCommand() : base(null)
         {
@@ -34,22 +33,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
-
-            if (MentorChangeVector != null)
-            {
-                if (record.DeletionInProgressChangeVector == null)
-                {
-                    record.DeletionInProgressChangeVector = new Dictionary<string, string>();
-                }
-
-                foreach (var entry in MentorChangeVector)
-                {
-                    var key = entry.Key;
-                    var value = entry.Value;
-
-                    record.DeletionInProgressChangeVector[key] = value;
-                }
-            }
 
             if (record.DeletionInProgress == null)
             {
@@ -84,11 +67,12 @@ namespace Raven.Server.ServerWide.Commands
                         record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
 
-                record.Topology.ReplicationFactor = 0;
                 record.Topology = new DatabaseTopology
                 {
-                    Stamp = record.Topology.Stamp
+                    Stamp = record.Topology.Stamp,
+                    ReplicationFactor = 0
                 };
+
             }
             return null;
         }
@@ -101,10 +85,6 @@ namespace Raven.Server.ServerWide.Commands
             if (FromNodes != null)
             {
               json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
-            }
-            if (MentorChangeVector != null)
-            {
-              json[nameof(MentorChangeVector)] = DynamicJsonValue.Convert(MentorChangeVector);
             }
         }
     }
