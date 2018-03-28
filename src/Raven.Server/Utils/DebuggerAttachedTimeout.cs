@@ -20,6 +20,15 @@ namespace Raven.Server.Utils
         }
 
         [Conditional("DEBUG")]
+        public static void SendTimeout(ref int timespan)
+        {
+            if (IsDisabled)
+                return;
+
+            timespan *= 100;
+        }
+
+        [Conditional("DEBUG")]
         public static void LongTimespanIfDebugging(ref TimeSpan timespan)
         {
             if (IsDisabled)
