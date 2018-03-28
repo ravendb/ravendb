@@ -1322,7 +1322,22 @@ namespace Voron.Impl.Journal
 
             const int transactionHeaderPageOverhead = 1;
             var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
-            var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
+
+            PagerState pagerState;
+            try
+            {
+                pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
+            }
+            catch (InsufficientMemoryException)
+            {
+                // RavenDB-10830: failed to lock memory of temp buffers in encrypted db, let's create new file with initial size
+
+                _compressionPager.Dispose();
+                _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+                _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+                throw;
+            }
+
             tx.EnsurePagerStateReference(pagerState);
 
             _compressionPager.EnsureMapped(tx, 0, pagesRequired);
@@ -1401,13 +1416,27 @@ namespace Voron.Impl.Journal
                 var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
                 int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
                                                         ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
+
                 _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired + outputBufferInPages, _maxNumberOfPagesRequiredForCompressionBuffer);
 
                 var totalSizeWrittenPlusTxHeader = totalSizeWritten + sizeof(TransactionHeader);
                 var pagesWritten = (totalSizeWrittenPlusTxHeader / Constants.Storage.PageSize) +
                                    (totalSizeWrittenPlusTxHeader % Constants.Storage.PageSize == 0 ? 0 : 1);
 
-                pagerState = _compressionPager.EnsureContinuous(pagesWritten, outputBufferInPages);
+                try
+                {
+                    pagerState = _compressionPager.EnsureContinuous(pagesWritten, outputBufferInPages);
+                }
+                catch (InsufficientMemoryException)
+                {
+                    // RavenDB-10830: failed to lock memory of temp buffers in encrypted db, let's create new file with initial size
+
+                    _compressionPager.Dispose();
+                    _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+                    _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+                    throw;
+                }
+                
                 tx.EnsurePagerStateReference(pagerState);
                 _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
 
