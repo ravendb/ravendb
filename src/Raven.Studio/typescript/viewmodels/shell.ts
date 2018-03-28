@@ -7,6 +7,7 @@ import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
+import accessManager = require("common/shell/accessManager");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import favNodeBadge = require("common/shell/favNodeBadge");
 import searchBox = require("common/shell/searchBox");
@@ -30,7 +31,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
@@ -55,6 +55,7 @@ class shell extends viewModelBase {
     collectionsTracker = collectionsTracker.default;
     footer = footer.default;
     clusterManager = clusterTopologyManager.default;
+    accessManager = accessManager.default;
     continueTest = continueTest.default;
     static buildInfo = buildInfo;
 
@@ -140,7 +141,10 @@ class shell extends viewModelBase {
         });
 
         $.when<any>(licenseTask, topologyTask, clientCertifiateTask)
-            .done(() => {
+            .done(([license]: [Raven.Server.Commercial.LicenseStatus], 
+                   [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],
+                   [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition]) => {
+            
                 changesContext.default
                     .connectServerWideNotificationCenter();
 
@@ -156,6 +160,13 @@ class shell extends viewModelBase {
                 this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
 
                 this.connectToRavenServer();
+                
+                if (certificate) {
+                    this.accessManager.securityClearance(certificate.SecurityClearance);                   
+                }
+                else {
+                    this.accessManager.securityClearance("ValidUser");
+                }
             })
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 
@@ -283,12 +294,8 @@ class shell extends viewModelBase {
 
     loadServerConfig(): JQueryPromise<void> {
         const deferred = $.Deferred<void>().resolve();
-
-        //TODO: it is temporary fix:
         
-        accessHelper.isGlobalAdmin(true);
-        accessHelper.canReadWriteSettings(true);
-        accessHelper.canReadSettings(true);
+        // Todo - what should be here ?
         
         return deferred;
     }

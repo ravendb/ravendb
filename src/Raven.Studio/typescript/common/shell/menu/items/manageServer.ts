@@ -1,14 +1,16 @@
 ﻿import appUrl = require("common/appUrl");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import accessHelper = require("viewmodels/shell/accessHelper");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
+import accessManager = require("common/shell/accessManager");
 
 export = getManageServerMenuItem;
 
 function getManageServerMenuItem() {
-    let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
+
+    const access = accessManager.default.manageServerMenu;
+    const accessMainMenu = accessManager.default.mainMenu;
+        
     const items: menuItem[] = [
         new leafMenuItem({
             route: 'admin/settings/cluster',
@@ -17,7 +19,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-cluster',
             dynamicHash: appUrl.forCluster,
-            enabled: canReadOrWrite
+            enabled: access.enableClusterMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/addClusterNode',
@@ -25,7 +27,7 @@ function getManageServerMenuItem() {
             title: "Add Cluster Node",
             nav: false,
             dynamicHash: appUrl.forAddClusterNode,
-            enabled: canReadOrWrite,
+            enabled: accessManager.default.clusterAdmin,
             itemRouteToHighlight: 'admin/settings/cluster'
         }),           
         new leafMenuItem({
@@ -35,16 +37,16 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-client-configuration',
             dynamicHash: appUrl.forGlobalClientConfiguration,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableClientConfigurationMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Admin JS Console",
-            nav: true,
+            nav: access.showAdminJSConsoleMenuItem,
             css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableAdminJSConsoleMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/certificates',
@@ -53,7 +55,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-certificate',
             dynamicHash: appUrl.forCertificates,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableCertificatesMenuItem
         }), 
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
@@ -64,7 +66,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-admin-logs',
             dynamicHash: appUrl.forAdminLogs,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableAdminLogsMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/trafficWatch',
@@ -73,7 +75,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-traffic-watch',
             dynamicHash: appUrl.forTrafficWatch,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableTrafficWatchMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
@@ -82,7 +84,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugInfo,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableGatherDebugInfoMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/debug/advanced*details',
@@ -91,10 +93,10 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-debug-advanced',
             hash: appUrl.forDebugAdvancedThreadsRuntime(),
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableAdvancedMenuItem
         }),
     ];
 
-    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server');
+    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null, accessMainMenu.showManageServerMenuItem());
 }
 

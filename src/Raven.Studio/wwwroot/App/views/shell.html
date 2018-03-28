@@ -192,7 +192,7 @@
 
 <script type="text/html" id="intermediateMenuItem">
     <li class="arrow-right">
-        <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }">
+        <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }, visible: item.nav">
             <i data-bind="css: item.css"></i>
             <span data-bind="text: item.title"></span>
         </a>
