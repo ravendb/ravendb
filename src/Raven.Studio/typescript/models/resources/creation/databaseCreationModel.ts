@@ -382,8 +382,11 @@ class databaseCreationModel {
 
     toDto(): Raven.Client.ServerWide.DatabaseRecord {
         const settings: dictionary<string> = {};
+        const dataDir = _.trim(this.path.dataPath());
 
-        settings[configuration.core.dataDirectory] = _.trim(this.path.dataPath()) || null;
+        if (dataDir) {
+            settings[configuration.core.dataDirectory] = dataDir;
+        }
 
         return {
             DatabaseName: this.name(),
