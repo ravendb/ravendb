@@ -86,7 +86,10 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = "DemoteOnServerDown";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0,  customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
+            });
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
