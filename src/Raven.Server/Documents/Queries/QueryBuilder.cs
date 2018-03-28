@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, ValueExpression value, bool distinct = false)
+            BlittableJsonReaderObject parameters, ValueExpression value)
         {
             if (value.Value == ValueTokenType.Parameter)
             {
@@ -800,10 +800,6 @@ namespace Raven.Server.Documents.Queries
                 {
                     ValueTokenType? expectedValueType = null;
                     var unwrapedArray = UnwrapArray(array, metadata.QueryText, parameters);
-                    if (distinct)
-                    {
-                        unwrapedArray = unwrapedArray.Distinct();
-                    }
                     foreach (var item in unwrapedArray)
                     {
                         if (expectedValueType == null)
@@ -859,7 +855,7 @@ namespace Raven.Server.Documents.Queries
             // this is known to be 0-9 with possibly _
             bool isNegative = token[0] == '-';
 
-            for (var index = isNegative  ? 1 : 0; index < token.Length; index++)
+            for (var index = isNegative ? 1 : 0; index < token.Length; index++)
             {
                 var ch = token[index];
                 if (ch == '_')
