@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Sparrow.Platform;
 using Sparrow.Threading;
 using Xunit;
 
@@ -177,7 +178,9 @@ namespace StressTests.Sparrow
                 };
                 if (threadName != null)
                     _threads[i].Name = threadName + " (" + i + ")";
-                _threads[i].SetApartmentState(threadApartmentState);
+
+                if (PlatformDetails.RunningOnPosix == false) // not supported on Posix
+                    _threads[i].SetApartmentState(threadApartmentState);
             }
 
             // Start all of the threads
