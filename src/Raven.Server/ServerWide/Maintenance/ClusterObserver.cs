@@ -676,7 +676,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     FromNodes = nodesToDelete.ToArray(),
                     HardDelete = _hardDeleteOnReplacement,
                     UpdateReplicationFactor = false,
-                    MentorChangeVector = mentorChangeVector
                 };
 
                 if (deletions == null)
@@ -689,7 +688,6 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             var alreadInDeletionProgress = new List<string>();
             alreadInDeletionProgress.AddRange(record.DeletionInProgress?.Keys);
-            alreadInDeletionProgress.AddRange(record.DeletionInProgressChangeVector?.Keys);
             return alreadInDeletionProgress;
         }
 

@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public void CompleteDeletionIfNeeded()
+        public void CompleteDeletionIfNeeded(CancellationTokenSource cts)
         {
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -525,7 +525,22 @@ namespace Raven.Server.Documents.Replication
                 var record = _server.Cluster.ReadDatabase(ctx, Database.Name, out var _);
                 if (record?.DeletionInProgress?.ContainsKey(_server.NodeTag) == true)
                 {
-                    _server.DatabasesLandlord.ShouldDeleteDatabase(Database.Name, record);
+                    try
+                    {
+                        cts.Cancel();
+                    }
+                    catch
+                    {
+                        // nothing that we can do about it.
+                        // probably the database is being deleted.
+                    }
+                    finally
+                    {
+                        TaskExecutor.Execute(state =>
+                        {
+                            _server.DatabasesLandlord.DeleteDatabase(Database.Name, record.DeletionInProgress[_server.NodeTag], record);
+                        }, null);
+                    }
                 }
             }
         }

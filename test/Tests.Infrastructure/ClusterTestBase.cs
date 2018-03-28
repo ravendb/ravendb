@@ -392,7 +392,6 @@ namespace Tests.Infrastructure
             var clustersServers = new List<RavenServer>();
             for (var i = 0; i < numberOfNodes; i++)
             {
-				var customSettings = new Dictionary<string, string>();
                 customSettings = customSettings ?? new Dictionary<string, string>()
                 {
                     [RavenConfiguration.GetKey(x=>x.Cluster.MoveToRehabGraceTime)] = "1",

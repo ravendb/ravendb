@@ -391,18 +391,18 @@ namespace RachisTests.DatabaseCluster
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
-                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(3, dbToplogy.Count);
                 Assert.Equal(0, dbToplogy.Promotables.Count);
 
                 var node = Servers[1].ServerStore.Engine.Tag;
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
                 var res = await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
 
-                await WaitForValueAsync(async () =>
+                Assert.Equal(1, await WaitForValueAsync(async () =>
                 {
                     var records = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     return records.DeletionInProgress.Count;
-                }, 1);
+                }, 1));
 
                 DatabaseRecord record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                 Assert.Single(record.DeletionInProgress);

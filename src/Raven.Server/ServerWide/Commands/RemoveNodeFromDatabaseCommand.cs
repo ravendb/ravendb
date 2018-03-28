@@ -19,7 +19,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             record.Topology.RemoveFromTopology(NodeTag);
             record.DeletionInProgress?.Remove(NodeTag);
-            record.DeletionInProgressChangeVector?.Remove(NodeTag);
 
             return null;
         }

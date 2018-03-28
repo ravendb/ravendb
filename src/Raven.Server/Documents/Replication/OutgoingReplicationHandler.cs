@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.Replication
                                     if (etag == _lastSentDocumentEtag)
                                     {
                                         SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
-                                        _parent.CompleteDeletionIfNeeded();
+                                        _parent.CompleteDeletionIfNeeded(_cts);
                                     }
                                     else if (nextReplicateAt > DateTime.UtcNow)
                                     {
