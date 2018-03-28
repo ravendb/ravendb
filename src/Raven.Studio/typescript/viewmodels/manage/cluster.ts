@@ -15,12 +15,14 @@ import clusterGraph = require("models/database/cluster/clusterGraph");
 import assignCores = require("viewmodels/manage/assignCores");
 import license = require("models/auth/licenseModel");
 import eventsCollector = require("common/eventsCollector");
+import accessManager = require("common/shell/accessManager");
 
 class cluster extends viewModelBase {
 
     private graph = new clusterGraph();
 
     topology = clusterTopologyManager.default.topology;
+    accessManager = accessManager.default.clusterView;
 
     canDeleteNodes: KnockoutComputed<boolean>;
     canAddNodes: KnockoutComputed<boolean>;

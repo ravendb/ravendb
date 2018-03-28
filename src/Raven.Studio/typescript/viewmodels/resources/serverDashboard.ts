@@ -18,6 +18,7 @@ import clusterNode = require("models/database/cluster/clusterNode");
 import databasesManager = require("common/shell/databasesManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import serverTime = require("common/helpers/database/serverTime");
+import accessManager = require("common/shell/accessManager");
 
 class machineResourcesSection {
 
@@ -522,6 +523,8 @@ class serverDashboard extends viewModelBase {
     liveClient = ko.observable<serverDashboardWebSocketClient>();
     
     clusterManager = clusterTopologyManager.default;
+    accessManager = accessManager.default.dashboardView;
+    
     formattedUpTime: KnockoutComputed<string>;
     formattedStartTime: KnockoutComputed<string>;
     node: KnockoutComputed<clusterNode>;

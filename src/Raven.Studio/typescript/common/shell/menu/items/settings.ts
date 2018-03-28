@@ -1,16 +1,20 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-import accessHelper = require("viewmodels/shell/accessHelper");
+import accessManager = require("common/shell/accessManager");
+
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
+
+    const access = accessManager.default.databaseSettingsMenu;
+    
     const items: menuItem[] = [
         new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
             moduleId: 'viewmodels/database/settings/databaseRecord',
             title: 'Database Record',
-            nav: true,
+            nav: access.showDatabaseRecordMenuItem,
             css: 'icon-database-settings',
             dynamicHash: appUrls.databaseRecord
         }),
@@ -21,7 +25,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableConnectionStringsMenuItem
         }),
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
@@ -30,7 +34,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-conflicts',
             dynamicHash: appUrls.conflictResolution,
-            enabled: accessHelper.isGlobalAdmin
+            enabled: access.enableConflictResolutionMenuItem
         }),
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
