@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
@@ -782,7 +783,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, ValueExpression value)
+            BlittableJsonReaderObject parameters, ValueExpression value, bool distinct = false)
         {
             if (value.Value == ValueTokenType.Parameter)
             {
@@ -798,7 +799,12 @@ namespace Raven.Server.Documents.Queries
                 if (array != null)
                 {
                     ValueTokenType? expectedValueType = null;
-                    foreach (var item in UnwrapArray(array, metadata.QueryText, parameters))
+                    var unwrapedArray = UnwrapArray(array, metadata.QueryText, parameters);
+                    if (distinct)
+                    {
+                        unwrapedArray = unwrapedArray.Distinct();
+                    }
+                    foreach (var item in unwrapedArray)
                     {
                         if (expectedValueType == null)
                             expectedValueType = item.Type;
