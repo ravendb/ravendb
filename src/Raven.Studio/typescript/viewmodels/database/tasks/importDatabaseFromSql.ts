@@ -9,7 +9,7 @@ import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
     
-    static pageCount = 5; //TODO: set to 100!
+    static pageCount = 50; //TODO: set to 100!
     
     spinners = {
         schema: ko.observable<boolean>(false)
@@ -104,7 +104,26 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     onActionClicked(reference: sqlReference, action: sqlMigrationAction) {
+        if (action === "embed" && reference.action() !== "embed") {
+            const tableToEmbed = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
+            reference.effectiveInnerTable(tableToEmbed.cloneForEmbed());
+        }
+        
+        if (action === "link" && reference.action() !== "link") {
+            const tableToLink = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
+            // no need to clone in this case
+            reference.effectiveLinkTable(tableToLink);
+        }
+        
         reference.action(action);
+        
+        if (action !== "embed") {
+            reference.effectiveInnerTable(null);
+        }
+        
+        if (action !== "link") {
+            reference.effectiveLinkTable(null);
+        }
     }
 }
 

@@ -11,7 +11,29 @@ abstract class abstractSqlTable {
     documentColumns = ko.observableArray<sqlColumn>([]);
     references = ko.observableArray<sqlReference>([]);
 
-    abstract toDto(): Raven.Server.SqlMigration.Model.AbstractCollection;
+    getPrimaryKeyColumnNames() {
+        return this.primaryKeyColumns().map(x => x.sqlName);
+    }
+    
+    getLinkedReferencesDto() {
+         return this.references()
+            .filter(x => x.action() === 'link')
+            .map(x => x.toLinkDto());
+    }
+    
+    getEmbeddedReferencesDto() {
+        return this.references()
+            .filter(x => x.action() === 'embed')
+            .map(x => x.toEmbeddedDto());
+    }
+    
+    getColumnsMapping() {
+        const mapping = {} as dictionary<string>;
+        this.documentColumns().forEach(column => {
+            mapping[column.sqlName] = column.propertyName();
+        });
+        return mapping;
+    }
 }
 
 export = abstractSqlTable;

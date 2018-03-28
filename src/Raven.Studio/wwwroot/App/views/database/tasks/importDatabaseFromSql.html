@@ -1,4 +1,4 @@
-<div class="importDatabase absolute-fill flex-vertical">
+<div class="importDatabase absolute-fill flex-vertical sql-migration">
     <div class="panel" data-bind="if: inFirstStep, visible: inFirstStep">
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: nextStep">
@@ -106,45 +106,32 @@
             </div>
             <div class="scroll flex-grow">
                 <div data-bind="foreach: $root.currentTables">
-                    <div class="panel">
+                    <div class="panel panel-info">
                         <div class="flex-horizontal padding padding-sm">
                             <div>
                                 <div class="checkbox" data-placement="left">
                                     <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
-                                    <label data-bind="text: collectionName, attr: { for: 'table_' + $index() }"></label>
+                                    <label data-bind="attr: { for: 'table_' + $index() }">
+                                        <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
+                                        <i class="icon-arrow-right"></i>
+                                        <span class="with-top-label" data-label="Collection" data-bind="text: collectionName"></span>
+                                    </label>
                                 </div>
-                                <div><small>Document ID: <span data-bind="text: documentIdTemplate"></span></small></div>
+                                
                             </div>
                             <div class="flex-separator"></div>
                             <div>
-                                <button class="btn btn-default">Filter / Transform</button>
+                                <button class="btn btn-default">
+                                    <i class="icon-edit"></i>
+                                    <span>Filter / Transform</span>
+                                </button>
                             </div>
                             
                         </div>
-                        <div class="panel-addon padding padding-sm">
-                            <div>Properties:</div>
-                            <ul data-bind="foreach: documentColumns">
-                                <li class="prop" data-bind="text: propertyName() + ' (' + type + ')'"></li>
-                            </ul>
-                            
-                            <div>References:</div>
-                            
-                            <ul data-bind="foreach: references">
-                                <li>
-                                    <span data-bind="text: name"></span> | 
-                                    <span data-bind="text: joinColumns.join(', ')"></span> | 
-                                    <span data-bind="text: targetTable.tableName"></span> | 
-                                    <span data-bind="text: type"></span> 
-                                    
-                                    <div class="btn-group">
-                                                <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
-                                                <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
-                                                <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
-                                    </div>
-                                    
-                                </li>
-                            </ul>
-                            
+                        <div class="panel-addon" data-bind="collapse: checked">
+                            <div class="document-id"><i class="icon-sql-document-id"></i> Document ID: <span data-bind="text: documentIdTemplate"></span></div>
+                            <div class="object-container" data-bind="template: { name: 'object-template' }">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -166,3 +153,69 @@
         </div>
     </div>
 </div>
+
+<script type="text/html" id="object-template">
+    <table data-bind="foreach:documentColumns" class="properties_table">
+        <tr>
+            <td><span data-bind="text: sqlName"></span></td>
+            <td><i class="icon-arrow-right"></i></td>
+            <td><span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="text: ': ' + type"></span></td>
+        </tr>
+    </table>
+    
+    <table data-bind="foreach: references" style="width:100%">
+        <tr>
+            <td width="400">
+                <span data-bind="visible: type === 'OneToMany'">
+                    <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
+                    <span class="text-muted">PK</span>
+                    <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+                    
+                    <span class="text-muted">from FK</span>
+                    <span data-bind="text: joinColumns.join(', ')"></span>
+                    in <i class="icon-table"></i> <span data-bind="text: targetTable.tableName"></span>
+                </span>
+                
+                <span data-bind="visible: type === 'ManyToOne'">
+                    <span data-bind="text: joinColumns.join(', ')"></span> <span class="text-muted">FK</span>
+                    <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+                    
+                    <span class="text-muted">from PK</span>
+                    <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
+                    in <i class="icon-table"></i> <span data-bind="text: targetTable.tableName"></span>
+                </span>
+            </td>
+            <td width="180">
+                <div class="btn-group link-actions">
+                    <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
+                    <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
+                    <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
+                </div>
+                <span data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">
+                    <i class="icon-arrow-right"></i>
+                </span>
+            </td>
+            <td>
+                <span data-bind="with: effectiveInnerTable">
+                    <span class="raven-property-name" data-bind="text: $parent.name"></span>:
+                </span>
+                <span data-bind="with: effectiveLinkTable">
+                    <span class="raven-property-name" data-bind="text: $parent.name"></span>:
+                    <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">[</span>
+                    <span data-bind="text: documentIdTemplate"></span>
+                    <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">, ...]</span>
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <div data-bind="with: effectiveInnerTable">
+                    <div data-bind="css: { 'array-container': $parent.type === 'OneToMany'}">
+                        <div class="object-container" data-bind="template: { name: 'object-template' }">
+                        </div>    
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</script>
