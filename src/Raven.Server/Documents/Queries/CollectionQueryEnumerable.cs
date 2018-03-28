@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (item is ValueExpression iv)
                             {
-                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv))
+                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv, distinct:true))
                                 {
                                     AddId(id.Value?.ToString());
                                 }
