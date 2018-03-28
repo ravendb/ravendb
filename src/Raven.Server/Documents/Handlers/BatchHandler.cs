@@ -249,8 +249,13 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var index in Database.IndexStore.GetIndexes())
                 {
-                    if (index.Collections.Count == 0 || index.Collections.Overlaps(modifiedCollections))
+                    if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
+                        index.Collections.Overlaps(modifiedCollections) ||
+                        index.Collections.Count == 0)
+                    {
                         indexesToCheck.Add(index);
+                    }
+                        
                 }
             }
             return indexesToCheck;
