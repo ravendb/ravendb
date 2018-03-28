@@ -14,7 +14,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -385,7 +384,7 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -393,7 +392,7 @@ namespace Tests.Infrastructure
             var clustersServers = new List<RavenServer>();
             for (var i = 0; i < numberOfNodes; i++)
             {
-                var customSettings = new Dictionary<string, string>();
+                customSettings = customSettings ?? new Dictionary<string, string>();
                 string serverUrl;
 
                 if (useSsl)
