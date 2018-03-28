@@ -13,6 +13,7 @@ using System.Runtime.ExceptionServices;
 using Sparrow.Logging;
 using System.Threading;
 using Sparrow.Collections;
+using Voron.Global;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -136,7 +137,13 @@ namespace Voron.Impl.Journal
             {
                 if (lazyTransactionScratch == null)
                     throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
-                lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocated4Kb);
+
+                var sizeInBytes = _journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
+
+                int sizeInPages = checked(sizeInBytes / Constants.Storage.PageSize +
+                                          sizeInBytes % Constants.Storage.PageSize == 0 ? 0 : 1);
+
+                lazyTransactionScratch.EnsureSize(sizeInPages);
                 lazyTransactionScratch.AddToBuffer(cur4KbPos, pages);
 
                 // non lazy tx will add itself to the buffer and then flush scratch to journal
