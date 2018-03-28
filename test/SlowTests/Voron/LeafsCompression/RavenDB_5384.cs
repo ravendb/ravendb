@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using FastTests;
+using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Sparrow;
 using Voron;

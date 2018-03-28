@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using FastTests.Voron;
 using Xunit;
 using Voron;
 using Voron.Global;

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Utils;
+using FastTests.Voron;
 using Voron;
 using Voron.Platform.Win32;
 using Xunit;

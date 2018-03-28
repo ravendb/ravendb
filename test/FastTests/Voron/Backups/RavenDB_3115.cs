@@ -14,7 +14,7 @@ namespace FastTests.Voron.Backups
 {
     public class RavenDB_3115 : StorageTest
     {
-        private IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
+        private readonly IncrementalBackupTestUtils _incrementalBackupTestUtils = new IncrementalBackupTestUtils();
 
         protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
         {
@@ -23,11 +23,6 @@ namespace FastTests.Voron.Backups
             options.ManualFlushing = true;
 
             return options;
-        }
-
-        public RavenDB_3115()
-        {
-            IncrementalBackupTestUtils.Clean();
         }
 
         [Fact]
@@ -61,7 +56,7 @@ namespace FastTests.Voron.Backups
                     }
                 }
 
-                BackupMethods.Incremental.ToFile(env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+                BackupMethods.Incremental.ToFile(env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
             }
 
             // restart
@@ -72,7 +67,8 @@ namespace FastTests.Voron.Backups
 
         public override void Dispose()
         {
-            IncrementalBackupTestUtils.Clean();
+            base.Dispose();
+            _incrementalBackupTestUtils.Dispose();
         }
     }
 }

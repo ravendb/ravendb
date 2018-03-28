@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections;
+using FastTests.Voron;
 using SlowTests.Utils;
 using Voron;
 using Voron.Util.Conversion;

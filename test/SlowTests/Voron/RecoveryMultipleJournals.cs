@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using FastTests.Voron;
 using Sparrow;
 using Sparrow.Utils;
 using Voron;

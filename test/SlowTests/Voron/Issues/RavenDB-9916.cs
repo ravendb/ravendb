@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Sparrow.Binary;
-using Voron;
-using Voron.Data.Fixed;
-using Voron.Data.Tables;
+﻿using FastTests.Voron;
 using Xunit;
 
 namespace SlowTests.Voron.Issues
@@ -43,7 +37,7 @@ namespace SlowTests.Voron.Issues
                 var midpoint = index / 2;
                 for (int i = 1; i < 10_000; i++)
                 {
-                    fst.Delete(midpoint+i);
+                    fst.Delete(midpoint + i);
                     fst.Add(index++, buffer);
                 }
 
@@ -94,7 +88,7 @@ namespace SlowTests.Voron.Issues
 
                 for (long i = 0; i < 5_000; i++)
                 {
-                    fst.Delete(i );
+                    fst.Delete(i);
                 }
 
                 tx.Commit();

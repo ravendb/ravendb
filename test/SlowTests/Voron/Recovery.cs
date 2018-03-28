@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using FastTests.Voron;
 using Voron;
 using Voron.Global;
 using Xunit;
