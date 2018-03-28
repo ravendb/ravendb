@@ -16,7 +16,11 @@ namespace Raven.Database.Bundles.Replication.Impl
 
         public static bool IsDirectChildOfCurrent(RavenJObject incomingMetadata, RavenJObject existingMetadata)
         {
+            if (existingMetadata == null || existingMetadata.Type == JTokenType.Null || incomingMetadata == null || incomingMetadata.Type == JTokenType.Null)
+                return false;
+
             var history = incomingMetadata[Constants.RavenReplicationHistory];
+
             //if we the source of the metadata we have is the same as the incoming
             //and the incoming has a higher version than we can assume it is a parent
             //since we now merge histories.
@@ -35,8 +39,8 @@ namespace Raven.Database.Bundles.Replication.Impl
             //Checking that the incoming document contains as a source the same source as the exsisting document source
             // and has a version higher or equal to the exsisting document (since we now merge the replication history).
             return history.Values().Any(x => RavenJTokenEqualityComparer.Default.Equals(
-                    ((RavenJObject) x)[Constants.RavenReplicationSource], existingMetadata[Constants.RavenReplicationSource])
-                    && ((RavenJObject) x)[Constants.RavenReplicationVersion].Value<long>() >= existingMetadata[Constants.RavenReplicationVersion].Value<long>());            
+                    ((RavenJObject)x)[Constants.RavenReplicationSource], existingMetadata[Constants.RavenReplicationSource])
+                    && ((RavenJObject)x)[Constants.RavenReplicationVersion].Value<long>() >= existingMetadata[Constants.RavenReplicationVersion].Value<long>());
         }
 
         public static RavenJArray MergeReplicationHistories(RavenJArray leftHandHistory, RavenJArray rightHandHistory, string documentId)
@@ -44,7 +48,7 @@ namespace Raven.Database.Bundles.Replication.Impl
             var sourcesToVersionEntries = new Dictionary<string, RavenJObject>();
             MergeSingleHistory(leftHandHistory, sourcesToVersionEntries, documentId);
             MergeSingleHistory(rightHandHistory, sourcesToVersionEntries, documentId);
-            return new RavenJArray(sourcesToVersionEntries.Values); 
+            return new RavenJArray(sourcesToVersionEntries.Values);
         }
 
         public static void MergeSingleHistory(RavenJArray history, Dictionary<string, RavenJObject> sourcesToVersionEntries, string documentId)
@@ -52,7 +56,7 @@ namespace Raven.Database.Bundles.Replication.Impl
             var historyValues = history.Values();
             foreach (var entry in historyValues)
             {
-                var entryAsObject = (RavenJObject) entry;
+                var entryAsObject = (RavenJObject)entry;
                 var sourceAsString = entryAsObject[Constants.RavenReplicationSource].Value<string>();
                 var versionAsLong = entryAsObject[Constants.RavenReplicationVersion].Value<long>();
 
@@ -66,7 +70,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 
                 RavenJObject val;
                 RavenJToken ravenReplicationVersion;
-                if (sourcesToVersionEntries.TryGetValue(sourceAsString, out val) == false || 
+                if (sourcesToVersionEntries.TryGetValue(sourceAsString, out val) == false ||
                     val.TryGetValue(Constants.RavenReplicationVersion, out ravenReplicationVersion) == false ||
                     ravenReplicationVersion.Value<long>() < versionAsLong)
                     sourcesToVersionEntries[sourceAsString] = entryAsObject;
