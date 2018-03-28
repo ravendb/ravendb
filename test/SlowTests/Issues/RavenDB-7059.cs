@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Identities;
@@ -18,14 +19,14 @@ namespace SlowTests.Issues
 {
     public class RavenDB_7059 : ClusterTestBase
     {
-        private readonly string _fileName = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.ravendump");
+        private readonly string _fileName = Path.Combine(RavenTestHelper.NewDataPath(nameof(RavenDB_7059), 0, forceCreateDir: true), $"{Guid.NewGuid()}.ravendump");
 
         private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
-        
+
         [Fact]
         public async Task Cluster_identity_should_work_with_smuggler()
         {
@@ -34,19 +35,19 @@ namespace SlowTests.Issues
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] {leaderServer.WebUrl},
+                Urls = new[] { leaderServer.WebUrl },
                 Database = databaseName
             })
             {
                 leaderStore.Initialize();
-                
+
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
                     session.Store(new User { Name = "John Dow" }, "users|");
                     session.Store(new User { Name = "Jake Dow" }, "users|");
                     session.Store(new User { Name = "Jessie Dow" }, "users|");
-                    session.SaveChanges();                   
+                    session.SaveChanges();
                 }
 
                 WaitForIdentity(leaderStore, "users", 3);
@@ -63,30 +64,30 @@ namespace SlowTests.Issues
             leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] {leaderServer.WebUrl},
+                Urls = new[] { leaderServer.WebUrl },
                 Database = databaseName
             })
             {
                 leaderStore.Initialize();
-                
+
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 await leaderStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _fileName);
-                
+
                 using (var session = leaderStore.OpenSession())
                 {
                     session.Store(new User { Name = "Julie Dow" }, "users|");
-                    session.SaveChanges();                   
+                    session.SaveChanges();
                 }
 
                 using (var session = leaderStore.OpenSession())
                 {
                     var julieDow = session.Query<User>().First(u => u.Name.StartsWith("Julie"));
-                    Assert.Equal("users/4",julieDow.Id);
+                    Assert.Equal("users/4", julieDow.Id);
 
                 }
-            }                        
+            }
         }
-        
+
         private async Task CreateDatabasesInCluster(int clusterSize, string databaseName, IDocumentStore store)
         {
             var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName), clusterSize));

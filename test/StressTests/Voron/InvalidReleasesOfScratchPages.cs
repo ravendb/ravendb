@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Voron;
 using SlowTests.Voron;
 using Voron;
 using Xunit;

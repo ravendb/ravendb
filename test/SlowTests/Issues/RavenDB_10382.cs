@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using SlowTests.Voron;
+using FastTests.Voron;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;

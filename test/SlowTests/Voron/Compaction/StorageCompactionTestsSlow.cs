@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
+using Raven.Server.Utils;
 using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
@@ -16,12 +18,11 @@ namespace SlowTests.Voron.Compaction
     {
         public StorageCompactionTestsSlow()
         {
-            if (Directory.Exists(DataDir))
-                StorageTest.DeleteDirectory(DataDir);
+            IOExtensions.DeleteDirectory(DataDir);
 
             var compactedData = Path.Combine(DataDir, "Compacted");
-            if (Directory.Exists(compactedData))
-                StorageTest.DeleteDirectory(compactedData);
+
+            IOExtensions.DeleteDirectory(compactedData);
         }
 
 
@@ -199,7 +200,7 @@ namespace SlowTests.Voron.Compaction
 
         [Theory]
         [InlineDataWithRandomSeed(123, 99)]
-        [InlineDataWithRandomSeed(1024*1024*5, 1)]
+        [InlineDataWithRandomSeed(1024 * 1024 * 5, 1)]
         public void Streams_RavenDB_6510(int fooSize, int barSize, int seed)
         {
             var r = new Random(seed);
@@ -264,7 +265,7 @@ namespace SlowTests.Voron.Compaction
 
                     tx.Commit();
                 }
-                
+
                 using (var tx = env.WriteTransaction())
                 {
                     var tree = tx.ReadTree("tree");
@@ -300,7 +301,7 @@ namespace SlowTests.Voron.Compaction
                             {
                                 if (readResult == null)
                                 {
-                                    
+
                                 }
 
                                 Assert.NotNull(readResult);
