@@ -5,7 +5,7 @@ import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import messagePublisher = require("common/messagePublisher");
-import accessHelper = require("viewmodels/shell/accessHelper");
+import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
 
 class databaseRecord extends viewModelBase {
@@ -14,7 +14,6 @@ class databaseRecord extends viewModelBase {
     docEditor: AceAjax.Editor;
     securedSettings: string;
     updatedDto: documentDto;
-    leavePageDeferred: JQueryPromise<any>;
     isForbidden = ko.observable<boolean>(false);
 
     static containerId ="#databaseSettingsContainer";
@@ -36,8 +35,9 @@ class databaseRecord extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
         var deferred = $.Deferred();
-
-        this.isForbidden(!accessHelper.isGlobalAdmin());
+        
+        this.isForbidden(!accessManager.default.clusterAdmin());
+        
         if (this.isForbidden()) {
             deferred.resolve({ can: true });
         } else {

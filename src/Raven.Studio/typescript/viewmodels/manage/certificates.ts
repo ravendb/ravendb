@@ -18,6 +18,7 @@ import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
 import changesContext = require("common/changesContext");
+import accessManager = require("common/shell/accessManager");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -44,6 +45,7 @@ class certificates extends viewModelBase {
     usingHttps = location.protocol === "https:";
     
     resolveDatabasesAccess = certificateModel.resolveDatabasesAccess;
+    accessManager = accessManager.default.certificatesView;
 
     importedFileName = ko.observable<string>();
     
@@ -300,7 +302,6 @@ class certificates extends viewModelBase {
                             });
                 }
             });
-        
     }
     
     private loadCertificates() {
@@ -405,6 +406,29 @@ class certificates extends viewModelBase {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
     
+    canDelete(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+        return ko.pureComputed(() => {
+            if (!this.accessManager.canDeleteClusterAdminCertificate() && securityClearance === "ClusterAdmin") {
+                return false;
+            }
+            
+            if (!this.accessManager.canDeleteClusterNodeCertificate() && securityClearance === "ClusterNode") {
+                return false;
+            }
+            
+            return true; 
+        });
+    }
+
+    canGenerateCertificateForSecurityClearanceType(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+        return ko.pureComputed(() => {
+            if (!this.accessManager.canGenerateClientCertificateForAdmin() && securityClearance === "ClusterAdmin") {
+                return false;
+            }
+
+            return true;
+        });
+    }
 }
 
 export = certificates;
