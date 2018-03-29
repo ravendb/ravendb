@@ -175,7 +175,7 @@
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() && $root.isUserAccess()">
+                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()"> 
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>

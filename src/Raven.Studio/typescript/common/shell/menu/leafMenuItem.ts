@@ -14,7 +14,7 @@ class leafMenuItem implements menuItem {
     openAsDialog: boolean;
     path: KnockoutComputed<string>;
     parent: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
-    enabled: KnockoutObservable<boolean> | KnockoutComputed<boolean>;
+    enabled: KnockoutObservable<boolean>;
     type: menuItemType = "leaf";
     itemRouteToHighlight: string;
     alias: boolean;
@@ -33,7 +33,7 @@ class leafMenuItem implements menuItem {
         dynamicHash?: dynamicHashType,
         css?: string,
         openAsDialog?: boolean,
-        enabled?: KnockoutObservable<boolean> | KnockoutComputed<boolean>;
+        enabled?: KnockoutObservable<boolean>;
         itemRouteToHighlight?: string;
         badgeData?: KnockoutObservable<number>;
         alias?: boolean;
