@@ -190,6 +190,11 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitBinaryExpression(BinaryExpression expression)
         {
+            if (_insideWhere > 0)
+            {
+                VerifyLegalBinaryExpression(expression);
+            }
+
             switch (expression.NodeType)
             {
                 case ExpressionType.OrElse:
@@ -218,6 +223,29 @@ namespace Raven.Client.Documents.Linq
                     break;
             }
 
+        }
+
+        private void VerifyLegalBinaryExpression(BinaryExpression expression)
+        {
+            if (expression.Left is BinaryExpression left)
+            {
+                VerifyLegalBinaryExpression(left);
+            }
+
+            if (expression.Right is BinaryExpression right)
+            {
+                VerifyLegalBinaryExpression(right);
+            }
+
+            if (IsMemberAccessForQuerySource(expression.Left) &&
+                IsMemberAccessForQuerySource(expression.Right))
+            {
+                // x.Foo < x.Bar
+                throw new NotSupportedException("Where clauses conataining a Binray Expression between two fields are not supported. " +
+                                                "All Binary Expressions inside a Where clause should be between a field and a constant value. " +
+                                                $"`{expression.Left}` and `{expression.Right}` are both fields.");
+            }
+          
         }
 
         private void VisitAndAlso(BinaryExpression andAlso)
