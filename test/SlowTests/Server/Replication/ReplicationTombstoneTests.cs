@@ -334,7 +334,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-10864")]
         public async Task Tombstone_should_replicate_in_master_master()
         {
             var dbName1 = "FooBar-1";
