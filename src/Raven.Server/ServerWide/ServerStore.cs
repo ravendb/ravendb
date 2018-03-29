@@ -171,25 +171,38 @@ namespace Raven.Server.ServerWide
             return ClusterMaintenanceSupervisor?.GetStats();
         }
 
-
         public async Task UpdateTopologyChangeNotification()
         {
             while (ServerShutdown.IsCancellationRequested == false)
             {
+                await _engine.WaitForState(RachisState.Follower).WithCancellation(ServerShutdown);
+                if (ServerShutdown.IsCancellationRequested)
+                    return;
+
+                var leaveTask = _engine.WaitForLeaveState(RachisState.Follower);
+                if (await Task.WhenAny(NotificationCenter.WaitForNew(), leaveTask).WithCancellation(ServerShutdown) == leaveTask)
+                {
+                    continue;
+                }
+
                 try
                 {
-                    if (await _engine.WaitForState(RachisState.Follower).WaitWithTimeout(TimeSpan.FromSeconds(10)) == false)
-                        continue;
-
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
                     {
-                        var cancelTask = _engine.WaitForLeaveState(RachisState.Follower).ContinueWith(state => { cts.Cancel(); }, ServerShutdown);
+                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForAllRemoved, leaveTask)
+                            .ContinueWith(state => { cts.Cancel(); }, ServerShutdown);
+
                         var topology = GetClusterTopology();
                         var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
                         using (var ws = new ClientWebSocket())
                         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
                             var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
+
+                            if (Server.Certificate != null)
+                            {
+                                ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
+                            }
                             await ws.ConnectAsync(leaderWsUrl, cts.Token);
                             while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
                             {
@@ -213,9 +226,12 @@ namespace Raven.Server.ServerWide
                 catch (OperationCanceledException)
                 {
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    //
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error during receiving topology updates from the leader", e);
+                    }
                 }
             }
         }
