@@ -19,7 +19,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
 
         public string Leader { get; private set; }
 
-        public string NodeTag { get; private set; }
+        public string NodeTag { get; set; }
         
         public long CurrentTerm { get; private set; }
 
