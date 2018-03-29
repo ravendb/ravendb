@@ -30,13 +30,12 @@ namespace Raven.Server.NotificationCenter.Handlers
                                     isValidFor(db) == false)
                                     continue; // not valid for this, skipping
                             }
-                                
 
                             await writer.WriteToWebSocket(action.Json);
                         }
                     }
 
-                    await writer.WriteNotifications(isValidFor, () => Server.ServerStore.Engine.NotifyTopologyChange(propogateError: true));
+                    await writer.WriteNotifications(isValidFor);
                 }
             }
         }
@@ -82,6 +81,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             
             return NoContent();
         }
+
     }
 
     public abstract class ServerNotificationHandlerBase : RequestHandler

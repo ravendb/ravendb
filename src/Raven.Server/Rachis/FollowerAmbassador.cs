@@ -196,7 +196,7 @@ namespace Raven.Server.Rachis
                         finally
                         {
                             needNewConnection = true;
-                            _debugRecorder.Record("Connection obtatined");
+                            _debugRecorder.Record("Connection obtained");
                         }
 
                         Status = AmbassadorStatus.Connected;
@@ -302,7 +302,7 @@ namespace Raven.Server.Rachis
                                         break;
                                     UpdateFollowerTicks();
                                 }
-                                _debugRecorder.Record("Response was recieved");
+                                _debugRecorder.Record("Response was received");
                                 if (aer.Success == false)
                                 {
                                     // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -741,7 +741,7 @@ namespace Raven.Server.Rachis
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info($"Sending LogLengthNegotiation to {_tag} with term {lln.Term:#,#;;0} " +
-                                             $"({lln.PrevLogIndex:#,#;;0} / {lln.PrevLogTerm:#,#;;0}) - Trnuncated {lln.Truncated}");
+                                             $"({lln.PrevLogIndex:#,#;;0} / {lln.PrevLogTerm:#,#;;0}) - Truncated {lln.Truncated}");
                         }
                     }
                     UpdateLastSend("Negotiation 2");
