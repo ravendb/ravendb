@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Linq
                 IsMemberAccessForQuerySource(expression.Right))
             {
                 // x.Foo < x.Bar
-                throw new NotSupportedException("Where clauses conataining a Binray Expression between two fields are not supported. " +
+                throw new NotSupportedException("Where clauses containing a Binary Expression between two fields are not supported. " +
                                                 "All Binary Expressions inside a Where clause should be between a field and a constant value. " +
                                                 $"`{expression.Left}` and `{expression.Right}` are both fields.");
             }
