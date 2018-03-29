@@ -26,8 +26,7 @@ class cluster extends viewModelBase {
 
     canDeleteNodes: KnockoutComputed<boolean>;
     canAddNodes: KnockoutComputed<boolean>;
-    showConnectivity: KnockoutComputed<boolean>;
-
+    
     leaderUrl: KnockoutComputed<string>;
     utilizedCores: KnockoutComputed<number>;
     maxCores: KnockoutComputed<number>;
@@ -93,10 +92,6 @@ class cluster extends viewModelBase {
             const localPart = appUrl.forCluster();
 
             return appUrl.toExternalUrl(serverUrl, localPart);
-        });
-
-        this.showConnectivity = ko.pureComputed(() => {
-            return !this.topology().leader() || this.topology().leader() === this.topology().nodeTag();
         });
 
         this.utilizedCores = ko.pureComputed(() => {
