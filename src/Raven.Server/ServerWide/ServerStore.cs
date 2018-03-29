@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -168,6 +169,84 @@ namespace Raven.Server.ServerWide
             if (_engine.LeaderTag != NodeTag)
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
             return ClusterMaintenanceSupervisor?.GetStats();
+        }
+
+        public async Task UpdateTopologyChangeNotification()
+        {
+            while (ServerShutdown.IsCancellationRequested == false)
+            {
+                await _engine.WaitForState(RachisState.Follower).WithCancellation(ServerShutdown);
+                if (ServerShutdown.IsCancellationRequested)
+                    return;
+
+                var leaveTask = _engine.WaitForLeaveState(RachisState.Follower);
+                if (await Task.WhenAny(NotificationCenter.WaitForNew(), leaveTask).WithCancellation(ServerShutdown) == leaveTask)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
+                    {
+                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForAllRemoved, leaveTask)
+                            .ContinueWith(state =>
+                            {
+                                try
+                                {
+                                    cts.Cancel();
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
+                            }, ServerShutdown);
+
+                        while (cancelTask.IsCompleted == false)
+                        {
+                            var topology = GetClusterTopology();
+                            var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
+                            if (leaderUrl == null)
+                                continue;
+                            using (var ws = new ClientWebSocket())
+                            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                            {
+                                var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
+
+                                if (Server.Certificate?.Certificate != null)
+                                {
+                                    ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
+                                }
+                                await ws.ConnectAsync(leaderWsUrl, cts.Token);
+                                while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                                {
+                                    using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
+                                    {
+                                        if (notification == null)
+                                            break;
+                                        var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
+                                        if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
+                                        {
+                                            topologyNotification.NodeTag = _engine.Tag;
+                                            NotificationCenter.Add(topologyNotification);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error during receiving topology updates from the leader", e);
+                    }
+                }
+            }
         }
 
         internal ClusterObserver Observer { get; set; }
@@ -509,6 +588,7 @@ namespace Raven.Server.ServerWide
             }
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
+            Task.Run(UpdateTopologyChangeNotification, ServerShutdown);
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
