@@ -25,7 +25,7 @@ class machineResourcesSection {
     cpuChart: dashboardChart;
     memoryChart: dashboardChart;
     
-    systemCommitLimit: number;
+    totalMemory: number;
     
     resources = ko.observable<machineResources>();
 
@@ -37,9 +37,9 @@ class machineResourcesSection {
         });
 
         this.memoryChart = new dashboardChart("#memoryChart", {
-            yMaxProvider: () => this.systemCommitLimit,
+            yMaxProvider: () => this.totalMemory,
             topPaddingProvider: () => 2,
-            tooltipProvider: data => machineResourcesSection.memoryTooltip(data)
+            tooltipProvider: data => machineResourcesSection.memoryTooltip(data, this.totalMemory)
         });
     }
     
@@ -49,7 +49,7 @@ class machineResourcesSection {
     }
     
     onData(data: Raven.Server.Dashboard.MachineResources) {
-        this.systemCommitLimit = data.SystemCommitLimit;
+        this.totalMemory = data.TotalMemory;
 
         this.cpuChart.onData(moment.utc(data.Date).toDate(),
             [
@@ -58,8 +58,7 @@ class machineResourcesSection {
             ]);
         this.memoryChart.onData(moment.utc(data.Date).toDate(),
             [
-                { key: "physical", value: data.TotalMemory },
-                { key: "machine", value: data.CommitedMemory },
+                { key: "machine", value: data.TotalMemory - data.AvailableMemory },
                 { key: "process", value: data.ProcessMemoryUsage }
             ]);
         
@@ -87,16 +86,16 @@ class machineResourcesSection {
         return null;
     }
 
-    private static memoryTooltip(data: dashboardChartTooltipProviderArgs) {
+    private static memoryTooltip(data: dashboardChartTooltipProviderArgs, totalMemory: number) {
         if (data) {
             const date = moment(data.date).format(serverDashboard.timeFormat);
-            const physical = generalUtils.formatBytesToSize(data.values['physical']); 
+            const physical = generalUtils.formatBytesToSize(totalMemory); 
             const machine = generalUtils.formatBytesToSize(data.values['machine']); 
             const process = generalUtils.formatBytesToSize(data.values['process']);
             return `<div>
                 Time: <strong>${date}</strong><br />
-                Physical memory: <strong>${physical}</strong><br />
-                Commited memory: <strong>${machine}</strong><br />
+                Usable physical memory: <strong>${physical}</strong><br />
+                Machine memory usage: <strong>${machine}</strong><br />
                 Process memory usage: <strong>${process}</strong>
                 </div>`;
         }
