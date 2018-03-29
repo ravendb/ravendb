@@ -20,9 +20,13 @@ namespace Raven.Server.Dashboard
 
         public long ProcessMemoryUsage { get; set; } // in bytes
 
-        public bool IsProcessMemoryRss { get; set; }
+        public bool IsWindows { get; set; }
 
         public bool IsLowMemory { get; set; }
+
+        public long LowMemoryThreshold { get; set; } // in bytes
+
+        public long CommitChargeThreshold { get; set; } // in bytes
 
         public override DynamicJsonValue ToJson()
         {
@@ -31,11 +35,14 @@ namespace Raven.Server.Dashboard
             json[nameof(MachineCpuUsage)] = MachineCpuUsage;
             json[nameof(ProcessCpuUsage)] = ProcessCpuUsage;
             json[nameof(TotalMemory)] = TotalMemory;
+            json[nameof(AvailableMemory)] = AvailableMemory;
             json[nameof(SystemCommitLimit)] = SystemCommitLimit;
             json[nameof(CommitedMemory)] = CommitedMemory;
             json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
-            json[nameof(IsProcessMemoryRss)] = IsProcessMemoryRss;
+            json[nameof(IsWindows)] = IsWindows;
             json[nameof(IsLowMemory)] = IsLowMemory;
+            json[nameof(LowMemoryThreshold)] = LowMemoryThreshold;
+            json[nameof(CommitChargeThreshold)] = CommitChargeThreshold;
 
             return json;
         }

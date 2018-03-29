@@ -62,20 +62,25 @@
                             </div>
                             <div class="separator"></div>
                             <div class="infogrid-label dashboard-memory" data-bind="with: resources">
-                                <div><i class="icon-memory"></i><span>MEM</span> (<span class="physical-memory" data-bind="text: $root.sizeFormatter(totalMemory())" data-toggle="tooltip" title="Usable Physical Memory"></span>)</div>
-                                <div>
-                                    <div data-toggle="tooltip" title="System Commit Limit">
-                                        <i class="icon-server icon-document-group"></i>
-                                        <strong data-bind="text: $root.sizeFormatter(systemCommitLimit())"></strong>
+                                <div><i class="icon-memory"></i><span>MEM</span> 
+                                    <span data-bind="visible: isLowMemory">
+                                        <i class="icon-warning text-warning" data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': lowMemoryTooltip }"></i>
+                                    </span>
                                     </div>
-                                    <div data-toggle="tooltip" title="Commited Memory">
-                                        <i class="icon-server machine-usage"></i>
-                                        <strong data-bind="text: $root.sizeFormatter(commitedMemory()), attr: { class: commitedMemoryUsageClass }"></strong>
+                                <div>
+                                    <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': totalMemoryTooltip }">
+                                        <i class="icon-server icon-document-group"></i>
+                                        <strong class="text-success" data-bind="text: $root.sizeFormatter(totalMemory())"></strong>
                                     </div>
 
-                                    <div data-toggle="tooltip" data-bind="attr: { title: processUsageTooltip }">
+                                    <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': machineMemoryUsageTooltip }">
+                                        <i class="icon-server machine-usage"></i>
+                                        <strong class="text-success" data-bind="text: $root.sizeFormatter(usedMemory())"></strong>
+                                    </div>
+
+                                    <div data-toggle="tooltip" title="RavenDB Working Set">
                                         <i class="icon-raven process-usage"></i>
-                                        <strong data-bind="text: $root.sizeFormatter(processMemoryUsage()), attr: { class: processMemoryUsageClass }"></strong>
+                                        <strong class="text-success" data-bind="text: $root.sizeFormatter(processMemoryUsage())"></strong>
                                     </div>
                                 </div>
                                 

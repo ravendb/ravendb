@@ -911,9 +911,9 @@ namespace Raven.Server.Utils.Cli
 
             var memoryStats = MemoryStatsWithMemoryMappedInfo();
             var msg = new StringBuilder();
-            msg.Append($"Working Set:{memoryStats.WorkingSet}");
-            msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
-            msg.Append($" Managed Memory:{memoryStats.ManagedMemory}");
+            msg.Append($"Working Set: {memoryStats.WorkingSet}");
+            msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
             WriteText("Sending Low Memory simulation signal... ", TextColor, cli, newLine: false);
@@ -922,9 +922,9 @@ namespace Raven.Server.Utils.Cli
 
             WriteText("After sending low mem simulation event, memory stats: ", TextColor, cli, newLine: false);
             msg.Clear();
-            msg.Append($"Working Set:{memoryStats.WorkingSet}");
-            msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
-            msg.Append($" Managed Memory:{memoryStats.ManagedMemory}");
+            msg.Append($"Working Set: {memoryStats.WorkingSet}");
+            msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
             return true;
