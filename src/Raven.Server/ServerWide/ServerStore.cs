@@ -202,37 +202,38 @@ namespace Raven.Server.ServerWide
                                 }
                             }, ServerShutdown);
 
-                        var topology = GetClusterTopology();
-                        var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
-                        if (leaderUrl == null)
-                            continue;
-                        using (var ws = new ClientWebSocket())
-                        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                        while (cancelTask.IsCompleted == false)
                         {
-                            var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
+                            var topology = GetClusterTopology();
+                            var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
+                            if (leaderUrl == null)
+                                continue;
+                            using (var ws = new ClientWebSocket())
+                            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                            {
+                                var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
 
-                            if (Server.Certificate?.Certificate != null)
-                            {
-                                ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
-                            }
-                            await ws.ConnectAsync(leaderWsUrl, cts.Token);
-                            while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
-                            {
-                                using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
+                                if (Server.Certificate?.Certificate != null)
                                 {
-                                    if (notification == null)
-                                        break;
-                                    var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
-                                    if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
+                                    ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
+                                }
+                                await ws.ConnectAsync(leaderWsUrl, cts.Token);
+                                while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                                {
+                                    using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
                                     {
-                                        topologyNotification.NodeTag = _engine.Tag;
-                                        NotificationCenter.Add(topologyNotification);
+                                        if (notification == null)
+                                            break;
+                                        var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
+                                        if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
+                                        {
+                                            topologyNotification.NodeTag = _engine.Tag;
+                                            NotificationCenter.Add(topologyNotification);
+                                        }
                                     }
                                 }
                             }
                         }
-
-                        await cancelTask;
                     }
                 }
                 catch (OperationCanceledException)
