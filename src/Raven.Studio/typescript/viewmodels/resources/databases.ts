@@ -49,8 +49,8 @@ class databases extends viewModelBase {
     statsSubscription: changeSubscription;
 
     accessManager = accessManager.default.databasesView;
-    isUserAccess = accessManager.default.validUser;
-     
+    isAboveUserAccess = accessManager.default.operatorAndAbove;
+   
     constructor() {
         super();
 
