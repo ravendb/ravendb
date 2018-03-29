@@ -84,16 +84,25 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     private initSecondStep() {
-        /* TODO:
-        <div class="hover-preview" style="width: 100px; height: 5px ;background-color: red; position: absolute; top: 0px; left: 0">AAAA</div>
+        this.registerDisposableHandler($("body"), "click", (event: JQueryEventObject) => {
+            if ($(event.target).closest(".inline-edit").length === 0) {
+                // click outside edit area - close all of them
+                
+                $(".inline-edit.edit-mode")
+                    .removeClass("edit-mode");
+            }
+        });
         
-        const hover = $(".hover-preview");
-        $("#js-second-step").on("mouseenter mouseleave", ".prop", (event) => {
-            const top = $(event.target).position().top;
+        $("#js-second-step").on("click", ".inline-edit", event => {
+            event.preventDefault();
+          
+            $(".inline-edit.edit-mode")
+                .removeClass("edit-mode");
             
-            hover.css('top',  top + "px");
-            console.log(event);
-        });*/
+            const container = $(event.target).closest(".inline-edit");
+            container.addClass("edit-mode");
+            $("input", container).focus();
+        })
     }
     
     migrate() {
