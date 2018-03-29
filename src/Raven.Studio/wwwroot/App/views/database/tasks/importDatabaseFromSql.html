@@ -107,17 +107,16 @@
             <div class="scroll flex-grow">
                 <div data-bind="foreach: $root.currentTables">
                     <div class="panel panel-info">
-                        <div class="flex-horizontal padding padding-sm">
-                            <div>
-                                <div class="checkbox" data-placement="left">
-                                    <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
-                                    <label data-bind="attr: { for: 'table_' + $index() }">
-                                        <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
-                                        <i class="icon-arrow-right"></i>
-                                        <span class="with-top-label raven-property-name inline-edit" data-label="Collection" data-bind="text: collectionName"></span>
-                                    </label>
-                                </div>
-                                
+                        <div class="flex-horizontal padding padding-sm panel-header">
+                            <div class="checkbox" data-placement="left">
+                                <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
+                                <label data-bind="attr: { for: 'table_' + $index() }">&nbsp;</label>
+                            </div>
+                            <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
+                            <i class="icon-arrow-right"></i>
+                            <div class="with-top-label raven-property-name inline-edit inline-block" data-label="Collection">
+                                <span class="static" data-bind="text: collectionName"></span>
+                                <input class="form-control input-sm" data-bind="textInput: collectionName" />
                             </div>
                             <div class="flex-separator"></div>
                             <div>
@@ -158,71 +157,86 @@
 </div>
 
 <script type="text/html" id="object-template">
-    <table data-bind="foreach:documentColumns" class="properties_table">
-        <tr>
-            <td><span data-bind="text: sqlName"></span></td>
-            <td><i class="icon-arrow-right"></i></td>
-            <td class="inline-edit"><span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="text: ': ' + type"></span></td>
-        </tr>
+    <table class="properties_table">
+        <tbody data-bind="foreach:documentColumns">
+            <tr>
+                <td><span data-bind="text: sqlName"></span></td>
+                <td><i class="icon-arrow-right"></i></td>
+                <td class="inline-edit">
+                    <div class="static">
+                        <span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="text: ': ' + type"></span>
+                    </div>
+                    <input class="form-control input-sm" data-bind="textInput: propertyName" />
+                </td>
+            </tr>
+        </tbody>
     </table>
     
-    <table data-bind="foreach: references" style="width:100%">
-        <tr>
-            <td width="400">
-                <span data-bind="visible: type === 'OneToMany'">
-                    <span class="text-muted">PK</span>
-                    <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
+    <table style="width:100%">
+        <tbody data-bind="foreach: references">
+            <tr>
+                <td width="400">
+                    <span data-bind="visible: type === 'OneToMany'">
+                        <span class="text-muted">PK</span>
+                        <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
+                        
+                        <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+                        
+                        <span class="text-muted">from FK</span>
+                        <span data-bind="text: joinColumns.join(', ')"></span>
+                        <span class="text-muted">in <i class="icon-table"></i></span>
+                        <span data-bind="text: targetTable.tableName"></span>
+                    </span>
                     
-                    <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
-                    
-                    <span class="text-muted">from FK</span>
-                    <span data-bind="text: joinColumns.join(', ')"></span>
-                    <span class="text-muted">in <i class="icon-table"></i></span>
-                    <span data-bind="text: targetTable.tableName"></span>
-                </span>
-                
-                <span data-bind="visible: type === 'ManyToOne'">
-                    <span class="text-muted">FK</span> 
-                    <span data-bind="text: joinColumns.join(', ')"></span> 
-                    <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
-                    
-                    <span class="text-muted">from PK</span>
-                    <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
-                    <span class="text-muted">in <i class="icon-table"></i></span>
-                    <span data-bind="text: targetTable.tableName"></span>
-                </span>
-            </td>
-            <td width="180">
-                <div class="btn-group link-actions">
-                    <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
-                    <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
-                    <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
-                </div>
-                <span data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">
-                    <i class="icon-arrow-right"></i>
-                </span>
-            </td>
-            <td>
-                <span class="inline-edit" data-bind="with: effectiveInnerTable">
-                    <span class="raven-property-name" data-bind="text: $parent.name"></span>:
-                </span>
-                <span class="inline-edit" data-bind="with: effectiveLinkTable">
-                    <span class="raven-property-name" data-bind="text: $parent.name"></span>:
-                    <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">[</span>
-                    <span data-bind="text: documentIdTemplate"></span>
-                    <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">, ...]</span>
-                </span>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3">
-                <div data-bind="with: effectiveInnerTable">
-                    <div data-bind="css: { 'array-container': $parent.type === 'OneToMany'}">
-                        <div class="object-container" data-bind="template: { name: 'object-template' }">
-                        </div>    
+                    <span data-bind="visible: type === 'ManyToOne'">
+                        <span class="text-muted">FK</span> 
+                        <span data-bind="text: joinColumns.join(', ')"></span> 
+                        <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+                        
+                        <span class="text-muted">from PK</span>
+                        <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
+                        <span class="text-muted">in <i class="icon-table"></i></span>
+                        <span data-bind="text: targetTable.tableName"></span>
+                    </span>
+                </td>
+                <td width="180">
+                    <div class="btn-group link-actions">
+                        <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
+                        <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
+                        <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
                     </div>
-                </div>
-            </td>
-        </tr>
+                    <span data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">
+                        <i class="icon-arrow-right"></i>
+                    </span>
+                </td>
+                <td>
+                    <div class="inline-edit inline-block" data-bind="with: effectiveInnerTable">
+                        <span class="static">
+                            <span class="raven-property-name" data-bind="text: $parent.name"></span>:    
+                        </span>
+                        <input class="form-control input-sm" data-bind="textInput: $parent.name" />
+                    </div>
+                    <div class="inline-edit inline-block" data-bind="with: effectiveLinkTable">
+                        <div class="static">
+                            <span class="raven-property-name" data-bind="text: $parent.name"></span>:
+                            <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">[</span>
+                            <span data-bind="text: documentIdTemplate"></span>
+                            <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">, ...]</span>
+                        </div>
+                        <input class="form-control input-sm" data-bind="textInput: $parent.name" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3">
+                    <div data-bind="with: effectiveInnerTable">
+                        <div data-bind="css: { 'array-container': $parent.type === 'OneToMany'}">
+                            <div class="object-container" data-bind="template: { name: 'object-template' }">
+                            </div>    
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
     </table>
 </script>

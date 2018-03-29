@@ -9,6 +9,23 @@
     .raven-property-name {
         color: @raven-field-color;
     }
+    
+    .panel-header {
+        
+        .icon-arrow-right {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        
+        .inline-edit {
+            &:hover {
+                &:after {
+                    top: -4px;
+                }
+            }
+        }
+    }
+    
     .panel-addon {
         font-size: 13px;
         line-height: 1.5;
@@ -18,11 +35,6 @@
         padding: 2px 8px;
     }
     
-    .checkbox {
-        label {
-            padding-top: 6px;
-        }
-    }
     .panel-info {
         .link-actions {
             padding-left: 5px;
@@ -84,12 +96,15 @@
     
     .with-top-label {
         position: relative;
+        vertical-align: middle;
+        
+        transform: translate(0, 8px);
         
         &:before {
             color: #63728a;
             position: absolute;
             left: 0;
-            top: -14px;
+            top: -11px;
             line-height: 10px;
             font-size: 10px;
             text-transform: uppercase;
@@ -109,8 +124,22 @@
     
     .inline-edit {
         border: solid 1px transparent; 
+        input {
+            display: none;
+        }
         
-        &:hover {
+        &.edit-mode {
+            input {
+                display: block;
+            }
+            
+            .static {
+                display: none;
+            }
+        }
+        
+        &:hover:not(.edit-mode) {
+            padding-right: 4px;
             border: solid 1px @gray;
             border-right: solid 22px @gray;
             position: relative;
