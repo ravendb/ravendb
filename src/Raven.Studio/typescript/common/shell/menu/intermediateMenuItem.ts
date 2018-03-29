@@ -23,13 +23,13 @@ class intermediateMenuItem implements menuItem {
         return result;
     });
 
-    constructor(title: string, children: menuItem[], css?: string, hashes?: { dynamicHash: () => string, hash?: string }, visible?: boolean) {
+    constructor(title: string, children: menuItem[], css?: string, hashes?: { dynamicHash: () => string, hash?: string }, nav?: boolean) {
         this.title = title;
         this.children = children;
         this.css = css;
         
-        if (visible !== undefined) {
-            this.nav(visible);
+        if (nav !== undefined) {
+            this.nav(nav);
         } 
        
         if (hashes && hashes.dynamicHash) {

@@ -6,20 +6,14 @@ class accessManager {
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
 
-    clusterAdmin = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin");    
-    private clusterNode = ko.pureComputed(() => this.securityClearance() === "ClusterNode");
-    private operator = ko.pureComputed(() => this.securityClearance() === "Operator");
-    validUser = ko.pureComputed(() => this.securityClearance() === "ValidUser");
-    private unauthenticatedClient = ko.pureComputed(() => this.securityClearance() === "UnauthenticatedClients");
-
-    private validUserAndBelow = ko.pureComputed(()=> this.validUser() || this.unauthenticatedClient());
-    private OperatorAndBelow = ko.pureComputed(()=> this.operator() || this.validUser() || this.unauthenticatedClient());   
-    private clusterNodeAndBelow = ko.pureComputed(()=> this.clusterNode() || this.operator() || this.validUser() || this.unauthenticatedClient()); 
-    private clusterAdminAndBelow = ko.pureComputed(()=> this.clusterAdmin() || this.clusterNode() || this.operator() || this.validUser() || this.unauthenticatedClient());
+    private allLevels = ko.pureComputed(() =>  true);
+    clusterAdmin = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin");
+        
+    operatorAndAbove = ko.pureComputed(() => { 
+         const clearance = this.securityClearance();
+         return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
+    });
     
-    private operatorAndAbove = ko.pureComputed(() => this.clusterAdmin() || this.clusterNode() || this.operator());
-    private clusterNodeAndAbove = ko.pureComputed(() => this.clusterAdmin() || this.clusterNode());
-         
     // *** Views Access *** //
     
     dashboardView = {
@@ -61,7 +55,7 @@ class accessManager {
     
     manageServerMenu = {
         showAdminJSConsoleMenuItem: this.clusterAdmin,
-        enableClusterMenuItem: this.clusterAdminAndBelow,
+        enableClusterMenuItem: this.allLevels,
         enableClientConfigurationMenuItem: this.clusterAdmin,
         enableAdminJSConsoleMenuItem: this.clusterAdmin,
         enableCertificatesMenuItem: this.clusterAdmin,
@@ -69,13 +63,14 @@ class accessManager {
         enableTrafficWatchMenuItem: this.clusterAdmin,
         enableGatherDebugInfoMenuItem: this.clusterAdmin,
         enableAdvancedMenuItem: this.clusterAdmin
-    }
+    };
     
     databaseSettingsMenu = {
         showDatabaseRecordMenuItem: this.operatorAndAbove,
-        enableConnectionStringsMenuItem: this.clusterAdmin,
+        showConnectionStringsMenuItem: this.operatorAndAbove,
+        enableConnectionStringsMenuItem: this.clusterAdmin, 
         enableConflictResolutionMenuItem: this.clusterAdmin
-    }
+    };
 }
 
 export = accessManager;
