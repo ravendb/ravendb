@@ -161,11 +161,18 @@ class shell extends viewModelBase {
 
                 this.connectToRavenServer();
                 
-                if (certificate) {
-                    this.accessManager.securityClearance(certificate.SecurityClearance);                   
-                }
+                // "http"
+                if (location.protocol === "http:") {
+                    this.accessManager.securityClearance("ClusterAdmin");
+                } 
                 else {
-                    this.accessManager.securityClearance("ValidUser");
+                    // "https"
+                    if (certificate) {
+                        this.accessManager.securityClearance(certificate.SecurityClearance);
+                    }
+                    else {
+                        this.accessManager.securityClearance("ValidUser");
+                    }
                 }
             })
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());

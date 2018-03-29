@@ -22,7 +22,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/settings/connectionStrings',
             moduleId: "viewmodels/database/settings/connectionStrings",
             title: "Connection Strings",
-            nav: true,
+            nav: access.showConnectionStringsMenuItem,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
             enabled: access.enableConnectionStringsMenuItem
