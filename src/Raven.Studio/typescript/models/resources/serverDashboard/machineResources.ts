@@ -86,10 +86,6 @@ class machineResources {
         });
     }
 
-    private removeSpaces(str: string): string {
-        return str.split(" ").join("");
-    }
-
     update(dto: Raven.Server.Dashboard.MachineResources) {
         this.machineCpuUsage(dto.MachineCpuUsage);
         this.processCpuUsage(dto.ProcessCpuUsage);
