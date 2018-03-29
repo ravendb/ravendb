@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -35,7 +37,7 @@ namespace Raven.Server.Web.Studio
         }
         
         [RavenAction("/databases/*/admin/sql-migration/import", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ImportSql()
+        public Task ImportSql()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -52,14 +54,45 @@ namespace Raven.Server.Web.Studio
                         migrationRequest = serializer.Deserialize<MigrationRequest>(blittableJsonReader);
                     }
                     
+                    var operationId = Database.Operations.GetNextOperationId();
+                    
                     var sourceSqlDatabase = migrationRequest.Source;
                     
                     var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
                     var schema = dbDriver.FindSchema();
+                    var token = CreateOperationToken();
                     
-                    await dbDriver.Migrate(migrationRequest.Settings, schema, Database, context);
+                    var result = new MigrationResult(migrationRequest.Settings);
                     
-                    NoContentStatus();
+                    Database.Operations.AddOperation(Database, "SQL Migration", Documents.Operations.Operations.OperationType.MigrationFromSql, onProgress =>
+                    {
+                        return Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // allocate new context as we executed this async
+                                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
+                                {
+                                    await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress);    
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                result.AddError($"Error occurred during import. Exception: {e.Message}");
+                                onProgress.Invoke(result.Progress);
+                                throw;
+                            }
+
+                            return (IOperationResult) result;
+                        });
+                    }, operationId, token);
+                    
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteOperationId(context, operationId);
+                    }
+                    
+                    return Task.CompletedTask;
                 }
             }
         }

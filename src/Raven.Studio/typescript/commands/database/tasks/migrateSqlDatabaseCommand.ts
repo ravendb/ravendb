@@ -8,9 +8,9 @@ class migrateSqlDatabaseCommand extends commandBase {
           super();
     }
 
-    execute(): JQueryPromise<void> { //TODO: it should return operation id
+    execute(): JQueryPromise<operationIdDto> {
         const url = endpoints.databases.sqlMigration.adminSqlMigrationImport;
-        return this.post<void>(url, JSON.stringify(this.dto), this.db)
+        return this.post<operationIdDto>(url, JSON.stringify(this.dto), this.db)
             .fail((response: JQueryXHR) => {
                 this.reportError(`Failed to migrate SQL database`, response.responseText, response.statusText);
             });

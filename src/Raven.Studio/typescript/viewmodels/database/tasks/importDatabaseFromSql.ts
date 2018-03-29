@@ -109,7 +109,7 @@ class importCollectionFromSql extends viewModelBase {
         const dto = this.model.toDto();
         new migrateSqlDatabaseCommand(this.activeDatabase(), dto)
             .execute()
-            .done(() => messagePublisher.reportSuccess("OK!"));
+            .done((operationId: operationIdDto) => messagePublisher.reportSuccess("Operation id: " + operationId.OperationId));
         //TODO: operation id + watch
     }
     

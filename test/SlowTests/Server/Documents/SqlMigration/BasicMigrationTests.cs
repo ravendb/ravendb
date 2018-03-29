@@ -616,8 +616,6 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-
-        //TODO: link + missing target colleciton should throw 
         //TODO: skip test if db is not available 
     }
 }

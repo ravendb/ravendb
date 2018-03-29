@@ -399,6 +399,9 @@ namespace Raven.Server.Documents.Operations
 
             [Description("Database Backup")]
             DatabaseBackup,
+            
+            [Description("Migration from SQL")]
+            MigrationFromSql
         }
     }
 }
