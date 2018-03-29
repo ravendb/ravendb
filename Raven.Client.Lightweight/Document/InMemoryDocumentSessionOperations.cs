@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 #if !DNXCORE50
 using System.Transactions;
 #endif
@@ -31,6 +32,7 @@ using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -661,7 +663,10 @@ more responsive application.
             {
                 if (EntityChanged(entity, entitiesAndMetadata[entity]))
                 {
-                    throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                    throw new InvalidOperationException($"Can't delete changed entity (ID: {id}) using identifier. " +
+                                                        "Use Delete<T>(T entity) instead. " +
+                                                        $"Number of tracked entities: {entitiesByKey.Count}, " +
+                                                        $"Entity: {JsonConvert.SerializeObject(entity, Default.Converters)}");
                 }
                 Delete(entity);
                 return;
