@@ -115,17 +115,52 @@ class sqlMigration {
             tableDto.References.forEach(referenceDto => {
                 const targetTable = sqlMigration.findRootTable(mapping, referenceDto.Schema, referenceDto.Table);
                 
-                const oneToMany = new sqlReference(targetTable, referenceDto.Columns, "OneToMany");
+                const oneToMany = new sqlReference(targetTable, sourceTable, referenceDto.Columns, "OneToMany");
                 sourceTable.references.push(oneToMany);
                 
-                const manyToOne = new sqlReference(sourceTable, referenceDto.Columns, "ManyToOne");
+                const manyToOne = new sqlReference(sourceTable, targetTable, referenceDto.Columns, "ManyToOne");
                 targetTable.references.push(manyToOne);
                 manyToOne.effectiveLinkTable(sourceTable);
             });
         });
         
+        this.updateNames(mapping);
         
         this.tables(mapping);
+    }
+    
+    private updateNames(mapping: Array<rootSqlTable>) {
+        
+        const collectionNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
+        const propertyNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
+        
+        mapping.forEach(rootTable => {
+            rootTable.collectionName(collectionNameFunc(rootTable.collectionName()));
+            
+            sqlMigration.updatePropertyNames(rootTable, propertyNameFunc);
+        });
+    }
+    
+    static updatePropertyNames(table: abstractSqlTable, transformFunction: (input: string) => string) {
+        table.documentColumns().forEach(column => {
+            column.propertyName(transformFunction(column.sqlName));
+        });
+        
+        table.references()
+            .filter(x => x.type === "ManyToOne")
+            .forEach(ref => {
+                ref.name(ref.joinColumns.map(transformFunction).join("And"));
+            });
+        
+        _.forEach(_.groupBy(table.references()
+            .filter(x => x.type === 'OneToMany'), x => x.targetTable.tableName), (refs, name) => {
+            
+            const basicName = transformFunction(name);
+            
+            refs.forEach((ref: sqlReference, idx: number) => {
+                ref.name(refs.length > 1 ? basicName + (idx + 1) : basicName)
+            });
+        });
     }
     
     static findRootTable(tables: Array<rootSqlTable>, tableSchema: string,  tableName: string) {

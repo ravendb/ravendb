@@ -8,6 +8,9 @@ class rootSqlTable extends abstractSqlTable {
     checked = ko.observable<boolean>(true);
     documentIdTemplate: KnockoutComputed<string>;
     
+    query = ko.observable<string>();
+    patchScript = ko.observable<string>();
+    
     constructor() {
         super();
         this.documentIdTemplate = ko.pureComputed(() => {
@@ -21,8 +24,8 @@ class rootSqlTable extends abstractSqlTable {
             SourceTableName: this.tableName,
             SourceTableSchema: this.tableSchema,
             Name: this.collectionName(),
-            Patch: null, //TODO:
-            SourceTableQuery: null,  //TODO
+            Patch: this.patchScript(),
+            SourceTableQuery: this.query(),
             NestedCollections: this.getEmbeddedReferencesDto(),
             LinkedCollections: this.getLinkedReferencesDto(),
             ColumnsMapping: this.getColumnsMapping(),

@@ -262,11 +262,21 @@ class extensions {
                 const value = valueAccessor();
                 const valueUnwrapped = ko.unwrap(value);
                 const $element = $(element);
-                $element
-                    .addClass('collapse')
-                    .collapse({
-                        toggle: valueUnwrapped
-                    });
+                
+                if (valueUnwrapped) {
+                    $element
+                        .addClass('collapse')
+                        .addClass('in')
+                        .collapse({
+                            toggle: !valueUnwrapped
+                        });
+                } else {
+                    $element
+                        .addClass('collapse')
+                        .collapse({
+                            toggle: valueUnwrapped
+                        });
+                }
 
                 // mark element is being initialized to allow initial animation to take place
                 $(element).data('bs.collapse').initializing = true;
