@@ -98,8 +98,33 @@
     }
     
     .properties_table {
+        border-collapse: separate;
+        
         td {
             padding-right: 5px;
+            padding-top: 1px;
+            padding-bottom: 1px;
+        }
+    }
+    
+    .inline-edit {
+        border: solid 1px transparent; 
+        
+        &:hover {
+            border: solid 1px @gray;
+            border-right: solid 22px @gray;
+            position: relative;
+            
+            &:after {
+                position: absolute;
+                right: -17px;
+                top: 0;
+                bottom: 0;
+                content: "\e92a";
+                font-family: 'icomoon' !important;
+            }
+            
+            cursor: pointer;
         }
     }
 }

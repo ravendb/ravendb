@@ -6,6 +6,7 @@ import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 class sqlReference {
     
     targetTable: abstractSqlTable;
+    sourceTable: abstractSqlTable;
     
     name = ko.observable<string>();
     
@@ -17,9 +18,9 @@ class sqlReference {
     effectiveInnerTable = ko.observable<innerSqlTable>();
     effectiveLinkTable = ko.observable<abstractSqlTable>();
     
-    constructor(targetTable: abstractSqlTable, joinColumns: string[], type: Raven.Server.SqlMigration.Model.RelationType) {
+    constructor(targetTable: abstractSqlTable, sourceTable: abstractSqlTable, joinColumns: string[], type: Raven.Server.SqlMigration.Model.RelationType) {
         this.targetTable = targetTable;
-        this.name(joinColumns.join("And")); //TODO: - consider using collection name by default ? 
+        this.sourceTable = sourceTable;
         this.joinColumns = joinColumns;
         this.type = type;
         this.action(type === "OneToMany" ? 'skip' : 'link');
@@ -49,7 +50,7 @@ class sqlReference {
     }
     
     clone(): sqlReference {
-        return new sqlReference(this.targetTable, this.joinColumns, this.type);
+        return new sqlReference(this.targetTable, this.sourceTable, this.joinColumns, this.type);
     }
     
     getTypeClass() {

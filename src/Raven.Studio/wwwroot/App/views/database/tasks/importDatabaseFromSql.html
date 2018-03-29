@@ -114,7 +114,7 @@
                                     <label data-bind="attr: { for: 'table_' + $index() }">
                                         <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
                                         <i class="icon-arrow-right"></i>
-                                        <span class="with-top-label" data-label="Collection" data-bind="text: collectionName"></span>
+                                        <span class="with-top-label raven-property-name inline-edit" data-label="Collection" data-bind="text: collectionName"></span>
                                     </label>
                                 </div>
                                 
@@ -129,7 +129,10 @@
                             
                         </div>
                         <div class="panel-addon" data-bind="collapse: checked">
-                            <div class="document-id"><i class="icon-sql-document-id"></i> Document ID: <span data-bind="text: documentIdTemplate"></span></div>
+                            <div class="document-id">
+                                <span class="text-muted"><i class="icon-sql-document-id"></i> Document ID:</span> 
+                                <span data-bind="text: documentIdTemplate"></span>
+                            </div>
                             <div class="object-container" data-bind="template: { name: 'object-template' }">
                             </div>
                         </div>
@@ -159,7 +162,7 @@
         <tr>
             <td><span data-bind="text: sqlName"></span></td>
             <td><i class="icon-arrow-right"></i></td>
-            <td><span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="text: ': ' + type"></span></td>
+            <td class="inline-edit"><span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="text: ': ' + type"></span></td>
         </tr>
     </table>
     
@@ -167,22 +170,26 @@
         <tr>
             <td width="400">
                 <span data-bind="visible: type === 'OneToMany'">
-                    <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
                     <span class="text-muted">PK</span>
+                    <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
+                    
                     <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
                     
                     <span class="text-muted">from FK</span>
                     <span data-bind="text: joinColumns.join(', ')"></span>
-                    in <i class="icon-table"></i> <span data-bind="text: targetTable.tableName"></span>
+                    <span class="text-muted">in <i class="icon-table"></i></span>
+                    <span data-bind="text: targetTable.tableName"></span>
                 </span>
                 
                 <span data-bind="visible: type === 'ManyToOne'">
-                    <span data-bind="text: joinColumns.join(', ')"></span> <span class="text-muted">FK</span>
+                    <span class="text-muted">FK</span> 
+                    <span data-bind="text: joinColumns.join(', ')"></span> 
                     <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
                     
                     <span class="text-muted">from PK</span>
                     <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
-                    in <i class="icon-table"></i> <span data-bind="text: targetTable.tableName"></span>
+                    <span class="text-muted">in <i class="icon-table"></i></span>
+                    <span data-bind="text: targetTable.tableName"></span>
                 </span>
             </td>
             <td width="180">
@@ -196,10 +203,10 @@
                 </span>
             </td>
             <td>
-                <span data-bind="with: effectiveInnerTable">
+                <span class="inline-edit" data-bind="with: effectiveInnerTable">
                     <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                 </span>
-                <span data-bind="with: effectiveLinkTable">
+                <span class="inline-edit" data-bind="with: effectiveLinkTable">
                     <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                     <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">[</span>
                     <span data-bind="text: documentIdTemplate"></span>

@@ -7,7 +7,7 @@ class sqlColumn {
     
     constructor(column: Raven.Server.SqlMigration.Schema.TableColumn) {
         this.sqlName = column.Name;
-        this.propertyName(_.upperFirst(_.camelCase(column.Name))); //tODO: use settings for doing this
+        this.propertyName(column.Name);
         this.type = column.Type;
     }
     

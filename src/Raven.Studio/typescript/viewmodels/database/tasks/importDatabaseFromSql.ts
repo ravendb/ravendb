@@ -5,6 +5,7 @@ import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDa
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import messagePublisher = require("common/messagePublisher");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
+import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -106,7 +107,14 @@ class importCollectionFromSql extends viewModelBase {
     onActionClicked(reference: sqlReference, action: sqlMigrationAction) {
         if (action === "embed" && reference.action() !== "embed") {
             const tableToEmbed = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
-            reference.effectiveInnerTable(tableToEmbed.cloneForEmbed());
+            const innerTable = tableToEmbed.cloneForEmbed();
+            reference.effectiveInnerTable(innerTable);
+            
+            const propertyNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
+            
+            sqlMigration.updatePropertyNames(innerTable, propertyNameFunc);
+            
+            this.removeBackReference(innerTable, reference);
         }
         
         if (action === "link" && reference.action() !== "link") {
@@ -124,6 +132,14 @@ class importCollectionFromSql extends viewModelBase {
         if (action !== "link") {
             reference.effectiveLinkTable(null);
         }
+    }
+    
+    private removeBackReference(table: innerSqlTable, reference: sqlReference) {
+        const refToDelete = table.references().find(t => _.isEqual(t.joinColumns, reference.joinColumns) 
+            && t.targetTable.tableName === reference.sourceTable.tableName 
+            && t.targetTable.tableSchema === reference.targetTable.tableSchema);
+        
+        table.references.remove(refToDelete);
     }
 }
 
