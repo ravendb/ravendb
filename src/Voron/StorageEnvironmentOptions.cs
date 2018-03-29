@@ -640,6 +640,8 @@ namespace Voron
                     // isn't paged to disk
                     pager.LockMemory = true;
                     pager.DoNotConsiderMemoryLockFailureAsCatastrophicError = DoNotConsiderMemoryLockFailureAsCatastrophicError;
+
+                    pager.SetPagerState(pager.PagerState); // with LockMemory = true set
                 }
                 return pager;
             }
