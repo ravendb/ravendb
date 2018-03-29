@@ -47,7 +47,7 @@ namespace Raven.Backup
 
             var backupRequest = new
             {
-                BackupLocation = parameters.BackupPath.Replace("\\", "\\\\"),
+                BackupLocation = parameters,
             };
 
 
