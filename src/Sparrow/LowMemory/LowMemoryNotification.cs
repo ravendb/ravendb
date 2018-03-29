@@ -345,11 +345,18 @@ namespace Sparrow.LowMemory
             if (PlatformDetails.RunningOnPosix == false)
             {
                 // this is relevant only on Windows
-                var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalCommittableMemory * _commitChargeThreshold);
+                var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + GetCommitChargeThreshold(memInfo);
                 isLowMemory |= memInfo.TotalCommittableMemory <= commitChargePlusMinSizeToKeepFree;
             }
 
             return isLowMemory;
+        }
+
+        public Size LowMemoryThreshold => _lowMemoryThreshold;
+
+        public Size GetCommitChargeThreshold(MemoryInfoResult memInfo)
+        {
+            return memInfo.TotalCommittableMemory * _commitChargeThreshold;
         }
 
         private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long physicalMem, long currentcommitCharge)

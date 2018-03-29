@@ -1,22 +1,28 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-import serverTime = require("common/helpers/database/serverTime");
+import generalUtils = require("common/generalUtils");
 
 class machineResources {
+    sizeFormatter = generalUtils.formatBytesToSize;
+
     machineCpuUsage = ko.observable<number>(0);
+    processCpuUsage = ko.observable<number>(0);
+
+    totalMemory = ko.observable<number>(0);
+    usedMemory = ko.observable<number>(0);
+    processMemoryUsage = ko.observable<number>(0);
     systemCommitLimit = ko.observable<number>(0);
     commitedMemory = ko.observable<number>(0);
-    processCpuUsage = ko.observable<number>(0);
-    processMemoryUsage = ko.observable<number>(0);
-    totalMemory = ko.observable<number>(0);
-    
+    isWindows = ko.observable<boolean>();
+    isLowMemory = ko.observable<boolean>();
+    lowMemoryThreshold = ko.observable<number>(0);
+    commitChargeThreshold = ko.observable<number>(0);
+
     machineCpuUsageClass: KnockoutComputed<string>;
     processCpuUsageClass: KnockoutComputed<string>;
-    machineMemoryUsageClass: KnockoutComputed<string>;
-    commitedMemoryUsageClass: KnockoutComputed<string>;
-    processMemoryUsageClass: KnockoutComputed<string>;
 
-    isProcessMemoryRss = ko.observable<boolean>();
-    processUsageTooltip: KnockoutComputed<string>;
+    totalMemoryTooltip: KnockoutComputed<string>;
+    machineMemoryUsageTooltip: KnockoutComputed<string>;
+    lowMemoryTooltip: KnockoutComputed<string>;
 
     constructor(dto: Raven.Server.Dashboard.MachineResources) {
         this.update(dto);
@@ -31,51 +37,77 @@ class machineResources {
             return this.getCpuUsageClass(usage);
         });
 
-        this.commitedMemoryUsageClass = ko.pureComputed(() => {
-            const used = this.commitedMemory();
-            return this.getMemoryUsageClass(used);
+        this.totalMemoryTooltip = ko.pureComputed(() => {
+            let tooltip = `<div>
+                Usable Physical Memory: <strong>${this.sizeFormatter(this.totalMemory())}</strong><br />`;
+
+            if (this.isWindows()) {
+                tooltip += ` System Commit Limit: <strong>${this.sizeFormatter(this.systemCommitLimit())}</strong><br />`;
+            } else {
+                tooltip += ` Swap: <strong>${this.sizeFormatter(this.systemCommitLimit() - this.totalMemory())}</strong><br />`;
+            }
+
+            return `${tooltip}</div>`;
         });
 
-        this.processMemoryUsageClass = ko.pureComputed(() => {
-            const used = this.processMemoryUsage();
-            return this.getMemoryUsageClass(used);
+        this.machineMemoryUsageTooltip = ko.pureComputed(() => {
+            const availableMemory = this.totalMemory() - this.usedMemory();
+            let tooltip = `<div>
+                                Machine Memory Usage: <strong>${this.sizeFormatter(this.usedMemory())}</strong><br />
+                                Available Memory: <strong>${this.sizeFormatter(availableMemory)}</strong>`;
+
+            if (this.isWindows()) {
+                tooltip += `<br />Commited Memory: <strong>${this.sizeFormatter(this.commitedMemory())}</strong>`;
+            }
+
+            return `${tooltip}</div>`;
         });
 
-        this.processUsageTooltip = ko.pureComputed(() => {
-            return this.isProcessMemoryRss() ? "RavenDB Resident Memory" : "RavenDB Working Set";
+        this.lowMemoryTooltip = ko.pureComputed(() => {
+            let tooltip = `<div><span class="text-warning">Running in Low Memory Mode</span>`;
+
+            const availableMemory = this.totalMemory() - this.usedMemory();
+            const lowMemoryThreshold = this.lowMemoryThreshold();
+            if (availableMemory < lowMemoryThreshold) {
+                tooltip += `<br />Available Memory: <strong>${ this.sizeFormatter(availableMemory) } </strong>
+                            <br />Low Memory Threshold: <strong>${this.sizeFormatter(this.lowMemoryThreshold())}</strong>`;
+            }
+
+            if (this.isWindows()) {
+                const availableToCommit = this.systemCommitLimit() - this.commitedMemory();
+                const commitThreshold = this.commitChargeThreshold();
+                if (availableToCommit <= commitThreshold) {
+                    tooltip += `<br />Available to Commit: <strong>${this.sizeFormatter(availableToCommit)}</strong>
+                                <br /><strong>Commit Threshold: ${this.sizeFormatter(commitThreshold)}</strong><br />`;
+                }  
+            }
+
+            return `${tooltip}</div>`;
         });
     }
-    
+
+    private removeSpaces(str: string): string {
+        return str.split(" ").join("");
+    }
+
     update(dto: Raven.Server.Dashboard.MachineResources) {
         this.machineCpuUsage(dto.MachineCpuUsage);
         this.processCpuUsage(dto.ProcessCpuUsage);
+        this.totalMemory(dto.TotalMemory);
+        this.usedMemory(dto.TotalMemory - dto.AvailableMemory);
+        this.processMemoryUsage(dto.ProcessMemoryUsage);
         this.systemCommitLimit(dto.SystemCommitLimit);
         this.commitedMemory(dto.CommitedMemory);
-        this.processMemoryUsage(dto.ProcessMemoryUsage);
-        this.isProcessMemoryRss(dto.IsProcessMemoryRss);
-        this.totalMemory(dto.TotalMemory);
+        this.isWindows(dto.IsWindows);
+        this.isLowMemory(dto.IsLowMemory);
+        this.lowMemoryThreshold(dto.LowMemoryThreshold);
+        this.commitChargeThreshold(dto.CommitChargeThreshold);
     }
 
     private getCpuUsageClass(usage: number) {
         if (usage >= 90) {
             return "text-danger";
         } else if (usage >= 80) {
-            return "text-warning";
-        }
-
-        return "text-success";
-    }
-
-    private getMemoryUsageClass(used: number): string {
-        const total = this.totalMemory();
-        if (!total) {
-            return "";
-        }
-
-        const percentageUsage = used * 100.0 / total;
-        if (percentageUsage >= 90) {
-            return "text-danger";
-        } else if (percentageUsage >= 80) {
             return "text-warning";
         }
 
