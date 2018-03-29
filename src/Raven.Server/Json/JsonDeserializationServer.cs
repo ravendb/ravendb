@@ -30,6 +30,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Web.System;
 
@@ -141,6 +142,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, FacetOptions> FacetOptions = GenerateJsonDeserializationRoutine<FacetOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseInfo> DatabaseInfo = GenerateJsonDeserializationRoutine<DatabaseInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, ClusterTopologyChanged> ClusterTopologyChanged = GenerateJsonDeserializationRoutine<ClusterTopologyChanged>();
 
         public class Parameters
         {
