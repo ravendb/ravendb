@@ -99,7 +99,12 @@
         <div class="col-sm-12 col-lg-8 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div class="panel panel-default flex-grow no-margin">
-                    <div class="panel-body">
+                    <div class="panel-body padding padding-sm">
+                        <div class="checkbox checkbox-default checkbox-inline align-checkboxes" title="Select all or none">
+                            <input type="checkbox" class="styled" data-bind="checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
+                            <label></label>
+                        </div>
+                        
                         <button class="btn btn-primary" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
                             <i class="icon-import"></i>
                             <span>Migrate</span>
