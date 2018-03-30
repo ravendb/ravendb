@@ -7,7 +7,6 @@ import messagePublisher = require("common/messagePublisher");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import notificationCenter = require("common/notifications/notificationCenter");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
-import operation = require("../../../common/notifications/models/operation");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -27,6 +26,8 @@ class importCollectionFromSql extends viewModelBase {
     currentLocationHumane: KnockoutComputed<string>;
     
     inFirstStep = ko.observable<boolean>(true);
+    globalSelectionState: KnockoutComputed<checkbox>;
+    togglingAll = ko.observable<boolean>(false);
     
     databases = ko.observableArray<string>([]); //TODO: fetch this on databases focus
     
@@ -51,6 +52,25 @@ class importCollectionFromSql extends viewModelBase {
             const end = Math.min(total, start + importCollectionFromSql.pageCount - 1);
             
             return "Tables " + start.toLocaleString() + "-" + end.toLocaleString() + " out of " + total.toLocaleString();
+        });
+        
+        this.globalSelectionState = ko.pureComputed<checkbox>(() => {
+            if (this.togglingAll()) {
+                // speed up animation!
+                return;
+            }
+                
+            const tables = this.model.tables();
+            const totalCount = tables.length;
+            const selectedCount = this.model.getSelectedTablesCount();
+            
+            if (totalCount && selectedCount === totalCount) {
+                return "checked";
+            }
+            if (selectedCount > 0) {
+                return "some_checked";
+            }
+            return "unchecked";
         });
     }
     
@@ -159,6 +179,23 @@ class importCollectionFromSql extends viewModelBase {
             && t.targetTable.tableSchema === reference.targetTable.tableSchema);
         
         table.references.remove(refToDelete);
+    }
+    
+    toggleSelectAll() {
+        this.togglingAll(true);
+        const selectedCount = this.model.getSelectedTablesCount();
+
+        if (selectedCount > 0) {
+            this.model.tables().forEach(table => {
+                table.checked(false);
+            });
+        } else {
+            this.model.tables().forEach(table => {
+                table.checked(true);
+            });
+        }
+        
+        this.togglingAll(false);
     }
 }
 

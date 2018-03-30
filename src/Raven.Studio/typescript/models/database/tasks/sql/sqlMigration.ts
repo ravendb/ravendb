@@ -223,6 +223,10 @@ class sqlMigration {
     private escape(inputString: string) {
         return inputString.replace("'", "''");
     }
+    
+    getSelectedTablesCount() {
+        return _.sumBy(this.tables(), t => t.checked() ? 1 : 0);
+    }
 }
 
 export = sqlMigration;
