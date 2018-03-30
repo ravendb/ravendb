@@ -426,6 +426,9 @@ namespace Raven.Server.Documents.Indexes
                 if (Count == _initialCount)
                     return;
 
+                if (_tree.Llt.Environment.Options.IsCatastrophicFailureSet)
+                    return; // avoid re-throwing it
+
                 _tree.Increment(_keySlice, Count - _initialCount);
             }
 

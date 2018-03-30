@@ -189,9 +189,9 @@ namespace Voron
 
             IoMetrics = new IoMetrics(256, 256, ioChangesNotifications);
 
-            _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath.FullPath);
+            _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
 
-            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((e) =>
+            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, e) =>
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Catastrophic failure in {this}", e);
@@ -207,7 +207,7 @@ namespace Voron
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
         {
             _catastrophicFailure = exception;
-            _catastrophicFailureNotification.RaiseNotificationOnce(exception.SourceException);
+            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, exception.SourceException);
         }
 
         public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
@@ -1063,6 +1063,7 @@ namespace Voron
         private int _numOfConcurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlashInSec;
         public long CompressTxAboveSizeInBytes;
+        private Guid _environmentId;
 
         public virtual void SetPosixOptions()
         {
@@ -1126,6 +1127,11 @@ namespace Voron
                     // nothing we can do about it
                 }
             }
+        }
+
+        public void SetEnvironmentId(Guid environmentId)
+        {
+            _environmentId = environmentId;
         }
     }
 }
