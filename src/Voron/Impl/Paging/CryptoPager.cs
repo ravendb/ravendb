@@ -299,8 +299,11 @@ namespace Voron.Impl.Paging
             {
                 if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize == 0)
                 {
-                    // Pages that are marked with OriginalSize = 0 were seperated from a larger allocation, we cannot free them directly.
+                    // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
                     // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
+                    // We still need to return the buffer allocated for the hash
+                    _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
+
                     continue;
                 }
 
