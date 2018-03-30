@@ -107,6 +107,8 @@ namespace Raven.Server.SqlMigration.Model
         public long ReadCount { get; set; }
 
         public long ErroredCount { get; set; }
+        
+        public long SkippedCount { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -114,13 +116,15 @@ namespace Raven.Server.SqlMigration.Model
             {
                 [nameof(Processed)] = Processed,
                 [nameof(ReadCount)] = ReadCount,
+                [nameof(SkippedCount)] = SkippedCount,
                 [nameof(ErroredCount)] = ErroredCount
             };
         }
 
         public override string ToString()
         {
-            return $"Read: {ReadCount}. " +
+            return $"Skipped: {SkippedCount}. " + 
+                   $"Read: {ReadCount}. " +
                    $"Errored: {ErroredCount}.";
         }
     }

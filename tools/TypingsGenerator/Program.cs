@@ -376,6 +376,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseSchema));
             scripter.AddType(typeof(MigrationProvider));
             scripter.AddType(typeof(MigrationRequest));
+            scripter.AddType(typeof(MigrationResult));
+            scripter.AddType(typeof(MigrationProgress));
 
             return scripter;
         }

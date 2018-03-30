@@ -12,7 +12,7 @@ class migrateSqlDatabaseCommand extends commandBase {
         const url = endpoints.databases.sqlMigration.adminSqlMigrationImport;
         return this.post<operationIdDto>(url, JSON.stringify(this.dto), this.db)
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to migrate SQL database`, response.responseText, response.statusText);
+                this.reportError(`Failed to initialize SQL Migration operation`, response.responseText, response.statusText);
             });
     }
 }

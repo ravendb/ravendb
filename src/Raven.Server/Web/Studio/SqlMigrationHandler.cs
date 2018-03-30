@@ -64,7 +64,10 @@ namespace Raven.Server.Web.Studio
                     
                     var result = new MigrationResult(migrationRequest.Settings);
                     
-                    Database.Operations.AddOperation(Database, "SQL Migration", Documents.Operations.Operations.OperationType.MigrationFromSql, onProgress =>
+                    var collectionsCount = migrationRequest.Settings.Collections.Count;
+                    var operationDescription = "Importing " + collectionsCount + " " + (collectionsCount == 1 ? "collection" : "collections") + " from SQL database: " + schema.CatalogName;
+                    
+                    Database.Operations.AddOperation(Database, operationDescription, Documents.Operations.Operations.OperationType.MigrationFromSql, onProgress =>
                     {
                         return Task.Run(async () =>
                         {
