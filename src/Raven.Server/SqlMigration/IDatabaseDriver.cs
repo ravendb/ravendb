@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
@@ -14,6 +15,6 @@ namespace Raven.Server.SqlMigration
         DatabaseSchema FindSchema();
         
         Task Migrate(MigrationSettings settings, DatabaseSchema schema, DocumentDatabase db, DocumentsOperationContext context,
-            MigrationResult result = null, Action<IOperationProgress> onProgress = null, OperationCancelToken token = default);
+            MigrationResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default);
     }
 }

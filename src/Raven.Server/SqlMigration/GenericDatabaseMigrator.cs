@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
@@ -20,7 +21,7 @@ namespace Raven.Server.SqlMigration
         public abstract DatabaseSchema FindSchema();
 
         public async Task Migrate(MigrationSettings settings, DatabaseSchema dbSchema, DocumentDatabase db, DocumentsOperationContext context,
-            MigrationResult result, Action<IOperationProgress> onProgress, OperationCancelToken token = default)
+            MigrationResult result, Action<IOperationProgress> onProgress, CancellationToken token = default)
         {
             if (result == null)
                 result = new MigrationResult(settings);
@@ -54,6 +55,8 @@ namespace Raven.Server.SqlMigration
                             foreach (var doc in EnumerateTable(GetQueryForCollection(collectionToImport), collectionToImport.ColumnsMapping, specialColumns,
                                 attachmentColumns, enumerationConnection))
                             {
+                                token.ThrowIfCancellationRequested();
+                                
                                 try
                                 {
                                     doc.SetCollection(collectionToImport.Name);
@@ -76,16 +79,12 @@ namespace Raven.Server.SqlMigration
                                         onProgress.Invoke(result.Progress);
                                     }
                                 }
-                                catch (Exception e) //TODO: should we rethrow some of errors?
+                                catch (Exception e)
                                 {
                                     result.AddError(e.Message);
                                     collectionCount.ErroredCount++;
                                 }
                             }
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Error during processing collection: " + collectionToImport.Name, e);
                         }
                         finally
                         {
