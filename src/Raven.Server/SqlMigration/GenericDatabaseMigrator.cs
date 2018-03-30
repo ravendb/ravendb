@@ -53,7 +53,7 @@ namespace Raven.Server.SqlMigration
                         try
                         {
                             foreach (var doc in EnumerateTable(GetQueryForCollection(collectionToImport), collectionToImport.ColumnsMapping, specialColumns,
-                                attachmentColumns, enumerationConnection))
+                                attachmentColumns, enumerationConnection, settings.MaxRowsPerTable))
                             {
                                 token.ThrowIfCancellationRequested();
                                 
@@ -362,7 +362,7 @@ namespace Raven.Server.SqlMigration
         protected abstract string GetQueryForCollection(RootCollection collection);
 
         protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping,
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, TConnection connection);
+            HashSet<string> specialColumns, HashSet<string> attachmentColumns, TConnection connection, int? rowsLimit);
 
         protected abstract IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
         protected abstract IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, TConnection connection);

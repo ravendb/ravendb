@@ -616,6 +616,43 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
+        
+        [Theory]
+        [InlineData(MigrationProvider.MsSQL)]
+        [InlineData(MigrationProvider.MySQL)]
+        public async Task CanLimitRows(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                
+                using (var store = GetDocumentStore())
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            new RootCollection(schemaName, "movie", "Movies")
+                        },
+                        MaxRowsPerTable = 2
+                    };
+
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        await driver.Migrate(settings, schema, db, context);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(2, session.Advanced.LoadStartingWith<JObject>("Movies/").Length);
+                    }
+                }
+            }
+        }
         //TODO: skip test if db is not available 
     }
 }

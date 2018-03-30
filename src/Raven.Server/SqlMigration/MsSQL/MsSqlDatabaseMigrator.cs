@@ -231,9 +231,9 @@ namespace Raven.Server.SqlMigration.MsSQL
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, SqlConnection connection)
+            HashSet<string> specialColumns, HashSet<string> attachmentColumns, SqlConnection connection, int? rowsLimit)
         {
-            using (var cmd = new SqlCommand(tableQuery, connection))
+            using (var cmd = new SqlCommand(LimitRowsNumber(tableQuery, rowsLimit), connection))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
@@ -247,6 +247,14 @@ namespace Raven.Server.SqlMigration.MsSQL
                     yield return migrationDocument;
                 }
             }
+        }
+        
+        private string LimitRowsNumber(string inputQuery, int? rowsLimit)
+        {
+            if (rowsLimit.HasValue) 
+                return "select top " + rowsLimit + " rowsLimited.* from (" + inputQuery + ") rowsLimited";
+            
+            return inputQuery;
         }
 
         protected override IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, SqlConnection connection)
