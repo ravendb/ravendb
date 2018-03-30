@@ -76,7 +76,7 @@ namespace Raven.Server.Web.Studio
                                 // allocate new context as we executed this async
                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
                                 {
-                                    await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress);    
+                                    await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress, token.Token);    
                                 }
                             }
                             catch (Exception e)
