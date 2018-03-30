@@ -123,9 +123,9 @@ namespace Raven.Server.Documents
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
-                CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+                CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, e) =>
                 {
-                    serverStore.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
+                    serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId);
                 });
             }
             catch (Exception)
@@ -864,16 +864,19 @@ namespace Raven.Server.Documents
                 Transaction tx = null;
                 try
                 {
-                    try
+                    using (environment.Environment.Options.SkipCatastrophicFailureAssertion())
                     {
-                        tx = environment.Environment.ReadTransaction();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        continue;
-                    }
+                        try
+                        {
+                            tx = environment.Environment.ReadTransaction();
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            continue;
+                        }
 
-                    sizeOnDiskInBytes += GetSizeOnDisk(environment, tx);
+                        sizeOnDiskInBytes += GetSizeOnDisk(environment, tx);
+                    }
                 }
                 finally
                 {

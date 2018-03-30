@@ -685,6 +685,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (indexContext.OpenReadTransaction())
                 {
                     return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
@@ -712,6 +713,7 @@ namespace Raven.Server.Documents.Indexes
                     return (true, (long)IndexProgressStatus.RunningStorageOperation);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (indexContext.OpenReadTransaction())
                 {
                     var isStale = IsStale(databaseContext, indexContext);
@@ -1284,7 +1286,20 @@ namespace Raven.Server.Documents.Indexes
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occurred for '{Name}'.", e);
 
+            var corruptionStats = DocumentDatabase.ServerStore.DatabasesLandlord.CatastrophicFailureHandler.GetStats(_environment.DbId);
+
+            if (corruptionStats.WillUnloadDatabase)
+            {
+                // it can be a transient error, we are going to unload the database and do not error the index yet
+                // let's stop the indexing thread
+                _indexDisabled = true;  
+                return;
+            }
+
+            // we exceeded the number of db unloads due to corruption error, let's error the index
+            
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
+
             try
             {
                 using (_environment.Options.SkipCatastrophicFailureAssertion()) // we really want to store Error state
@@ -1746,6 +1761,7 @@ namespace Raven.Server.Documents.Indexes
                     throw new ObjectDisposedException("Index " + Name);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (var tx = context.OpenReadTransaction())
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
