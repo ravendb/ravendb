@@ -5,22 +5,22 @@ namespace Voron.Exceptions
 {
     public class CatastrophicFailureNotification
     {
-        private readonly Action<Exception> _catastrophicFailure;
+        private readonly Action<Guid, Exception> _catastrophicFailure;
         private bool _raised;
 
-        public CatastrophicFailureNotification(Action<Exception> catastrophicFailureHandler)
+        public CatastrophicFailureNotification(Action<Guid, Exception> catastrophicFailureHandler)
         {
             Debug.Assert(catastrophicFailureHandler != null);
 
             _catastrophicFailure = catastrophicFailureHandler;
         }
 
-        public void RaiseNotificationOnce(Exception e)
+        public void RaiseNotificationOnce(Guid environmentId, Exception e)
         {
             if (_raised)
                 return;
 
-            _catastrophicFailure.Invoke(e);
+            _catastrophicFailure.Invoke(environmentId, e);
 
             _raised = true;
         }
