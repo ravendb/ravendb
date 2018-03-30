@@ -70,9 +70,9 @@ namespace Raven.Server.SqlMigration.MySQL
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, MySqlConnection connection)
+            HashSet<string> specialColumns, HashSet<string> attachmentColumns, MySqlConnection connection, int? rowsLimit)
         {
-            using (var cmd = new MySqlCommand(tableQuery, connection))
+            using (var cmd = new MySqlCommand(LimitRowsNumber(tableQuery, rowsLimit), connection))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
@@ -86,6 +86,14 @@ namespace Raven.Server.SqlMigration.MySQL
                     yield return migrationDocument;
                 }
             }
+        }
+        
+        private string LimitRowsNumber(string inputQuery, int? rowsLimit)
+        {
+            if (rowsLimit.HasValue) 
+                return "select rowsLimited.* from (" + inputQuery + ") rowsLimited limit " + rowsLimit;
+            
+            return inputQuery;
         }
 
         private void FindTableNames(MySqlConnection connection, DatabaseSchema dbSchema)
