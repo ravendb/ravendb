@@ -99,7 +99,7 @@
         <div class="col-sm-12 col-lg-8 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div class="panel panel-default flex-grow no-margin">
-                    <div class="panel-body padding padding-sm">
+                    <div class="panel-body padding padding-sm flex-horizontal">
                         <div class="checkbox checkbox-default checkbox-inline align-checkboxes" title="Select all or none">
                             <input type="checkbox" class="styled" data-bind="checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
@@ -107,8 +107,17 @@
                         
                         <button class="btn btn-primary" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
                             <i class="icon-import"></i>
-                            <span>Migrate</span>
+                            <span>Migrate selected tables </span><span data-bind="visible: model.testImport">(partial)</span>
                         </button>
+                        <div class="flex-separator"></div>
+                        <div class="dropdown">
+                            <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                <i class="icon-settings"></i><span>Settings</span>
+                                <span class="caret"></span>
+                            </button>
+                            <div class="dropdown-menu settings-menu dropdown-menu-right" data-bind="dropdownPanel: true, template: { name: 'migration-settings-template' }">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -247,4 +256,47 @@
             </tr>
         </tbody>
     </table>
+</script>
+
+<script type="text/html" id="migration-settings-template">
+    <form class="flex-form padding" data-bind="with: model">
+        <div class="form-group" data-bind="validationElement: batchSize">
+            <label class="control-label">Batch size</label>
+            <div class="flex-grow">
+                <input class="form-control" placeholder="Migration batch size" data-bind="numericInput: batchSize">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="control-label">Convert binary columns to attachments</label>
+            <div class="flex-grow">
+                <div class="toggle">
+                    <input type="checkbox" class="styled" data-bind="checked: binaryToAttachment">
+                    <label></label>
+                </div>
+            </div>
+        </div>
+        <div class="form-group no-margin">
+            <label class="control-label">Partial migration <br/><small class="text-muted">limits maximum number of documents<br /> per each table</small></label>
+            <div class="flex-grow">
+                <div class="toggle">
+                    <input type="checkbox" class="styled" data-bind="checked: testImport">
+                    <label></label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group" data-bind="validationElement: maxDocumentsToImportPerTable, visible: testImport">
+            <label class="control-label left-ident">Maximum rows number<br /><small class="text-muted">per SQL table</small></label>
+            <div class="flex-grow">
+                <input class="form-control" placeholder="Migration batch size" data-bind="numericInput: maxDocumentsToImportPerTable">
+            </div>
+        </div>
+        
+        <div class="flex-horizontal">
+            <div class="flex-separator"></div>
+            <button class="btn btn-default btn-sm close-panel">
+                Close
+            </button>
+        </div>
+    </form>
 </script>
