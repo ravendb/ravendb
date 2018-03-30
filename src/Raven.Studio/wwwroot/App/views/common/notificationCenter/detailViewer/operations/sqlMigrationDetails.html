@@ -1,0 +1,84 @@
+<div class="modal-dialog modal-lg" role="document" id="sqlMigrationModal">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
+                </div>
+                <div class="flex-grow text-right">
+                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <h3 class="text-danger" data-bind="visible: operationFailed">Operation failed!</h3>
+            <div class="items-list" data-bind="visible: items().length">
+                <div class="migration-legend">
+                    <div class="name">
+                    </div>
+                    <div class="status status-processed">
+                        status
+                    </div>
+                    <div class="read">
+                        read
+                    </div>
+                    <div class="skipped">
+                        skipped
+                    </div>
+                    <div class="errors">
+                        errors
+                    </div>
+                </div>
+                
+                <div class="items-container" data-bind="foreach: items">
+                    <div class="migration-item">
+                        <div class="name">
+                            <h3 data-bind="text: name"></h3>
+                        </div>
+                        <div class="status status-processed" data-bind="visible: stage() === 'processed'">
+                            <i class="icon-check"></i> <span>Processed</span>
+                        </div>
+                        <div class="status status-errored" data-bind="visible: stage() === 'error'">
+                            <i class="icon-exclamation"></i> <span>Error</span>
+                        </div>
+                        <div class="status status-processing" data-bind="visible: stage() === 'processing'">
+                            <span class="global-spinner spinner-sm"></span> <span>Processing</span>
+                        </div>
+                        <div class="status status-waiting" data-bind="visible: stage() === 'pending'">
+                            <i class="icon-waiting"></i> <span>Pending</span>
+                        </div>
+                        <div class="read" data-bind="text: readCount, css: { 'text-muted': !hasReadCount() }">
+                        </div>
+                        <div class="skipped" data-bind="text: skippedCount, css: { 'text-muted': !hasSkippedCount() }">
+                        </div>
+                        <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !hasErroredCount() }">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal margin-top" data-bind="visible: !operationFailed()">
+                <div class="toggle" data-bind="visible: !operationFailed()">
+                    <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
+                    <label for="smuggler-monitoring">
+                        Monitoring (tail -f)
+                    </label>
+                </div>
+                <div class="flex-separator"></div>
+                <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
+                </button>
+            </div>
+            <pre class="margin-top migration-messages" data-bind="visible: detailsVisible, if: detailsVisible"><code data-bind="text: messagesJoined"></code></pre>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable, css: { 'btn-spinner': spinners.kill }, disable: spinners.kill">
+                <i class="icon-cancel"></i> <span>Abort</span>
+            </button>
+        </div>
+    </div>
+</div>

@@ -5,7 +5,9 @@ import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDa
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import messagePublisher = require("common/messagePublisher");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
+import notificationCenter = require("common/notifications/notificationCenter");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
+import operation = require("../../../common/notifications/models/operation");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -13,7 +15,8 @@ class importCollectionFromSql extends viewModelBase {
     static pageCount = 50; //TODO: set to 100!
     
     spinners = {
-        schema: ko.observable<boolean>(false)
+        schema: ko.observable<boolean>(false),
+        importing: ko.observable<boolean>(false)
     };
     
     model = new sqlMigration();
@@ -79,8 +82,6 @@ class importCollectionFromSql extends viewModelBase {
                 this.initSecondStep();
             })
             .always(() => this.spinners.schema(false));
-            
-        //TODO: finish
     }
     
     private initSecondStep() {
@@ -107,10 +108,19 @@ class importCollectionFromSql extends viewModelBase {
     
     migrate() {
         const dto = this.model.toDto();
-        new migrateSqlDatabaseCommand(this.activeDatabase(), dto)
+        const db = this.activeDatabase();
+        
+        this.spinners.importing(true);
+        
+        new migrateSqlDatabaseCommand(db, dto)
             .execute()
-            .done((operationId: operationIdDto) => messagePublisher.reportSuccess("Operation id: " + operationId.OperationId));
-        //TODO: operation id + watch
+            .done((operation: operationIdDto) => {
+                notificationCenter.instance.openDetailsForOperationById(db, operation.OperationId);
+                
+                notificationCenter.instance.monitorOperation(db, operation.OperationId)
+                    .always(() => this.spinners.importing(false));
+            })
+            .fail(() => this.spinners.importing(false));
     }
     
     onActionClicked(reference: sqlReference, action: sqlMigrationAction) {

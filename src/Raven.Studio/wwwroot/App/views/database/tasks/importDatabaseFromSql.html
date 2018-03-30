@@ -100,7 +100,10 @@
             <div class="flex-header flex-horizontal">
                 <div class="panel panel-default flex-grow no-margin">
                     <div class="panel-body">
-                        <button class="btn btn-primary" data-bind="click: $root.migrate">Migrate</button>
+                        <button class="btn btn-primary" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
+                            <i class="icon-import"></i>
+                            <span>Migrate</span>
+                        </button>
                     </div>
                 </div>
             </div>

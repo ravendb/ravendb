@@ -1,0 +1,94 @@
+﻿#sqlMigrationModal {
+    .migration-messages {
+        height: 250px;
+        overflow: auto;
+    }
+
+    .items-list {
+        
+        .items-container {
+            max-height: 60vh;
+            overflow-y: scroll;
+        }
+        
+        .migration-item, .migration-legend {
+            display: flex;
+            align-items: center;
+            padding: 0 @grid-gutter-width/2;;
+
+            + .migration-item {
+                margin-top: @grid-gutter-width/4;
+            }
+
+            .name {
+                width: 400px;
+            }
+
+            .status {
+                flex-grow: 1;
+            }
+
+            .read:not(.text-muted) {
+                color: @brand-success;
+            }
+
+            .skipped:not(.text-muted) {
+                color: @brand-warning;
+            }
+
+            .errors:not(.text-muted) {
+                color: @brand-danger;
+            }
+
+            .read, .skipped, .errors {
+                width: 100px;
+                text-align: center;
+            }
+        }
+        
+        .migration-legend {
+            text-transform: uppercase;
+            font-size: 10px;
+            padding: 0 20px;
+        }
+
+        .migration-item {
+            padding: @grid-gutter-width/4 @grid-gutter-width/2;
+            background-color: @gray-dark;
+            padding-left: @grid-gutter-width/4*3;
+
+            .name {
+                h3 {
+                    margin: 0;
+                }
+            }
+
+            .global-spinner {
+                &:before {
+                    position: relative;
+                    top: 4px;
+                }
+
+                & + span {
+                    margin-left: 5px;
+                }
+            }
+
+            .status {
+                font-size: 12px;
+
+                &.status-processed {
+                    color: @brand-success;
+                }
+
+                &.status-errored {
+                    color: @brand-danger;
+                }
+
+                &.status-processing {
+                    color: @brand-primary;
+                }
+            }
+        }
+    }
+}
