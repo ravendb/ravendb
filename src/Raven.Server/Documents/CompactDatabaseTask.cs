@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
 
             using (await _serverStore.DatabasesLandlord.UnloadAndLockDatabase(_database, "it is being compacted"))
             using (var src = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
-                new CatastrophicFailureNotification(exception => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
+                new CatastrophicFailureNotification((endId, exception) => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
             {
                 src.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
                 src.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents
                 {
                     configuration.Core.DataDirectory = new PathSetting(basePath + "-Compacting");
                     using (var dst = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
-                        new CatastrophicFailureNotification(exception => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
+                        new CatastrophicFailureNotification((envId, exception) => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
                     {
                         dst.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                         dst.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;

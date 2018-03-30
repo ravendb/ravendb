@@ -402,6 +402,8 @@ namespace Voron
                 var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databseGuidId, 0, 16);
                 Debug.Assert(result == 22);
             }
+
+            _options.SetEnvironmentId(databseGuidId);
         }
 
         public string Base64Id { get; } = new string(' ', 22);
@@ -959,6 +961,7 @@ namespace Voron
         public EnvironmentStats Stats()
         {
             var transactionPersistentContext = new TransactionPersistentContext();
+            using (_options.SkipCatastrophicFailureAssertion())
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
