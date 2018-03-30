@@ -22,9 +22,8 @@ namespace Raven.Server.SqlMigration.MsSQL
         public const string SelectReferantialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
                                                            "from information_schema.REFERENTIAL_CONSTRAINTS";
 
-        public const string SelectKeyColumnUsageWhereConstraintName = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME" +
+        public const string SelectKeyColumnUsage = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
                                                                       " from information_schema.KEY_COLUMN_USAGE " +
-                                                                      "where CONSTRAINT_NAME = @constraintName " +
                                                                       "order by ORDINAL_POSITION";
 
         private readonly string _connectionString;
@@ -147,50 +146,48 @@ namespace Raven.Server.SqlMigration.MsSQL
                     referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["UNIQUE_CONSTRAINT_NAME"].ToString());
             }
 
+            var keyColumnUsageCache = GetKeyColumnUsageCache(connection);
+            
             foreach (var kvp in referentialConstraints)
             {
-                (string Schema, string TableName) fkSchemaAndTableName = default, pkSchemaAndTableName;
-                var fkColumnsName = new List<string>();
+                var fkCacheValue = keyColumnUsageCache[kvp.Key];
+                var pkCacheValue = keyColumnUsageCache[kvp.Value];
+                
+                var pkTable = dbSchema.GetTable(pkCacheValue.Schema, pkCacheValue.TableName);
 
-                using (var cmd = new SqlCommand(SelectKeyColumnUsageWhereConstraintName, connection))
+                pkTable.References.Add(new TableReference(fkCacheValue.Schema, fkCacheValue.TableName)
                 {
-                    cmd.Parameters.AddWithValue("constraintName", kvp.Key);
-
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            fkSchemaAndTableName = GetTableNameFromReader(reader);
-                            fkColumnsName.Add(reader["COLUMN_NAME"].ToString());
-                        }
-                    }
-                }
-
-                using (var cmd = new SqlCommand(SelectKeyColumnUsageWhereConstraintName, connection))
-                {
-                    cmd.Parameters.AddWithValue("constraintName", kvp.Value);
-
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            pkSchemaAndTableName = GetTableNameFromReader(reader);
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException("Expected at least one record when when searching for foreign key relationship: " + kvp.Key + " -> " +
-                                                                kvp.Value);
-                        }
-                    }
-                }
-
-                var pkTable = dbSchema.GetTable(pkSchemaAndTableName.Schema, pkSchemaAndTableName.TableName);
-
-                pkTable.References.Add(new TableReference(fkSchemaAndTableName.Schema, fkSchemaAndTableName.TableName)
-                {
-                    Columns = fkColumnsName
+                    Columns = fkCacheValue.ColumnNames
                 });
             }
+        }
+        
+        private Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)> GetKeyColumnUsageCache(SqlConnection connection)
+        {
+            var cache = new Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)>();
+            
+            using (var cmd = new SqlCommand(SelectKeyColumnUsage, connection))
+            {
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var cacheKey = reader["CONSTRAINT_NAME"].ToString();
+                        (string schema, string tableName) = GetTableNameFromReader(reader);
+                        var columnName = reader["COLUMN_NAME"].ToString();
+                        
+                        if (cache.TryGetValue(cacheKey, out var cacheValue) == false)
+                        {
+                            cacheValue = (schema, tableName, new List<string>());
+                            cache[cacheKey] = cacheValue;
+                        }
+                        
+                        cacheValue.ColumnNames.Add(columnName);
+                    }
+                }
+            }
+            
+            return cache;
         }
 
         private static (string Schema, string TableName) GetTableNameFromReader(SqlDataReader reader)

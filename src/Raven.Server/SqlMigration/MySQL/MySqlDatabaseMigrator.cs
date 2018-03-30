@@ -20,9 +20,9 @@ namespace Raven.Server.SqlMigration.MySQL
                                                            "from information_schema.REFERENTIAL_CONSTRAINTS " +
                                                            "where UNIQUE_CONSTRAINT_SCHEMA = @schema ";
 
-        public const string SelectKeyColumnUsageWhereConstraintName = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME" +
+        public const string SelectKeyColumnUsage = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
                                                                       " from information_schema.KEY_COLUMN_USAGE " +
-                                                                      "where CONSTRAINT_NAME = @constraintName and TABLE_SCHEMA = @schema " +
+                                                                      "where TABLE_SCHEMA = @schema " +
                                                                       "order by ORDINAL_POSITION";
 
         private readonly string _connectionString;
@@ -199,39 +199,54 @@ namespace Raven.Server.SqlMigration.MySQL
                             (reader["UNIQUE_CONSTRAINT_SCHEMA"].ToString(), reader["REFERENCED_TABLE_NAME"].ToString()));
                 }
             }
-
+            
+            var keyColumnUsageCache = GetKeyColumnUsageCache(connection);
+            
             foreach (var kvp in referentialConstraints)
             {
-                (string Schema, string TableName) fkSchemaAndTableName = default, pkSchemaAndTableName;
-                var fkColumnsName = new List<string>();
-
-                using (var cmd = new MySqlCommand(SelectKeyColumnUsageWhereConstraintName, connection))
-                {
-                    cmd.Parameters.AddWithValue("constraintName", kvp.Key);
-                    cmd.Parameters.AddWithValue("schema", connection.Database);
-
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            fkSchemaAndTableName = GetTableNameFromReader(reader);
-                            fkColumnsName.Add(reader["COLUMN_NAME"].ToString());
-                        }
-                    }
-                }
-
+                var cacheValue = keyColumnUsageCache[kvp.Key];
                 var pkTable = dbSchema.GetTable(kvp.Value.Schema, kvp.Value.Table);
-
+                
                 if (pkTable == null)
                 {
                     throw new InvalidOperationException("Can not find table: " + kvp.Value.Schema + "." + kvp.Value.Table);
                 }
-
-                pkTable.References.Add(new TableReference(fkSchemaAndTableName.Schema, fkSchemaAndTableName.TableName)
+                
+                pkTable.References.Add(new TableReference(cacheValue.Schema, cacheValue.TableName)
                 {
-                    Columns = fkColumnsName,
+                    Columns = cacheValue.ColumnNames
                 });
             }
+        }
+        
+        private Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)> GetKeyColumnUsageCache(MySqlConnection connection)
+        {
+            var cache = new Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)>();
+            
+            using (var cmd = new MySqlCommand(SelectKeyColumnUsage, connection))
+            {
+                cmd.Parameters.AddWithValue("schema", connection.Database);
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var cacheKey = reader["CONSTRAINT_NAME"].ToString();
+                        (string schema, string tableName) = GetTableNameFromReader(reader);
+                        var columnName = reader["COLUMN_NAME"].ToString();
+                        
+                        if (cache.TryGetValue(cacheKey, out var cacheValue) == false)
+                        {
+                            cacheValue = (schema, tableName, new List<string>());
+                            cache[cacheKey] = cacheValue;
+                        }
+                        
+                        cacheValue.ColumnNames.Add(columnName);
+                    }
+                }
+            }
+            
+            return cache;
         }
 
         private static (string Schema, string TableName) GetTableNameFromReader(MySqlDataReader reader)
