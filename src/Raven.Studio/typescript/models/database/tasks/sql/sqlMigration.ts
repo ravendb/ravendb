@@ -14,6 +14,9 @@ class sqlMigration {
     binaryToAttachment = ko.observable<boolean>(true);
     batchSize = ko.observable<number>(1000);
     
+    testImport = ko.observable<boolean>(false);
+    maxDocumentsToImportPerTable = ko.observable<number>(1000);
+    
     sqlServer = {
         connectionString: ko.observable<string>()
     };
@@ -54,15 +57,29 @@ class sqlMigration {
         
         this.sqlServerValidationGroup = ko.validatedObservable({
             connectionString: this.sqlServer.connectionString,
-            sourceDatabaseName: this.sourceDatabaseName
+            sourceDatabaseName: this.sourceDatabaseName,
+            batchSize: this.batchSize,
+            maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
 
         this.mySqlValidationGroup = ko.validatedObservable({
             server: this.mySql.server,
             username: this.mySql.username,            
             password: this.mySql.password,
-            sourceDatabaseName: this.sourceDatabaseName
+            sourceDatabaseName: this.sourceDatabaseName,
+            batchSize: this.batchSize,
+            maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
+        
+        this.batchSize.extend({
+            required: true
+        });
+        
+        this.maxDocumentsToImportPerTable.extend({
+            required: {
+                onlyIf: () => this.testImport()
+            }
+        })
     }
 
     labelForProvider(type: Raven.Server.SqlMigration.MigrationProvider) {
@@ -200,6 +217,8 @@ class sqlMigration {
             Settings: {
                 BatchSize: this.batchSize(),
                 BinaryToAttachment: this.binaryToAttachment(),
+                MaxRowsPerTable: this.testImport() ? this.maxDocumentsToImportPerTable() : undefined,
+                
                 Collections: this.tables()
                     .filter(x => x.checked())
                     .map(x => x.toDto())
