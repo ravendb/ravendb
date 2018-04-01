@@ -384,12 +384,11 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
                 var parameters = JsonDeserializationServer.Parameters.MembersOrder(json);
 
-                if (record.Topology.Members.Count != parameters.MembersOrder.Count
-                    || record.Topology.Members.All(parameters.MembersOrder.Contains) == false)
-                {
-                    throw new ArgumentException("The reordered list doesn't correspond to the existing members of the database group.");
-                }
-                record.Topology.Members = parameters.MembersOrder;
+                var reorderedTopology = DatabaseTopology.Reorder(record.Topology, parameters.MembersOrder);
+
+                record.Topology.Members = reorderedTopology.Members;
+                record.Topology.Promotables = reorderedTopology.Promotables;
+                record.Topology.Rehabs = reorderedTopology.Rehabs;
 
                 var reorder = new UpdateTopologyCommand
                 {
