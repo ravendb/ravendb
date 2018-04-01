@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -839,7 +840,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (previous.TryGetValue(currentIndexStatus.Key, out var _) == false)
                     return false;
 
-                if (lastPrevEtag > currentIndexStatus.Value.LastIndexedEtag)
+                var lastIndexEtag = currentIndexStatus.Value.LastIndexedEtag;
+                if (lastIndexEtag == (long)Index.IndexProgressStatus.Faulty)
+                {
+                    continue; // skip the check on faulty indexes
+                }
+
+                if (lastPrevEtag > lastIndexEtag)
                     return false;
 
             }
