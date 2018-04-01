@@ -497,21 +497,21 @@ namespace Raven.Server.ServerWide.Maintenance
                 switch (nodeStats.Status)
                 {
                     case ClusterNodeStatusReport.ReportStatus.Timeout:
-                        reason = $"Node in rehabilitation due to timeout reached trying to get stats from node";
+                        reason = $"Node in rehabilitation due to timeout reached trying to get stats from node.{Environment.NewLine}";
                         break;
 
                     default:
-                        reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'";
+                        reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'.{Environment.NewLine}";
                         break;
                 }
             }
             else if (nodeStats.Report.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
             {
-                reason = $"In rehabilitation because the DatabaseStatus for this node is {nameof(Faulted)}";
+                reason = $"In rehabilitation because the DatabaseStatus for this node is {nameof(Faulted)}.{Environment.NewLine}";
             }
             else
             {
-                reason = "In rehabilitation because the node is reachable but had no report about the database";
+                reason = $"In rehabilitation because the node is reachable but had no report about the database.{Environment.NewLine}";
             }
 
             if (nodeStats?.Error != null)
