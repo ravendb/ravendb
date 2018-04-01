@@ -700,6 +700,22 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public void RemoveAndDispose(IDisposable parentState, IDisposable disposable)
+        {
+            if(disposable == null)
+                return;
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenWriteTransaction()) // using write tx just for the lock here
+            using (disposable)
+            {
+                if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
+                    throw new ConcurrencyException(
+                        "Could not remove the disposable because by the time we did it the parent state has changed");
+                _disposables.Remove(disposable);
+            }
+        }
+
         public void SwitchToLeaderState(long electionTerm, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
             if (Log.IsInfoEnabled)
