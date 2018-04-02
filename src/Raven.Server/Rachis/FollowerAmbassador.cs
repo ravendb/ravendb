@@ -150,7 +150,7 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info($"{ToString()} was unable to set the thread priority, will continue with the same priority", e);
                     }
                 }
-
+                var hadConnectionFailure = false;
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
                 {
@@ -168,7 +168,7 @@ namespace Raven.Server.Rachis
                                 }
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
-                                    _engine.RemoveAndDispose(this, _connection);
+                                    _engine.RemoveAndDispose(_leader, _connection);
                                     var (stream, disconnect) = _engine.ConnectToPeer(_url, _certificate, context).Result;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
@@ -183,13 +183,7 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            Status = AmbassadorStatus.FailedToConnect;
-                            StatusMessage = $"Failed to connect with {_tag}.{Environment.NewLine}" + e.Message;
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info($"{ToString()}: Failed to connect to remote follower: {_tag} {_url}", e);
-                            }
-                            // wait a bit
+                            NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
@@ -225,7 +219,7 @@ namespace Raven.Server.Rachis
                         {
                             entries.Clear();
                             _engine.ValidateTerm(_term);
-                            
+
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
                                 AppendEntries appendEntries;
@@ -293,11 +287,12 @@ namespace Raven.Server.Rachis
                                             if (_engine.Log.IsInfoEnabled)
                                             {
                                                 var msg = aer?.Success == true ? "successfully" : "failed";
-                                                _engine.Log.Info($"{ToString()}: waited long time ({readWatcher.ElapsedMilliseconds}) to read a single response from stream ({msg}).");
+                                                _engine.Log.Info(
+                                                    $"{ToString()}: waited long time ({readWatcher.ElapsedMilliseconds}) to read a single response from stream ({msg}).");
                                             }
                                         }
                                     }
-                                    
+
                                     if (aer.Pending == false)
                                         break;
                                     UpdateFollowerTicks();
@@ -320,10 +315,12 @@ namespace Raven.Server.Rachis
 
                                 UpdateLastMatchFromFollower(aer.LastLogIndex);
                             }
-                            
-                            if(_running == false)
+
+                            if (_running == false)
                                 break;
-                            
+
+                            hadConnectionFailure = false;
+
                             var task = _leader.WaitForNewEntries();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             using (context.OpenReadTransaction())
@@ -331,7 +328,7 @@ namespace Raven.Server.Rachis
                                 if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
                                     continue; // instead of waiting, we have new entries, start immediately
                             }
-                            
+
                             // either we have new entries to send, or we waited for long enough 
                             // to send another heartbeat
                             task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
@@ -348,19 +345,11 @@ namespace Raven.Server.Rachis
                     {
                         throw;
                     }
+                   
                     catch (Exception e)
                     {
-                        Status = AmbassadorStatus.FailedToConnect;
-                        StatusMessage = $"Failed to talk with {_tag}.{Environment.NewLine}" + e;
-                        if (_engine.Log.IsInfoEnabled)
-                        {
-                            _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
-                        }
-                        // notify leader about an error
-
                         _connection?.Dispose();
-
-                        _leader?.NotifyAboutException(Tag, e);
+                        NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
@@ -411,6 +400,26 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info($"{ToString()}: Node {_tag} is finished with the message '{StatusMessage}'.");
                 }
                 _connection?.Dispose();
+            }
+        }
+
+        private void NotifyOnException(ref bool hadConnectionFailure, Exception e)
+        {
+            // It could be that due to election or leader change, the follower has forcely closed the connection.
+            // In any case we don't want to raise a notification due to a one-time connection failure.
+            if (hadConnectionFailure || e.InnerException is IOException == false)
+            {
+                Status = AmbassadorStatus.FailedToConnect;
+                StatusMessage = $"{e.Message}.{Environment.NewLine}" + e.InnerException;
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info(e.Message, e.InnerException);
+                }
+                _leader?.NotifyAboutException(Tag, e);
+            }
+            if (e.InnerException is IOException)
+            {
+                hadConnectionFailure = true;
             }
         }
 
