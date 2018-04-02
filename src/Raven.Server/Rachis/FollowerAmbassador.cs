@@ -168,7 +168,7 @@ namespace Raven.Server.Rachis
                                 }
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
-                                    _engine.RemoveAndDispose(this, _connection);
+                                    _engine.RemoveAndDispose(_leader, _connection);
                                     var (stream, disconnect) = _engine.ConnectToPeer(_url, _certificate, context).Result;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
