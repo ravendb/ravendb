@@ -162,7 +162,7 @@ namespace Raven.Server.Rachis
                             {
                                 RequestVoteResponse rvr;
                                 currentElectionTerm = _candidate.ElectionTerm;
-                                if (_candidate.IsForcedElection == false ||
+                                if (_candidate.IsForcedElection == false &&
                                     _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                 {
                                     sp = Stopwatch.StartNew();
@@ -215,8 +215,7 @@ namespace Raven.Server.Rachis
                                     }
                                     TrialElectionWonAtTerm = rvr.Term;
                                     _candidate.WaitForChangeInState();
-                                    if (currentElectionTerm != _candidate.ElectionTerm)
-                                        continue;
+                                    continue;
                                 }
                                 sp = Stopwatch.StartNew();
                                 connection.Send(context, new RequestVote

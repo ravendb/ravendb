@@ -673,14 +673,19 @@ namespace Raven.Server.Rachis
             var alert = AlertRaised.Create(
                 null,
                 title,
-                $"Failed to talk with {nodeTag}, message: {e.Message}",
+                e.Message,
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 key: title,
-                details: new ExceptionDetails(e));
+                details: new ExceptionDetails(e.InnerException));
+
             _engine.Notify(alert);
-            ErrorsList.Enqueue((nodeTag, alert));
-            ErrorsList.Reduce(25);
+
+            if (ErrorsList.Any(err => err.error.Id == alert.Id) == false)
+            {
+                ErrorsList.Enqueue((nodeTag, alert));
+                ErrorsList.Reduce(25);
+            }
         }
         private DisposeLock _disposerLock = new DisposeLock("Leader");
         public void Dispose()
