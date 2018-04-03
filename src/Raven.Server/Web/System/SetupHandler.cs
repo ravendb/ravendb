@@ -164,7 +164,7 @@ namespace Raven.Server.Web.System
                                 Response = result,
                                 Error = errorJToken ?? error
                             });
-                            
+
                             streamWriter.Flush();
                         }
 
@@ -205,7 +205,9 @@ namespace Raven.Server.Web.System
                         fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
                     }
 
-                    var licenseStatus = ServerStore.LicenseManager.GetLicenseStatus(licenseInfo.License);
+                    var licenseStatus = await SetupManager
+                        .GetUpdatedLicenseStatus(ServerStore, licenseInfo.License)
+                        .ConfigureAwait(false);
                     fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
                     fullResult.LicenseType = licenseStatus.Type;
 
@@ -214,6 +216,10 @@ namespace Raven.Server.Web.System
                         var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
                         context.Write(writer, blittable);
                     }
+                }
+                catch (LicenseExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {
