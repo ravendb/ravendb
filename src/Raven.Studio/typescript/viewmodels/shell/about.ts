@@ -66,11 +66,22 @@ class about extends viewModelBase {
 
     shortDescription = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
-        if (!licenseStatus || !license.licenseShortDescription()) {
+        const shortDescription = license.licenseShortDescription();
+        if (!licenseStatus || !shortDescription) {
             return null;
         }
 
-        return license.licenseShortDescription();
+        return shortDescription;
+    });
+
+    licenseId = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        const licenseId = license.licenseId();
+        if (!licenseStatus || !licenseId) {
+            return null;
+        }
+
+        return licenseId;
     });
 
     registered = ko.pureComputed(() => {
