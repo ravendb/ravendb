@@ -694,7 +694,7 @@ namespace Raven.Server.Documents.Indexes
 
         public enum IndexProgressStatus
         {
-            Faulty = -1,
+            BadIndex = -1,
             RunningStorageOperation = -2,
             Stale = -3
         }
@@ -703,8 +703,8 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(databaseContext.Transaction != null);
 
-            if (Type == IndexType.Faulty)
-                return (true, (long)IndexProgressStatus.Faulty);
+            if (Type == IndexType.Faulty || State == IndexState.Error)
+                return (true, (long)IndexProgressStatus.BadIndex);
 
             using (CurrentlyInUse(out var valid))
             {
