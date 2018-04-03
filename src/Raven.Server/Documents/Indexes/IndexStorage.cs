@@ -180,7 +180,6 @@ namespace Raven.Server.Documents.Indexes
             var errors = new List<IndexingError>();
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (_environment.Options.SkipCatastrophicFailureAssertion())
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
@@ -212,7 +211,6 @@ namespace Raven.Server.Documents.Indexes
         public long ReadErrorsCount()
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (_environment.Options.SkipCatastrophicFailureAssertion())
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");

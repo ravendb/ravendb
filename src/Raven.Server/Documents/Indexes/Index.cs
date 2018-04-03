@@ -683,7 +683,6 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (indexContext.OpenReadTransaction())
                 {
                     return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
@@ -711,7 +710,6 @@ namespace Raven.Server.Documents.Indexes
                     return (true, (long)IndexProgressStatus.RunningStorageOperation);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (indexContext.OpenReadTransaction())
                 {
                     var isStale = IsStale(databaseContext, indexContext);
@@ -1759,7 +1757,6 @@ namespace Raven.Server.Documents.Indexes
                     throw new ObjectDisposedException("Index " + Name);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (var tx = context.OpenReadTransaction())
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
