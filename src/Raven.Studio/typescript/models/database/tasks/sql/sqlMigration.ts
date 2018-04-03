@@ -115,6 +115,7 @@ class sqlMigration {
             table.tableName = tableDto.TableName;
             table.tableSchema = tableDto.Schema;
             table.collectionName(tableDto.TableName);
+            table.query(tableDto.DefaultQuery);
             const columns = tableDto.Columns.map(columnDto => new sqlColumn(columnDto));
             const primaryKeyColumns = columns.filter(c => _.includes(tableDto.PrimaryKeyColumns, c.sqlName));
             const specialColumnNames = this.findSpecialColumnNames(dbSchema, tableDto.Schema, tableDto.TableName);

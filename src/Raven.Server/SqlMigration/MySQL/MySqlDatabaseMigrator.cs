@@ -66,7 +66,12 @@ namespace Raven.Server.SqlMigration.MySQL
                 return collection.SourceTableQuery;
             }
 
-            return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName);
+            return GetSelectAllQueryForTable(collection.SourceTableSchema, collection.SourceTableName);
+        }
+        
+        protected override string GetSelectAllQueryForTable(string tableSchema, string tableName)
+        {
+            return "select * from " + QuoteTable(tableSchema, tableName);
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
@@ -111,7 +116,8 @@ namespace Raven.Server.SqlMigration.MySQL
                         
                         if (tableSchema == null)
                         {
-                            tableSchema = new TableSchema(schemaAndTableName.Schema, schemaAndTableName.TableName);
+                            tableSchema = new TableSchema(schemaAndTableName.Schema, schemaAndTableName.TableName,
+                                GetSelectAllQueryForTable(schemaAndTableName.Schema, schemaAndTableName.TableName));
                             dbSchema.Tables.Add(tableSchema);
                         }
 

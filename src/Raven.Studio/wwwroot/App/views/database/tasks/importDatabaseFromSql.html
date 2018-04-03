@@ -121,7 +121,7 @@
                     </div>
                 </div>
             </div>
-            <div class="scroll flex-grow">
+            <div class="scroll flex-grow js-scroll-tables">
                 <div data-bind="foreach: $root.currentTables">
                     <div class="panel panel-info">
                         <div class="flex-horizontal padding padding-sm panel-header">
@@ -129,15 +129,17 @@
                                 <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
                                 <label data-bind="attr: { for: 'table_' + $index() }">&nbsp;</label>
                             </div>
-                            <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
-                            <i class="icon-arrow-right"></i>
-                            <div class="with-top-label raven-property-name inline-edit inline-block" data-label="Collection">
-                                <span class="static" data-bind="text: collectionName"></span>
-                                <input class="form-control input-sm" data-bind="textInput: collectionName" />
+                            <div class="flex-horizontal flex-wrap">
+                                <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
+                                <i class="icon-arrow-right"></i>
+                                <div class="with-top-label raven-property-name inline-edit inline-block" data-label="Collection">
+                                    <span class="static" data-bind="text: collectionName"></span>
+                                    <input class="form-control input-sm" data-bind="textInput: collectionName" />
+                                </div>    
                             </div>
                             <div class="flex-separator"></div>
                             <div>
-                                <button class="btn btn-default">
+                                <button class="btn btn-default" data-bind="click: $root.enterEditMode, css: { active: $data === $root.itemBeingEdited() }">
                                     <i class="icon-edit"></i>
                                     <span>Filter / Transform</span>
                                 </button>
@@ -168,7 +170,54 @@
         </div>
 
         <div class="col-sm-12 col-lg-4 flex-vertical">
-            TODO: edit patch / query / test documents
+            <div id="editTransform" class="panel" data-bind="with: itemBeingEdited">
+                <div class="padding padding-sm">
+                    <div>
+                        <label>
+                            <strong>SQL Table:</strong> <span data-bind="text: tableName"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="toggle">
+                        <input id="customizeQuery" type="checkbox" data-bind="checked: customizeQuery">
+                        <label for="customizeQuery">Filter source table records</label>
+                    </div>
+                    
+                    <div data-bind="collapse: customizeQuery">
+                        <label><strong>SQL Query:</strong></label>
+                        <div data-bind="validationElement: query">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: query, fontSize: '14px', lang: $root.aceEditorLangMode(), completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 200px;"></pre>
+    
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
+                                <div class="help-block" data-bind="validationMessage: query"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle">
+                        <input id="transformResults" type="checkbox" data-bind="checked: transformResults">
+                        <label for="transformResults">Transform documents</label>
+                    </div>
+                    
+                    <div data-bind="collapse: transformResults">
+                        <label><strong>Script:</strong></label>
+                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
+                        <div data-bind="validationElement: patchScript">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: patchScript, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: patchScript" style="height: 300px;"></pre>
+    
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchScript">
+                                <div class="help-block" data-bind="validationMessage: patchScript"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="margin-top">
+                        <button title="Close" class="btn btn-default" data-bind="click: $root.closeEditedTransformation"><i class="icon-cancel"></i> <span>Close</span></button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

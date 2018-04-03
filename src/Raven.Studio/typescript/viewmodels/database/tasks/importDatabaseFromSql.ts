@@ -3,20 +3,23 @@ import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
-import messagePublisher = require("common/messagePublisher");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import notificationCenter = require("common/notifications/notificationCenter");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
     
-    static pageCount = 50; //TODO: set to 100!
+    static pageCount = 5; //TODO: set to 100!
     
     spinners = {
         schema: ko.observable<boolean>(false),
         importing: ko.observable<boolean>(false)
     };
+    
+    completer = defaultAceCompleter.completer();
     
     model = new sqlMigration();
     
@@ -29,14 +32,18 @@ class importCollectionFromSql extends viewModelBase {
     globalSelectionState: KnockoutComputed<checkbox>;
     togglingAll = ko.observable<boolean>(false);
     
+    itemBeingEdited = ko.observable<rootSqlTable>();
+    
     databases = ko.observableArray<string>([]); //TODO: fetch this on databases focus
     
     validationGroup: KnockoutValidationGroup;    
 
     constructor() {
         super();
+        
+        aceEditorBindingHandler.install();
 
-        this.bindToCurrentInstance("onActionClicked", "setCurrentPage");
+        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "closeEditedTransformation");
         
         this.pageCount = ko.pureComputed(() => Math.ceil(this.model.tables().length / importCollectionFromSql.pageCount) );
         
@@ -76,7 +83,7 @@ class importCollectionFromSql extends viewModelBase {
     
     setCurrentPage(page: number) {
         this.currentPage(page);
-        //TODO: scroll up
+        $(".js-scroll-tables").scrollTop(0);
     }
     
     nextStep() {        
@@ -196,6 +203,29 @@ class importCollectionFromSql extends viewModelBase {
         }
         
         this.togglingAll(false);
+    }
+    
+    enterEditMode(table: rootSqlTable) {
+        this.itemBeingEdited(table);
+    }
+    
+    syntaxHelp() {
+        //TODO:
+    }
+    
+    closeEditedTransformation() {
+        this.itemBeingEdited(null);
+    }
+    
+    aceEditorLangMode() {
+        switch (this.model.databaseType()) {
+            case "MsSQL":
+                return "ace/mode/sqlserver";
+            case "MySQL":
+                return "ace/mode/mysql";
+            default: 
+                return "ace/mode/sql";
+        }
     }
 }
 

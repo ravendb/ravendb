@@ -8,7 +8,10 @@ class rootSqlTable extends abstractSqlTable {
     checked = ko.observable<boolean>(true);
     documentIdTemplate: KnockoutComputed<string>;
     
+    customizeQuery = ko.observable<boolean>(false); //TODO: validation  required onlyif
     query = ko.observable<string>();
+    //TODO: autocomplete columns names?
+    transformResults = ko.observable<boolean>(false);  //TODO: validation  required onlyif
     patchScript = ko.observable<string>();
     
     constructor() {
@@ -24,8 +27,8 @@ class rootSqlTable extends abstractSqlTable {
             SourceTableName: this.tableName,
             SourceTableSchema: this.tableSchema,
             Name: this.collectionName(),
-            Patch: this.patchScript(),
-            SourceTableQuery: this.query(),
+            Patch: this.transformResults() ? this.patchScript() : undefined,
+            SourceTableQuery: this.customizeQuery() ? this.query() : undefined,
             NestedCollections: this.getEmbeddedReferencesDto(),
             LinkedCollections: this.getLinkedReferencesDto(),
             ColumnsMapping: this.getColumnsMapping(),
