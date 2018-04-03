@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
@@ -59,17 +60,6 @@ namespace Raven.Server.SqlMigration
                                 
                                 try
                                 {
-                                    doc.SetCollection(collectionToImport.Name);
-
-                                    var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
-
-                                    FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
-
-                                    var docBlittable = patcher.Patch(doc.ToBllitable(context));
-                                    //TODO: support for throw skip 
-
-                                    await writer.InsertDocument(docBlittable, id, doc.Attachments);
-
                                     collectionCount.ReadCount++;
 
                                     if (collectionCount.ReadCount % 1000 == 0)
@@ -77,6 +67,27 @@ namespace Raven.Server.SqlMigration
                                         var message = $"Read {collectionCount.ReadCount:#,#;;0} rows from table: " + collectionToImport.SourceTableName;
                                         result.AddInfo(message);
                                         onProgress.Invoke(result.Progress);
+                                    }
+                                    
+                                    doc.SetCollection(collectionToImport.Name);
+
+                                    var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
+
+                                    FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
+
+                                    var docBlittable = patcher.Patch(doc.ToBllitable(context));
+
+                                    await writer.InsertDocument(docBlittable, id, doc.Attachments);
+                                }
+                                catch (JavaScriptException e)
+                                {
+                                    if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        collectionCount.SkippedCount++;
+                                    } 
+                                    else
+                                    {
+                                        throw;
                                     }
                                 }
                                 catch (Exception e)
