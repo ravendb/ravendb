@@ -400,7 +400,7 @@ namespace Raven.Server.Commercial
                 if (skipLeaseLicense == false)
                 {
                     // license expired, we'll try to update it
-                    license = await GetUpdatedLicense(license);
+                    license = await GetUpdatedLicenseInternal(license);
                     if (license != null)
                     {
                         await Activate(license, skipLeaseLicense: true, ensureNotPassive: ensureNotPassive);
@@ -552,11 +552,14 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task<License> GetUpdatedLicense(License license)
+        public async Task<License> GetUpdatedLicense(
+            License currentLicense, 
+            Func<HttpResponseMessage, Task> onFailure = null, 
+            Func<LeasedLicense, License> onSuccess = null)
         {
             var leaseLicenseInfo = new LeaseLicenseInfo
             {
-                License = license,
+                License = currentLicense,
                 BuildInfo = _buildInfo,
                 ClusterId = _serverStore.GetClusterTopology().TopologyId,
                 UtilizedCores = GetUtilizedCores()
@@ -568,7 +571,11 @@ namespace Raven.Server.Commercial
 
             if (response.IsSuccessStatusCode == false)
             {
-                await HandleLeaseLicenseFailure(response).ConfigureAwait(false);
+                if (onFailure != null)
+                {
+                    await onFailure(response).ConfigureAwait(false);
+                }
+                
                 return null;
             }
 
@@ -578,33 +585,48 @@ namespace Raven.Server.Commercial
                 var json = context.Read(leasedLicenseAsStream, "leased license info");
                 var leasedLicense = JsonDeserializationServer.LeasedLicense(json);
 
-                var newLicense = leasedLicense.License;
-                var licenseChanged =
-                    newLicense.Name != license.Name ||
-                    newLicense.Id != license.Id ||
-                    newLicense.Keys.All(license.Keys.Contains) == false;
+                if (onSuccess == null)
+                    return leasedLicense.License;
 
-                if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
-                {
-                    var severity =
-                        leasedLicense.NotificationSeverity == NotificationSeverity.None ?
-                        NotificationSeverity.Info : leasedLicense.NotificationSeverity;
-                    var alert = AlertRaised.Create(
-                        null,
-                        leasedLicense.Title,
-                        leasedLicense.Message,
-                        AlertType.LicenseManager_LicenseUpdateMessage,
-                        severity);
-
-                    _serverStore.NotificationCenter.Add(alert);
-                }
-
-                if (string.IsNullOrWhiteSpace(leasedLicense.ErrorMessage) == false)
-                {
-                    _licenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
-                }
-                return licenseChanged ? leasedLicense.License : null;
+                return onSuccess.Invoke(leasedLicense);
             }
+        }
+
+        private async Task<License> GetUpdatedLicenseInternal(License currentLicense)
+        {
+            return await GetUpdatedLicense(currentLicense,
+                    async response => await HandleLeaseLicenseFailure(response).ConfigureAwait(false),
+                    leasedLicense =>
+                    {
+                        var newLicense = leasedLicense.License;
+                        var licenseChanged =
+                            newLicense.Name != currentLicense.Name ||
+                            newLicense.Id != currentLicense.Id ||
+                            newLicense.Keys.All(currentLicense.Keys.Contains) == false;
+
+                        if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
+                        {
+                            var severity =
+                                leasedLicense.NotificationSeverity == NotificationSeverity.None 
+                                    ? NotificationSeverity.Info : leasedLicense.NotificationSeverity;
+                            var alert = AlertRaised.Create(
+                                null,
+                                leasedLicense.Title,
+                                leasedLicense.Message,
+                                AlertType.LicenseManager_LicenseUpdateMessage,
+                                severity);
+
+                            _serverStore.NotificationCenter.Add(alert);
+                        }
+
+                        if (string.IsNullOrWhiteSpace(leasedLicense.ErrorMessage) == false)
+                        {
+                            _licenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
+                        }
+
+                        return licenseChanged ? leasedLicense.License : null;
+                    })
+                .ConfigureAwait(false);
         }
 
         private async Task ExecuteTasks()
@@ -638,7 +660,7 @@ namespace Raven.Server.Commercial
                 if (loadedLicense == null)
                     return;
 
-                var updatedLicense = await GetUpdatedLicense(loadedLicense);
+                var updatedLicense = await GetUpdatedLicenseInternal(loadedLicense);
                 if (updatedLicense == null)
                     return;
 
