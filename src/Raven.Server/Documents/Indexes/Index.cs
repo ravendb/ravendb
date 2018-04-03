@@ -114,6 +114,7 @@ namespace Raven.Server.Documents.Indexes
         internal TransactionContextPool _contextPool;
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+        private readonly object _disablingIndexLock = new object();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
 
@@ -616,8 +617,11 @@ namespace Raven.Server.Documents.Indexes
 
             if (disableIndex)
             {
-                _indexDisabled = true;
-                _mre.Set();
+                lock (_disablingIndexLock)
+                {
+                    _indexDisabled = true;
+                    _mre.Set();
+                }
             }
             else
             {
@@ -879,16 +883,21 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
-                        if (_indexDisabled)
-                            return;
+                        lock (_disablingIndexLock)
+                        {
+                            if (_indexDisabled)
+                                return;
 
+                            _mre.Reset();
+                        }
+                        
                         // this is called on every iteration because index priorities can be changed at runtime
                         ChangeIndexThreadPriorityIfNeeded();
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
 
-                        _mre.Reset();
+                        
 
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
                         LastIndexingTime = stats.StartTime;
@@ -1290,7 +1299,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 // it can be a transient error, we are going to unload the database and do not error the index yet
                 // let's stop the indexing thread
-                _indexDisabled = true;  
+                _indexDisabled = true;
+                _mre.Set();
+
                 return;
             }
 
