@@ -692,7 +692,7 @@ namespace Raven.Server.Documents.Indexes
 
         public enum IndexProgressStatus
         {
-            BadIndex = -1,
+            Faulty = -1,
             RunningStorageOperation = -2,
             Stale = -3
         }
@@ -701,8 +701,8 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(databaseContext.Transaction != null);
 
-            if (Type == IndexType.Faulty || State == IndexState.Error)
-                return (true, (long)IndexProgressStatus.BadIndex);
+            if (Type == IndexType.Faulty)
+                return (true, (long)IndexProgressStatus.Faulty);
 
             using (CurrentlyInUse(out var valid))
             {
@@ -712,10 +712,14 @@ namespace Raven.Server.Documents.Indexes
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 using (indexContext.OpenReadTransaction())
                 {
-                    var isStale = IsStale(databaseContext, indexContext);
+                    // if the index is marked as Errored we still can fetch the indexed last etag.
+                    if (State != IndexState.Error)
+                    {
+                        var isStale = IsStale(databaseContext, indexContext);
 
-                    if (isStale)
-                        return (true, (long)IndexProgressStatus.Stale);
+                        if (isStale)
+                            return (true, (long)IndexProgressStatus.Stale);
+                    }
 
                     long lastEtag = 0;
                     foreach (var collection in Collections)
