@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -16,7 +17,7 @@ namespace SlowTests.Server.Documents.SqlMigration
     {
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanMigrateSkipOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -64,7 +65,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanMigrateEmbedOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -125,7 +126,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -184,7 +185,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanMigrateSkipOnChild(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -232,7 +233,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanMigrateEmbedOnChild(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -293,7 +294,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnChild(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -363,7 +364,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task NestedEmbedding(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -441,7 +442,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task LinkInsideEmbed(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -515,7 +516,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanHandleMissingParentEmbed(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -565,7 +566,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanHandleMissingParentLink(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -619,7 +620,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanLimitRows(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))

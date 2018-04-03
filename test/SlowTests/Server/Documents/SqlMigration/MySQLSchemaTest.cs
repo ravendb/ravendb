@@ -16,13 +16,14 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.MsSQL;
 using Raven.Server.SqlMigration.Schema;
 using SlowTests.Server.Documents.ETL.SQL;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlMigration
 {
     public class MySQLSchemaTest : SqlAwareTestBase
     {
-        [Fact]
+        [RequiresMySqlFact]
         public void CanFetchSchema()
         {
             using (WithSqlDatabase(MigrationProvider.MySQL, out var connectionString, out string schemaName, includeData: false))

@@ -10,6 +10,7 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using SlowTests.Server.Documents.ETL.SQL;
+using Tests.Infrastructure;
 using Voron.Util;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
@@ -17,18 +18,6 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public abstract class SqlAwareTestBase : RavenTestBase
     {
-        public static readonly Lazy<string> MySqlDatabaseConnection = new Lazy<string>(() =>
-        {
-            var local = @"server=127.0.0.1;uid=root;pwd=";
-            using (var con = new MySqlConnection(local))
-            {
-                con.Open();
-            }
-
-            return local;
-        });
-
-
         protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, MigrationSettings settings)
         {
             foreach (var collection in settings.Collections)
@@ -184,7 +173,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         protected DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "sql_test_" + Guid.NewGuid();
-            var rawConnectionString = MySqlDatabaseConnection.Value;
+            var rawConnectionString = MySqlTests.MySqlDatabaseConnection.Value;
             connectionString = rawConnectionString + $";database=\"{databaseName}\"";
 
             using (var connection = new MySqlConnection(rawConnectionString))

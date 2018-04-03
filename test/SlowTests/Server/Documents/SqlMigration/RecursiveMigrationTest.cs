@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -16,7 +17,7 @@ namespace SlowTests.Server.Documents.SqlMigration
     {
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanLinkOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -65,7 +66,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanLinkOnChild(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -112,7 +113,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task CanEmbedOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
