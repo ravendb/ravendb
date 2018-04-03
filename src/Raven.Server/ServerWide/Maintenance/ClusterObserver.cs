@@ -841,9 +841,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     return false;
 
                 var lastIndexEtag = currentIndexStatus.Value.LastIndexedEtag;
-                if (lastIndexEtag == (long)Index.IndexProgressStatus.Faulty)
+                if (lastIndexEtag == (long)Index.IndexProgressStatus.BadIndex)
                 {
-                    continue; // skip the check on faulty indexes
+                    continue; // skip the check for bad indexes
                 }
 
                 if (lastPrevEtag > lastIndexEtag)
