@@ -342,6 +342,22 @@ namespace Raven.Server.Commercial
             return currentNodeSettingsJson;
         }
 
+        public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicnese, Reference<License> updatedLicense = null)
+        {
+            var license = 
+                await serverStore.LicenseManager.GetUpdatedLicense(currentLicnese).ConfigureAwait(false)
+                ?? currentLicnese;
+
+            var licenseStatus = serverStore.LicenseManager.GetLicenseStatus(license);
+            if (licenseStatus.Expired)
+                throw new LicenseExpiredException($"The provided license for {license.Name} has expired ({licenseStatus.Expiration})");
+
+            if (updatedLicense != null)
+                updatedLicense.Value = license;
+
+            return licenseStatus;
+        }
+
         public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult
@@ -352,10 +368,9 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var licenseStatus = serverStore.LicenseManager.GetLicenseStatus(setupInfo.License);
-
-                if (licenseStatus.Expired)
-                    throw new InvalidOperationException("The provided license for " + setupInfo.License.Name + " has expired (" + licenseStatus.Expiration + ")");
+                var updatedLicense = new Reference<License>();
+                await GetUpdatedLicenseStatus(serverStore, setupInfo.License, updatedLicense).ConfigureAwait(false);
+                setupInfo.License = updatedLicense.Value;
 
                 AssertNoClusterDefined(serverStore);
 
