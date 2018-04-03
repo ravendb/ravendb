@@ -3,6 +3,7 @@
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import changesContext = require("common/changesContext");
+import licenseModel = require("models/auth/licenseModel");
 
 class clusterTopologyManager {
 
@@ -42,6 +43,7 @@ class clusterTopologyManager {
 
     private onTopologyUpdated(e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
         this.topology().updateWith(e);
+        licenseModel.fetchLicenseStatus();
     }
 
     private initObservables() {
