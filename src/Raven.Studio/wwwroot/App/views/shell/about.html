@@ -51,6 +51,10 @@
                                     <th>Limits</th>
                                     <td><span data-bind="text: shortDescription"></span></td>
                                 </tr>
+                                <tr data-bind="visible: licenseId">
+                                    <th>License ID</th>
+                                    <td><span data-bind="text: licenseId"></span></td>
+                                </tr>
                             </table>
                         </div>
                         <div data-bind="visible: registered" class="license-actions">
