@@ -969,20 +969,19 @@ namespace Sparrow.Json
                     case BlittableJsonToken.Integer:
                         ReadVariableSizeLong(propValueOffset);
                         break;
-                    case BlittableJsonToken.LazyNumber:
-                        var floatLen = ReadNumber(_mem + objStartOffset - propOffset, 1);
-                        var floatStringBuffer = new string(' ', floatLen);
-                        fixed (char* pChars = floatStringBuffer)
-                        {
-                            for (int j = 0; j < floatLen; j++)
-                            {
-                                pChars[j] = (char)ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
-                            }
-                        }
-                        double _double;
-                        var result = double.TryParse(floatStringBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out _double);
-                        if (!(result))
-                            ThrowInvalidDouble(floatStringBuffer);
+                    case BlittableJsonToken.LazyNumber:                        
+                        var numberLength = ReadVariableSizeInt(propValueOffset, out byte lengthOffset);
+                        var escCount = ReadVariableSizeInt(propValueOffset + lengthOffset + numberLength, out byte escOffset);
+
+                        // if number has any non-ascii symbols, we rull it out immediately
+                        if (escCount > 0)                            
+                            ThrowInvalidNumber(propValueOffset);
+
+                        var numberCharsStart = _mem + objStartOffset - propOffset + lengthOffset;
+
+                        // try and validate number using double's validation
+                        if (_context.TryParseDouble(numberCharsStart, numberLength, out _) == false )                                               
+                            ThrowInvalidNumber(propValueOffset);                            
                         break;
                     case BlittableJsonToken.String:
                         StringValidation(propValueOffset);
@@ -1050,9 +1049,9 @@ namespace Sparrow.Json
             throw new InvalidDataException("Compressed string not valid");
         }
 
-        private static void ThrowInvalidDouble(string floatStringBuffer)
+        private void ThrowInvalidNumber(int numberPosition)
         {
-            throw new InvalidDataException("Double not valid (" + floatStringBuffer + ")");
+            throw new InvalidDataException("Number not valid (" + ReadStringLazily(numberPosition).ToString() + ")");
         }
 
         private static void ThrowInvalidPropertiesId()
