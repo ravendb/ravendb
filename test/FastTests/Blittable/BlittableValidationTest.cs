@@ -265,9 +265,12 @@ namespace FastTests.Blittable
             };
             fixed (byte* ptr = &blittable[0])
             {
-                var reader = new BlittableJsonReaderObject(ptr, 0x16, null);
-                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
-                Assert.Equal(message.Message, "Double not valid (1.3.5)");
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var reader = new BlittableJsonReaderObject(ptr, 0x16, context);
+                    var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
+                    Assert.Equal(message.Message, "Number not valid (1.3.5)");
+                }
             }
         }
 
