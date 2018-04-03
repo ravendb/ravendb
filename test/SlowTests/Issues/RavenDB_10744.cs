@@ -124,12 +124,23 @@ namespace SlowTests.Issues
                     Assert.True(mre.Wait(TimeSpan.FromMinutes(1)));
                     Assert.Equal(IndexState.Error, index.State);
 
-                    var errorCount = index.GetErrorCount();
+                    long errorCount = 0;
+
+                    for (int i = 0; i < 20; i++)
+                    {
+                        errorCount = index.GetErrorCount();
+
+                        if (errorCount > 0)
+                            break;
+
+                        Thread.Sleep(500); // errors are updated in next tx when we update the stats
+                    }
+                    
                     Assert.Equal(1, errorCount);
 
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                     {
-                        using (var tx = context.OpenWriteTransaction())
+                        using (context.OpenReadTransaction())
                         {
                             var indexStats = index.GetIndexStats(context);
 
