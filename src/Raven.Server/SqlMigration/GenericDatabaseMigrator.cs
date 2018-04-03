@@ -360,6 +360,8 @@ namespace Raven.Server.SqlMigration
         }
 
         protected abstract string GetQueryForCollection(RootCollection collection);
+        
+        protected abstract string GetSelectAllQueryForTable(string tableSchema, string tableName);
 
         protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping,
             HashSet<string> specialColumns, HashSet<string> attachmentColumns, TConnection connection, int? rowsLimit);

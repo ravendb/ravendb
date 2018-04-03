@@ -14,16 +14,19 @@ namespace Raven.Server.SqlMigration.Schema
         
         public string TableName { get; set; }
         
+        public string DefaultQuery { get; set; }
+        
         public List<TableColumn> Columns { get; set; } = new List<TableColumn>();
         
         public List<string> PrimaryKeyColumns { get; set; } = new List<string>();
         
         public List<TableReference> References { get; set; } = new List<TableReference>();
 
-        public TableSchema(string schema, string tableName)
+        public TableSchema(string schema, string tableName, string defaultQuery)
         {
             Schema = schema;
             TableName = tableName;
+            DefaultQuery = defaultQuery;
         }
 
         public DynamicJsonValue ToJson()
@@ -32,6 +35,7 @@ namespace Raven.Server.SqlMigration.Schema
             {
                 [nameof(Schema)] = Schema,
                 [nameof(TableName)] = TableName,
+                [nameof(DefaultQuery)] = DefaultQuery,
                 [nameof(Columns)] = new DynamicJsonArray(Columns.Select(x => x.ToJson())),
                 [nameof(PrimaryKeyColumns)] = TypeConverter.ToBlittableSupportedType(PrimaryKeyColumns),
                 [nameof(References)] = new DynamicJsonArray(References.Select(x => x.ToJson()))
