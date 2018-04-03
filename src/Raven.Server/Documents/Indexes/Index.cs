@@ -695,7 +695,6 @@ namespace Raven.Server.Documents.Indexes
         {
             Faulty = -1,
             RunningStorageOperation = -2,
-            Stale = -3
         }
 
         public virtual (bool IsStale, long LastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
@@ -714,22 +713,14 @@ namespace Raven.Server.Documents.Indexes
                 using (_environment.Options.SkipCatastrophicFailureAssertion())
                 using (indexContext.OpenReadTransaction())
                 {
-                    // if the index is marked as Errored we still can fetch the indexed last etag.
-                    if (State != IndexState.Error)
-                    {
-                        var isStale = IsStale(databaseContext, indexContext);
-
-                        if (isStale)
-                            return (true, (long)IndexProgressStatus.Stale);
-                    }
-
                     long lastEtag = 0;
                     foreach (var collection in Collections)
                     {
                         lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
                     }
 
-                    return (false, lastEtag);
+                    var isStale = IsStale(databaseContext, indexContext);
+                    return (isStale, lastEtag);
                 }
             }
         }

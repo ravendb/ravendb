@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -607,7 +609,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
+            var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats,
+                mentorCurrDbStats.LastIndexStats);
             if (indexesCatchedUp)
             {
                 if (_logger.IsOperationsEnabled)
@@ -813,7 +816,8 @@ namespace Raven.Server.ServerWide.Maintenance
         private static bool CheckIndexProgress(
             long lastPrevEtag,
             Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> previous,
-            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> current)
+            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> current,
+            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> mentor)
         {
             /*
             Here we are being a bit tricky. A database node is consider ready for promotion when
@@ -832,20 +836,38 @@ namespace Raven.Server.ServerWide.Maintenance
              */
 
 
-            foreach (var currentIndexStatus in current)
+            foreach (var mentorIndex in mentor)
             {
-                if (currentIndexStatus.Value.IsStale == false)
+                // we go over all of the mentor indexes to validated that the promotable has them.
+                // Since we don't save in the state machine the definition of side-by-side indexes, we will skip them, because
+                // the promotable don't have them. 
+
+                if (mentorIndex.Value.IsSideBySide)
                     continue;
 
-                if (previous.TryGetValue(currentIndexStatus.Key, out var _) == false)
+                if (mentor.TryGetValue(Constants.Documents.Indexing.SideBySideIndexNamePrefix + mentorIndex.Key, out var mentorIndexStats) == false)
+                {
+                    mentorIndexStats = mentorIndex.Value;
+                }
+
+                if (previous.TryGetValue(mentorIndex.Key, out var _) == false)
                     return false;
 
-                var lastIndexEtag = currentIndexStatus.Value.LastIndexedEtag;
-                if (lastIndexEtag == (long)Index.IndexProgressStatus.Faulty)
+                if (current.TryGetValue(mentorIndex.Key, out var currentIndexStats) == false)
+                    return false;
+
+                if (currentIndexStats.IsStale == false)
+                    continue;
+
+                if (mentorIndexStats.LastIndexedEtag == (long)Index.IndexProgressStatus.Faulty)
                 {
                     continue; // skip the check for faulty indexes
                 }
 
+                if (mentorIndexStats.State == IndexState.Error && currentIndexStats.State == IndexState.Error)
+                    continue;
+                
+                var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                     return false;
 
