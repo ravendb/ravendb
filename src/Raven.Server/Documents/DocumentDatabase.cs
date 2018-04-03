@@ -864,19 +864,16 @@ namespace Raven.Server.Documents
                 Transaction tx = null;
                 try
                 {
-                    using (environment.Environment.Options.SkipCatastrophicFailureAssertion())
+                    try
                     {
-                        try
-                        {
-                            tx = environment.Environment.ReadTransaction();
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            continue;
-                        }
-
-                        sizeOnDiskInBytes += GetSizeOnDisk(environment, tx);
+                        tx = environment.Environment.ReadTransaction();
                     }
+                    catch (OperationCanceledException)
+                    {
+                        continue;
+                    }
+
+                    sizeOnDiskInBytes += GetSizeOnDisk(environment, tx);
                 }
                 finally
                 {
