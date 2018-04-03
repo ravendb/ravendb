@@ -13,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -137,6 +138,9 @@ namespace SlowTests.Authentication
 
             DoNotReuseServer(customSettings);
             UseNewLocalServer();
+
+            // We need this here because we use a staging lets encrypt cert, the chain is not trusted.
+            RequestExecutor.ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
 
             using (var store = GetDocumentStore(new Options
             {
