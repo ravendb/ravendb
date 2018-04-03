@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
+import listSqlDatabasesCommand = require("commands/database/tasks/listSqlDatabasesCommand");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -34,7 +35,8 @@ class importCollectionFromSql extends viewModelBase {
     
     itemBeingEdited = ko.observable<rootSqlTable>();
     
-    databases = ko.observableArray<string>([]); //TODO: fetch this on databases focus
+    sourceDatabaseFocus = ko.observable<boolean>(false);
+    databaseNames = ko.observableArray<string>([]);
     
     validationGroup: KnockoutValidationGroup;    
 
@@ -43,9 +45,13 @@ class importCollectionFromSql extends viewModelBase {
         
         aceEditorBindingHandler.install();
 
-        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "closeEditedTransformation");
+        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "closeEditedTransformation", "createDbAutocompleter");
         
-        this.pageCount = ko.pureComputed(() => Math.ceil(this.model.tables().length / importCollectionFromSql.pageCount) );
+        this.initObservables();
+    }
+    
+    private initObservables() {
+         this.pageCount = ko.pureComputed(() => Math.ceil(this.model.tables().length / importCollectionFromSql.pageCount) );
         
         this.currentTables = ko.pureComputed(() => {
             const start = this.currentPage() * importCollectionFromSql.pageCount;
@@ -79,6 +85,20 @@ class importCollectionFromSql extends viewModelBase {
             }
             return "unchecked";
         });
+        
+        const throttledFetch = _.throttle(() => this.fetchDatabaseNamesAutocomplete(), 200);
+        
+        this.sourceDatabaseFocus.subscribe(focus => {
+            if (focus) {
+                throttledFetch();
+            }
+        })
+    }
+    
+    private fetchDatabaseNamesAutocomplete() {
+        new listSqlDatabasesCommand(this.activeDatabase(), this.model.toSourceDto())
+            .execute()
+            .done(dbNames => this.databaseNames(dbNames)); 
     }
     
     setCurrentPage(page: number) {
@@ -226,6 +246,15 @@ class importCollectionFromSql extends viewModelBase {
             default: 
                 return "ace/mode/sql";
         }
+    }
+    
+    createDbAutocompleter(dbName: KnockoutObservable<string>) {
+        return ko.pureComputed(()=> {
+            const dbNameUnwrapped = dbName() ? dbName().toLocaleLowerCase() : "";
+            
+            return this.databaseNames()
+                .filter(name => name.toLocaleLowerCase().includes(dbNameUnwrapped));
+        });
     }
 }
 

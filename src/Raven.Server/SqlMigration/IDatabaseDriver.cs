@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -12,6 +13,8 @@ namespace Raven.Server.SqlMigration
 {
     public interface IDatabaseDriver
     {
+        List<string> GetDatabaseNames();
+        
         DatabaseSchema FindSchema();
         
         Task Migrate(MigrationSettings settings, DatabaseSchema schema, DocumentDatabase db, DocumentsOperationContext context,

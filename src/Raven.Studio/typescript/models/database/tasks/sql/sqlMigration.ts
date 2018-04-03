@@ -9,8 +9,8 @@ class sqlMigration {
     
     static possibleProviders = ["MsSQL", "MySQL"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
-    databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MySQL");
-    sourceDatabaseName = ko.observable<string>("northwind");
+    databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
+    sourceDatabaseName = ko.observable<string>();
     binaryToAttachment = ko.observable<boolean>(true);
     batchSize = ko.observable<number>(1000);
     
@@ -208,13 +208,17 @@ class sqlMigration {
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);
         }
     }
+
+    toSourceDto(): Raven.Server.SqlMigration.Model.SourceSqlDatabase {
+        return {
+            ConnectionString: this.getConnectionString(),
+            Provider: this.databaseType()
+        }
+    }
     
     toDto(): Raven.Server.SqlMigration.Model.MigrationRequest {
         return {
-            Source: {
-                ConnectionString: this.getConnectionString(),
-                Provider: this.databaseType()
-            },
+            Source: this.toSourceDto(),
             Settings: {
                 BatchSize: this.batchSize(),
                 BinaryToAttachment: this.binaryToAttachment(),
@@ -241,7 +245,7 @@ class sqlMigration {
     }
     
     private escape(inputString: string) {
-        return inputString.replace("'", "''");
+        return inputString ? inputString.replace("'", "''") : "";
     }
     
     getSelectedTablesCount() {
