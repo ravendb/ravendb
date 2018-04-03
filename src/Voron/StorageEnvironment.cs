@@ -961,7 +961,6 @@ namespace Voron
         public EnvironmentStats Stats()
         {
             var transactionPersistentContext = new TransactionPersistentContext();
-            using (_options.SkipCatastrophicFailureAssertion())
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task

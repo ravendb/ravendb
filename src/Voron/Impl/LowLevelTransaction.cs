@@ -226,7 +226,9 @@ namespace Voron.Impl
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
             TxStartTime = DateTime.UtcNow;
-            env.Options.AssertNoCatastrophicFailure();
+
+            if (flags == TransactionFlags.ReadWrite)
+                env.Options.AssertNoCatastrophicFailure();
 
             DataPager = env.Options.DataPager;
             _env = env;
