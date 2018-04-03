@@ -34,8 +34,9 @@ namespace Sparrow.Json
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
-        private List<GCHandle> _pinnedObjects;
-        private string _doubleStringBuffer;
+        private List<GCHandle> _pinnedObjects;        
+        private List<string> _normalNumbersStringBuffers = new List<string>(5);
+        private string _hugeNumbersBuffer;
 
         private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(OrdinalStringStructComparer.Instance);
 
@@ -1070,94 +1071,111 @@ namespace Sparrow.Json
 
         public unsafe double ParseDouble(byte* ptr, int length)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return double.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+            return double.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
 
         public unsafe bool TryParseDouble(byte* ptr, int length, out double val)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
                         
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return double.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture,out val);            
+            return double.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture,out val);            
         }
 
         public unsafe decimal ParseDecimal(byte* ptr, int length)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return decimal.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+            return decimal.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
 
         public unsafe bool TryParseDecimal(byte* ptr, int length, out decimal val)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return decimal.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+            return decimal.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
         }
 
         public unsafe float ParseFloat(byte* ptr, int length)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return float.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+            return float.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
 
         public unsafe bool TryParseFloat(byte* ptr, int length, out float val)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return float.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+            return float.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
         }
 
         public unsafe long ParseLong(byte* ptr, int length)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return long.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+            return long.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
 
         public unsafe bool TryParseLong(byte* ptr, int length, out long val)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return long.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+            return long.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
         }
 
         public unsafe ulong ParseULong(byte* ptr, int length)
         {            
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer= InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return ulong.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+            return ulong.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
 
         public unsafe bool TryParseULong(byte* ptr, int length, out ulong val)
         {
-            InitializeStringBufferForNumberParsing(ptr, length);
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
 
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            return ulong.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
-        }
+            return ulong.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }       
 
-        private unsafe void InitializeStringBufferForNumberParsing(byte* ptr, int length)
-        {            
+        private unsafe string InitializeStringBufferForNumberParsing(byte* ptr, int length)
+        {
+            var lengthsNextPowerOf2 = Sparrow.Binary.Bits.NextPowerOf2(length);
+
+            var actualPowerOf2 = (int)Math.Pow(lengthsNextPowerOf2, 0.5);
+            string stringBuffer;
+            if (actualPowerOf2 <= _normalNumbersStringBuffers.Count)
+            {
+                stringBuffer = _normalNumbersStringBuffers[actualPowerOf2 - 1];
+
+                if (stringBuffer == null)
+                {
+                    stringBuffer = _normalNumbersStringBuffers[actualPowerOf2 - 1] = new string(' ', lengthsNextPowerOf2);
+                }
+            }
+            else
+            {
+                stringBuffer = _hugeNumbersBuffer;
+                if (_hugeNumbersBuffer == null || length > _hugeNumbersBuffer.Length)
+                    stringBuffer = _hugeNumbersBuffer = new string(' ', length);
+            }
             // we should support any length of LazyNumber, therefore, we do not validate it's length
-
-            if (_doubleStringBuffer == null || length > _doubleStringBuffer.Length)
-                _doubleStringBuffer = new string(' ', length);
+            
             
             // here we assume a clear char <- -> byte conversion, we only support
             // utf8, and those cleanly transfer
-            fixed (char* pChars = _doubleStringBuffer)
+            fixed (char* pChars = stringBuffer)
             {
                 int i = 0;
 
@@ -1165,11 +1183,13 @@ namespace Sparrow.Json
                 {
                     pChars[i] = (char)ptr[i];
                 }
-                for (; i < _doubleStringBuffer.Length; i++)
+                for (; i < stringBuffer.Length; i++)
                 {
                     pChars[i] = ' ';
                 }
             }
+
+            return stringBuffer;
         }
 
         public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
