@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
@@ -12,7 +14,7 @@ namespace SlowTests.Server.Documents.SqlMigration
     {
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
-        [InlineData(MigrationProvider.MySQL)]
+        [RequiresMySqlInlineData]
         public async Task SimplePatch(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -51,7 +53,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Fact] //TODO: use theory
+        [Fact]
         public async Task PatchCanAccessNestedObjects()
         {
             using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, "basic"))
@@ -93,7 +95,48 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
+        
+        [Theory]
+        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMySqlInlineData]
+        public async Task SupportsDocumentSkip(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                using (var store = GetDocumentStore())
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store);
 
-        //TODO: test for throw 'skip'
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            new RootCollection(schemaName, "order_item", "OrderItems")
+                            {
+                                Patch = "if (this.Price < 200) throw 'skip';"
+                            }
+                        }
+                    };
+
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        var result = new MigrationResult(settings);
+                        await driver.Migrate(settings, schema, db, context, result);
+                        
+                        Assert.Equal(2, result.PerCollectionCount["OrderItems"].ReadCount);
+                        Assert.Equal(0, result.PerCollectionCount["OrderItems"].ErroredCount);
+                        Assert.Equal(1, result.PerCollectionCount["OrderItems"].SkippedCount);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(1, session.Advanced.LoadStartingWith<JObject>("OrderItems/").Length);
+                    }
+                }
+            }
+        }
     }
 }
