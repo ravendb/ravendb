@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
@@ -178,8 +179,9 @@ namespace Raven.Server.ServerWide.Maintenance
                                 report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
                                 {
                                     LastIndexedEtag = stats.LastProcessedEtag,
-                                    IsSideBySide = false,
-                                    IsStale = stats.IsStale
+                                    IsSideBySide = index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase),
+                                    IsStale = stats.IsStale,
+                                    State = index.State
                                 };
                             }
                         }
