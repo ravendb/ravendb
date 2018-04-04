@@ -735,7 +735,7 @@ namespace Raven.Server.Documents.Queries
             AssertValueIsString(fieldName, wktValue.Type);
 
             SpatialUnits? spatialUnits = null;
-            if (expression.Arguments.Count == 2)
+            if (expression.Arguments.Count == 4)
                 spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
 
             return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
