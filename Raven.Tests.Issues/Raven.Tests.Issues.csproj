@@ -143,6 +143,7 @@
     <Compile Include="NtpServers.cs" />
     <Compile Include="RavenDB-10635.cs" />
     <Compile Include="RavenDB-10815.cs" />
+    <Compile Include="RavenDB-10888.cs" />
     <Compile Include="RavenDB-7972.cs" />
     <Compile Include="RavenDB_10837.cs" />
     <Compile Include="RavenDB_7873.cs" />
