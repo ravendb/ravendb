@@ -140,8 +140,11 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-        private async Task WaitForIndexesAsync(string waitIndexes, Dictionary<int,Task> nextIndexingRoundsByIndexId,Index[] existingIndexes, BatchResult[] results)
+        private async Task WaitForIndexesAsync(string waitIndexes, Dictionary<int, Task> nextIndexingRoundsByIndexId, Index[] existingIndexes, BatchResult[] results)
         {
+            if (existingIndexes.Length == 0)
+                return;
+
             var parts = waitIndexes.Split(new [] {';'},StringSplitOptions.RemoveEmptyEntries);
             var throwOnTimeout = bool.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
