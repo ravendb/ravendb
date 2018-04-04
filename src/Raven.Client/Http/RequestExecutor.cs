@@ -595,8 +595,22 @@ namespace Raven.Client.Http
                         cachedItem.MightHaveBeenModified == false &&
                         command.CanCacheAggressively)
                     {
-                        command.SetResponse(context, cachedValue, fromCache: true);
-                        return;
+                        if((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
+                        {
+                            // if this is a cached delete, we only respect it if it _came_ from an aggresively cached
+                            // block, otherwise, we'll run the request again
+                            if((cachedItem.Item.Flags & HttpCache.ItemFlags.AggresivelyCached) == HttpCache.ItemFlags.AggresivelyCached)
+                            {
+                                command.SetResponse(context, cachedValue, fromCache: true);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            command.SetResponse(context, cachedValue, fromCache: true);
+                            return;
+                        }
+                        
                     }
 
                     request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
@@ -933,7 +947,7 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    Cache.SetNotFound(url);
+                    Cache.SetNotFound(url, AggressiveCaching.Value != null);
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
