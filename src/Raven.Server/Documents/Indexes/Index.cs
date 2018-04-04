@@ -1294,8 +1294,12 @@ namespace Raven.Server.Documents.Indexes
             {
                 // it can be a transient error, we are going to unload the database and do not error the index yet
                 // let's stop the indexing thread
-                _indexDisabled = true;
-                _mre.Set();
+
+                lock (_disablingIndexLock)
+                {
+                    _indexDisabled = true;
+                    _mre.Set();
+                }
 
                 return;
             }
