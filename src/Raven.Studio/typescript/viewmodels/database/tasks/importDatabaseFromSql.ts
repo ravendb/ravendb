@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
@@ -9,6 +10,9 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
+import viewHelpers = require("common/helpers/view/viewHelpers");
+import referenceInUseDialog = require("viewmodels/database/tasks/referenceInUseDialog");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -45,7 +49,8 @@ class importCollectionFromSql extends viewModelBase {
         
         aceEditorBindingHandler.install();
 
-        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "closeEditedTransformation", "createDbAutocompleter");
+        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", 
+            "closeEditedTransformation", "createDbAutocompleter", "goToTable", "onCollapseTable");
         
         this.initObservables();
     }
@@ -171,33 +176,74 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     onActionClicked(reference: sqlReference, action: sqlMigrationAction) {
-        if (action === "embed" && reference.action() !== "embed") {
-            const tableToEmbed = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
-            const innerTable = tableToEmbed.cloneForEmbed();
-            reference.effectiveInnerTable(innerTable);
-            
-            const propertyNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
-            
-            sqlMigration.updatePropertyNames(innerTable, propertyNameFunc);
-            
-            this.removeBackReference(innerTable, reference);
+        if (action === reference.action()) {
+            // nothing to do
+            return;
         }
         
-        if (action === "link" && reference.action() !== "link") {
+        switch (action) {
+            case "embed":
+                this.onEmbedTable(reference);
+                return;
+                
+            case "link":
+                this.onLinkTable(reference);
+                return;
+                
+            case "skip":
+                this.onSkipTable(reference);
+                return;
+        }
+    }
+    
+    private onEmbedTable(reference: sqlReference) {
+        const tableToEmbed = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
+        const innerTable = tableToEmbed.cloneForEmbed(reference);
+        
+        // setup initial state of cloned object
+        innerTable.references().forEach(innerReference => {
+            if (innerReference.action() === "link") {
+                const tableToLink = this.model.findRootTable(innerReference.targetTable.tableSchema, innerReference.targetTable.tableName);
+                innerReference.effectiveLinkTable(tableToLink);
+            }
+        });
+        
+        const propertyNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
+        
+        sqlMigration.updatePropertyNames(innerTable, propertyNameFunc);
+        
+        this.removeBackReference(innerTable, reference);
+        
+        reference.embed(innerTable);
+    }
+    
+    private onLinkTable(reference: sqlReference) {
+        const linkAction = () => {
             const tableToLink = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
-            // no need to clone in this case
-            reference.effectiveLinkTable(tableToLink);
-        }
+            reference.link(tableToLink);
+            
+            if (!tableToLink.checked()) {
+                tableToLink.checked(true);
+            }
+        };
         
-        reference.action(action);
-        
-        if (action !== "embed") {
-            reference.effectiveInnerTable(null);
+        // if we want to link to unchecked table then warn
+        if ((reference.targetTable as rootSqlTable).checked()) {
+            linkAction();
+        } else {
+            this.confirmationMessage("Table not selected", 
+                "Table '" + reference.targetTable.tableName + "' you are trying to link is not selected. Would you like to select this table and create a link?", 
+                ["Cancel", "Select table and create link"]) 
+                .done(result => {
+                    if (result.can) {
+                        linkAction();
+                    }
+                });
         }
-        
-        if (action !== "link") {
-            reference.effectiveLinkTable(null);
-        }
+    }
+    
+    private onSkipTable(reference: sqlReference) {
+        reference.skip();
     }
     
     private removeBackReference(table: innerSqlTable, reference: sqlReference) {
@@ -209,6 +255,7 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     toggleSelectAll() {
+        //TODO: disable checks? 
         this.togglingAll(true);
         const selectedCount = this.model.getSelectedTablesCount();
 
@@ -255,6 +302,41 @@ class importCollectionFromSql extends viewModelBase {
             return this.databaseNames()
                 .filter(name => name.toLocaleLowerCase().includes(dbNameUnwrapped));
         });
+    }
+    
+    goToTable(table: abstractSqlTable, animate = true) {
+        // first find page
+        const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
+        if (targetTableIndex !== -1) {
+            const page = Math.floor(targetTableIndex / importCollectionFromSql.pageCount);
+            this.setCurrentPage(page);
+            
+            // now find correct position 
+            const onPagePosition = targetTableIndex % importCollectionFromSql.pageCount;
+            const $targetElement = $(".js-scroll-tables .js-root-table-panel:eq(" + onPagePosition + ")");
+            $(".js-scroll-tables").scrollTop($targetElement[0].offsetTop - 20);
+            
+            if (animate) {
+                viewHelpers.animate($(".js-sql-table-name", $targetElement), "blink-style");    
+            }
+        }
+    }
+    
+    onCollapseTable(table: rootSqlTable, $event: JQueryMouseEventObject) {
+        
+        if (table.checked()) {
+            // we are about to uncheck this, find if we have any links to this table
+            const links = this.model.findLinksToTable(table);
+            if (links.length > 0) {
+                app.showBootstrapDialog(new referenceInUseDialog(table, links, (ref, action) => this.onActionClicked(ref, action)));
+                    
+                $event.preventDefault();
+                $event.stopImmediatePropagation();
+                return false;
+            }
+        }
+        
+        return true; // allow checked handler to be executed
     }
 }
 

@@ -2,6 +2,7 @@
 
 import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
+import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class rootSqlTable extends abstractSqlTable {
     collectionName = ko.observable<string>();
@@ -35,14 +36,19 @@ class rootSqlTable extends abstractSqlTable {
         } as Raven.Server.SqlMigration.Model.RootCollection;
     }
     
-    cloneForEmbed(): innerSqlTable {
-        const table = new innerSqlTable(this);
+    cloneForEmbed(parentReference: sqlReference): innerSqlTable {
+        const table = new innerSqlTable(parentReference);
         
         table.tableName = this.tableName;
         table.tableSchema = this.tableSchema;
         table.documentColumns(this.documentColumns().map(x => x.clone()));
         table.primaryKeyColumns(this.primaryKeyColumns().map(x => x.clone()));
-        table.references(this.references().map(x => x.clone()));
+        table.references(this.references().map(x => {
+            const clonedObject = x.clone();
+            clonedObject.sourceTable = table;
+            return clonedObject;
+        }));
+        
         return table;
     }
 }

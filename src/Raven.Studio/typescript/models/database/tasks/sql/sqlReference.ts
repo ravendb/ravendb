@@ -53,6 +53,24 @@ class sqlReference {
         return new sqlReference(this.targetTable, this.sourceTable, this.joinColumns, this.type);
     }
     
+    skip() {
+        this.action("skip");
+        this.effectiveLinkTable(null);
+        this.effectiveInnerTable(null);
+    }
+    
+    link(tableToLink: abstractSqlTable) {
+        this.action("link");
+        this.effectiveLinkTable(tableToLink);
+        this.effectiveInnerTable(null);
+    }
+    
+    embed(innerTable: innerSqlTable) {
+        this.action("embed");
+        this.effectiveInnerTable(innerTable);
+        this.effectiveLinkTable(null);    
+    }
+    
     getTypeClass() {
         switch (this.type) {
             case "OneToMany":

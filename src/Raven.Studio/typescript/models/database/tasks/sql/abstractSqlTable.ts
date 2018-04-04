@@ -34,6 +34,20 @@ abstract class abstractSqlTable {
         });
         return mapping;
     }
+    
+    findLinksToTable(tableToFind: abstractSqlTable): Array<sqlReference> {
+        const foundItems = this.references()
+            .filter(x => x.action() === 'link' && x.targetTable.tableSchema === tableToFind.tableSchema && x.targetTable.tableName === tableToFind.tableName);
+        
+        this.references()
+            .filter(x => x.action() === "embed")
+            .map(ref => {
+                foundItems.push(...ref.effectiveInnerTable().findLinksToTable(tableToFind));
+            });
+        
+        return foundItems;
+    }
+    
 }
 
 export = abstractSqlTable;

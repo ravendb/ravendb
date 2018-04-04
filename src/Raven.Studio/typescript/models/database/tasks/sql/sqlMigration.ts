@@ -189,6 +189,10 @@ class sqlMigration {
         return sqlMigration.findRootTable(this.tables(), tableSchema, tableName);
     }
     
+    findLinksToTable(table: abstractSqlTable): Array<sqlReference> {
+        return _.flatMap(this.tables().filter(x => x.checked()), t => t.findLinksToTable(table));
+    }
+    
     getConnectionString() {
         switch (this.databaseType()) {
             case "MySQL":

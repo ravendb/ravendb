@@ -135,14 +135,14 @@
             </div>
             <div class="scroll flex-grow js-scroll-tables">
                 <div data-bind="foreach: $root.currentTables">
-                    <div class="panel panel-info">
+                    <div class="panel panel-info js-root-table-panel">
                         <div class="flex-horizontal padding padding-sm panel-header">
                             <div class="checkbox" data-placement="left">
-                                <input type="checkbox" data-bind="checked: checked, attr: { id: 'table_' + $index() }" />
+                                <input type="checkbox" data-bind="click: $root.onCollapseTable, checked: checked, attr: { id: 'table_' + $index() }" />
                                 <label data-bind="attr: { for: 'table_' + $index() }">&nbsp;</label>
                             </div>
                             <div class="flex-horizontal flex-wrap">
-                                <span class="with-top-label" data-label="Table" data-bind="text: tableName"></span>
+                                <span class="with-top-label js-sql-table-name" data-label="Table" data-bind="text: tableName"></span>
                                 <i class="icon-arrow-right"></i>
                                 <div class="with-top-label raven-property-name inline-edit inline-block" data-label="Collection">
                                     <span class="static" data-bind="text: collectionName"></span>
@@ -263,7 +263,7 @@
                         <span class="text-muted">from FK</span>
                         <span data-bind="text: joinColumns.join(', ')"></span>
                         <span class="text-muted">in <i class="icon-table"></i></span>
-                        <span data-bind="text: targetTable.tableName"></span>
+                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to ' + targetTable.tableName + ' table'}, click: _.partial($root.goToTable, targetTable)"></a>
                     </span>
                     
                     <span data-bind="visible: type === 'ManyToOne'">
@@ -274,7 +274,7 @@
                         <span class="text-muted">from PK</span>
                         <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
                         <span class="text-muted">in <i class="icon-table"></i></span>
-                        <span data-bind="text: targetTable.tableName"></span>
+                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to ' + targetTable.tableName + ' table'}, click: _.partial($root.goToTable, targetTable)"></a>
                     </span>
                 </td>
                 <td width="180">
@@ -290,16 +290,16 @@
                 <td>
                     <div class="inline-edit inline-block" data-bind="with: effectiveInnerTable">
                         <span class="static">
-                            <span class="raven-property-name" data-bind="text: $parent.name"></span>:    
+                            <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                         </span>
                         <input class="form-control input-sm" data-bind="textInput: $parent.name" />
                     </div>
                     <div class="inline-edit inline-block" data-bind="with: effectiveLinkTable">
                         <div class="static">
                             <span class="raven-property-name" data-bind="text: $parent.name"></span>:
-                            <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">[</span>
+                            <span class="text-muted" data-bind="visible: $parent.type === 'OneToMany'">[</span>
                             <span data-bind="text: documentIdTemplate"></span>
-                            <span class="text-muted" data-bind="visible: $parent.type === 'ManyToOne'">, ...]</span>
+                            <span class="text-muted" data-bind="visible: $parent.type === 'OneToMany'">, ...]</span>
                         </div>
                         <input class="form-control input-sm" data-bind="textInput: $parent.name" />
                     </div>
