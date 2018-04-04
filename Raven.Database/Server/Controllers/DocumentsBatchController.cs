@@ -169,11 +169,7 @@ namespace Raven.Database.Server.Controllers
 
             if (lastEtag == null)
             {
-                if (deletedIds.Count > 0)
-                {
-                    while (Database.WorkContext.IndexRemovalQueueContainsAnyFrom(deletedIds))
-                        await Task.Delay(100).ConfigureAwait(false);
-                }
+                await HandleDeletions(deletedIds, timeout, throwOnTimeout).ConfigureAwait(false);
                 return;
             }
 
@@ -253,6 +249,33 @@ namespace Raven.Database.Server.Controllers
                     }
                 }
             } while (needToWait);
+        }
+
+        private async Task HandleDeletions(HashSet<string> deletedIds, TimeSpan timeout, bool throwOnTimeout)
+        {
+            if (deletedIds.Count <= 0)
+                return;
+
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                if (Database.WorkContext.IndexRemovalQueueContainsAnyFrom(deletedIds) == false)
+                    break;
+
+                var timeSpan = timeout - sp.Elapsed;
+                if (timeSpan <= TimeSpan.Zero)
+                {
+                    if (throwOnTimeout)
+                    {
+                        throw new TimeoutException($"After waiting for {sp.Elapsed}, could not verify that all deletions " +
+                                                   $"({deletedIds.Count:#,#;;0}) were removed from indexes");
+                    }
+
+                    break;
+                }
+
+                await Task.Delay(100).ConfigureAwait(false);
+            }
         }
 
         private async Task WaitForReplicationAsync(string writeAssurance, BatchResult lastResultWithEtag)
