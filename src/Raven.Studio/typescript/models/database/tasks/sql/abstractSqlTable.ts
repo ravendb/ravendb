@@ -48,6 +48,25 @@ abstract class abstractSqlTable {
         return foundItems;
     }
     
+    
+    isManyToMany() {
+        if (this.references().length !== 2) {
+            // many-to-many should have 2 references
+            return false;
+        }
+        
+        if (_.some(this.references(), x => x.type !== "ManyToOne")) {
+            // each reference should be manyToOne
+            return false;
+        }
+        
+        // at this point we have 2 many-to-one references
+        const allJoinColumns = _.flatMap(this.references(), r => r.joinColumns);
+        const primaryColumns = this.primaryKeyColumns().map(x => x.sqlName);
+        
+        return _.isEqual(allJoinColumns.sort(), primaryColumns.sort()); // references covers all primary key columns
+    }
+    
 }
 
 export = abstractSqlTable;

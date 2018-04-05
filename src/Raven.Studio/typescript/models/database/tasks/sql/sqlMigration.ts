@@ -4,6 +4,7 @@ import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 
 import sqlColumn = require("models/database/tasks/sql/sqlColumn");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
+import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 
 class sqlMigration {
     
@@ -173,6 +174,19 @@ class sqlMigration {
         this.updateNames(mapping);
         
         this.tables(mapping);
+        
+        if (this.advanced.detectManyToMany()) {
+            this.detectManyToMany();
+        }
+    }
+    
+    private findReverseReference(reference: sqlReference) {
+        const targetTable = this.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
+        return targetTable.references()
+            .find(r => r.type !== reference.type 
+                && _.isEqual(r.joinColumns, reference.joinColumns) 
+                && r.targetTable.tableSchema === reference.sourceTable.tableSchema 
+                && r.targetTable.tableName === reference.sourceTable.tableName);
     }
     
     private updateNames(mapping: Array<rootSqlTable>) {
@@ -279,6 +293,49 @@ class sqlMigration {
     getSelectedTablesCount() {
         return _.sumBy(this.tables(), t => t.checked() ? 1 : 0);
     }
+
+    private detectManyToMany() {
+        const manyToManyTables = this.tables().filter(t => t.isManyToMany());
+
+        manyToManyTables.forEach(table => {
+            table.references().forEach(reference => {
+                reference.action("skip");
+
+                const reverseReference = this.findReverseReference(reference);
+                this.onEmbedTable(reverseReference);
+                
+                const reverseTable = reverseReference.sourceTable as rootSqlTable;
+                reverseTable.transformResults(true);
+                const innerPropertyName = reverseReference.effectiveInnerTable().references()[0].name();
+                
+                const script = "// flatten many-to-many relationship\r\n"
+                    + "this." + reverseReference.name() + " = this." + reverseReference.name() + ".map(x => x." + innerPropertyName + ");\r\n";
+                
+                reverseTable.patchScript(script);
+            });
+
+            table.checked(false);
+        });
+    }
+    
+    onEmbedTable(reference: sqlReference) {
+        const tableToEmbed = this.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
+        const innerTable = tableToEmbed.cloneForEmbed(reference);
+        
+        // setup initial state of cloned object
+        innerTable.references().forEach(innerReference => {
+            if (innerReference.action() === "link") {
+                const tableToLink = this.findRootTable(innerReference.targetTable.tableSchema, innerReference.targetTable.tableName);
+                innerReference.effectiveLinkTable(tableToLink);
+            }
+        });
+        
+        this.updatePropertyNames(innerTable);
+        innerTable.removeBackReference(reference);
+        
+        reference.embed(innerTable);
+    }
+
 }
 
 export = sqlMigration;
