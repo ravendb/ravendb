@@ -335,6 +335,16 @@ class sqlMigration {
         
         reference.embed(innerTable);
     }
+    
+    setAllLinksToSkip() {
+        this.tables().forEach(table => {
+            table.references().forEach(reference => {
+                if (reference.action() === 'link') {
+                    reference.skip();
+                }
+            })
+        })
+    }
 
 }
 
