@@ -142,7 +142,7 @@
                 <div class="panel panel-default flex-grow no-margin">
                     <div class="panel-body padding padding-sm flex-horizontal">
                         <div class="checkbox checkbox-default checkbox-inline align-checkboxes" title="Select all or none">
-                            <input type="checkbox" class="styled" data-bind="checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
+                            <input type="checkbox" class="styled" data-bind="click: onToggleAllClick, checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
                         <button class="btn btn-primary" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">

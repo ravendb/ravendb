@@ -379,6 +379,26 @@ class importCollectionFromSql extends viewModelBase {
         
         return true; // allow checked handler to be executed
     }
+    
+    onToggleAllClick(_: any, $event: JQueryMouseEventObject) {
+        if (this.model.getSelectedTablesCount()) {
+            
+            this.confirmationMessage("Unselect all tables", "To maintain connections integrity, all references with action 'link' will be set to 'skip'. Do you want to proceed? ", ["Cancel", "Set references to 'skip' and unselect all"])
+                .done(result => {
+                    if (result.can) {
+                        this.model.setAllLinksToSkip();
+                        this.toggleSelectAll();
+                    }
+                });
+            
+            
+            $event.preventDefault();
+            $event.stopImmediatePropagation();
+            return false;
+        } 
+        
+        return true; // allow checked handler to be executed
+    }
 }
 
 export = importCollectionFromSql; 
