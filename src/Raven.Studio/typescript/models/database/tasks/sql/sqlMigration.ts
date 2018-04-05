@@ -17,6 +17,12 @@ class sqlMigration {
     testImport = ko.observable<boolean>(false);
     maxDocumentsToImportPerTable = ko.observable<number>(1000);
     
+    advanced = {
+        usePascalCase: ko.observable<boolean>(true),
+        trimUnderscoreId: ko.observable<boolean>(true),
+        detectManyToMany: ko.observable<boolean>(true) 
+    };
+    
     sqlServer = {
         connectionString: ko.observable<string>()
     };
@@ -31,14 +37,23 @@ class sqlMigration {
     
     mySqlValidationGroup: KnockoutValidationGroup;
     
-    tables = ko.observableArray<rootSqlTable>([]); 
+    tables = ko.observableArray<rootSqlTable>([]);
     
-    constructor() {    
-        this.initValidation();   
+    collectionNameTransformationFunc: (name: string) => string;
+    propertyNameTransformationFunc: (name: string) => string;
+    
+    constructor() {
+        this.initObservables();
+        this.initTransformationFunctions();
+        this.initValidation();
+    }
+    
+    private initObservables() {
+        this.advanced.usePascalCase.subscribe(() => this.initTransformationFunctions());
+        this.advanced.trimUnderscoreId.subscribe(() => this.initTransformationFunctions());
     }
 
     initValidation() {
-        
         this.sqlServer.connectionString.extend({
                 required: true
             });
@@ -80,6 +95,19 @@ class sqlMigration {
                 onlyIf: () => this.testImport()
             }
         })
+    }
+    
+    private initTransformationFunctions() {
+        const pascal = (input: string) => _.upperFirst(_.camelCase(input));
+        const removeId = (input: string) => input.toLocaleLowerCase().endsWith("_id") ? input.slice(0, -3) : input;
+        const identity = (input: string) => input;
+        
+        this.collectionNameTransformationFunc = this.advanced.usePascalCase() ? pascal : identity;
+        if (this.advanced.usePascalCase()) {
+            this.propertyNameTransformationFunc = this.advanced.trimUnderscoreId() ? _.flow(removeId, pascal) : pascal;
+        } else {
+            this.propertyNameTransformationFunc = this.advanced.trimUnderscoreId() ? removeId : identity;
+        }
     }
 
     labelForProvider(type: Raven.Server.SqlMigration.MigrationProvider) {
@@ -148,32 +176,28 @@ class sqlMigration {
     }
     
     private updateNames(mapping: Array<rootSqlTable>) {
-        
-        const collectionNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
-        const propertyNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
-        
         mapping.forEach(rootTable => {
-            rootTable.collectionName(collectionNameFunc(rootTable.collectionName()));
+            rootTable.collectionName(this.collectionNameTransformationFunc(rootTable.collectionName()));
             
-            sqlMigration.updatePropertyNames(rootTable, propertyNameFunc);
+            this.updatePropertyNames(rootTable);
         });
     }
     
-    static updatePropertyNames(table: abstractSqlTable, transformFunction: (input: string) => string) {
+    updatePropertyNames(table: abstractSqlTable) {
         table.documentColumns().forEach(column => {
-            column.propertyName(transformFunction(column.sqlName));
+            column.propertyName(this.propertyNameTransformationFunc(column.sqlName));
         });
         
         table.references()
             .filter(x => x.type === "ManyToOne")
             .forEach(ref => {
-                ref.name(ref.joinColumns.map(transformFunction).join("And"));
+                ref.name(ref.joinColumns.map(this.propertyNameTransformationFunc).join("And"));
             });
         
         _.forEach(_.groupBy(table.references()
             .filter(x => x.type === 'OneToMany'), x => x.targetTable.tableName), (refs, name) => {
             
-            const basicName = transformFunction(name);
+            const basicName = this.propertyNameTransformationFunc(name);
             
             refs.forEach((ref: sqlReference, idx: number) => {
                 ref.name(refs.length > 1 ? basicName + (idx + 1) : basicName)
