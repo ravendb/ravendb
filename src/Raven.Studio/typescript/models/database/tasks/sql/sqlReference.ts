@@ -29,8 +29,8 @@ class sqlReference {
     toLinkDto(): Raven.Server.SqlMigration.Model.LinkedCollection {
         return {
             Name: this.name(),
-            SourceTableName: this.targetTable.tableName,
-            SourceTableSchema: this.targetTable.tableSchema,
+            SourceTableName: this.effectiveLinkTable().tableName,
+            SourceTableSchema: this.effectiveLinkTable().tableSchema,
             JoinColumns: this.joinColumns,
             Type: this.type
         } as Raven.Server.SqlMigration.Model.LinkedCollection; 
@@ -39,13 +39,13 @@ class sqlReference {
     toEmbeddedDto(): Raven.Server.SqlMigration.Model.EmbeddedCollection {
         return {
             Name: this.name(),
-            SourceTableSchema: this.targetTable.tableSchema,
-            SourceTableName: this.targetTable.tableName,
+            SourceTableSchema: this.effectiveInnerTable().tableSchema,
+            SourceTableName: this.effectiveInnerTable().tableName,
             Type: this.type, 
             JoinColumns: this.joinColumns,
-            ColumnsMapping: this.targetTable.getColumnsMapping(),
-            LinkedCollections: this.targetTable.getLinkedReferencesDto(),
-            NestedCollections: this.targetTable.getEmbeddedReferencesDto()
+            ColumnsMapping: this.effectiveInnerTable().getColumnsMapping(),
+            LinkedCollections: this.effectiveInnerTable().getLinkedReferencesDto(),
+            NestedCollections: this.effectiveInnerTable().getEmbeddedReferencesDto()
         } as Raven.Server.SqlMigration.Model.EmbeddedCollection;
     }
     

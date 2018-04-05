@@ -10,6 +10,14 @@ class innerSqlTable extends abstractSqlTable {
         super();
         this.parentReference = parentReference;
     }
+    
+    removeBackReference(reference: sqlReference) {
+        const refToDelete = this.references().find(t => _.isEqual(t.joinColumns, reference.joinColumns)
+            && t.targetTable.tableName === reference.sourceTable.tableName
+            && t.targetTable.tableSchema === reference.targetTable.tableSchema);
+
+        this.references.remove(refToDelete);
+    }
 }
 
 

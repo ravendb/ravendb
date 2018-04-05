@@ -199,22 +199,7 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     private onEmbedTable(reference: sqlReference) {
-        const tableToEmbed = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
-        const innerTable = tableToEmbed.cloneForEmbed(reference);
-        
-        // setup initial state of cloned object
-        innerTable.references().forEach(innerReference => {
-            if (innerReference.action() === "link") {
-                const tableToLink = this.model.findRootTable(innerReference.targetTable.tableSchema, innerReference.targetTable.tableName);
-                innerReference.effectiveLinkTable(tableToLink);
-            }
-        });
-        
-        this.model.updatePropertyNames(innerTable);
-        
-        this.removeBackReference(innerTable, reference);
-        
-        reference.embed(innerTable);
+        this.model.onEmbedTable(reference);
     }
     
     private onLinkTable(reference: sqlReference) {
@@ -244,14 +229,6 @@ class importCollectionFromSql extends viewModelBase {
     
     private onSkipTable(reference: sqlReference) {
         reference.skip();
-    }
-    
-    private removeBackReference(table: innerSqlTable, reference: sqlReference) {
-        const refToDelete = table.references().find(t => _.isEqual(t.joinColumns, reference.joinColumns) 
-            && t.targetTable.tableName === reference.sourceTable.tableName 
-            && t.targetTable.tableSchema === reference.targetTable.tableSchema);
-        
-        table.references.remove(refToDelete);
     }
     
     toggleSelectAll() {
