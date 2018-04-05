@@ -27,6 +27,11 @@ abstract class abstractSqlTable {
             .map(x => x.toEmbeddedDto());
     }
     
+    checkForDuplicateProperties() {
+        const localProperties = this.documentColumns().map(x => x.propertyName());
+        return localProperties.length !== _.uniq(localProperties).length;
+    }
+    
     getColumnsMapping() {
         const mapping = {} as dictionary<string>;
         this.documentColumns().forEach(column => {

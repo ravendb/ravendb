@@ -180,6 +180,12 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     migrate() {
+        const firstWithDuplicates = this.model.tables().find(x => x.hasDuplicateProperties());
+        if (firstWithDuplicates) {
+            this.goToTable(firstWithDuplicates);
+            return;
+        }
+        
         const dto = this.model.toDto();
         const db = this.activeDatabase();
         
@@ -320,28 +326,40 @@ class importCollectionFromSql extends viewModelBase {
         this.searchText(""); // make sure table is visible
         
         const table = (reverseReference.sourceTable as rootSqlTable);
+        if (table.checked()) {
+            // first find page
+            const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
+            
+            const page = Math.floor(targetTableIndex / importCollectionFromSql.pageCount);
+            this.setCurrentPage(page);
+            
+            // navigate exactly to reference position
+            const $revReference = $("[data-ref-id=" + reverseReference.id + "]");
+            
+            $(".js-scroll-tables").scrollTop($revReference.offset().top - originalTopPosition);
+            
+            viewHelpers.animate($revReference, "blink-style");
+        } else {
+            this.goToTable(table, animate);
+        }
+    }
+    
+    private goToTable(table: rootSqlTable, animate = true) {
+        this.searchText(""); // make sure table is visible
+        
         // first find page
         const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
         if (targetTableIndex !== -1) {
             const page = Math.floor(targetTableIndex / importCollectionFromSql.pageCount);
             this.setCurrentPage(page);
             
-            if (table.checked()) {
-                // navigate exactly to reference position
-                const $revReference = $("[data-ref-id=" + reverseReference.id + "]");
-                
-                $(".js-scroll-tables").scrollTop($revReference.offset().top - originalTopPosition);
-                
-                viewHelpers.animate($revReference, "blink-style");
-            } else {
-                const onPagePosition = targetTableIndex % importCollectionFromSql.pageCount;
-                const $targetElement = $(".js-scroll-tables .js-root-table-panel:eq(" + onPagePosition + ")");
-                
-                $(".js-scroll-tables").scrollTop($targetElement[0].offsetTop - 20);
-                
-                if (animate) {
-                    viewHelpers.animate($(".js-sql-table-name", $targetElement), "blink-style");    
-                }
+            const onPagePosition = targetTableIndex % importCollectionFromSql.pageCount;
+            const $targetElement = $(".js-scroll-tables .js-root-table-panel:eq(" + onPagePosition + ")");
+            
+            $(".js-scroll-tables").scrollTop($targetElement[0].offsetTop - 20);
+            
+            if (animate) {
+                viewHelpers.animate($(".js-sql-table-name", $targetElement), "blink-style");    
             }
         }
     }
