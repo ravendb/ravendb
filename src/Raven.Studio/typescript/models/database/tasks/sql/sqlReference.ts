@@ -5,6 +5,8 @@ import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 
 class sqlReference {
     
+    id = _.uniqueId("sql-ref-");
+    
     targetTable: abstractSqlTable;
     sourceTable: abstractSqlTable;
     

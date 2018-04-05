@@ -52,7 +52,7 @@ class importCollectionFromSql extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", 
-            "closeEditedTransformation", "createDbAutocompleter", "goToTable", "onCollapseTable");
+            "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable");
         
         this.initObservables();
     }
@@ -281,20 +281,33 @@ class importCollectionFromSql extends viewModelBase {
         });
     }
     
-    goToTable(table: abstractSqlTable, animate = true) {
+    goToReverseReference(reference: sqlReference, animate = true) {
+        const originalTopPosition = $("[data-ref-id=" + reference.id + "]").offset().top;
+        const reverseReference = this.model.findReverseReference(reference); //TODO: what if table is not selected?
+        
+        const table = (reverseReference.sourceTable as rootSqlTable);
         // first find page
         const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
         if (targetTableIndex !== -1) {
             const page = Math.floor(targetTableIndex / importCollectionFromSql.pageCount);
             this.setCurrentPage(page);
             
-            // now find correct position 
-            const onPagePosition = targetTableIndex % importCollectionFromSql.pageCount;
-            const $targetElement = $(".js-scroll-tables .js-root-table-panel:eq(" + onPagePosition + ")");
-            $(".js-scroll-tables").scrollTop($targetElement[0].offsetTop - 20);
-            
-            if (animate) {
-                viewHelpers.animate($(".js-sql-table-name", $targetElement), "blink-style");    
+            if (table.checked()) {
+                // navigate exactly to reference position
+                const $revReference = $("[data-ref-id=" + reverseReference.id + "]");
+                
+                $(".js-scroll-tables").scrollTop($revReference.offset().top - originalTopPosition);
+                
+                viewHelpers.animate($revReference, "blink-style");
+            } else {
+                const onPagePosition = targetTableIndex % importCollectionFromSql.pageCount;
+                const $targetElement = $(".js-scroll-tables .js-root-table-panel:eq(" + onPagePosition + ")");
+                
+                $(".js-scroll-tables").scrollTop($targetElement[0].offsetTop - 20);
+                
+                if (animate) {
+                    viewHelpers.animate($(".js-sql-table-name", $targetElement), "blink-style");    
+                }
             }
         }
     }
