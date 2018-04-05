@@ -1,4 +1,4 @@
-<div class="modal-dialog modal-lg" role="document">
+<div class="modal-dialog modal-lg reference-in-use-modal" role="document">
     <div class="modal-content">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: close" aria-hidden="true">
@@ -6,7 +6,7 @@
             </button>
             <h4 class="modal-title">Table is in use</h4>
         </div>
-        <div class="modal-body">
+        <div class="modal-body max-height">
             <p class="margin-bottom">Table <strong data-bind="text: table.tableName"></strong> is linked by following references:</p>
 
             <table style="width:100%" class="margin-bottom table table-striped">
@@ -16,7 +16,7 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody data-bind="foreach: $root.references" class="max-height">
+                <tbody data-bind="foreach: $root.references">
                 <tr>
                     <td>
                         <div data-bind="template: { name: 'in-use-reference-template' }">

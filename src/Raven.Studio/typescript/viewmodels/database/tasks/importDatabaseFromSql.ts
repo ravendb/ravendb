@@ -37,6 +37,8 @@ class importCollectionFromSql extends viewModelBase {
     globalSelectionState: KnockoutComputed<checkbox>;
     togglingAll = ko.observable<boolean>(false);
     
+    showAdvancedOptions = ko.observable<boolean>(false);
+    
     itemBeingEdited = ko.observable<rootSqlTable>();
     
     sourceDatabaseFocus = ko.observable<boolean>(false);
@@ -208,9 +210,7 @@ class importCollectionFromSql extends viewModelBase {
             }
         });
         
-        const propertyNameFunc = (input: string) => _.upperFirst(_.camelCase(input));
-        
-        sqlMigration.updatePropertyNames(innerTable, propertyNameFunc);
+        this.model.updatePropertyNames(innerTable);
         
         this.removeBackReference(innerTable, reference);
         
