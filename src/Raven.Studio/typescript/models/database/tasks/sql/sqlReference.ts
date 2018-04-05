@@ -25,7 +25,6 @@ class sqlReference {
         this.sourceTable = sourceTable;
         this.joinColumns = joinColumns;
         this.type = type;
-        this.action(type === "OneToMany" ? 'skip' : 'link');
     }
     
     toLinkDto(): Raven.Server.SqlMigration.Model.LinkedCollection {
@@ -52,7 +51,9 @@ class sqlReference {
     }
     
     clone(): sqlReference {
-        return new sqlReference(this.targetTable, this.sourceTable, this.joinColumns, this.type);
+        const newReference = new sqlReference(this.targetTable, this.sourceTable, this.joinColumns, this.type);
+        newReference.skip();
+        return newReference;
     }
     
     skip() {

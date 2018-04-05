@@ -163,11 +163,12 @@ class sqlMigration {
                 const targetTable = sqlMigration.findRootTable(mapping, referenceDto.Schema, referenceDto.Table);
                 
                 const oneToMany = new sqlReference(targetTable, sourceTable, referenceDto.Columns, "OneToMany");
+                oneToMany.skip();
                 sourceTable.references.push(oneToMany);
                 
                 const manyToOne = new sqlReference(sourceTable, targetTable, referenceDto.Columns, "ManyToOne");
+                manyToOne.link(sourceTable);
                 targetTable.references.push(manyToOne);
-                manyToOne.effectiveLinkTable(sourceTable);
             });
         });
         

@@ -283,7 +283,7 @@ class importCollectionFromSql extends viewModelBase {
     
     goToReverseReference(reference: sqlReference, animate = true) {
         const originalTopPosition = $("[data-ref-id=" + reference.id + "]").offset().top;
-        const reverseReference = this.model.findReverseReference(reference); //TODO: what if table is not selected?
+        const reverseReference = this.model.findReverseReference(reference);
         
         const table = (reverseReference.sourceTable as rootSqlTable);
         // first find page
