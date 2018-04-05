@@ -108,7 +108,7 @@
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
-                                    <input id="manyToMany" type="checkbox" data-bind="checked: advanced.usePascalCase">
+                                    <input id="manyToMany" type="checkbox" data-bind="checked: advanced.detectManyToMany">
                                     <label for="manyToMany">Detect <strong>many-to-many</strong> relationships</label>
                                 </div>
                             </div>
@@ -282,7 +282,7 @@
     <table style="width:100%">
         <tbody data-bind="foreach: references">
             <tr>
-                <td width="400">
+                <td width="400" data-bind="attr: { 'data-ref-id': id }">
                     <span data-bind="visible: type === 'OneToMany'">
                         <span class="text-muted">PK</span>
                         <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
@@ -292,7 +292,7 @@
                         <span class="text-muted">from FK</span>
                         <span data-bind="text: joinColumns.join(', ')"></span>
                         <span class="text-muted">in <i class="icon-table"></i></span>
-                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to ' + targetTable.tableName + ' table'}, click: _.partial($root.goToTable, targetTable)"></a>
+                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to reverse reference in ' + targetTable.tableName + ' table'}, click: $root.goToReverseReference"></a>
                     </span>
                     
                     <span data-bind="visible: type === 'ManyToOne'">
@@ -303,7 +303,7 @@
                         <span class="text-muted">from PK</span>
                         <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
                         <span class="text-muted">in <i class="icon-table"></i></span>
-                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to ' + targetTable.tableName + ' table'}, click: _.partial($root.goToTable, targetTable)"></a>
+                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to reverse reference in ' + targetTable.tableName + ' table'}, click: $root.goToReverseReference"></a>
                     </span>
                 </td>
                 <td width="180">

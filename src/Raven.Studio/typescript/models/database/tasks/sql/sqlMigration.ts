@@ -180,7 +180,7 @@ class sqlMigration {
         }
     }
     
-    private findReverseReference(reference: sqlReference) {
+    findReverseReference(reference: sqlReference) {
         const targetTable = this.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
         return targetTable.references()
             .find(r => r.type !== reference.type 
