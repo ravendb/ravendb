@@ -181,6 +181,10 @@
                                 </div>    
                             </div>
                             <div class="flex-separator"></div>
+                            <div class="customizations">
+                                <i title="Filtering is enabled" data-bind="visible: customizeQuery" class="icon-query"></i>
+                                <i title="Transform script is enabled" data-bind="visible: transformResults" class="icon-patch"></i>
+                            </div>
                             <div>
                                 <button class="btn btn-default" data-bind="click: $root.enterEditMode, css: { active: $data === $root.itemBeingEdited() }">
                                     <i class="icon-edit"></i>
@@ -240,12 +244,13 @@
                     
                     <div class="toggle">
                         <input id="transformResults" type="checkbox" data-bind="checked: transformResults">
-                        <label for="transformResults">Transform documents</label>
+                        <label for="transformResults">Transform documents <small class="js-script-popover"><i class="icon-info text-info"></i></small></label>
                     </div>
                     
                     <div data-bind="collapse: transformResults">
-                        <label><strong>Script:</strong></label>
-                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
+                        <label>
+                            <strong>Script:</strong>
+                        </label>
                         <div data-bind="validationElement: patchScript">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: patchScript, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: patchScript" style="height: 300px;"></pre>

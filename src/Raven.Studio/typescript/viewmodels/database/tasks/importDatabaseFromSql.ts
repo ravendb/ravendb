@@ -7,10 +7,9 @@ import listSqlDatabasesCommand = require("commands/database/tasks/listSqlDatabas
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import notificationCenter = require("common/notifications/notificationCenter");
-import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import defaultAceCompleter = require("common/defaultAceCompleter");
-import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
+import popoverUtils = require("common/popoverUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import referenceInUseDialog = require("viewmodels/database/tasks/referenceInUseDialog");
 
@@ -270,11 +269,24 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     enterEditMode(table: rootSqlTable) {
+        if (this.itemBeingEdited() === table) {
+            // act as toggle 
+            this.closeEditedTransformation();
+            return;
+        }
+        
         this.itemBeingEdited(table);
-    }
-    
-    syntaxHelp() {
-        //TODO:
+        
+        popoverUtils.longWithHover($("#editTransform .js-script-popover"),
+            {
+                content:
+                "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
+                "<pre><span class=\"token keyword\">var</span> age = <span class=\"token keyword\">this</span>.Age;<br />" +
+                "<span class=\"token keyword\">if</span> (age > <span class=\"token number\">18</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
+                "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
+                "<span class=\"token keyword\">this</span>.Adult = <span class=\"token keyword\">false</span>;<br />" +
+                "</pre>" 
+            });
     }
     
     closeEditedTransformation() {
