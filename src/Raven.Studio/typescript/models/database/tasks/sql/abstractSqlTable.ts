@@ -62,7 +62,7 @@ abstract class abstractSqlTable {
         
         // at this point we have 2 many-to-one references
         const allJoinColumns = _.flatMap(this.references(), r => r.joinColumns);
-        const primaryColumns = this.primaryKeyColumns().map(x => x.sqlName);
+        const primaryColumns = this.getPrimaryKeyColumnNames();
         
         return _.isEqual(allJoinColumns.sort(), primaryColumns.sort()); // references covers all primary key columns
     }

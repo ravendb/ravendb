@@ -4,7 +4,6 @@ import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 
 import sqlColumn = require("models/database/tasks/sql/sqlColumn");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
-import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 
 class sqlMigration {
     
