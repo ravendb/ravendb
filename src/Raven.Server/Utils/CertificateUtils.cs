@@ -144,7 +144,7 @@ namespace Raven.Server.Utils
             }
 
             // Serial Number
-            var serialNumber = new BigInteger(20, random);
+            var serialNumber = new BigInteger(20 * sizeof(byte), random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
@@ -194,7 +194,7 @@ namespace Raven.Server.Utils
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
 
             // Serial Number
-            BigInteger serialNumber = new BigInteger(20, random);
+            BigInteger serialNumber = new BigInteger(20 * sizeof(byte), random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
