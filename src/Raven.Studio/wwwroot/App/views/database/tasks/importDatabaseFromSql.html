@@ -145,11 +145,13 @@
                             <input type="checkbox" class="styled" data-bind="checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
-                        
                         <button class="btn btn-primary" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
                             <i class="icon-import"></i>
                             <span>Migrate selected tables </span><span data-bind="visible: model.testImport">(partial)</span>
                         </button>
+                        <div>
+                            <input type="text" accesskey="/" class="form-control filter-input" placeholder="Filter" title="Filter tables (Alt+/)" data-bind="textInput: $root.searchText" />    
+                        </div>
                         <div class="flex-separator"></div>
                         <div class="dropdown">
                             <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -376,7 +378,7 @@
         </div>
         
         <div class="form-group" data-bind="validationElement: maxDocumentsToImportPerTable, visible: testImport">
-            <label class="control-label left-ident">Maximum rows number<br /><small class="text-muted">per SQL table</small></label>
+            <label class="control-label left-indent">Maximum rows number<br /><small class="text-muted">per SQL table</small></label>
             <div class="flex-grow">
                 <input class="form-control" placeholder="Migration batch size" data-bind="numericInput: maxDocumentsToImportPerTable">
             </div>

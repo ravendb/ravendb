@@ -28,8 +28,11 @@ class importCollectionFromSql extends viewModelBase {
     
     model = new sqlMigration();
     
+    searchText = ko.observable<string>();
+    
     currentPage = ko.observable<number>(0);
     pageCount: KnockoutComputed<number>;
+    filteredTables = ko.observableArray<rootSqlTable>([]);
     currentTables: KnockoutComputed<Array<rootSqlTable>>;
     currentLocationHumane: KnockoutComputed<string>;
     
@@ -58,20 +61,20 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     private initObservables() {
-         this.pageCount = ko.pureComputed(() => Math.ceil(this.model.tables().length / importCollectionFromSql.pageCount) );
+        this.pageCount = ko.pureComputed(() => Math.ceil(this.filteredTables().length / importCollectionFromSql.pageCount) );
         
         this.currentTables = ko.pureComputed(() => {
             const start = this.currentPage() * importCollectionFromSql.pageCount;
-            return this.model.tables().slice(start, start + importCollectionFromSql.pageCount);
+            return this.filteredTables().slice(start, start + importCollectionFromSql.pageCount);
         });
         
         this.currentLocationHumane = ko.pureComputed(() => {
-            const total = this.model.tables().length;
+            const total = this.filteredTables().length;
             
             const start = this.currentPage() * importCollectionFromSql.pageCount + 1;
             const end = Math.min(total, start + importCollectionFromSql.pageCount - 1);
             
-            return "Tables " + start.toLocaleString() + "-" + end.toLocaleString() + " out of " + total.toLocaleString();
+            return "Tables " + start.toLocaleString() + "-" + end.toLocaleString() + " out of " + total.toLocaleString() + (this.searchText() ? " - filtered" : "");
         });
         
         this.globalSelectionState = ko.pureComputed<checkbox>(() => {
@@ -99,7 +102,22 @@ class importCollectionFromSql extends viewModelBase {
             if (focus) {
                 throttledFetch();
             }
-        })
+        });
+        
+        // dont' throttle for now as we need to point to exact location
+        // in case of performance issues we might replace filter with go to option
+        this.searchText.subscribe(() => this.filterTables());
+    }
+    
+    private filterTables() {
+        this.setCurrentPage(0);
+        const searchText = this.searchText();
+        if (searchText) {
+            const queryLower = searchText.toLocaleLowerCase();
+            this.filteredTables(this.model.tables().filter(x => x.tableName.toLocaleLowerCase().includes(queryLower) && x.collectionName().toLocaleLowerCase().includes(queryLower)));
+        } else {
+            this.filteredTables(this.model.tables());
+        }
     }
     
     private fetchDatabaseNamesAutocomplete() {
@@ -139,6 +157,8 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     private initSecondStep() {
+        this.filterTables();
+        
         this.registerDisposableHandler($("body"), "click", (event: JQueryEventObject) => {
             if ($(event.target).closest(".inline-edit").length === 0) {
                 // click outside edit area - close all of them
@@ -285,6 +305,8 @@ class importCollectionFromSql extends viewModelBase {
         const originalTopPosition = $("[data-ref-id=" + reference.id + "]").offset().top;
         const reverseReference = this.model.findReverseReference(reference);
         
+        this.searchText(""); // make sure table is visible
+        
         const table = (reverseReference.sourceTable as rootSqlTable);
         // first find page
         const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
@@ -313,7 +335,6 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     onCollapseTable(table: rootSqlTable, $event: JQueryMouseEventObject) {
-        
         if (table.checked()) {
             // we are about to uncheck this, find if we have any links to this table
             const links = this.model.findLinksToTable(table);
