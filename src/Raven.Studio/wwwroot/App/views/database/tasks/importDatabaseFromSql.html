@@ -191,9 +191,13 @@
                                     <span>Filter / Transform</span>
                                 </button>
                             </div>
-                            
                         </div>
                         <div class="panel-addon" data-bind="collapse: checked">
+                             <div class="table-warning has-error" data-bind="visible: hasDuplicateProperties">
+                                 <div class="help-block">
+                                    <i class="icon-warning"></i> This document contains duplicate property names
+                                 </div>
+                            </div>
                             <div class="document-id">
                                 <span class="text-muted"><i class="icon-sql-document-id"></i> Document ID:</span> 
                                 <span data-bind="text: documentIdTemplate"></span>

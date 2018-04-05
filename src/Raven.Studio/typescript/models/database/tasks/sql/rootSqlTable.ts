@@ -15,11 +15,35 @@ class rootSqlTable extends abstractSqlTable {
     transformResults = ko.observable<boolean>(false);  //TODO: validation  required onlyif
     patchScript = ko.observable<string>();
     
+    hasDuplicateProperties: KnockoutComputed<boolean>;
+    
     constructor() {
         super();
         this.documentIdTemplate = ko.pureComputed(() => {
             const templetePart = this.primaryKeyColumns().map(x => '{' + x.sqlName + '}').join("/");
             return this.collectionName() + "/" + templetePart;
+        });
+        
+        this.hasDuplicateProperties = ko.pureComputed(() => {
+            let hasDuplicates = false;
+            
+            if (this.checkForDuplicateProperties()) {
+                hasDuplicates = true;
+            }
+            
+            const refCheck = (reference: sqlReference) => {
+                if (reference.action() === "embed" && reference.effectiveInnerTable()) {
+                    if (reference.effectiveInnerTable().checkForDuplicateProperties()) {
+                        hasDuplicates = true;    
+                    }
+                                         
+                    reference.effectiveInnerTable().references().forEach(innerRef => refCheck(innerRef));    
+                }
+            };
+            
+            this.references().forEach(ref => refCheck(ref));
+            
+            return hasDuplicates;
         });
     }
     
