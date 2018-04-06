@@ -154,25 +154,22 @@
                                 data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }, click: continueWithFile">
                             <span class="icon-import"></span> <span>Continue using configuration file</span>
                         </button>
-                        
-                        
                     </div>
                 </div>
             </form>
-            
         </div>
     </div>
     
-    <div class="row flex-row flex-grow flex-stretch-items" id="js-second-step" data-bind="if: !inFirstStep()">
+    <div class="row flex-row flex-grow flex-stretch-items modal-root" id="js-second-step" data-bind="if: !inFirstStep()">
         <div class="col-sm-12 col-lg-8 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div class="panel panel-default flex-grow no-margin">
                     <div class="panel-body padding padding-sm flex-horizontal">
-                        <div class="checkbox checkbox-default checkbox-inline align-checkboxes" title="Select all or none">
+                        <div class="checkbox checkbox-default checkbox-inline align-checkboxes hidden-fullscreen" title="Select all or none">
                             <input type="checkbox" class="styled" data-bind="click: onToggleAllClick, checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
-                        <button class="btn btn-primary" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
+                        <button class="btn btn-primary hidden-fullscreen" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
                             <i class="icon-import"></i>
                             <span>Migrate selected tables </span><span data-bind="visible: model.testImport">(partial)</span>
                         </button>
@@ -180,16 +177,26 @@
                             <input type="text" accesskey="/" class="form-control filter-input" placeholder="Filter" title="Filter tables (Alt+/)" data-bind="textInput: $root.searchText" />    
                         </div>
                         <div class="flex-separator"></div>
-                        <div class="btn btn-default" data-bind="click: exportConfiguration">
-                            <i class="icon-export"></i>
-                            <span>Export configuration</span>
-                        </div>
-                        <div class="dropdown">
-                            <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                <i class="icon-settings"></i><span>Settings</span>
-                                <span class="caret"></span>
+                        <div>
+                            <button class="btn btn-default hidden-fullscreen" data-bind="click: exportConfiguration">
+                                <i class="icon-export"></i>
+                                <span>Export configuration</span>
                             </button>
-                            <div class="dropdown-menu settings-menu dropdown-menu-right" data-bind="dropdownPanel: true, template: { name: 'migration-settings-template' }">
+                            <button data-bind="click: enterFullScreen" class="btn btn-default hidden-fullscreen">
+                                <i class="icon-fullscreen"></i>
+                                <span>Full screen mode</span>
+                            </button>
+                            <button class="btn btn-default exit-button" data-bind="click: exitFullScreen">
+                                <i class="icon-exit-fullscreen"></i>
+                                <span>Exit full screen</span>
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <i class="icon-settings"></i><span>Settings</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <div class="dropdown-menu settings-menu dropdown-menu-right" data-bind="dropdownPanel: true, template: { name: 'migration-settings-template' }">
+                                </div>
                             </div>
                         </div>
                     </div>
