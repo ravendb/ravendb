@@ -3,132 +3,159 @@
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: nextStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>
+                
                 <div class="row">
-                    <div class="col-sm-8 col-lg-6 margin-top" data-bind="with: model">
-                        <div class="form-group">
-                            <div>
-                                <label class="control-label">SQL database driver</label>
-                            </div>
-                            <div class="flex-grow">
-                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                    <span data-bind="text: labelForProvider(databaseType())"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: $data.constructor.possibleProviders">
-                                    <li><a href="#"
-                                           data-bind="text: $parent.labelForProvider($data), click: $parent.databaseType.bind($parent.databaseType, $data)"></a>
-                                    </li>
-                                </ul>
-                                <span class="help-block" data-bind="validationMessage: databaseType"></span>
-                            </div>
-                        </div>
-                        <div data-bind="visible: databaseType() === 'MsSQL', with: sqlServer">
-                            <div class="form-group"
-                                 data-bind="validationElement: connectionString">
-                                <label class="control-label">Connection string<i class="required"></i></label>
+                    <div class="col-lg-6">
+                        <h4>Create new import configuration</h4>
+                        <hr />
+                        <div class="margin-top" data-bind="with: model">
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">SQL database driver</label>
+                                </div>
                                 <div class="flex-grow">
-                                    <textarea class="form-control"
-                                              data-bind="textInput: connectionString" rows="3"
-                                              title="The connection string for the SQL server"
-                                              placeholder="Enter the complete connection string for the SQL server">                                        
-                                    </textarea>
-                                    <div>
-                                        <small>
-                                            <i class="icon-info"></i>
-                                            Please provide 'Database name' in the field below, instead of using <code>Initial Catalog</code> option. 
-                                        </small>
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: labelForProvider(databaseType())"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $data.constructor.possibleProviders">
+                                        <li><a href="#"
+                                               data-bind="text: $parent.labelForProvider($data), click: $parent.databaseType.bind($parent.databaseType, $data)"></a>
+                                        </li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: databaseType"></span>
+                                </div>
+                            </div>
+                            <div data-bind="visible: databaseType() === 'MsSQL', with: sqlServer">
+                                <div class="form-group"
+                                     data-bind="validationElement: connectionString">
+                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <div class="flex-grow">
+                                        <textarea class="form-control"
+                                                  data-bind="textInput: connectionString" rows="3"
+                                                  title="The connection string for the SQL server"
+                                                  placeholder="Enter the complete connection string for the SQL server">                                        
+                                        </textarea>
+                                        <div>
+                                            <small>
+                                                <i class="icon-info"></i>
+                                                Please provide 'Database name' in the field below, instead of using <code>Initial Catalog</code> option. 
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div data-bind="visible: databaseType() === 'MySQL', with: mySql">
+                                <div class="form-group" data-bind="validationElement: server">
+                                    <label class="control-label">Server location<i class="required"></i></label>
+                                    <div class="flex-grow">
+                                        <input class="form-control"
+                                               data-bind="textInput: server"
+                                               placeholder="Server location">
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="validationElement: username,">
+                                    <label class="control-label">Username<i class="required"></i></label>
+                                    <div class="flex-grow">
+                                        <input class="form-control"
+                                               data-bind="textInput: username"
+                                               placeholder="Username">
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="validationElement: password">
+                                    <label class="control-label">Password</label>
+                                    <div class="flex-grow">
+                                        <input type="password" class="form-control"
+                                               data-bind="textInput: password"
+                                               placeholder="Password">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: sourceDatabaseName">
+                                <label class="control-label">SQL Database name<i class="required"></i></label>
+                                <div class="dropdown btn-block flex-grow"  data-bind="validationOptions: { insertMessages: false }">
+                                    <input class="form-control" autocomplete="off" id="sqlDatabaseName"
+                                           data-bind="textInput: sourceDatabaseName, hasFocus: $root.sourceDatabaseFocus"
+                                           placeholder="Enter the SQL Database name">
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu max-height" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#sqlDatabaseName', foreach: $root.createDbAutocompleter(sourceDatabaseName)">
+                                        <li role="presentation" data-bind="click: $parent.sourceDatabaseName.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: sourceDatabaseName">
+                                        <div class="help-block" data-bind="validationMessage: sourceDatabaseName"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <div class="col-sm-10">
+                                     <button class="btn btn-default" type="button"
+                                            data-bind="click: $root.showAdvancedOptions.toggle.bind($root.showAdvancedOptions)">
+                                        Advanced
+                                    </button> 
+                                    <button class="btn btn-primary" type="submit"
+                                            data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }">
+                                        <span class="icon-import"></span> <span>Create new import</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div data-bind="collapse: $root.showAdvancedOptions">
+                                <h3>Advanced options</h3>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="pascalCase" type="checkbox" data-bind="checked: advanced.usePascalCase">
+                                        <label for="pascalCase">Convert property names to <strong>PascalCase</strong></label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="removeId" type="checkbox" data-bind="checked: advanced.trimUnderscoreId">
+                                        <label for="removeId">Trim <strong>_id</strong> from property names</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="manyToMany" type="checkbox" data-bind="checked: advanced.detectManyToMany">
+                                        <label for="manyToMany">Detect <strong>many-to-many</strong> relationships</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div data-bind="visible: databaseType() === 'MySQL', with: mySql">
-                            <div class="form-group" data-bind="validationElement: server">
-                                <label class="control-label">Server location<i class="required"></i></label>
-                                <div class="flex-grow">
-                                    <input class="form-control"
-                                           data-bind="textInput: server"
-                                           placeholder="Server location">
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: username,">
-                                <label class="control-label">Username<i class="required"></i></label>
-                                <div class="flex-grow">
-                                    <input class="form-control"
-                                           data-bind="textInput: username"
-                                           placeholder="Username">
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: password">
-                                <label class="control-label">Password</label>
-                                <div class="flex-grow">
-                                    <input type="password" class="form-control"
-                                           data-bind="textInput: password"
-                                           placeholder="Password">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="validationElement: sourceDatabaseName">
-                            <label class="control-label">SQL Database name<i class="required"></i></label>
-                            <div class="dropdown btn-block flex-grow"  data-bind="validationOptions: { insertMessages: false }">
-                                <input class="form-control" autocomplete="off" id="sqlDatabaseName"
-                                       data-bind="textInput: sourceDatabaseName, hasFocus: $root.sourceDatabaseFocus"
-                                       placeholder="Enter the SQL Database name">
-                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                <ul class="dropdown-menu max-height" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#sqlDatabaseName', foreach: $root.createDbAutocompleter(sourceDatabaseName)">
-                                    <li role="presentation" data-bind="click: $parent.sourceDatabaseName.bind($parent, $data)">
-                                        <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
-                                        </a>
-                                    </li>
-                                </ul>
-                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: sourceDatabaseName">
-                                    <div class="help-block" data-bind="validationMessage: sourceDatabaseName"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div data-bind="collapse: $root.showAdvancedOptions">
-                            <hr />
-                            <h3>Advanced options</h3>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle">
-                                    <input id="pascalCase" type="checkbox" data-bind="checked: advanced.usePascalCase">
-                                    <label for="pascalCase">Convert property names to <strong>PascalCase</strong></label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle">
-                                    <input id="removeId" type="checkbox" data-bind="checked: advanced.trimUnderscoreId">
-                                    <label for="removeId">Trim <strong>_id</strong> from property names</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle">
-                                    <input id="manyToMany" type="checkbox" data-bind="checked: advanced.detectManyToMany">
-                                    <label for="manyToMany">Detect <strong>many-to-many</strong> relationships</label>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-                </div>
-                <hr/>
-                <div class="alert alert-warning">
-                    If user goes back to this view offer an option to continue previous setup
-                </div>
-                <hr/>
-                <div class="form-group">
-                    <div class="col-sm-10">
-                        <button class="btn btn-default" type="button" data-bind="click: $root.showAdvancedOptions.toggle.bind($root.showAdvancedOptions)">
-                            Advanced
+                    <div class="col-lg-6">
+                        <h4>Continue existing migration</h4>
+                        <hr />
+                        
+                        <div class="bg-info padding padding-xs margin-bottom"><small><i class="icon-info"></i> Note: Use this option if you have exported migration file</small></div>
+                        <div class="row form-group">
+                            <div class="col-lg-12">
+                                <div class="input-group file-input" data-bind="validationElement: importedFileName">
+                                    <input type="file" id="jsImportSqlFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
+                                    <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
+                                    <span class="input-group-btn">
+                                        <label for="jsImportSqlFilePicker" class="btn btn-default">
+                                            <i class="icon-document"></i><span>Browse</span>
+                                        </label>
+                                    </span>
+                                    <p class="help-block" data-bind="validationMessage: importedFileName"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="button"
+                                data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }, click: continueWithFile">
+                            <span class="icon-import"></span> <span>Continue using configuration file</span>
                         </button>
-                        <button class="btn btn-primary" type="submit" 
-                                data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }">
-                            <span class="icon-import"></span> <span>Continue</span>
-                        </button>
+                        
+                        
                     </div>
                 </div>
             </form>
@@ -153,6 +180,10 @@
                             <input type="text" accesskey="/" class="form-control filter-input" placeholder="Filter" title="Filter tables (Alt+/)" data-bind="textInput: $root.searchText" />    
                         </div>
                         <div class="flex-separator"></div>
+                        <div class="btn btn-default" data-bind="click: exportConfiguration">
+                            <i class="icon-export"></i>
+                            <span>Export configuration</span>
+                        </div>
                         <div class="dropdown">
                             <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                 <i class="icon-settings"></i><span>Settings</span>

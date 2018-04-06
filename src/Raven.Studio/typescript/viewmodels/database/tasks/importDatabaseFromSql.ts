@@ -1,4 +1,5 @@
 import app = require("durandal/app");
+import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
@@ -10,10 +11,17 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import popoverUtils = require("common/popoverUtils");
+import messagePublisher = require("common/messagePublisher");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageDialog");
 
-//TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
+interface exportDataDto {
+    Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,
+    Configuration: Raven.Server.SqlMigration.Model.MigrationRequest,
+    Advanced: sqlMigrationAdvancedSettingsDto,
+    DatabaseName: string
+}
+
 class importCollectionFromSql extends viewModelBase {
     
     static pageCount = 5; //TODO: set to 100!
@@ -34,6 +42,7 @@ class importCollectionFromSql extends viewModelBase {
     filteredTables = ko.observableArray<rootSqlTable>([]);
     currentTables: KnockoutComputed<Array<rootSqlTable>>;
     currentLocationHumane: KnockoutComputed<string>;
+    itemBeingEdited = ko.observable<rootSqlTable>();
     
     inFirstStep = ko.observable<boolean>(true);
     globalSelectionState: KnockoutComputed<checkbox>;
@@ -41,22 +50,31 @@ class importCollectionFromSql extends viewModelBase {
     
     showAdvancedOptions = ko.observable<boolean>(false);
     
-    itemBeingEdited = ko.observable<rootSqlTable>();
-    
     sourceDatabaseFocus = ko.observable<boolean>(false);
     databaseNames = ko.observableArray<string>([]);
+    importedFileName = ko.observable<string>();
     
-    validationGroup: KnockoutValidationGroup;    
+    continueFlowValidationGroup: KnockoutValidationGroup;
 
     constructor() {
         super();
         
         aceEditorBindingHandler.install();
 
-        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences",
+        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences", "fileSelected",
             "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable");
         
         this.initObservables();
+        this.initValidation();
+    }
+    
+    private initValidation() {
+        this.importedFileName.extend({
+            required: true
+        });
+        this.continueFlowValidationGroup = ko.validatedObservable({
+            importedFileName: this.importedFileName
+        })
     }
     
     private initObservables() {
@@ -108,26 +126,73 @@ class importCollectionFromSql extends viewModelBase {
         this.searchText.subscribe(() => this.filterTables());
     }
     
-    private filterTables() {
-        this.setCurrentPage(0);
-        const searchText = this.searchText();
-        if (searchText) {
-            const queryLower = searchText.toLocaleLowerCase();
-            this.filteredTables(this.model.tables().filter(x => x.tableName.toLocaleLowerCase().includes(queryLower) && x.collectionName().toLocaleLowerCase().includes(queryLower)));
-        } else {
-            this.filteredTables(this.model.tables());
-        }
+    createDbAutocompleter(dbName: KnockoutObservable<string>) {
+        return ko.pureComputed(()=> {
+            const dbNameUnwrapped = dbName() ? dbName().toLocaleLowerCase() : "";
+            
+            return this.databaseNames()
+                .filter(name => name.toLocaleLowerCase().includes(dbNameUnwrapped));
+        });
     }
     
+    fileSelected(fileName: string) {
+        const isFileSelected = fileName ? !!fileName.trim() : false;
+        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
+    }
+    
+    continueWithFile() {
+        if (!this.isValid(this.continueFlowValidationGroup)) {
+            return;
+        }
+        
+        const fileInput = <HTMLInputElement>document.querySelector("#jsImportSqlFilePicker");
+        const self = this;
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function () {
+            self.onConfigurationFileRead(this.result);
+        };
+        reader.onerror = (error: any) => {
+            alert(error);
+        };
+        reader.readAsText(file);
+    }
+    
+    private onConfigurationFileRead(content: string) {
+        let importedData: exportDataDto;
+        try {
+             importedData = JSON.parse(content); 
+        } catch (e) {
+            messagePublisher.reportError("Failed to parse json data", undefined, undefined);
+            throw e;
+        }
+
+        // Check correctness of data
+        if (!importedData.hasOwnProperty('Schema') || !importedData.hasOwnProperty('Configuration')) {
+            messagePublisher.reportError("Invalid SQL migration file format", undefined, undefined);
+        } else {
+            this.togglingAll(true);
+            
+            this.inFirstStep(false);
+            this.model.sourceDatabaseName(importedData.DatabaseName);
+            this.model.loadAdvancedSettings(importedData.Advanced);
+            this.model.onSchemaUpdated(importedData.Schema, false);
+            
+            this.initSecondStep();
+            this.model.applyConfiguration(importedData.Configuration);
+            
+            this.togglingAll(false);
+        }
+    }
+
     private fetchDatabaseNamesAutocomplete() {
         new listSqlDatabasesCommand(this.activeDatabase(), this.model.toSourceDto())
             .execute()
             .done(dbNames => this.databaseNames(dbNames)); 
-    }
-    
-    setCurrentPage(page: number) {
-        this.currentPage(page);
-        $(".js-scroll-tables").scrollTop(0);
     }
     
     nextStep() {        
@@ -177,6 +242,22 @@ class importCollectionFromSql extends viewModelBase {
             container.addClass("edit-mode");
             $("input", container).focus();
         })
+    }
+    
+    private filterTables() {
+        this.setCurrentPage(0);
+        const searchText = this.searchText();
+        if (searchText) {
+            const queryLower = searchText.toLocaleLowerCase();
+            this.filteredTables(this.model.tables().filter(x => x.tableName.toLocaleLowerCase().includes(queryLower) && x.collectionName().toLocaleLowerCase().includes(queryLower)));
+        } else {
+            this.filteredTables(this.model.tables());
+        }
+    }
+    
+    setCurrentPage(page: number) {
+        this.currentPage(page);
+        $(".js-scroll-tables").scrollTop(0);
     }
     
     migrate() {
@@ -320,15 +401,6 @@ class importCollectionFromSql extends viewModelBase {
         }
     }
     
-    createDbAutocompleter(dbName: KnockoutObservable<string>) {
-        return ko.pureComputed(()=> {
-            const dbNameUnwrapped = dbName() ? dbName().toLocaleLowerCase() : "";
-            
-            return this.databaseNames()
-                .filter(name => name.toLocaleLowerCase().includes(dbNameUnwrapped));
-        });
-    }
-    
     goToReverseReference(reference: sqlReference, animate = true) {
         const originalTopPosition = $("[data-ref-id=" + reference.id + "]").offset().top;
         const reverseReference = this.model.findReverseReference(reference);
@@ -413,12 +485,30 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     createLinksCount(table: rootSqlTable) {
-        return ko.pureComputed(() => this.model.findLinksToTable(table).length);
+        return ko.pureComputed(() => {
+            if (this.togglingAll()) {
+                return 0;
+            }
+            return this.model.findLinksToTable(table).length;
+        });
     }
     
     showIncomingReferences(table: rootSqlTable) {
         const links = this.model.findLinksToTable(table);
         app.showBootstrapDialog(new referenceUsageDialog(table, links, false,  (ref, action) => this.onActionClicked(ref, action)));
+    }
+    
+    exportConfiguration() {
+        const exportFileName = `Sql-import-from-${this.model.sourceDatabaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
+
+        const exportData = {
+            Schema: this.model.dbSchema,
+            Configuration: this.model.toDto(),
+            Advanced: this.model.advancedSettingsDto(),
+            DatabaseName: this.model.sourceDatabaseName()
+        } as exportDataDto;
+        
+        fileDownloader.downloadAsJson(exportData, exportFileName + ".json", exportFileName);
     }
 }
 
