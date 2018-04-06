@@ -82,7 +82,7 @@ namespace Raven.Server.Indexing
             _stream.UpdateCurrentTransaction(state.Transaction);
             var readByte = _stream.ReadByte();
             if (readByte == -1)
-                throw new EndOfStreamException();
+                ThrowEndOfStreamException();
 
             return (byte)readByte;
         }
@@ -104,6 +104,9 @@ namespace Raven.Server.Indexing
 
         public override void Seek(long pos, IState s)
         {
+            if (pos >= _stream.Length)
+                ThrowInvalidSeekPosition(pos);
+
             var state = s as VoronState;
             if (state == null)
             {
@@ -185,6 +188,16 @@ namespace Raven.Server.Indexing
         private static void ThrowStateNullException()
         {
             throw new ArgumentNullException("State");
+        }
+
+        private void ThrowEndOfStreamException()
+        {
+            throw  new EndOfStreamException($"Input name: {_name}. Current position: {_stream.Position}, length: {_stream.Length}");
+        }
+
+        private void ThrowInvalidSeekPosition(long pos)
+        {
+            throw new InvalidOperationException($"Cannot set stream position to {pos} because the length of '{_name}' stream is {_stream.Length}");
         }
     }
 }
