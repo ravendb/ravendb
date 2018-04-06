@@ -181,11 +181,15 @@
                                 </div>    
                             </div>
                             <div class="flex-separator"></div>
-                            <div class="customizations">
+                            <div class="customizations" data-bind="visible: checked">
                                 <i title="Filtering is enabled" data-bind="visible: customizeQuery" class="icon-query"></i>
                                 <i title="Transform script is enabled" data-bind="visible: transformResults" class="icon-patch"></i>
                             </div>
-                            <div>
+                            <div data-bind="visible: checked">
+                                <button class="btn btn-default" title="Show incoming links" data-bind="click: $root.showIncomingReferences">
+                                    <i class="icon-sql-many-to-one"></i>
+                                    <span data-bind="text: $root.createLinksCount($data)"></span>
+                                </button>
                                 <button class="btn btn-default" data-bind="click: $root.enterEditMode, css: { active: $data === $root.itemBeingEdited() }">
                                     <i class="icon-edit"></i>
                                     <span>Filter / Transform</span>

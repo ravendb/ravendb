@@ -11,7 +11,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import popoverUtils = require("common/popoverUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
-import referenceInUseDialog = require("viewmodels/database/tasks/referenceInUseDialog");
+import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageDialog");
 
 //TODO: consider removing 'Please provide 'Database name' in field below, instead of using' - instead automatically extract this from connection string on blur
 class importCollectionFromSql extends viewModelBase {
@@ -53,7 +53,7 @@ class importCollectionFromSql extends viewModelBase {
         
         aceEditorBindingHandler.install();
 
-        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", 
+        this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences",
             "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable");
         
         this.initObservables();
@@ -225,6 +225,17 @@ class importCollectionFromSql extends viewModelBase {
     
     private onEmbedTable(reference: sqlReference) {
         this.model.onEmbedTable(reference);
+        
+        const links = this.model.findLinksToTable(reference.targetTable);
+        const targetTable = reference.targetTable as rootSqlTable;
+        if (links.length === 0 && targetTable.checked()) {
+            this.confirmationMessage("Deselect table?", "Table '" + reference.targetTable.tableName + "' can be deselected, after being embedded. Do you want to deselect?", ["No", "Yes, deselect"])
+                .done(result => {
+                    if (result.can) {
+                        targetTable.checked(false);
+                    }
+                });
+        }
     }
     
     private onLinkTable(reference: sqlReference) {
@@ -257,7 +268,6 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     toggleSelectAll() {
-        //TODO: disable checks? 
         this.togglingAll(true);
         const selectedCount = this.model.getSelectedTablesCount();
 
@@ -369,12 +379,14 @@ class importCollectionFromSql extends viewModelBase {
             // we are about to uncheck this, find if we have any links to this table
             const links = this.model.findLinksToTable(table);
             if (links.length > 0) {
-                app.showBootstrapDialog(new referenceInUseDialog(table, links, (ref, action) => this.onActionClicked(ref, action)));
+                app.showBootstrapDialog(new referenceUsageDialog(table, links, true, (ref, action) => this.onActionClicked(ref, action)));
                     
                 $event.preventDefault();
                 $event.stopImmediatePropagation();
                 return false;
             }
+            
+            table.setAllLinksToSkip();
         }
         
         return true; // allow checked handler to be executed
@@ -383,7 +395,7 @@ class importCollectionFromSql extends viewModelBase {
     onToggleAllClick(_: any, $event: JQueryMouseEventObject) {
         if (this.model.getSelectedTablesCount()) {
             
-            this.confirmationMessage("Unselect all tables", "To maintain connections integrity, all references with action 'link' will be set to 'skip'. Do you want to proceed? ", ["Cancel", "Set references to 'skip' and unselect all"])
+            this.confirmationMessage("Deselect all tables", "To maintain connections integrity, all references with action 'link' will be set to 'skip'. Do you want to proceed? ", ["Cancel", "Set references to 'skip' and deselect all"])
                 .done(result => {
                     if (result.can) {
                         this.model.setAllLinksToSkip();
@@ -398,6 +410,15 @@ class importCollectionFromSql extends viewModelBase {
         } 
         
         return true; // allow checked handler to be executed
+    }
+    
+    createLinksCount(table: rootSqlTable) {
+        return ko.pureComputed(() => this.model.findLinksToTable(table).length);
+    }
+    
+    showIncomingReferences(table: rootSqlTable) {
+        const links = this.model.findLinksToTable(table);
+        app.showBootstrapDialog(new referenceUsageDialog(table, links, false,  (ref, action) => this.onActionClicked(ref, action)));
     }
 }
 
