@@ -205,8 +205,8 @@ namespace Raven.Server.ServerWide
             var positionOfRead = _blockNumber * _internalBuffer.Length + _bufferIndex;
             while (totalRead < _internalBuffer.Length)
             {
-                var amountToRead = Math.Min(_internalBuffer.Length - totalRead, Math.Max(0, (int)(_maxLength - positionOfRead)));
-                var currentRead = _stream.Read(_internalBuffer, totalRead, amountToRead);
+                var amountToRead = Math.Min(_internalBuffer.Length - totalRead, Math.Max(0, _maxLength - positionOfRead));
+                var currentRead = _stream.Read(_internalBuffer, totalRead, (int)amountToRead);
                 positionOfRead += currentRead;
                 if (currentRead == 0)
                 {
