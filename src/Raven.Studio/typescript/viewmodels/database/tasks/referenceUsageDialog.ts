@@ -2,11 +2,11 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 
-class referenceInUseDialog extends dialogViewModelBase {
+class referenceUsageDialog extends dialogViewModelBase {
     
     allResolved: KnockoutComputed<boolean>;
     
-    constructor(private table: rootSqlTable, private references: Array<sqlReference>, private action: (ref: sqlReference, action: sqlMigrationAction) => void) {
+    constructor(private table: rootSqlTable, private references: Array<sqlReference>, private enforceNoLinks: boolean, private action: (ref: sqlReference, action: sqlMigrationAction) => void) {
         super();
         
         this.bindToCurrentInstance("onActionClicked");
@@ -25,6 +25,7 @@ class referenceInUseDialog extends dialogViewModelBase {
     }
     
     unselect() {
+        this.table.setAllLinksToSkip();
         this.table.checked(false);
         
         this.close();
@@ -35,4 +36,4 @@ class referenceInUseDialog extends dialogViewModelBase {
     }
 }
 
-export = referenceInUseDialog; 
+export = referenceUsageDialog; 

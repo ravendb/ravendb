@@ -72,6 +72,18 @@ abstract class abstractSqlTable {
         return _.isEqual(allJoinColumns.sort(), primaryColumns.sort()); // references covers all primary key columns
     }
     
+     setAllLinksToSkip() {
+        this.references().forEach(reference => {
+            if (reference.action() === 'link') {
+                reference.skip();
+            }
+            
+            if (reference.action() === 'embed') {
+                reference.effectiveInnerTable().setAllLinksToSkip();
+            }
+        });
+    }
+    
 }
 
 export = abstractSqlTable;

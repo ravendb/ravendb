@@ -337,13 +337,7 @@ class sqlMigration {
     }
     
     setAllLinksToSkip() {
-        this.tables().forEach(table => {
-            table.references().forEach(reference => {
-                if (reference.action() === 'link') {
-                    reference.skip();
-                }
-            })
-        })
+        this.tables().forEach(table => table.setAllLinksToSkip());
     }
 
 }
