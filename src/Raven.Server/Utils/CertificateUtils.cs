@@ -19,6 +19,8 @@ namespace Raven.Server.Utils
 {
     internal class CertificateUtils
     {
+        private const int BitsPerByte = 8; 
+
         public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName);
@@ -144,7 +146,7 @@ namespace Raven.Server.Utils
             }
 
             // Serial Number
-            var serialNumber = new BigInteger(20 * sizeof(byte), random);
+            var serialNumber = new BigInteger(20 * BitsPerByte, random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
@@ -194,7 +196,7 @@ namespace Raven.Server.Utils
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
 
             // Serial Number
-            BigInteger serialNumber = new BigInteger(20 * sizeof(byte), random);
+            BigInteger serialNumber = new BigInteger(20 * BitsPerByte, random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
