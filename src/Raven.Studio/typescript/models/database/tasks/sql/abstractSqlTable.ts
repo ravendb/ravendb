@@ -54,7 +54,9 @@ abstract class abstractSqlTable {
         this.references()
             .filter(x => x.action() === "embed")
             .map(ref => {
-                foundItems.push(...ref.effectiveInnerTable().findLinksToTable(tableToFind));
+                if (ref.effectiveInnerTable()) {
+                    foundItems.push(...ref.effectiveInnerTable().findLinksToTable(tableToFind));
+                }
             });
         
         return foundItems;

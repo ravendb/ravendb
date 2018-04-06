@@ -126,6 +126,14 @@ class importCollectionFromSql extends viewModelBase {
         this.searchText.subscribe(() => this.filterTables());
     }
     
+    compositionComplete() {
+        super.compositionComplete();
+        
+        this.registerDisposableHandler($(document), "fullscreenchange", () => {
+            $("body").toggleClass("fullscreen", $(document).fullScreen());
+        });
+    }
+    
     createDbAutocompleter(dbName: KnockoutObservable<string>) {
         return ko.pureComputed(()=> {
             const dbNameUnwrapped = dbName() ? dbName().toLocaleLowerCase() : "";
@@ -509,6 +517,14 @@ class importCollectionFromSql extends viewModelBase {
         } as exportDataDto;
         
         fileDownloader.downloadAsJson(exportData, exportFileName + ".json", exportFileName);
+    }
+    
+    enterFullScreen() {
+        $("#js-second-step").fullScreen(true);
+    }
+
+    exitFullScreen() {
+        $("#js-second-step").fullScreen(false);
     }
 }
 

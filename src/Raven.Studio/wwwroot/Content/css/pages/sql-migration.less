@@ -1,7 +1,38 @@
 @raven-field-color: #a4f012;
 
+.fullscreen {
+    
+    #editTransform {
+        margin-top: 60px;
+    }
+    
+    .hidden-fullscreen {
+        display: none;
+    }
+    
+    .sql-migration {
+        width: 100%;
+        
+        .exit-button {
+            display: inline-block;
+        }
+        
+        & > h3 {
+            display: block;
+        }
+        
+        .modal-root {
+            width: 100%;
+            background-color: @gray-base;
+        }
+    }
+}
+
 .sql-migration {
 
+    .exit-button {
+        display: none;
+    }
     
     .customizations {
         font-size: 10px;
