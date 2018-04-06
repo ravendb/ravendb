@@ -35,9 +35,13 @@ class sqlMigration {
         password: ko.observable<string>() 
     };
     
+    connectionStringOverride = ko.observable<string>();
+    
     mySqlValidationGroup: KnockoutValidationGroup;
     
     tables = ko.observableArray<rootSqlTable>([]);
+    
+    dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema;
     
     collectionNameTransformationFunc: (name: string) => string;
     propertyNameTransformationFunc: (name: string) => string;
@@ -136,7 +140,9 @@ class sqlMigration {
         return result;
     }
     
-    onSchemaUpdated(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema) {
+    onSchemaUpdated(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema, defaultSetup = true) {
+        this.dbSchema = dbSchema;
+        
         const mapping = _.map(dbSchema.Tables, tableDto => {
             const table = new rootSqlTable();
             
@@ -166,7 +172,12 @@ class sqlMigration {
                 sourceTable.references.push(oneToMany);
                 
                 const manyToOne = new sqlReference(sourceTable, targetTable, referenceDto.Columns, "ManyToOne");
-                manyToOne.link(sourceTable);
+                if (defaultSetup) {
+                    manyToOne.link(sourceTable);    
+                } else {
+                    manyToOne.skip();
+                }
+                
                 targetTable.references.push(manyToOne);
             });
         });
@@ -175,7 +186,7 @@ class sqlMigration {
         
         this.tables(mapping);
         
-        if (this.advanced.detectManyToMany()) {
+        if (defaultSetup && this.advanced.detectManyToMany()) {
             this.detectManyToMany();
         }
     }
@@ -232,6 +243,11 @@ class sqlMigration {
     }
     
     getConnectionString() {
+        if (this.connectionStringOverride()) {
+            // used when we import configuration file
+            return this.connectionStringOverride();
+        }
+        
         switch (this.databaseType()) {
             case "MySQL":
                 let mySQLConnectionString = `server='${this.escape(this.mySql.server())}';` +
@@ -250,7 +266,7 @@ class sqlMigration {
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);
         }
     }
-
+    
     toSourceDto(): Raven.Server.SqlMigration.Model.SourceSqlDatabase {
         return {
             ConnectionString: this.getConnectionString(),
@@ -271,6 +287,20 @@ class sqlMigration {
                     .map(x => x.toDto())
             }
         } as Raven.Server.SqlMigration.Model.MigrationRequest;
+    }
+    
+    advancedSettingsDto(): sqlMigrationAdvancedSettingsDto {
+        return {
+            UsePascalCase: this.advanced.usePascalCase(),
+            DetectManyToMany: this.advanced.detectManyToMany(),
+            TrimUnderscoreId: this.advanced.trimUnderscoreId()
+        }
+    }
+    
+    loadAdvancedSettings(dto: sqlMigrationAdvancedSettingsDto) {
+        this.advanced.usePascalCase(dto.UsePascalCase);
+        this.advanced.trimUnderscoreId(dto.TrimUnderscoreId);
+        this.advanced.detectManyToMany(dto.DetectManyToMany);
     }
 
     getValidationGroup(): KnockoutValidationGroup {
@@ -338,6 +368,71 @@ class sqlMigration {
     
     setAllLinksToSkip() {
         this.tables().forEach(table => table.setAllLinksToSkip());
+    }
+    
+    applyConfiguration(config: Raven.Server.SqlMigration.Model.MigrationRequest) {
+        const source = config.Source;
+        
+        this.databaseType(source.Provider);
+        this.connectionStringOverride(source.ConnectionString);
+        
+        const settings = config.Settings;
+        this.binaryToAttachment(settings.BinaryToAttachment);
+        this.batchSize(settings.BatchSize);
+        this.testImport(!!settings.MaxRowsPerTable);
+        this.maxDocumentsToImportPerTable(this.testImport() ? settings.MaxRowsPerTable : 1000);
+        
+        settings.Collections.forEach(collection => {
+            const rootTable = this.findRootTable(collection.SourceTableSchema, collection.SourceTableName);
+            this.applyConfigurationToCollection(rootTable, collection, "root");
+        });
+        
+        this.tables().forEach(table => {
+            const matchedTable = settings.Collections.find(x => x.SourceTableSchema === table.tableSchema && x.SourceTableName === table.tableName);
+            if (!matchedTable) {
+                table.checked(false);
+            }
+        })
+    }
+    
+    private applyConfigurationToCollection(table: abstractSqlTable, collection: Raven.Server.SqlMigration.Model.AbstractCollection, collectionType: "root" | "embed") {
+        if (collectionType === "root") {
+            const rootCollection = collection as Raven.Server.SqlMigration.Model.RootCollection;
+            const rootTable = table as rootSqlTable;
+            
+            if (rootCollection.SourceTableQuery) {
+                rootTable.customizeQuery(true);
+                rootTable.query(rootCollection.SourceTableQuery);
+            }
+            
+            if (rootCollection.Patch) {
+                rootTable.transformResults(true);
+                rootTable.patchScript(rootCollection.Patch);
+            }
+            
+            rootTable.collectionName(rootCollection.Name);
+        }
+        
+        const withReferences = collection as Raven.Server.SqlMigration.Model.CollectionWithReferences;
+            
+        withReferences.NestedCollections.forEach(nested => {
+            const reference = table.findReference(nested);
+            reference.name(nested.Name);
+            this.onEmbedTable(reference);
+            
+            this.applyConfigurationToCollection(reference.effectiveInnerTable(), nested, "embed");
+        });
+        
+        withReferences.LinkedCollections.forEach(linked => {
+            const reference = table.findReference(linked);
+            reference.link(reference.targetTable);
+            reference.name(linked.Name);
+        });
+        
+        Object.keys(collection.ColumnsMapping).forEach(sqlName => {
+            const column = table.documentColumns().find(x => x.sqlName === sqlName);
+            column.propertyName(collection.ColumnsMapping[sqlName]);
+        });
     }
 
 }

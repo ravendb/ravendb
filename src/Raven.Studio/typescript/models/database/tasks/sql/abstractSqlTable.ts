@@ -40,6 +40,13 @@ abstract class abstractSqlTable {
         return mapping;
     }
     
+    findReference(target: Raven.Server.SqlMigration.Model.ICollectionReference): sqlReference {
+        return this.references().find(x => x.type === target.Type 
+            && _.isEqual(x.joinColumns, target.JoinColumns) 
+            && x.targetTable.tableSchema === target.SourceTableSchema 
+            && x.targetTable.tableName === target.SourceTableName);
+    }
+    
     findLinksToTable(tableToFind: abstractSqlTable): Array<sqlReference> {
         const foundItems = this.references()
             .filter(x => x.action() === 'link' && x.targetTable.tableSchema === tableToFind.tableSchema && x.targetTable.tableName === tableToFind.tableName);
