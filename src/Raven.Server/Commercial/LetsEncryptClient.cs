@@ -245,12 +245,6 @@ namespace Raven.Server.Commercial
             foreach (var item in order.Authorizations)
             {
                 var (challengeResponse, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, item, null, token);
-                if (challengeResponse.Status == "valid")
-                    continue;
-
-                if (challengeResponse.Status != "pending")
-                    throw new InvalidOperationException("Expected autorization status 'pending', but got: " + order.Status +
-                        Environment.NewLine + responseText);
 
                 var challenge = challengeResponse.Challenges.First(x => x.Type == "dns-01");
                 _challenges.Add(challenge);
@@ -260,6 +254,13 @@ namespace Raven.Server.Commercial
                     var dnsToken = Jws.Base64UrlEncoded(sha256.ComputeHash(Encoding.UTF8.GetBytes(keyToken)));
                     results[challengeResponse.Identifier.Value.ToLowerInvariant()] = dnsToken;
                 }
+
+                if (challengeResponse.Status == "valid")
+                    continue;
+
+                if (challengeResponse.Status != "pending")
+                    throw new InvalidOperationException("Expected autorization status 'pending', but got: " + order.Status +
+                        Environment.NewLine + responseText);
             }
 
             return results;
@@ -374,7 +375,7 @@ namespace Raven.Server.Commercial
                 return false;
             }
 
-            var cert = new X509Certificate2(cache.Cert);
+            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(cache.Cert));
 
             // if it is about to expire, we need to refresh
             if ((cert.NotAfter - DateTime.UtcNow).TotalDays < 14)
