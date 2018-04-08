@@ -149,6 +149,7 @@ namespace Raven.Server.Commercial
         public License License { get; set; }
         public string Domain { get; set; }
         public string RootDomain { get; set; }
+        public string Challenge { get; set; }
         public List<RegistrationNodeInfo> SubDomains { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -158,6 +159,7 @@ namespace Raven.Server.Commercial
                 [nameof(License)] = License.ToJson(),
                 [nameof(Domain)] = Domain,
                 [nameof(RootDomain)] = RootDomain,
+                [nameof(Challenge)] = Challenge,
                 [nameof(SubDomains)] = SubDomains.Select(o => o.ToJson()).ToArray()
             };
         }
@@ -167,7 +169,6 @@ namespace Raven.Server.Commercial
     {
         public List<string> Ips { get; set; }
         public string SubDomain { get; set; }
-        public string Challenge { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -175,7 +176,6 @@ namespace Raven.Server.Commercial
             {
                 [nameof(Ips)] = new DynamicJsonArray(Ips),
                 [nameof(SubDomain)] = SubDomain,
-                [nameof(Challenge)] = Challenge
             };
         }
     }

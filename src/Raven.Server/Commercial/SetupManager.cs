@@ -63,7 +63,7 @@ namespace Raven.Server.Commercial
 
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
             await acmeClient.Init(email);
-            return await acmeClient.GetTermsOfServiceUri();
+            return acmeClient.GetTermsOfServiceUri();
         }
 
         public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
@@ -137,10 +137,9 @@ namespace Raven.Server.Commercial
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
 
-
             try
             {
-                await UpdateDnsRecordsForCertificateRefreshTask(challengeResult.Challenges, setupInfo, token);
+                await UpdateDnsRecordsForCertificateRefreshTask(challengeResult.Challenge, setupInfo, token);
 
                 // Cache the current DNS topology so we can check it again
             }
@@ -394,7 +393,7 @@ namespace Raven.Server.Commercial
                 var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
                 progress.Processed++;
-                progress.AddInfo(challengeResult.Challenges != null
+                progress.AddInfo(challengeResult.Challenge != null
                     ? "Successfully received challenge(s) information from Let's Encrypt."
                     : "Using cached Let's Encrypt certificate.");
 
@@ -404,7 +403,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challenges, setupInfo, token);
+                    await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challenge, setupInfo, token);
                 }
                 catch (Exception e)
                 {
@@ -509,9 +508,9 @@ namespace Raven.Server.Commercial
         }
 
         private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, SetupInfo setupInfo,  LetsEncryptClient client, 
-            (Dictionary<string, string> Challanges, LetsEncryptClient.CachedCertificateResult Cache) challengeResult,  CancellationToken token)
+            (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult,  CancellationToken token)
         {
-            if (challengeResult.Challanges == null && challengeResult.Cache != null)
+            if (challengeResult.Challange == null && challengeResult.Cache != null)
             {
                 return BuildNewPfx(setupInfo, challengeResult.Cache.Certificate, challengeResult.Cache.PrivateKey);
             }
@@ -528,7 +527,7 @@ namespace Raven.Server.Commercial
             onValdiationSuccessful();
 
 
-            (byte[] Cert, RSA PrivateKey) result;
+            (X509Certificate2 Cert, RSA PrivateKey) result;
             try
             {
                 result = await client.GetCertificate(token);
@@ -548,9 +547,8 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, byte[] cert, RSA privateKey)
+        private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
         {
-            var certificate = new X509Certificate2(cert);
             var certWithKey = certificate.CopyWithPrivateKey(privateKey);
 
             Pkcs12Store store = new Pkcs12StoreBuilder().Build();
@@ -582,31 +580,23 @@ namespace Raven.Server.Commercial
             return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable);
         }
 
-        private static async Task<(Dictionary<string, string> Challenges, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
+        private static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
             SetupInfo setupInfo, 
             LetsEncryptClient client, 
             CancellationToken token)
         {
             try
             {
-                var hosts = new List<string>();
-                foreach (var tag in setupInfo.NodeSetupInfos)
-                {
-                    hosts.Add(BuildHostName(tag.Key, setupInfo.Domain, setupInfo.RootDomain));
-                }
-
-                hosts.Sort(); // ensure stable sorting 
-
-                if (client.TryGetCachedCertificate(hosts, out var certBytes))
+                var host = setupInfo.Domain + "." + setupInfo.RootDomain ;
+                var wildcardHost = "*." + host;
+                if (client.TryGetCachedCertificate(wildcardHost, out var certBytes))
                     return (null, certBytes);
 
-                var challenges = new Dictionary<string, string>();
-                foreach (var tag in setupInfo.NodeSetupInfos)
-                {
-                    challenges[tag.Key] = await client.GetDnsChallenge(BuildHostName(tag.Key, setupInfo.Domain, setupInfo.RootDomain), token);
-                }
+                var result = await client.NewOrder(new[] { wildcardHost }, token);
 
-                return (challenges, null);
+                result.TryGetValue(host, out var challenge);
+                // we may already be authorized for this? 
+                return (challenge, null);
 
             }
             catch (Exception e)
@@ -623,7 +613,7 @@ namespace Raven.Server.Commercial
         }
 
         private static async Task UpdateDnsRecordsForCertificateRefreshTask(
-            Dictionary<string, string> map,
+            string challenge,
             SetupInfo setupInfo, CancellationToken token)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
@@ -632,6 +622,7 @@ namespace Raven.Server.Commercial
                 {
                     License = setupInfo.License,
                     Domain = setupInfo.Domain,
+                    Challenge = challenge,
                     RootDomain = setupInfo.RootDomain,
                     SubDomains = new List<RegistrationNodeInfo>()
                 };
@@ -641,7 +632,6 @@ namespace Raven.Server.Commercial
                     var regNodeInfo = new RegistrationNodeInfo
                     {
                         SubDomain = (node.Key + "." + setupInfo.Domain).ToLower(),
-                        Challenge = map[node.Key]
                     };
 
                     registrationInfo.SubDomains.Add(regNodeInfo);
@@ -714,7 +704,7 @@ namespace Raven.Server.Commercial
         private static async Task UpdateDnsRecordsTask(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
-            Dictionary<string, string> map,
+            string challenge,
             SetupInfo setupInfo,
             CancellationToken token)
         {
@@ -724,13 +714,14 @@ namespace Raven.Server.Commercial
                 {
                     License = setupInfo.License,
                     Domain = setupInfo.Domain,
+                    Challenge = challenge,
                     RootDomain = setupInfo.RootDomain,
                     SubDomains = new List<RegistrationNodeInfo>()
                 };
 
+
                 foreach (var node in setupInfo.NodeSetupInfos)
                 {
-
                     var regNodeInfo = new RegistrationNodeInfo
                     {
                         SubDomain = (node.Key + "." + setupInfo.Domain).ToLower(),
@@ -742,36 +733,13 @@ namespace Raven.Server.Commercial
                             }
                     };
 
-                    if (map == null)
-                    {
-                        // this means that we already have a cached certificate, so we just need to check if we need to update
-                        // the DNS records.
-                        try
-                        {
-                            var existing = Dns.GetHostAddresses(BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain))
-                                .Select(ip => ip.ToString())
-                                .ToList();
-                            if (node.Value.Addresses.All(existing.Contains))
-                                continue; // we can skip this
-                        }
-                        catch (Exception)
-                        {
-                            // it is expected that this won't exists
-                        }
-                        regNodeInfo.Challenge = "dummy value";
-                    }
-                    else
-                    {
-                        regNodeInfo.Challenge = map[node.Key];
-                    }
-
                     registrationInfo.SubDomains.Add(regNodeInfo);
                 }
                 progress.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", setupInfo.NodeSetupInfos.Keys)}.");
 
                 onProgress(progress);
 
-                if (registrationInfo.SubDomains.Count == 0)
+                if (registrationInfo.SubDomains.Count == 0 && registrationInfo.Challenge == null)
                 {
                     // no need to update anything, can skip doing DNS update
                     progress.AddInfo("Cached DNS values matched, skipping DNS update");
@@ -804,7 +772,7 @@ namespace Raven.Server.Commercial
                 }
 
 
-                if (map == null && registrationInfo.SubDomains.Exists(x => x.SubDomain.StartsWith("A.", StringComparison.OrdinalIgnoreCase)) == false)
+                if (challenge == null && registrationInfo.SubDomains.Exists(x => x.SubDomain.StartsWith("A.", StringComparison.OrdinalIgnoreCase)) == false)
                 {
                     progress.AddInfo("DNS update started successfully, since current node (A) DNS record didn't change, not waiting for full DNS propogation.");
                     return;

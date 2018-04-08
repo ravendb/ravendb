@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -19,10 +20,15 @@ namespace Raven.Server.Commercial
 {
     public class LetsEncryptClient
     {
-        public const string Staging = "https://acme-v01.api.letsencrypt.org/directory";
-        public const string ProductionV1 = "https://acme-v01.api.letsencrypt.org/directory";
+        public const string StagingV2 = "https://acme-staging-v02.api.letsencrypt.org/directory";
+        public const string ProductionV2 = "https://acme-v02.api.letsencrypt.org/directory";
 
-        
+        private static readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+            Formatting = Formatting.Indented
+        };
+
         private static Dictionary<string, HttpClient> _cachedClients = new Dictionary<string, HttpClient>(StringComparer.OrdinalIgnoreCase);
 
         private static HttpClient GetCachedClient(string url)
@@ -51,7 +57,7 @@ namespace Raven.Server.Commercial
                 return value;
             }
         }
-        
+
         /// <summary>
         ///     In our scenario, we assume a single single wizard progressing
         ///     and the locking is basic to the wizard progress. Adding explicit
@@ -61,42 +67,34 @@ namespace Raven.Server.Commercial
         /// </summary>
         private static readonly object Locker = new object();
 
-        private readonly List<Challenge> _challenges = new List<Challenge>();
-
-        private readonly List<string> _hosts = new List<string>();
+        private Jws _jws;
         private readonly string _path;
         private readonly string _url;
+        private string _nonce;
         private RSACryptoServiceProvider _accountKey;
         private RegistrationCache _cache;
-        private AcmeClient _client;
+        private HttpClient _client;
+        private Directory _directory;
+        private List<AuthorizationChallenge> _challenges = new List<AuthorizationChallenge>();
+        private Order _currentOrder;
 
         public LetsEncryptClient(string url)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
 
-            string localAppDataPath = null;
-            try
-            {
-                // If we use the SpecialFolderOption.Create option, GetFolderPath fails with ArgumentException if the directory does not exist.
-                // Until https://github.com/dotnet/corefx/issues/26677 is fixed, we'll ask for the path and create the directory ourselves.
-                localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.Create);
 
-                if (System.IO.Directory.Exists(localAppDataPath) == false)
-                    System.IO.Directory.CreateDirectory(localAppDataPath);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Failed to create the directory: {localAppDataPath}", e);
-            }
-            
             var hash = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(url));
-            var file = Convert.ToBase64String(hash) + ".lets-encrypt.cache.json";
-            _path = Path.Combine(localAppDataPath, file);
+            var file = Jws.Base64UrlEncoded(hash) + ".lets-encrypt.cache.json";
+            _path = Path.Combine(home, file);
         }
 
-        public async Task Init(string email, CancellationToken token = default (CancellationToken))
+        public async Task Init(string email, CancellationToken token = default(CancellationToken))
         {
             _accountKey = new RSACryptoServiceProvider(4096);
+            _client = GetCachedClient(_url);
+            (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("directory", UriKind.Relative), null, token);
 
             if (File.Exists(_path))
             {
@@ -109,7 +107,7 @@ namespace Raven.Server.Commercial
                     }
 
                     _accountKey.ImportCspBlob(_cache.AccountKey);
-
+                    _jws = new Jws(_accountKey, _cache.Id);
                     success = true;
                 }
                 catch
@@ -121,76 +119,226 @@ namespace Raven.Server.Commercial
 
                 if (success)
                 {
-                    _client = new AcmeClient(GetCachedClient(_url), _accountKey);
-
                     return;
                 }
             }
 
-            // need to generate new account
-            _client = new AcmeClient(new HttpClient
+            _jws = new Jws(_accountKey, null);
+            var (account, response) = await SendAsync<Account>(HttpMethod.Post, _directory.NewAccount, new Account
             {
-                BaseAddress = new Uri(_url)
-            }, _accountKey);
-            var registration = await _client.RegisterAsync(new NewRegistrationRequest
-            {
-                Contact = new[] {"mailto:" + email}
+                // we validate this in the UI before we get here, so that is fine
+                TermsOfServiceAgreed = true,
+                Contacts = new[] { "mailto:" + email },
             }, token);
+            _jws.SetKeyId(account);
+
+            if (account.Status != "valid")
+                throw new InvalidOperationException("Account status is not valid, was: " + account.Status + Environment.NewLine + response);
+
             lock (Locker)
             {
                 _cache = new RegistrationCache
                 {
-                    Location = registration.Location,
-                    Id = registration.Id,
-                    Key = registration.Key,
-                    AccountKey = _accountKey.ExportCspBlob(true)
+                    Location = account.Location,
+                    AccountKey = _accountKey.ExportCspBlob(true),
+                    Id = account.Id,
+                    Key = account.Key
                 };
                 File.WriteAllText(_path,
                     JsonConvert.SerializeObject(_cache, Formatting.Indented));
             }
         }
 
-        public async Task<string> GetDnsChallenge(string hostname, CancellationToken token = default (CancellationToken))
+        private async Task<(TResult Result, string Response)> SendAsync<TResult>(HttpMethod method, Uri uri, object message, CancellationToken token) where TResult : class
         {
-            _hosts.Add(hostname);
 
-            var challenge = await _client.NewDnsAuthorizationAsync(hostname, token);
-            var dnsChallenge = challenge.Challenges.First(x => x.Type == "dns-01");
-            var keyToken= _client.GetKeyAuthorization(dnsChallenge.Token);
-            var computedDns = Jws.Base64UrlEncoded(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(keyToken)));
+            var response = await SendAsyncInternal(method, uri, message, token);
 
-            _challenges.Add(dnsChallenge);
+            if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
+            {
+                var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var problem = JsonConvert.DeserializeObject<Problem>(problemJson);
+                problem.RawJson = problemJson;
+                throw new LetsEncrytException(problem, response);
+            }
 
-            return computedDns;
+            var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+            if (typeof(TResult) == typeof(string)
+                && response.Content.Headers.ContentType.MediaType == "application/pem-certificate-chain")
+            {
+                return ((TResult)(object)responseText, null);
+            }
+
+            var responseContent = JObject.Parse(responseText).ToObject<TResult>();
+
+            if (responseContent is IHasLocation ihl)
+            {
+                if (response.Headers.Location != null)
+                    ihl.Location = response.Headers.Location;
+            }
+
+            return (responseContent, responseText);
         }
 
-        public async Task CompleteChallenges(CancellationToken token = default (CancellationToken))
+        private async Task<HttpResponseMessage> SendAsyncInternal(HttpMethod method, Uri uri, object message, CancellationToken token)
+        {
+            var hasNonce = _nonce != null;
+            do
+            {
+                var request = new HttpRequestMessage(method, uri);
+                if (message != null)
+                {
+                    var encodedMessage = _jws.Encode(message, new JwsHeader
+                    {
+                        Nonce = _nonce,
+                        Url = uri
+                    });
+                    var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
+
+                    request.Content = new StringContent(json, Encoding.UTF8, "application/jose+json");
+                }
+
+                var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+
+                if (response.Headers.TryGetValues("Replay-Nonce", out var vals))
+                    _nonce = vals.FirstOrDefault();
+                else
+                    _nonce = null;
+
+                if(response.IsSuccessStatusCode || hasNonce || _nonce == null )
+                {
+                    return response; // either successful or no point in retry
+                }
+                hasNonce = true; // we only allow it once
+            } while (true);
+
+        }
+
+        public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, CancellationToken token = default(CancellationToken))
+        {
+            _challenges.Clear();
+            var (order, response) = await SendAsync<Order>(HttpMethod.Post, _directory.NewOrder, new Order
+            {
+                Expires = DateTime.UtcNow.AddDays(2),
+                Identifiers = hostnames.Select(hostname => new OrderIdentifier
+                {
+                    Type = "dns",
+                    Value = hostname
+                }).ToArray()
+            }, token);
+
+            if (order.Status != "pending")
+                throw new InvalidOperationException("Created new order and expected status 'pending', but got: " + order.Status + Environment.NewLine +
+                    response);
+            _currentOrder = order;
+            var results = new Dictionary<string, string>();
+            foreach (var item in order.Authorizations)
+            {
+                var (challengeResponse, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, item, null, token);
+                if (challengeResponse.Status == "valid")
+                    continue;
+
+                if (challengeResponse.Status != "pending")
+                    throw new InvalidOperationException("Expected autorization status 'pending', but got: " + order.Status +
+                        Environment.NewLine + responseText);
+
+                var challenge = challengeResponse.Challenges.First(x => x.Type == "dns-01");
+                _challenges.Add(challenge);
+                var keyToken = _jws.GetKeyAuthorization(challenge.Token);
+                using (var sha256 = SHA256.Create())
+                {
+                    var dnsToken = Jws.Base64UrlEncoded(sha256.ComputeHash(Encoding.UTF8.GetBytes(keyToken)));
+                    results[challengeResponse.Identifier.Value] = dnsToken;
+                }
+            }
+
+            return results;
+        }
+
+        public async Task CompleteChallenges(CancellationToken token = default(CancellationToken))
         {
             for (var index = 0; index < _challenges.Count; index++)
             {
                 var challenge = _challenges[index];
-                var completeChallenge = await _client.CompleteChallengeAsync(challenge, token);
-                if (completeChallenge.Status != "valid")
-                    throw new InvalidOperationException("Failed to complete challenge for " + _hosts[index] + Environment.NewLine +
-                                                        JsonConvert.SerializeObject(challenge));
+
+                while (true)
+                {
+                    AuthorizationChallengeResponse result;
+                    string responseText;
+                    try
+                    {
+                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, new AuthorizeChallenge
+                        {
+                            KeyAuthorization = _jws.GetKeyAuthorization(challenge.Token)
+                        }, token);
+                    }
+                    catch (Exception e)
+                    {
+                        AuthorizationChallengeResponse err = null;
+                        string errorText = null;
+                        try
+                        {
+                            (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, challenge.Url, null, token);
+                        }
+                        catch (Exception)
+                        {
+                            // if we failed here, throw the original error
+                            // since err isn't set
+                        }
+                        if (err == null)
+                            throw;
+
+                        throw new InvalidOperationException("Failed to complete challenge because: " + err.Error?.Detail  + 
+                            Environment.NewLine + errorText, e);
+                    }
+
+                    if (result.Status == "valid")
+                        break;
+                    if (result.Status != "pending")
+                        throw new InvalidOperationException("Failed autorization of " + _currentOrder.Identifiers[index].Value + Environment.NewLine + responseText);
+
+                    await Task.Delay(500);
+                }
             }
         }
 
-        public async Task<(byte[] Cert, RSA  PrivateKey)> GetCertificate(CancellationToken token = default (CancellationToken))
+        public async Task<(X509Certificate2 Cert, RSA PrivateKey)> GetCertificate(CancellationToken token = default(CancellationToken))
         {
-            var key = new RSACryptoServiceProvider(4096); 
-            var csr = new CertificateRequest("CN=" + _hosts[0],
+            var key = new RSACryptoServiceProvider(4096);
+            var csr = new CertificateRequest("CN=" + _currentOrder.Identifiers[0].Value,
                 key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
             var san = new SubjectAlternativeNameBuilder();
-            foreach (var host in _hosts)
-                san.AddDnsName(host);
+            foreach (var host in _currentOrder.Identifiers)
+                san.AddDnsName(host.Value);
 
             csr.CertificateExtensions.Add(san.Build());
-            var certResponse = await _client.NewCertificateRequestAsync(csr.CreateSigningRequest(), token);
-            _cache.CachedCerts[_hosts[0]] = new CertificateCache
+
+            var (response, responseText) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Finalize, new FinalizeRequest
             {
-                Cert = certResponse.Certificate, 
+                CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest())
+            }, token);
+
+            while (response.Status != "valid")
+            {
+                (response, responseText) = await SendAsync<Order>(HttpMethod.Get, response.Location, null, token);
+
+                if (response.Status == "processing")
+                {
+                    await Task.Delay(500);
+                    continue;
+                }
+                throw new InvalidOperationException("Invalid order status: " + response.Status + Environment.NewLine +
+                    responseText);
+            }
+            var (pem, _) = await SendAsync<string>(HttpMethod.Get, response.Certificate, null, token);
+
+            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem));
+
+            _cache.CachedCerts[_currentOrder.Identifiers[0].Value] = new CertificateCache
+            {
+                Cert = pem,
                 Private = key.ExportCspBlob(true)
             };
 
@@ -200,50 +348,27 @@ namespace Raven.Server.Commercial
                     JsonConvert.SerializeObject(_cache, Formatting.Indented));
             }
 
-            return (certResponse.Certificate, key);
+            return (cert, key);
         }
 
         public class CachedCertificateResult
         {
             public RSA PrivateKey;
-            public byte[] Certificate;
+            public X509Certificate2 Certificate;
         }
 
-        public bool TryGetCachedCertificate(List<string> hosts, out CachedCertificateResult value)
+        public bool TryGetCachedCertificate(string host, out CachedCertificateResult value)
         {
             value = null;
-            if (_cache.CachedCerts.TryGetValue(hosts[0], out var cache) == false)
+            if (_cache.CachedCerts.TryGetValue(host, out var cache) == false)
             {
                 return false;
             }
 
             var cert = new X509Certificate2(cache.Cert);
 
-            var sanNames = cert.Extensions["2.5.29.17"];
-
-            if (sanNames == null)
-                return false;
-
-            var generalNames = GeneralNames.GetInstance(Asn1Object.FromByteArray(sanNames.RawData));
-
-            var certHosts = generalNames.GetNames();
-            foreach (var host in _hosts)
-            {
-                var found = false;
-
-                foreach (var certHost in certHosts)
-                    if (host.Equals(certHost.Name.ToString(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        found = true;
-                        break;
-                    }
-
-                if (found == false)
-                    return false;
-            }
-
             // if it is about to expire, we need to refresh
-            if ((cert.NotAfter - DateTime.UtcNow).TotalDays <= 30)
+            if ((cert.NotAfter - DateTime.UtcNow).TotalDays < 14)
                 return false;
 
             var rsa = new RSACryptoServiceProvider(4096);
@@ -251,18 +376,26 @@ namespace Raven.Server.Commercial
 
             value = new CachedCertificateResult
             {
-                Certificate = cache.Cert,
+                Certificate = cert,
                 PrivateKey = rsa
             };
             return true;
         }
-        
-        
-        public async Task<string> GetTermsOfServiceUri(CancellationToken token = default (CancellationToken))
+
+
+        public string GetTermsOfServiceUri(CancellationToken token = default(CancellationToken))
         {
-            var dir = await _client.EnsureDirectoryAsync(token);
-            return dir.Meta.TermsOfService;
+            return _directory.Meta.TermsOfService;
         }
+
+        public void ResetCachedCertificate(IEnumerable<string> hostsToRemove)
+        {
+            foreach (var host in hostsToRemove)
+            {
+                _cache.CachedCerts.Remove(host);
+            }
+        }
+
 
         private class RegistrationCache
         {
@@ -270,286 +403,59 @@ namespace Raven.Server.Commercial
             public byte[] AccountKey;
             public string Id;
             public Jwk Key;
-            public string Location;
+            public Uri Location;
         }
 
         private class CertificateCache
         {
-            public byte[] Cert;
+            public string Cert;
             public byte[] Private;
         }
 
-        #region ACME client 
-
-        // the code below was taken from Oocx.Acme.Net project
-        // https://github.com/oocx/acme.net/tree/97e7b1a1c44b6b4505b7b56de9594e2709fe1fd0
-        // 
-        // We want to use something that is self contained and easily modifiable by us. 
-
-        private class AcmeClient
+        private class AuthorizationChallengeResponse
         {
-            private readonly HttpClient _client;
+            [JsonProperty("identifier")]
+            public OrderIdentifier Identifier { get; set; }
 
-            private readonly Jws _jws;
-            private Directory _directory;
+            [JsonProperty("status")]
+            public string Status { get; set; }
 
-            private string _nonce;
+            [JsonProperty("expires")]
+            public DateTime? Expires { get; set; }
 
-            public AcmeClient(HttpClient client, RSA key)
-            {
-                _client = client ?? throw new ArgumentNullException(nameof(client));
+            [JsonProperty("wildcard")]
+            public bool Wildcard { get; set; }
 
-                _jws = new Jws(key);
-            }
+            [JsonProperty("challenges")]
+            public AuthorizationChallenge[] Challenges { get; set; }
 
-
-            public string GetKeyAuthorization(string token)
-            {
-                return _jws.GetKeyAuthorization(token);
-            }
-
-            public async Task<Directory> GetDirectoryAsync(CancellationToken token = default (CancellationToken))
-            {
-                return await GetAsync<Directory>(new Uri("directory", UriKind.Relative), token).ConfigureAwait(false);
-            }
-
-            private void RememberNonce(HttpResponseMessage response)
-            {
-                try
-                {
-                    _nonce = response.Headers.GetValues("Replay-Nonce").First();
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Cannot remember nonce", e);
-                }
-            }
-
-            public async Task<RegistrationResponse> RegisterAsync(NewRegistrationRequest request, CancellationToken token = default (CancellationToken))
-            {
-                await EnsureDirectoryAsync(token).ConfigureAwait(false);
-
-                if (request.Agreement == null) request.Agreement = _directory.Meta.TermsOfService;
-
-                try
-                {
-                    var registration = await PostAsync<RegistrationResponse>(
-                        _directory.NewRegistration,
-                        request,
-                        token
-                    ).ConfigureAwait(false);
-
-                    return registration;
-                }
-                catch (AcmeException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
-                {
-                    var location = ex.Response.Headers.Location.ToString();
-
-                    var response = await PostAsync<RegistrationResponse>(
-                        new Uri(location),
-                        new UpdateRegistrationRequest(),
-                        token
-                    ).ConfigureAwait(false);
-
-                    if (string.IsNullOrEmpty(response.Location)) response.Location = location;
-
-                    return response;
-                }
-            }
-
-            public async Task<Directory> EnsureDirectoryAsync(CancellationToken token = default (CancellationToken))
-            {
-                if (_directory == null || _nonce == null) 
-                    _directory = await GetDirectoryAsync(token).ConfigureAwait(false);
-                return _directory;
-            }
-
-            public async Task<RegistrationResponse> UpdateRegistrationAsync(UpdateRegistrationRequest request, CancellationToken token = default (CancellationToken))
-            {
-                await EnsureDirectoryAsync().ConfigureAwait(false);
-
-                return await PostAsync<RegistrationResponse>(new Uri(request.Location), request, token).ConfigureAwait(false);
-            }
-
-            public async Task<AuthorizationResponse> NewDnsAuthorizationAsync(string dnsName, CancellationToken token = default (CancellationToken))
-            {
-                await EnsureDirectoryAsync().ConfigureAwait(false);
-
-                var authorization = new AuthorizationRequest
-                {
-                    Resource = "new-authz",
-                    Identifier = new Identifier("dns", dnsName)
-                };
-
-                return await PostAsync<AuthorizationResponse>(_directory.NewAuthorization, authorization, token).ConfigureAwait(false);
-            }
-
-            public async Task<Challenge> CompleteChallengeAsync(Challenge challenge, CancellationToken token = default (CancellationToken))
-            {
-                var challangeRequest = new KeyAuthorizationRequest
-                {
-                    KeyAuthorization = _jws.GetKeyAuthorization(challenge.Token)
-                };
-
-                challenge = await PostAsync<Challenge>(challenge.Uri, challangeRequest,token).ConfigureAwait(false);
-
-                while (challenge?.Status == "pending")
-                {
-                    await Task.Delay(1000,token).ConfigureAwait(false);
-
-                    challenge = await GetAsync<Challenge>(challenge.Uri,token).ConfigureAwait(false);
-                }
-
-                return challenge;
-            }
-
-            public async Task<CertificateResponse> NewCertificateRequestAsync(byte[] csr, CancellationToken token = default (CancellationToken))
-            {
-                await EnsureDirectoryAsync().ConfigureAwait(false);
-
-                var request = new AcmeCertificateRequest
-                {
-                    Csr = Jws.Base64UrlEncoded(csr)
-                };
-
-                var response = await PostAsync<CertificateResponse>(
-                    _directory.NewCertificate,
-                    request,
-                    token
-                ).ConfigureAwait(false);
-
-                return response;
-            }
-
-            #region Helpers
-
-            private async Task<TResult> GetAsync<TResult>(Uri uri, CancellationToken token) where TResult : class
-            {
-                return await SendAsync<TResult>(HttpMethod.Get, uri, null,token).ConfigureAwait(false);
-            }
-
-            private async Task<TResult> PostAsync<TResult>(Uri uri, object message, CancellationToken token) where TResult : class
-            {
-                return await SendAsync<TResult>(HttpMethod.Post, uri, message, token).ConfigureAwait(false);
-            }
-
-            private static readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                Formatting = Formatting.Indented
-            };
-
-            private async Task<TResult> SendAsync<TResult>(HttpMethod method, Uri uri, object message, CancellationToken token) where TResult : class
-            {
-                var nonceHeader = new AcmeHeader
-                {
-                    Nonce = _nonce
-                };
-
-                var request = new HttpRequestMessage(method, uri);
-
-                if (message != null)
-                {
-                    var encodedMessage = _jws.Encode(message, nonceHeader);
-                    var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
-
-                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                }
-
-                HttpResponseMessage response;
-                var retries = 5;
-                do
-                {
-                    try
-                    {
-                        await Task.Delay(1000, token);
-                        response = await _client.SendAsync(request, token).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("acme request failed.", e);
-                    }
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        break;
-                    }
-                } while (retries-- > 0);
-
-                RememberNonce(response);
-
-                if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
-                {
-                    var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var problem = JsonConvert.DeserializeObject<Problem>(problemJson);
-                    throw new AcmeException(problem, response);
-                }
-
-                if (typeof(TResult) == typeof(CertificateResponse)
-                    && response.Content.Headers.ContentType.MediaType == "application/pkix-cert")
-                {
-                    var certificateBytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-
-                    var certificateResponse = new CertificateResponse
-                    {
-                        Certificate = certificateBytes
-                    };
-
-                    GetHeaderValues(response, certificateResponse);
-
-                    return certificateResponse as TResult;
-                }
-
-                var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                var responseContent = JObject.Parse(responseText).ToObject<TResult>();
-
-                GetHeaderValues(response, responseContent);
-
-                return responseContent;
-            }
-
-            private static void GetHeaderValues<TResult>(HttpResponseMessage response, TResult responseContent)
-            {
-                var properties =
-                    typeof(TResult).GetProperties(BindingFlags.Public | BindingFlags.SetProperty | BindingFlags.Instance)
-                        .Where(p => p.PropertyType == typeof(string))
-                        .ToDictionary(p => p.Name, p => p);
-
-                foreach (var header in response.Headers)
-                {
-                    if (properties.TryGetValue(header.Key, out var property)
-                        && header.Value.Count() == 1)
-                        property.SetValue(responseContent, header.Value.First());
-
-                    if (header.Key == "Link")
-                        foreach (var link in header.Value)
-                        {
-                            var parts = link.Split(';');
-
-                            if (parts.Length != 2) continue;
-
-                            if (parts[1] == "rel=\"terms-of-service\"" && properties.ContainsKey("Agreement"))
-                                properties["Agreement"].SetValue(responseContent, parts[0].Substring(1, parts[0].Length - 2));
-                        }
-                }
-            }
-
-            #endregion
+            [JsonProperty("error")]
+            public Problem Error { get; set; }
         }
 
-        private class AcmeException : Exception
+        private class AuthorizeChallenge
         {
-            public AcmeException(Problem problem, HttpResponseMessage response)
-                : base($"{problem.Type}: {problem.Detail}")
-            {
-                Problem = problem;
-                Response = response;
-            }
+            [JsonProperty("keyAuthorization")]
+            public string KeyAuthorization { get; set; }
 
-            public Problem Problem { get; }
+        }
 
-            public HttpResponseMessage Response { get; }
+        private class AuthorizationChallenge
+        {
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+            [JsonProperty("status")]
+            public string Status { get; set; }
+
+            [JsonProperty("url")]
+            public Uri Url { get; set; }
+
+            [JsonProperty("token")]
+            public string Token { get; set; }
+
+            [JsonProperty("error")]
+            public Problem Error { get; set; }
         }
 
         private class Jwk
@@ -591,142 +497,22 @@ namespace Raven.Server.Commercial
             public string Algorithm { get; set; }
         }
 
-        // ref: http://tools.ietf.org/html/rfc7515#page-15
-
-        private class Challenge
-        {
-            [JsonProperty("type")]
-            public string Type { get; set; }
-
-            /// <summary>
-            ///     The URI to which a response can be posted.
-            /// </summary>
-            [JsonProperty("uri")]
-            public Uri Uri { get; set; }
-
-            [JsonProperty("token")]
-            public string Token { get; set; }
-
-            /// <summary>
-            ///     The status of this authorization.
-            ///     Possible values are: "unknown", "pending", "processing", "valid", "invalid" and "revoked".
-            ///     If this field is missing, then the default value is "pending".
-            /// </summary>
-            [JsonProperty("status")]
-            public string Status { get; set; }
-
-            /// <summary>
-            ///     The error that occurred while the server was validating the challenge.
-            /// </summary>
-            [JsonProperty("error")]
-            public Error Error { get; set; }
-
-            [JsonProperty("tls")]
-            public bool Tls { get; set; }
-
-            /// <summary>
-            ///     The time at which this challenge was completed by the server
-            /// </summary>
-            [JsonProperty("validated")]
-            public DateTime? Validated { get; set; }
-
-            [JsonProperty("keyAuthorization")]
-            public string KeyAuthorization { get; set; }
-
-            [JsonProperty("validationRecord")]
-            public ValidationRecord[] ValidationRecord { get; set; }
-        }
-
-        private class Error
-        {
-            [JsonProperty("detail")]
-            public string Detail { get; set; }
-
-            [JsonProperty("type")]
-            public string Type { get; set; }
-        }
-
-        private class ValidationRecord
-        {
-            [JsonProperty("addressResolved")]
-            public string AddressResolved { get; set; }
-
-            [JsonProperty("addressUsed")]
-            public string AddressUsed { get; set; }
-
-            [JsonProperty("hostname")]
-            public string HostName { get; set; }
-
-            [JsonProperty("port")]
-            public string Port { get; set; }
-
-            [JsonProperty("url")]
-            public Uri Url { get; set; }
-        }
-
-        private abstract class RegistrationRequest
-        {
-            [JsonProperty("jwk")]
-            public Jwk Key { get; set; }
-
-            [JsonProperty("contact")]
-            public string[] Contact { get; set; }
-
-            [JsonProperty("agreement")]
-            public string Agreement { get; set; }
-
-            [JsonProperty("authorizations")]
-            public string Authorizations { get; set; }
-
-            [JsonProperty("certificates")]
-            public string Certificates { get; set; }
-        }
-
-        private class NewRegistrationRequest : RegistrationRequest
-        {
-            [JsonProperty("resource")]
-            public string Resource { get; } = "new-reg";
-        }
-
-        private class UpdateRegistrationRequest : RegistrationRequest
-        {
-            public UpdateRegistrationRequest()
-            {
-            }
-
-            public UpdateRegistrationRequest(string location, string agreement, string[] contact)
-            {
-                Location = location ?? throw new ArgumentNullException(nameof(location));
-                Agreement = agreement;
-                Contact = contact;
-            }
-
-            [JsonIgnore]
-            public string Location { get; }
-
-            [JsonProperty("resource")]
-            public string Resource { get; } = "reg";
-        }
-
         private class Directory
         {
-            [JsonProperty("new-reg")]
-            public Uri NewRegistration { get; set; }
-
-            [JsonProperty("recover-reg")]
-            public Uri RecoverRegistration { get; set; }
-
-            [JsonProperty("new-authz")]
-            public Uri NewAuthorization { get; set; }
-
-            [JsonProperty("new-cert")]
-            public Uri NewCertificate { get; set; }
-
-            [JsonProperty("revoke-cert")]
-            public Uri RevokeCertificate { get; set; }
-
-            [JsonProperty("key-change")]
+            [JsonProperty("keyChange")]
             public Uri KeyChange { get; set; }
+
+            [JsonProperty("newNonce")]
+            public Uri NewNonce { get; set; }
+
+            [JsonProperty("newAccount")]
+            public Uri NewAccount { get; set; }
+
+            [JsonProperty("newOrder")]
+            public Uri NewOrder { get; set; }
+
+            [JsonProperty("revokeCert")]
+            public Uri RevokeCertificate { get; set; }
 
             [JsonProperty("meta")]
             public DirectoryMeta Meta { get; set; }
@@ -734,14 +520,33 @@ namespace Raven.Server.Commercial
 
         private class DirectoryMeta
         {
-            [JsonProperty("terms-of-service")]
+            [JsonProperty("termsOfService")]
             public string TermsOfService { get; set; }
+        }
 
-            [JsonProperty("website")]
-            public string Website { get; set; }
+        public class Problem
+        {
+            [JsonProperty("type")]
+            public string Type { get; set; }
 
-            [JsonProperty("caa-identities")]
-            public string[] CaaIdentities { get; set; }
+            [JsonProperty("detail")]
+            public string Detail { get; set; }
+
+            public string RawJson { get; set; }
+        }
+
+        public class LetsEncrytException : Exception
+        {
+            public LetsEncrytException(Problem problem, HttpResponseMessage response)
+                : base($"{problem.Type}: {problem.Detail}")
+            {
+                Problem = problem;
+                Response = response;
+            }
+
+            public Problem Problem { get; }
+
+            public HttpResponseMessage Response { get; }
         }
 
         private class JwsMessage
@@ -776,157 +581,141 @@ namespace Raven.Server.Commercial
 
             [JsonProperty("jwk")]
             public Jwk Key { get; set; }
+
+
+            [JsonProperty("kid")]
+            public string KeyId { get; set; }
+
+
+            [JsonProperty("nonce")]
+            public string Nonce { get; set; }
+
+            [JsonProperty("url")]
+            public Uri Url { get; set; }
         }
 
-        private class RegistrationResponse
+        private interface IHasLocation
         {
-            [JsonProperty("key")]
-            public Jwk Key { get; set; }
-
-            [JsonProperty("id")]
-            public string Id { get; set; }
-
-            [JsonProperty("initialIp")]
-            public string InitialIp { get; set; }
-
-            [JsonProperty("createdAt")]
-            public DateTime CreatedAt { get; set; }
-
-            [JsonProperty("contact")]
-            public string[] Contact { get; set; }
-
-            [JsonProperty("agreement")]
-            public string Agreement { get; set; }
-
-            [JsonProperty("authorizations")]
-            public string Authorization { get; set; }
-
-            [JsonProperty("certificates")]
-            public string Certificates { get; set; }
-
-            public string Location { get; set; }
+            Uri Location { get; set; }
         }
 
-        private class Problem
+        private class Order : IHasLocation
         {
-            [JsonProperty("type")]
-            public string Type { get; set; }
+            public Uri Location { get; set; }
 
-            [JsonProperty("detail")]
-            public string Detail { get; set; }
-        }
-
-        private class AuthorizationResponse
-        {
             [JsonProperty("status")]
             public string Status { get; set; }
 
             [JsonProperty("expires")]
-            public string Expires { get; set; }
+            public DateTime? Expires { get; set; }
 
-            [JsonProperty("identifier")]
-            public Identifier Identifier { get; set; }
+            [JsonProperty("identifiers")]
+            public OrderIdentifier[] Identifiers { get; set; }
 
-            [JsonProperty("challenges")]
-            public Challenge[] Challenges { get; set; }
+            [JsonProperty("notBefore")]
+            public DateTime? NotBefore { get; set; }
 
-            [JsonProperty("combinations")]
-            public int[][] Combinations { get; set; }
+            [JsonProperty("notAfter")]
+            public DateTime? NotAfter { get; set; }
 
-            [JsonIgnore]
-            public Uri Location { get; set; }
+            [JsonProperty("error")]
+            public Problem Error { get; set; }
+
+            [JsonProperty("authorizations")]
+            public Uri[] Authorizations { get; set; }
+
+            [JsonProperty("finalize")]
+            public Uri Finalize { get; set; }
+
+            [JsonProperty("certificate")]
+            public Uri Certificate { get; set; }
         }
-        // https://tools.ietf.org/html/draft-ietf-acme-acme-01#section-5.3
 
-        private class Identifier
+        private class OrderIdentifier
         {
-            public Identifier()
-            {
-            }
-
-            public Identifier(string type, string value)
-            {
-                Type = type;
-                Value = value;
-            }
-
             [JsonProperty("type")]
             public string Type { get; set; }
 
             [JsonProperty("value")]
             public string Value { get; set; }
+
         }
 
-        private class AuthorizationRequest
+        private class Account : IHasLocation
         {
-            [JsonProperty("resource")]
-            public string Resource { get; set; }
+            [JsonProperty("termsOfServiceAgreed")]
+            public bool TermsOfServiceAgreed { get; set; }
 
-            [JsonProperty("identifier")]
-            public Identifier Identifier { get; set; }
+            [JsonProperty("contact")]
+            public string[] Contacts { get; set; }
+
+            [JsonProperty("status")]
+            public string Status { get; set; }
+
+            [JsonProperty("id")]
+            public string Id { get; set; }
+
+            [JsonProperty("createdAt")]
+            public DateTime CreatedAt { get; set; }
+
+            [JsonProperty("key")]
+            public Jwk Key { get; set; }
+
+            [JsonProperty("initialIp")]
+            public string InitialIp { get; set; }
+
+            [JsonProperty("orders")]
+            public Uri Orders { get; set; }
+
+            public Uri Location { get; set; }
         }
 
-        private class KeyAuthorizationRequest
+        private class FinalizeRequest
         {
-            [JsonProperty("resource")]
-            public string Resource => "challenge";
-
-            [JsonProperty("keyAuthorization")]
-            public string KeyAuthorization { get; set; }
-        }
-
-        private class AcmeCertificateRequest
-        {
-            [JsonProperty("resource")]
-            public string Resource => "new-cert";
-
             [JsonProperty("csr")]
-            public string Csr { get; set; }
-        }
-
-        private class CertificateResponse
-        {
-            public string Location { get; set; }
-
-            public byte[] Certificate { get; set; }
-        }
-
-        private class AcmeHeader
-        {
-            [JsonProperty("nonce")]
-            public string Nonce { get; set; }
+            public string CSR { get; set; }
         }
 
         private class Jws
         {
-            private readonly Jwk jwk;
-            private readonly RSA rsa;
+            private readonly Jwk _jwk;
+            private readonly RSA _rsa;
 
-            public Jws(RSA rsa)
+            public Jws(RSA rsa, string keyId)
             {
-                this.rsa = rsa ?? throw new ArgumentNullException(nameof(rsa));
+                _rsa = rsa ?? throw new ArgumentNullException(nameof(rsa));
 
                 var publicParameters = rsa.ExportParameters(false);
 
-                jwk = new Jwk
+                _jwk = new Jwk
                 {
                     KeyType = "RSA",
                     Exponent = Base64UrlEncoded(publicParameters.Exponent),
-                    Modulus = Base64UrlEncoded(publicParameters.Modulus)
+                    Modulus = Base64UrlEncoded(publicParameters.Modulus),
+                    KeyId = keyId
                 };
             }
 
-            public JwsMessage Encode<TPayload, THeader>(TPayload payload, THeader protectedHeader)
+            public JwsMessage Encode<TPayload>(TPayload payload, JwsHeader protectedHeader)
             {
+                protectedHeader.Algorithm = "RS256";
+                if (_jwk.KeyId != null)
+                {
+                    protectedHeader.KeyId = _jwk.KeyId;
+                }
+                else
+                {
+                    protectedHeader.Key = _jwk;
+                }
+
                 var message = new JwsMessage
                 {
-                    Header = new JwsHeader("RS256", jwk),
                     Payload = Base64UrlEncoded(JsonConvert.SerializeObject(payload)),
                     Protected = Base64UrlEncoded(JsonConvert.SerializeObject(protectedHeader))
                 };
 
                 message.Signature = Base64UrlEncoded(
-                    rsa.SignData(Encoding.ASCII.GetBytes(message.Protected + "." + message.Payload),
+                    _rsa.SignData(Encoding.ASCII.GetBytes(message.Protected + "." + message.Payload),
                         HashAlgorithmName.SHA256,
                         RSASignaturePadding.Pkcs1));
 
@@ -935,7 +724,7 @@ namespace Raven.Server.Commercial
 
             private string GetSha256Thumbprint()
             {
-                var json = "{\"e\":\"" + jwk.Exponent + "\",\"kty\":\"RSA\",\"n\":\"" + jwk.Modulus + "\"}";
+                var json = "{\"e\":\"" + _jwk.Exponent + "\",\"kty\":\"RSA\",\"n\":\"" + _jwk.Modulus + "\"}";
 
                 using (var sha256 = SHA256.Create())
                 {
@@ -961,15 +750,10 @@ namespace Raven.Server.Commercial
                 s = s.Replace('/', '_'); // 63rd char of encoding
                 return s;
             }
-        }
 
-        #endregion
-
-        public void ResetCachedCertificate(IEnumerable<string> hostsToRemove)
-        {
-            foreach (var host in hostsToRemove)
+            internal void SetKeyId(Account account)
             {
-                _cache.CachedCerts.Remove(host);
+                _jwk.KeyId = account.Id;
             }
         }
     }
