@@ -1708,7 +1708,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             for (int index = 0; index < newExpression.Arguments.Count; index++)
             {
-                var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
+                if (!(newExpression.Arguments[index] is MemberExpression memberExpression))
+                {
+                    throw new InvalidOperationException($"Illegal expression of type {newExpression.Arguments[index].GetType()} " +
+                                                        $"in GroupBy clause : {newExpression.Arguments[index]}." +  Environment.NewLine +
+                                                        "You cannot do computation in group by dynamic query, " +
+                                                        "you can group on properties / fields only.");
+                }
+
+                var originalField = GetSelectPath(memberExpression);
 
                 if (prefix != null)
                     originalField = string.Join(".", prefix.Union(new[] { originalField }));
