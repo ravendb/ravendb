@@ -29,8 +29,8 @@ namespace SlowTests.Authentication
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             UseNewLocalServer();
-
-            var acmeStaging = "https://acme-staging.api.letsencrypt.org/directory";
+			
+            var acmeStaging = "https://acme-staging-v02.api.letsencrypt.org/directory";
             Server.Configuration.Core.AcmeUrl = acmeStaging;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 
