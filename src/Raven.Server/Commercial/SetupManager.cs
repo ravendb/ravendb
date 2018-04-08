@@ -587,7 +587,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                var host = setupInfo.Domain + "." + setupInfo.RootDomain ;
+                var host = (setupInfo.Domain + "." + setupInfo.RootDomain).ToLowerInvariant() ;
                 var wildcardHost = "*." + host;
                 if (client.TryGetCachedCertificate(wildcardHost, out var certBytes))
                     return (null, certBytes);
