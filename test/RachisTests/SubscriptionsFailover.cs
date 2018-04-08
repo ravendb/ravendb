@@ -670,6 +670,8 @@ namespace RachisTests
                     Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
                 }
 
+                await GenerateDocuments(store);
+
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
@@ -685,8 +687,6 @@ namespace RachisTests
                         await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
                     });
                     
-                    await GenerateDocuments(store);
-
                     Assert.True(await batchProccessed.WaitAsync(_reasonableWaitTime));
 
                     Assert.True(await ThrowsAsync<SubscriptionInvalidStateException>(task).WaitWithTimeout(TimeSpan.FromSeconds(120)).ConfigureAwait(false));
