@@ -53,7 +53,7 @@ namespace Raven.Server.Config.Categories
         public SetupMode SetupMode { get; set; }
 
         [Description("The URLs which the server should contact when requesting certificates from using the ACME protocol.")]
-        [DefaultValue("https://acme-v01.api.letsencrypt.org/directory")]
+        [DefaultValue("https://acme-v02.api.letsencrypt.org/directory")]
         [ConfigurationEntry("AcmeUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string AcmeUrl { get; set; }
 
