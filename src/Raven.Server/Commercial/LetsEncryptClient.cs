@@ -196,7 +196,16 @@ namespace Raven.Server.Commercial
                     });
                     var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
 
-                    request.Content = new StringContent(json, Encoding.UTF8, "application/jose+json");
+                    request.Content = new StringContent(json, Encoding.UTF8, "application/jose+json")
+                    {
+                        Headers =
+                        {
+                            ContentType =
+                            {
+                                CharSet = string.Empty
+                            }
+                        }
+                    };
                 }
 
                 var response = await _client.SendAsync(request, token).ConfigureAwait(false);
@@ -249,7 +258,7 @@ namespace Raven.Server.Commercial
                 using (var sha256 = SHA256.Create())
                 {
                     var dnsToken = Jws.Base64UrlEncoded(sha256.ComputeHash(Encoding.UTF8.GetBytes(keyToken)));
-                    results[challengeResponse.Identifier.Value] = dnsToken;
+                    results[challengeResponse.Identifier.Value.ToLowerInvariant()] = dnsToken;
                 }
             }
 
