@@ -26,6 +26,40 @@ namespace Raven.Server.Utils
             }
         }
 
+        public static bool EnsureReadWritePermissionForDirectory(string directory)
+        {
+            string tmpFileName = null;
+            string testString = "I can write here!";
+            try
+            {
+                if (string.IsNullOrWhiteSpace(directory))
+                {
+                    return false;
+                }
+
+                if (Directory.Exists(directory) == false)
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                tmpFileName = Path.Combine(directory, Path.GetRandomFileName());
+                File.WriteAllText(tmpFileName, testString);
+                var read = File.ReadAllText(tmpFileName); //I can read too!
+                return read == testString;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                if (tmpFileName != null)
+                {
+                    File.Delete(tmpFileName);
+                }
+            }
+        }
+
         public static void MoveDirectory(string src, string dst)
         {
             for (var i = 0; i < Retries; i++)
