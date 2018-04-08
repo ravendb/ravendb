@@ -1414,6 +1414,12 @@ namespace Raven.Server.ServerWide
                             continue;
                         }
 
+                        if (idleDbInstance.Changes.Connections.Values.Any(x=>x.IsDisposed == false))
+                        {
+                            //TODO: ignore changes api open by the studio once those are mark with proper headers, see RavenDB-10850.
+                            continue;
+                        }
+
                         if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
                             continue;
 
