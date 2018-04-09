@@ -30,6 +30,7 @@ namespace Raven.Server.Utils
         {
             string tmpFileName = null;
             string testString = "I can write here!";
+            bool folderCreatedByUs = false;
             try
             {
                 if (string.IsNullOrWhiteSpace(directory))
@@ -40,23 +41,45 @@ namespace Raven.Server.Utils
                 if (Directory.Exists(directory) == false)
                 {
                     Directory.CreateDirectory(directory);
+                    folderCreatedByUs = true;
                 }
 
                 tmpFileName = Path.Combine(directory, Path.GetRandomFileName());
                 File.WriteAllText(tmpFileName, testString);
                 var read = File.ReadAllText(tmpFileName); //I can read too!
+                File.Delete(tmpFileName);
+                if (folderCreatedByUs)
+                {
+                    Directory.Delete(directory);                    
+                }
                 return read == testString;
             }
             catch
             {
-                return false;
-            }
-            finally
-            {
-                if (tmpFileName != null)
+                //We need to try and delete the file here too since we can't modify the return value from a finally block.
+                if (File.Exists(tmpFileName))
                 {
-                    File.Delete(tmpFileName);
+                    try
+                    {
+                        File.Delete(tmpFileName);
+                    }
+                    catch
+                    {
+                    }
+
                 }
+
+                if (folderCreatedByUs)
+                {
+                    try
+                    {
+                        Directory.Delete(directory);
+                    }
+                    catch
+                    {
+                    }
+                }
+                return false;
             }
         }
 
