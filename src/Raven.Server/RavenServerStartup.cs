@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
@@ -280,7 +281,8 @@ namespace Raven.Server
             if (exception is DatabaseDisabledException ||
                 exception is DatabaseLoadFailureException ||
                 exception is DatabaseLoadTimeoutException ||
-                exception is DatabaseConcurrentLoadTimeoutException)
+                exception is DatabaseConcurrentLoadTimeoutException ||
+                exception is NodeIsPassiveException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;

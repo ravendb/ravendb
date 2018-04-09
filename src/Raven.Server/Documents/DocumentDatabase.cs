@@ -263,7 +263,14 @@ namespace Raven.Server.Documents
 
                 TaskExecutor.Execute((state) =>
                 {
-                    NotifyFeaturesAboutStateChange(record, index);
+                    try
+                    {
+                        NotifyFeaturesAboutStateChange(record, index);
+                    }
+                    catch
+                    {
+                        // We ignore the exception since it was caught in the function itself
+                    }
                 }, null);
             }
             catch (Exception)

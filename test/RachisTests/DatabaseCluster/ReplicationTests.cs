@@ -807,16 +807,12 @@ namespace RachisTests.DatabaseCluster
             {
                 using (var session = srcStore.OpenSession())
                 {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
                     session.Store(new User
                     {
                         Name = "Karmel"
                     }, "users/1");
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        session as DocumentSession,
-                        "users/1",
-                        u => u.Name.Equals("Karmel"),
-                        TimeSpan.FromSeconds(clusterSize + 5)));
                 }
 
                 // add watcher with invalid url to test the failover on database topology discovery
@@ -858,19 +854,14 @@ namespace RachisTests.DatabaseCluster
 
                     using (var session = srcStore.OpenSession())
                     {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
                         session.Store(new User
                         {
                             Name = "Karmel2"
                         }, "users/2");
                         session.SaveChanges();
-                        Assert.True(await WaitForDocumentInClusterAsync<User>(
-                            session as DocumentSession,
-                            "users/2",
-                            u => u.Name.Equals("Karmel2"),
-                            TimeSpan.FromSeconds(clusterSize + 5)));
                     }
 
-                    WaitForUserToContinueTheTest(dstStore as DocumentStore);
                     Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
                 }
             }

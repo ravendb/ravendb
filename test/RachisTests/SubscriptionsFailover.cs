@@ -355,9 +355,8 @@ namespace RachisTests
 
                 expectedRevisionsCount = nodesAmount + 2;
                 continueMre.Set();
-                //Assert.True(await task.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
 
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount}");
                 ackSent.Reset(true);
 
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
@@ -365,7 +364,7 @@ namespace RachisTests
                 expectedRevisionsCount += 2;
 
 
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount}");
                 ackSent.Reset(true);
                 continueMre.Set();
 
@@ -629,7 +628,7 @@ namespace RachisTests
                 }))
                 {
                     var task = subscription.Run(a => { });
-                    Assert.True(await ThrowsAsync<SubscriptionInvalidStateException>(task).WaitWithTimeout(TimeSpan.FromSeconds(120)).ConfigureAwait(false));
+                    Assert.True(await ThrowsAsync<SubscriptionInvalidStateException>(task).WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false));
                 }
             }
         }
@@ -756,16 +755,15 @@ namespace RachisTests
                     {
                         if (disposedOnce == false)
                         {
+                            disposedOnce = true;
                             subscription.OnSubscriptionConnectionRetry += x =>
                             {
                                 subscriptionRetryBegins.SetAndResetAtomically();
                             };
                             await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
-                            disposedOnce = true;
                         }
                         batchProccessed.SetAndResetAtomically();
                     });
-
                     await GenerateDocuments(store);
 
                     Assert.True(await batchProccessed.WaitAsync(_reasonableWaitTime));
@@ -783,8 +781,8 @@ namespace RachisTests
                             deletePrevious: false,
                             partialPath: leaderDataDir);
                     
-                    Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(120)));
-                    Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(120)));
+                    Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(60)));
 
                 }
             }

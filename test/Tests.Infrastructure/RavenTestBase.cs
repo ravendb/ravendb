@@ -178,8 +178,10 @@ namespace FastTests
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
                         store.Urls = result.NodesAddedTo.SelectMany(UseFiddler).ToArray();
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                        var task = WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
-                        task.ConfigureAwait(false).GetAwaiter().GetResult();
+                        AsyncHelpers.RunSync(async () =>
+                        {
+                            await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout); 
+                        });
                     }
 
                     store.BeforeDispose += (sender, args) =>
@@ -242,7 +244,7 @@ namespace FastTests
                                     continue;
                                 }
 
-                                server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex).ConfigureAwait(false).GetAwaiter().GetResult();
+                                AsyncHelpers.RunSync(async () => await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex));
                             }
                         }
                     };
