@@ -606,17 +606,23 @@ namespace Raven.Server.ServerWide
         private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
-                throw new EncryptionException($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! " + loadedCertificate);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thubprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
+                
 
             if (serverStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer)
             {
                 // Do not allow long range certificates in developer mode.
                 if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))
                 {
-                    throw new InvalidOperationException("The server certificate expiration date is more than 4 months from now. " +
-                                                        "This is not allowed when using the developer license. " +
-                                                        "The developer license is not allowed for production use. " +
-                                                        "Either switch the license or use a short term certificate.");
+                    const string msg = "The server certificate expiration date is more than 4 months from now. " +
+                                       "This is not allowed when using the developer license. " +
+                                       "The developer license is not allowed for production use. " +
+                                       "Either switch the license or use a short term certificate.";
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(msg);
+                    throw new InvalidOperationException(msg);
                 }
             }
         }
@@ -634,7 +640,12 @@ namespace Raven.Server.ServerWide
             }
 
             if (pk == null)
-                throw new EncryptionException("Unable to find the private key in the provided certificate from " + source);
+            {
+                var msg = "Unable to find the private key in the provided certificate from " + source;
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+                throw new EncryptionException(msg);
+            }
         }
 
         public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
@@ -662,8 +673,13 @@ namespace Raven.Server.ServerWide
             }
 
             if (supported == false)
-                throw new EncryptionException("Server certificate " + loadedCertificate.FriendlyName + "from " + source +
-                                              " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+            {
+                var msg = "Server certificate " + loadedCertificate.FriendlyName + "from " + source +
+                          " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+                throw new EncryptionException(msg);
+            }
         }
     }
 }
