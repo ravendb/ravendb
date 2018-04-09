@@ -50,18 +50,17 @@ namespace Raven.Server.Utils
             }
             catch
             {
-                //We need to try and delete the file here too since we can't modify the return value from a finally block.
-                if (File.Exists(tmpFileName))
+                //We need to try and delete the file here too since we can't modify the return value from a finally block.                
+                try
                 {
-                    try
+                    if (File.Exists(tmpFileName))
                     {
                         File.Delete(tmpFileName);
                     }
-                    catch
-                    {
-                    }
-
                 }
+                catch
+                {
+                }                
                 return false;
             }
         }
