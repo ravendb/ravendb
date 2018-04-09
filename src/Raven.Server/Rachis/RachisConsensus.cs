@@ -635,8 +635,6 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    
-                    
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
                         if (Log.IsInfoEnabled)
@@ -644,24 +642,7 @@ namespace Raven.Server.Rachis
                             Log.Info($"Initiate disposing the term _prior_ to {expectedTerm} with {toDispose.Count} things to dispose.");
                         }
 
-                        Parallel.ForEach(toDispose, d =>
-                        {
-                            try
-                            {
-                                d.Dispose();
-                            }
-                            catch (ObjectDisposedException)
-                            {
-                                // nothing to do
-                            }
-                            catch (Exception e)
-                            {
-                                if (Log.IsInfoEnabled)
-                                {
-                                    Log.Info("Failed to dispose during new rachis state transition", e);
-                                }
-                            }
-                        });
+                        ParallelDispose(toDispose);
                     });
                     
                     var elapsed = sp.Elapsed;
@@ -674,6 +655,31 @@ namespace Raven.Server.Rachis
                     }
                 }
             };
+        }
+
+        private void ParallelDispose(List<IDisposable> toDispose)
+        {
+            if(toDispose == null || toDispose.Count == 0)
+                return;
+
+            Parallel.ForEach(toDispose, d =>
+            {
+                try
+                {
+                    d.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // nothing to do
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Failed to dispose during new rachis state transition", e);
+                    }
+                }
+            });
         }
 
         public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
@@ -1639,7 +1645,6 @@ namespace Raven.Server.Rachis
                 switch (CurrentState)
                 {
                     case RachisState.Passive:
-                        return null;
                     case RachisState.Candidate:
                         return null;
                     case RachisState.Follower:

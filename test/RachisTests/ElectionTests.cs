@@ -20,8 +20,8 @@ namespace RachisTests
             Assert.True(nodeCurrentState == RachisState.LeaderElect ||
                         nodeCurrentState == RachisState.Leader);
             var waitForState = node.WaitForState(RachisState.Leader, CancellationToken.None);
-            var condition = await waitForState.WaitAsync(node.ElectionTimeout);
-            
+
+            var condition = await waitForState.WaitAsync(10 * node.ElectionTimeout);
             Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
         }
 
@@ -85,6 +85,10 @@ namespace RachisTests
             var leaderUrl = new HashSet<string>();
             foreach (var consensus in RachisConsensuses)
             {
+                if (consensus.Tag != consensus.LeaderTag)
+                {
+                    Assert.True(await consensus.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(1000));
+                }
                 leaderUrl.Add(consensus.LeaderTag);
             }
             Assert.True(leaderUrl.Count == 1, "Not all nodes agree on the leader");

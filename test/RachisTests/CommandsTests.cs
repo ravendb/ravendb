@@ -66,12 +66,12 @@ namespace RachisTests
                 try
                 {
                     var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
-                    Assert.True(await task.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
+                    Assert.True(await task.WaitAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
                     await task;
                     Assert.True(false, "We should have gotten an error");
                 }
                 // expecting either one of those
-                catch (TimeoutException)
+                catch (Exception e) when (e.InnerException is TimeoutException)
                 {
                 }
                 catch (NotLeadingException)
