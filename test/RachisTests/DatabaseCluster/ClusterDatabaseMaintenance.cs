@@ -284,7 +284,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
                 // rejoin the node to the cluster
                 await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
-                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(300)));
+                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
             }
         }
 

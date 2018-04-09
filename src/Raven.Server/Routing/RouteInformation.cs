@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Web;
@@ -71,6 +72,11 @@ namespace Raven.Server.Routing
         public Task CreateDatabase(RequestHandlerContext context)
         {
             var databaseName = context.RouteMatch.GetCapture();
+            if (context.RavenServer.ServerStore.IsPassive())
+            {
+                throw new NodeIsPassiveException($"Can't perform actions on the database '{databaseName}' while the node is passive.");
+            }
+
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
 

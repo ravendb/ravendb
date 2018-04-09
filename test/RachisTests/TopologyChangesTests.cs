@@ -16,13 +16,14 @@ namespace RachisTests
         {
             var leader = await CreateNetworkAndGetLeader(3);
             var followers = GetFollowers();
-            DisconnectFromNode(leader);
             var newServer = SetupServer();
+            DisconnectFromNode(leader);
             await leader.AddToClusterAsync(newServer.Url);
-            await newServer.WaitForTopology(Leader.TopologyModification.Promotable);
             var newLeader = WaitForAnyToBecomeLeader(followers);
+
             Assert.NotNull(newLeader);
             ReconnectToNode(leader);
+
             Assert.True(await leader.WaitForTopology(Leader.TopologyModification.Remove, newServer.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 6))); // was 'TotalMilliseconds * 3', changed to *6 for low end machines RavenDB-7263
         }
         /// <summary>
