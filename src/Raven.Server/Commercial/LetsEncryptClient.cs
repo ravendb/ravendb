@@ -441,43 +441,42 @@ namespace Raven.Server.Commercial
 
             private async Task<TResult> SendAsync<TResult>(HttpMethod method, Uri uri, object message, CancellationToken token) where TResult : class
             {
-                var nonceHeader = new AcmeHeader
-                {
-                    Nonce = _nonce
-                };
-
-                var request = new HttpRequestMessage(method, uri);
-
-                if (message != null)
-                {
-                    var encodedMessage = _jws.Encode(message, nonceHeader);
-                    var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
-
-                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                }
-
+                var hasNonce = _nonce != null;
                 HttpResponseMessage response;
-                var retries = 5;
+
                 do
                 {
-                    try
+                    var nonceHeader = new AcmeHeader
                     {
-                        await Task.Delay(1000, token);
-                        response = await _client.SendAsync(request, token).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
+                        Nonce = _nonce
+                    };
+
+                    var request = new HttpRequestMessage(method, uri);
+
+                    if (message != null)
                     {
-                        throw new InvalidOperationException("acme request failed.", e);
+                        var encodedMessage = _jws.Encode(message, nonceHeader);
+                        var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
+
+                        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
                     }
 
-                    if (response.IsSuccessStatusCode)
+                    response = await _client.SendAsync(request, token).ConfigureAwait(false);
+
+                    if (response.Headers.TryGetValues("Replay-Nonce", out var vals))
+                        _nonce = vals.FirstOrDefault();
+                    else
+                        _nonce = null;
+
+                    if (response.IsSuccessStatusCode || hasNonce || _nonce == null)
                     {
-                        break;
+                        break; // either successful or no point in retry
                     }
-                } while (retries-- > 0);
 
-                RememberNonce(response);
+                    hasNonce = true; // we only allow it once
 
+                } while (true);
+                
                 if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
                 {
                     var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
