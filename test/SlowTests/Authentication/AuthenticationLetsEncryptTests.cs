@@ -25,7 +25,7 @@ namespace SlowTests.Authentication
 {
     public partial class AuthenticationLetsEncryptTests : ClusterTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             UseNewLocalServer();
