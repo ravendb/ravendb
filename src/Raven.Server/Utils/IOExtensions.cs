@@ -45,18 +45,24 @@ namespace Raven.Server.Utils
                 tmpFileName = Path.Combine(directory, Path.GetRandomFileName());
                 File.WriteAllText(tmpFileName, testString);
                 var read = File.ReadAllText(tmpFileName); //I can read too!
+                File.Delete(tmpFileName);
                 return read == testString;
             }
             catch
             {
-                return false;
-            }
-            finally
-            {
-                if (tmpFileName != null)
+                //We need to try and delete the file here too since we can't modify the return value from a finally block.
+                if (File.Exists(tmpFileName))
                 {
-                    File.Delete(tmpFileName);
+                    try
+                    {
+                        File.Delete(tmpFileName);
+                    }
+                    catch
+                    {
+                    }
+
                 }
+                return false;
             }
         }
 
