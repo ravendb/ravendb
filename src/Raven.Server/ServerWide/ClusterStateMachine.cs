@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -530,6 +531,7 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                 {
                     DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
+                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
 
@@ -537,6 +539,8 @@ namespace Raven.Server.ServerWide
 
                 UpdateValue(index, items, lowerKey, key, updated);
             }
+
+            NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
         }
 
         private void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Logging;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -31,7 +32,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         static LatestVersionCheck()
         {
-            _timer = new Timer(state => PerformAsync(), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
+            _timer = new Timer(async state => await PerformAsync(), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
         }
 
         public static void Check(ServerStore serverStore)
@@ -45,7 +46,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             serverStore.NotificationCenter.Add(_alert);
         }
 
-        private static async void PerformAsync()
+        private static async Task PerformAsync()
         {
             try
             {

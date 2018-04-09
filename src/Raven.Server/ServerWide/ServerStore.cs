@@ -1529,7 +1529,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             // Also need to register my own certificate in the cluster, for other nodes to trust me
-            RegisterServerCertificateInCluster(Server.Certificate.Certificate, name).Wait(ServerShutdown);
+            AsyncHelpers.RunSync(() => RegisterServerCertificateInCluster(Server.Certificate.Certificate, name));
         }
 
         public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
