@@ -169,6 +169,9 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int readlink(string path, byte* buf, UIntPtr bufsiz);
 
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int access(string pathFullPath, int mode);
+
         // read(2)
         //    ssize_t read(int fd, void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -453,5 +456,14 @@ namespace Sparrow.Platform.Posix
         public ulong f_flag;     /* mount flags */
         public ulong f_namemax;  /* maximum filename length */
         public fixed int f_spare[6];
+    }
+
+    [Flags]
+    public enum AccessMode
+    {
+        F_OK = 0,
+        X_OK = 1,
+        W_OK = 2,
+        R_OK = 4
     }
 }
