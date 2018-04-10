@@ -82,7 +82,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
                 await srcRaft.ServerStore.RemoveFromClusterAsync("B");
-                await originalTaskNode.ServerStore.WaitForState(RachisState.Passive);
+                await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
 
                 using (var session = src.OpenSession())
                 {

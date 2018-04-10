@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -18,7 +19,7 @@ namespace RachisTests
             var nodeCurrentState = node.CurrentState;
             Assert.True(nodeCurrentState == RachisState.LeaderElect ||
                         nodeCurrentState == RachisState.Leader);
-            var waitForState = node.WaitForState(RachisState.Leader);
+            var waitForState = node.WaitForState(RachisState.Leader, CancellationToken.None);
             var condition = await waitForState.WaitAsync(node.ElectionTimeout);
             
             Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
@@ -51,7 +52,7 @@ namespace RachisTests
             {
                 foreach (var follower in followers)
                 {
-                    waitingList.Add(follower.WaitForState(RachisState.Leader));
+                    waitingList.Add(follower.WaitForState(RachisState.Leader, CancellationToken.None));
                 }
                 if (Log.IsInfoEnabled)
                 {
@@ -77,7 +78,7 @@ namespace RachisTests
                 Log.Info("Reconnect old leader");
             }
             ReconnectToNode(firstLeader);
-            Assert.True(await firstLeader.WaitForState(RachisState.Follower).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
+            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
             var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
             Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), "Old leader didn't rollback his log to the new leader log");
             Assert.Equal(numberOfNodes, RachisConsensuses.Count);

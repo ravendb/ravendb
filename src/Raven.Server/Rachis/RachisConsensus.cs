@@ -463,9 +463,9 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(TransactionOperationContext context);
 
-        public async Task WaitForState(RachisState rachisState)
+        public async Task WaitForState(RachisState rachisState, CancellationToken cts)
         {
-            while (true)
+            while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
@@ -477,9 +477,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForLeaveState(RachisState rachisState)
+        public async Task WaitForLeaveState(RachisState rachisState, CancellationToken cts)
         {
-            while (true)
+            while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -280,11 +281,11 @@ namespace RachisTests.DatabaseCluster
                 }
                 // bring the node back to live and ensure that he moves to passive state
                 Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
-                await Servers[1].ServerStore.WaitForState(RachisState.Passive).WaitAsync(TimeSpan.FromSeconds(30));
+                await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.Equal(RachisState.Passive, Servers[1].ServerStore.CurrentRachisState);
                 // rejoin the node to the cluster
                 await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
-                await Servers[1].ServerStore.WaitForState(RachisState.Follower).WaitAsync(TimeSpan.FromSeconds(300));
+                await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(300));
                 Assert.Equal(RachisState.Follower, Servers[1].ServerStore.CurrentRachisState);
             }
         }
@@ -639,10 +640,10 @@ namespace RachisTests.DatabaseCluster
 
             // remove and rejoin to change the url
             Assert.True(await leader.ServerStore.RemoveFromClusterAsync(nodeTag).WaitAsync(fromSeconds));
-            Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive).WaitAsync(fromSeconds));
+            Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(fromSeconds));
 
             Assert.True(await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag).WaitAsync(fromSeconds));
-            Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower).WaitAsync(fromSeconds));
+            Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(fromSeconds));
 
             // create a new database and verify that it resids on the server with the new url
             var (_, dbGroupNodes) = await CreateDatabaseInCluster("new" + databaseName, groupSize, leader.WebUrl);

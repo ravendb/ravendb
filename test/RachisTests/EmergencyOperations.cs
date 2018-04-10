@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -25,7 +26,7 @@ namespace RachisTests
             (
                @"server.ServerStore.SecedeFromCluster();"
             ));
-            await leader.ServerStore.WaitForState(RachisState.Leader);
+            await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = GetServerTopology(leader);
             Assert.NotEqual(old.TopologyId,@new.TopologyId);
             List<Task<RavenServer>> leaderSelectedTasks = new List<Task<RavenServer>>();
@@ -33,7 +34,7 @@ namespace RachisTests
             {
                 if(server == leader)
                     continue;
-                leaderSelectedTasks.Add(server.ServerStore.WaitForState(RachisState.Leader).ContinueWith(_=>server));
+                leaderSelectedTasks.Add(server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_=>server));
             }
             Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitAsync(TimeSpan.FromSeconds(2)),"New leader was not elected after old leader left the cluster.");            
         }
@@ -47,7 +48,7 @@ namespace RachisTests
             ClusterTopology old, @new;
             old = GetServerTopology(follower);
             new AdminJsConsole(follower, null).ApplyScript(new AdminJsScript(@"server.ServerStore.SecedeFromCluster();"));
-            await follower.ServerStore.WaitForState(RachisState.Leader);
+            await follower.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = GetServerTopology(follower);
             Assert.NotEqual(old.TopologyId, @new.TopologyId);            
         }
