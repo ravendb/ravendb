@@ -175,20 +175,20 @@ namespace Raven.Server.ServerWide
         {
             while (ServerShutdown.IsCancellationRequested == false)
             {
-                await _engine.WaitForState(RachisState.Follower).WithCancellation(ServerShutdown);
+                await _engine.WaitForState(RachisState.Follower, ServerShutdown);
                 if (ServerShutdown.IsCancellationRequested)
                     return;
-
-                var leaveTask = _engine.WaitForLeaveState(RachisState.Follower);
-                if (await Task.WhenAny(NotificationCenter.WaitForNew(), leaveTask).WithCancellation(ServerShutdown) == leaveTask)
-                {
-                    continue;
-                }
 
                 try
                 {
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
                     {
+                        var leaveTask = _engine.WaitForLeaveState(RachisState.Follower, cts.Token);
+                        if (await Task.WhenAny(NotificationCenter.WaitForNew(), leaveTask).WithCancellation(ServerShutdown) == leaveTask)
+                        {
+                            continue;
+                        }
+
                         var cancelTask = Task.WhenAny(NotificationCenter.WaitForAllRemoved, leaveTask)
                             .ContinueWith(state =>
                             {
@@ -207,7 +207,7 @@ namespace Raven.Server.ServerWide
                             var topology = GetClusterTopology();
                             var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
                             if (leaderUrl == null)
-                                continue;
+                                break; // will continue from the top of the loop
                             using (var ws = new ClientWebSocket())
                             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
@@ -259,8 +259,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (_engine.LeaderTag != NodeTag)
                     {
-                        await _engine.WaitForState(RachisState.Leader)
-                            .WithCancellation(_shutdownNotification.Token);
+                        await _engine.WaitForState(RachisState.Leader, ServerShutdown)
+                            .WithCancellation(ServerShutdown);
                         continue;
                     }
                     var term = _engine.CurrentTerm;
@@ -296,10 +296,10 @@ namespace Raven.Server.ServerWide
                                 await LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                             }
 
-                            var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader);
+                            var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader, ServerShutdown);
 
                             if (await Task.WhenAny(topologyChangedTask, leaderChanged)
-                                    .WithCancellation(_shutdownNotification.Token) == leaderChanged)
+                                    .WithCancellation(ServerShutdown) == leaderChanged)
                                 break;
                         }
                     }
@@ -1852,9 +1852,9 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForTopology(state);
         }
 
-        public Task WaitForState(RachisState rachisState)
+        public Task WaitForState(RachisState rachisState, CancellationToken cts)
         {
-            return _engine.WaitForState(rachisState);
+            return _engine.WaitForState(rachisState, cts);
         }
 
         public void ClusterAcceptNewConnection(Stream client, Action disconnect, EndPoint remoteEndpoint)

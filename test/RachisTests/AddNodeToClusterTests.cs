@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -105,7 +106,7 @@ namespace RachisTests
 
                     // remove the node from the cluster that is responsible for the external replication
                     Assert.True(await leader.ServerStore.RemoveFromClusterAsync(watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
-                    Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Passive).WaitAsync(fromSeconds));
+                    Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(fromSeconds));
 
                     var dbInstance = await responsibleServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("MainDB");
                     await WaitForValueAsync(() => dbInstance.ReplicationLoader.OutgoingConnections.Count(), 0);
@@ -148,7 +149,7 @@ namespace RachisTests
                 // rejoin the node
                 var newLeader = Servers.Single(s => s.ServerStore.IsLeader());
                 Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
-                Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Follower).WaitAsync(fromSeconds));
+                Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(fromSeconds));
 
                 using (var session = leaderStore.OpenAsyncSession())
                 {
