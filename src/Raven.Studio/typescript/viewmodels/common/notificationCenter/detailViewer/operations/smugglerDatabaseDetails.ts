@@ -63,7 +63,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             const result = [] as Array<smugglerListItem>;
             if ("SnapshotRestore" in status) {
-                const restoreCounts = (status as Raven.Server.Documents.PeriodicBackup.RestoreProgress).SnapshotRestore;
+                const restoreCounts = (status as Raven.Server.Documents.PeriodicBackup.Restore.RestoreProgress).SnapshotRestore;
                 
                 // skip it this case means it is not backup progress object or it is restore of non-binary data 
                 if (!restoreCounts.Skipped) {

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestorePoints
     {
@@ -15,19 +15,20 @@ namespace Raven.Server.Documents.PeriodicBackup
 
     public class RestorePoint
     {
-        public DateTime Key { get; set; }
-        
-        public RestorePointDetails Details { get; set; }
-    }
+        public DateTime DateTime { get; set; }
 
-    public class RestorePointDetails
-    {
         public string Location { get; set; }
 
         public string FileName { get; set; }
 
         public bool IsSnapshotRestore { get; set; }
 
+        public bool IsIncremental { get; set; }
+
         public int FilesToRestore { get; set; }
+
+        public string DatabaseName { get; set; }
+
+        public string NodeTag { get; set; }
     }
 }
