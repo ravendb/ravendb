@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -90,6 +91,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             localMemoryStream.Position = 0;
                             var entry = archive.CreateEntry($"{nodeName}.zip");
+                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                             using (var entryStream = entry.Open())
                             {
                                 localMemoryStream.CopyTo(entryStream);
@@ -173,6 +176,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 databaseNames ?? EmptyStringArray, certificate))
             {
                 var entry = archive.CreateEntry($"Node - [{tag}].zip");
+                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                 using (var entryStream = entry.Open())
                 {
                     await responseStream.CopyToAsync(entryStream);
@@ -240,6 +245,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 try
                 {
                     var entry = archive.CreateEntry(entryRoute);
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                     using (var entryStream = entry.Open())
                     using (var writer = new BlittableJsonTextWriter(context, entryStream))
                     using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context))
@@ -295,6 +302,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 try
                 {
                     var entry = archive.CreateEntry(DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path ?? databaseName));
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                     using (var entryStream = entry.Open())
                     using (var writer = new BlittableJsonTextWriter(jsonOperationContext, entryStream))
                     {

@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using Raven.Server.Routing;
 using Sparrow.Platform;
+using Voron.Platform.Posix;
 
 namespace Raven.Server.ServerWide
 {
@@ -40,6 +41,8 @@ namespace Raven.Server.ServerWide
         public static void WriteExceptionAsZipEntry(Exception e, ZipArchive archive, string entryName)
         {          
             var entry = archive.CreateEntry($"{entryName}.error");
+            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
             using (var entryStream = entry.Open())
             using (var sw = new StreamWriter(entryStream))
             {

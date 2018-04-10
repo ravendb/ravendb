@@ -42,6 +42,8 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
+using Voron.Platform.Posix;
+using OpenFlags = System.Security.Cryptography.X509Certificates.OpenFlags;
 
 namespace Raven.Server.Commercial
 {
@@ -1387,6 +1389,11 @@ namespace Raven.Server.Commercial
                         try
                         {
                             var entry = archive.CreateEntry($"admin.client.certificate.{name}.pfx");
+
+                            // Structure of external attributes field: https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute/14727#14727
+                            // The permissions go into the most significant 16 bits of an int
+                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                             using (var entryStream = entry.Open())
                             {
                                 var export = clientCert.Export(X509ContentType.Pfx);
@@ -1416,6 +1423,8 @@ namespace Raven.Server.Commercial
                                 var licenseString = JsonConvert.SerializeObject(setupInfo.License, Formatting.Indented);
 
                                 var entry = archive.CreateEntry("license.json");
+                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                                 using (var entryStream = entry.Open())
                                 using (var writer = new StreamWriter(entryStream))
                                 {
@@ -1494,6 +1503,8 @@ namespace Raven.Server.Commercial
                             try
                             {
                                 var entry = archive.CreateEntry($"{node.Key}/settings.json");
+                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                                 using (var entryStream = entry.Open())
                                 using (var writer = new StreamWriter(entryStream))
                                 {
@@ -1504,6 +1515,8 @@ namespace Raven.Server.Commercial
                                 // we save this multiple times on each node, to make it easier 
                                 // to deploy by just copying the node
                                 entry = archive.CreateEntry($"{node.Key}/{certificateFileName}");
+                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                                 using (var entryStream = entry.Open())
                                 {
                                     entryStream.Write(serverCertBytes, 0, serverCertBytes.Length);
@@ -1523,6 +1536,8 @@ namespace Raven.Server.Commercial
                         try
                         {
                             var entry = archive.CreateEntry("readme.txt");
+                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                             using (var entryStream = entry.Open())
                             using (var writer = new StreamWriter(entryStream))
                             {
