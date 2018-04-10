@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     message += $", backup name: {configuration.Name}";
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name, 
+                    _database.Name,
                     "Couldn't schedule next backup, this shouldn't happen",
                     message,
                     AlertType.PeriodicBackup,
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 IsFull = isFullBackup
             };
         }
-        
+
         private bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
             DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         previousBackupStatus.BackupType != configuration.BackupType || // backup type has changed
                         previousBackupStatus.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(previousBackupStatus.LocalBackup.BackupDirectory, configuration.BackupType) == false)
-                        // the local folder has a missing full backup
+                    // the local folder has a missing full backup
                     {
                         isFullBackup = true;
 
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Operations(message, e);
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name, 
+                    _database.Name,
                     "Periodic Backup",
                     message,
                     AlertType.PeriodicBackup,
@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var counter = 1;
                 while (true)
                 {
-                    fileName = $"{now}-{counter}${getBackupExtension()}";
+                    fileName = $"{now}-{counter:D2}${getBackupExtension()}";
                     backupFilePath = Path.Combine(backupFolder, fileName);
 
                     if (File.Exists(backupFilePath) == false)
@@ -853,7 +853,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         await RunPeriodicBackup(periodicBackup, isFullBackup);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         _logger.Operations("Error during create backup task", e);
                     }

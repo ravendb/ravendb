@@ -99,7 +99,9 @@ namespace Raven.Client.Documents.Smuggler
                         Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                         Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
-                .OrderBy(File.GetLastWriteTimeUtc)
+                .OrderBy(Path.GetFileNameWithoutExtension)
+                .ThenBy(Path.GetExtension, PeriodicBackupFileExtensionComparer.Instance)
+                .ThenBy(File.GetLastWriteTimeUtc)
                 .ToArray();
 
             if (files.Length == 0)
