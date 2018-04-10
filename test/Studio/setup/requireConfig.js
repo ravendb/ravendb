@@ -4,7 +4,6 @@ var require = {
     paths: {
         'jquery': studioWwwrootPrefix + 'lib/jquery/dist/jquery',
         'chai': studioWwwrootPrefix + 'lib/chai/chai',
-        'Squire': studioWwwrootPrefix + 'lib/Squire.js/src/Squire',
         'utils': 'js/utils',
         "moment": studioWwwrootPrefix + "lib/moment/moment",
         'ace': studioWwwrootPrefix + 'Content/ace',
