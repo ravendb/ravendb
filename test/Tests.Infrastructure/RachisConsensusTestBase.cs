@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -107,7 +108,7 @@ namespace Tests.Infrastructure
 
             foreach (var node in nodes)
             {
-                waitingTasks.Add(node.WaitForState(RachisState.Leader));
+                waitingTasks.Add(node.WaitForState(RachisState.Leader, CancellationToken.None));
             }
             Assert.True(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), "Waited too long for a node to become a leader but no leader was elected.");
             return nodes.FirstOrDefault(x => x.CurrentState == RachisState.Leader);

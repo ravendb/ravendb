@@ -379,7 +379,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
+            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
                 "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.LastStateChangeReason());
             return leader;
         }
@@ -432,7 +432,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {
@@ -484,7 +484,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {
@@ -516,7 +516,7 @@ namespace Tests.Infrastructure
         public async Task WaitForLeader(TimeSpan timeout)
         {
             var tasks = Servers
-                .Select(server => server.ServerStore.WaitForState(RachisState.Leader))
+                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None))
                 .ToList();
 
             tasks.Add(Task.Delay(timeout));
