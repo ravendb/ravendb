@@ -38,6 +38,8 @@ namespace Raven.Server.Documents
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = db.MasterKey?.ToArray();
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
+            if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
+                options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
 
             Environment = LayoutUpdater.OpenEnvironment(options);
 

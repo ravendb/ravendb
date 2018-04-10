@@ -462,6 +462,8 @@ namespace Raven.Server.ServerWide
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null);
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
+            if (Configuration.Storage.MaxScratchBufferSize.HasValue)
+                options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;

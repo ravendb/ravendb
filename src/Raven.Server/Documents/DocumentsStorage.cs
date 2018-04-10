@@ -229,7 +229,8 @@ namespace Raven.Server.Documents
             options.AddToInitLog = _addToInitLog;
             options.MasterKey = DocumentDatabase.MasterKey?.ToArray();
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-
+            if (DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
+                options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             try
             {
                 Initialize(options);
