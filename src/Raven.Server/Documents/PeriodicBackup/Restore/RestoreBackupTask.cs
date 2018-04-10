@@ -337,6 +337,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
                 .OrderBy(Path.GetFileNameWithoutExtension)
+                .ThenBy(Path.GetExtension, PeriodicBackupFileExtensionComparer.Instance)
                 .ThenBy(File.GetLastWriteTimeUtc);
 
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.LastFileNameToRestore))
