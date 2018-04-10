@@ -25,6 +25,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Utils;
+using Voron.Platform.Posix;
 
 namespace Raven.Server.Web.Authentication
 {
@@ -119,6 +120,11 @@ namespace Raven.Server.Web.Authentication
                 var certBytes = selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
 
                 var entry = archive.CreateEntry(certificate.Name + ".pfx");
+
+                // Structure of the external attributes field: https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute/14727#14727
+                // The permissions go into the most significant 16 bits of an int
+                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                 using (var s = entry.Open())
                     s.Write(certBytes, 0, certBytes.Length);
 
@@ -129,7 +135,7 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        public static void WriteCertificateAsPem(string name, byte[] rawBytes, string exportPassword, ZipArchive s)
+        public static void WriteCertificateAsPem(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
         {
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
@@ -152,13 +158,20 @@ namespace Raven.Server.Web.Authentication
                 throw new InvalidOperationException("Could not find private key.");
             }
 
-            using (var stream = s.CreateEntry(name + ".crt").Open())
+            var zipEntryCrt = archive.CreateEntry(name + ".crt");
+            zipEntryCrt.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+            using (var stream = zipEntryCrt.Open())
             using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
                 pw.WriteObject(entry.Certificate);
             }
-            using (var stream = s.CreateEntry(name + ".key").Open())
+
+            var zipEntryKey = archive.CreateEntry(name + ".key");
+            zipEntryKey.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+            using (var stream = zipEntryKey.Open())
             using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
