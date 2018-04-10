@@ -243,17 +243,48 @@
             <div class="col-md-4">
                 <label class="control-label">Restore point</label>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-12">
                 <div>
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
                                 data-bind="disable: restorePoints().length === 0 || $parent.databaseModel.spinners.fetchingRestorePoints(), attr: { title: restorePoints().length == 0 ? 'No restore points in selected directory' : '' }">
-                            <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePoint() || 'Select restore point...' ), textInput: selectedRestorePoint"></span>
+                            <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePointText() || 'Select restore point... (' + restorePointsCount().toLocaleString() + ' options)' ), textInput: selectedRestorePoint"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu max-height" data-bind="foreach: restorePoints">
-                            <li><a href="#" data-bind="text: $data.Key, click: _.partial($root.databaseModel.useRestorePoint, $data), attr: { 'title': 'File name: ' + $data.Details.FileName }"></a></li>
-                        </ul>
+                        <div class="dropdown-menu has-info">
+                            <ul class="menu max-height" role="menu" data-bind="foreach: restorePoints">
+                                <!-- ko if: $index() !== 0 -->
+                                <li class="divider"></li>
+                                <!-- /ko -->
+                                <li class="dropdown-header" data-bind="attr: { title: $data.databaseNameTitle }">
+                                    <span class="text-success" data-bind="text: $data.databaseName"></span>
+                                </li>
+
+                                <!-- ko foreach: $data.restorePoints -->
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($root.databaseModel.useRestorePoint, $data)" title="">
+                                        <div class="row">
+                                            <strong class="col-xs-4" data-bind="text: dateTime"></strong>
+                                            <small class="col-xs-3" data-bind="text: backupType"></small>
+                                            <small class="col-xs-2 text-center" data-bind="text: nodeTag"></small>
+                                            <small class="col-xs-3 text-center" data-bind="text: filesToRestore.toLocaleString()"></small>
+                                        </div>
+                                    </a>
+                                </li>
+                                <!-- /ko -->
+                            </ul>
+
+                            <div class="divider"></div>
+                            <div class="dropdown-header header bg-info" title="">
+                                <div class="row">
+                                    <span class="col-xs-4">Date</span>
+                                    <span class="col-xs-3">Backup Type</span>
+                                    <span class="col-xs-2">Node Tag</span>
+                                    <span class="col-xs-3">Files to Restore</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                     </div>
                     <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
                 </div>

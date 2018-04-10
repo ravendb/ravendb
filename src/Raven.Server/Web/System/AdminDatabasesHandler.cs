@@ -33,7 +33,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
@@ -41,6 +40,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -538,21 +538,23 @@ namespace Raven.Server.Web.System
                 if (Directory.Exists(restorePathJson.Path) == false)
                     throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
 
+                var sortedList = new SortedList<DateTime, RestorePoint>(new RestoreUtils.DescendedDateComparer());
                 var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
                 if (directories.Count == 0)
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List, assertLegacyBackups: true);
+                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, assertLegacyBackups: true);
                 }
                 else
                 {
                     foreach (var directory in directories)
                     {
-                        Restore.FetchRestorePoints(directory, restorePoints.List);
+                        RestoreUtils.FetchRestorePoints(directory, sortedList);
                     }
                 }
 
+                restorePoints.List = sortedList.Values.ToList();
                 if (restorePoints.List.Count == 0)
                     throw new InvalidOperationException("Couldn't locate any backup files!");
 

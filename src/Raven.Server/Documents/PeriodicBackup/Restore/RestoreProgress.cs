@@ -1,7 +1,7 @@
 using Raven.Client.Documents.Smuggler;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreProgress : SmugglerResult.SmugglerProgress
     {
