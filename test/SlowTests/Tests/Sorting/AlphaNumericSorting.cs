@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,6 +23,11 @@ namespace SlowTests.Tests.Sorting
                 "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce",
                 "C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
             };
+            var titles2 = new List<string>
+            {
+             //   "1", "a1", "a2", "a10", "A-1 steak sauce"
+                "1","a1","a2", "a10", "C++ debugger", "Carmen", "Abalone"
+            };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
@@ -44,8 +50,8 @@ namespace SlowTests.Tests.Sorting
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder());
-
-                    Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
+                    var localSort = localTracks.Select(x => x.Title);
+                    Assert.Equal(localSort, titlesFromServer);
                 }
 
                 using (var session = store.OpenSession())
@@ -57,7 +63,8 @@ namespace SlowTests.Tests.Sorting
 
                     localTracks.Sort(new AlphaNumericTrackOrder());
 
-                    Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
+                    var localSort = localTracks.Select(x => x.Title);
+                    Assert.Equal(localSort, titlesFromServer);
                 }
             }
         }
@@ -577,6 +584,121 @@ namespace SlowTests.Tests.Sorting
                     Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
                 }
             }
+        }
+
+        [Fact]
+        public void OrderByPrefixes()
+        {
+            var localTracks = new List<Track>();
+            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
+            localTracks.Add(CreateTrack("1a"));
+            localTracks.Add(CreateTrack("11a"));
+            localTracks.Add(CreateTrack("1ab"));
+            localTracks.Add(CreateTrack("aaaaa000002"));
+            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"));
+            localTracks.Add(CreateTrack("aaaaa1"));
+            localTracks.Add(CreateTrack("aaaaaa"));
+            localTracks.Add(CreateTrack("1"));
+            localTracks.Add(CreateTrack("1abc"));
+            localTracks.Add(CreateTrack("1a1"));
+            localTracks.Add(CreateTrack("1c1"));
+            localTracks.Add(CreateTrack("aaaaa"));
+
+
+
+
+
+            var localTracksRightOrder = new List<Track>();
+            localTracksRightOrder.Add(CreateTrack("1"));
+            localTracksRightOrder.Add(CreateTrack("1a"));
+            localTracksRightOrder.Add(CreateTrack("1a1"));
+            localTracksRightOrder.Add(CreateTrack("1ab"));
+            localTracksRightOrder.Add(CreateTrack("1abc"));
+            localTracksRightOrder.Add(CreateTrack("1c1"));
+            localTracksRightOrder.Add(CreateTrack("11a"));
+            localTracksRightOrder.Add(CreateTrack("aaaaa"));
+            localTracksRightOrder.Add(CreateTrack("aaaaa1"));
+            localTracksRightOrder.Add(CreateTrack("aaaaa000002"));
+            localTracksRightOrder.Add(CreateTrack("aaaaaa"));
+            localTracksRightOrder.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"));
+            localTracksRightOrder.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    localTracks.ForEach(session.Store);
+                    session.SaveChanges();
+                }
+
+                new TracksIndex().Execute(store);
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var tracks = session.Query<Track, TracksIndex>()
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .ToList();
+
+                    var expectedOrder = localTracksRightOrder.Select(x => x.Title);
+                    var actualOrder = tracks.Select(x => x.Title);
+                    Assert.Equal(expectedOrder, actualOrder);
+                }
+            }
+        }
+
+        [Fact]
+        public void NumbersTests()
+        {
+            var localTracks = new List<Track>();
+
+            localTracks.Add(CreateTrack("z00444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
+            localTracks.Add(CreateTrack("z0000444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445", year: 8));
+            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
+            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
+
+            localTracks.Add(CreateTrack("3333bvc1trt2", year: 4));
+            localTracks.Add(CreateTrack("3333bvc1trta", year: 5));
+
+            localTracks.Add(CreateTrack("3333bvc1trt001", year: 3));
+            localTracks.Add(CreateTrack("3333bvc1trt1", year: 3));
+
+
+            //trailing zeroes
+            localTracks.Add(CreateTrack("3333bvc00000000000000000000001trt", year: 1));
+
+            //letters, digits, letters
+            localTracks.Add(CreateTrack("00004444abc1111ccc", year: 6));
+            localTracks.Add(CreateTrack("4444abc1111ccc", year: 6));
+
+            localTracks.Add(CreateTrack("3333bvc1trt", year: 2));
+
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    localTracks.ForEach(session.Store);
+                    session.SaveChanges();
+                }
+
+                new TracksIndex().Execute(store);
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var tracks = session.Query<Track, TracksIndex>()
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .ToList();
+
+                    for (var i = 0; i < tracks.Count - 1; i++)
+                    {
+                        Assert.True(tracks[i].Year <= tracks[i+1].Year);
+                    }
+                }
+            }
+
+            
         }
 
         class AlphaNumericTrackOrder2 : IComparer<Track>
