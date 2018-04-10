@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform.Posix.macOS;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -946,6 +947,19 @@ namespace Sparrow.Json
             _arenaAllocator.ResetArena();
             _numberOfAllocatedStringsValues = 0;
             _generation = _generation + 1;
+
+            if (_pooledArrays != null )
+            {
+                foreach (var pooledTypesKVP in _pooledArrays)
+                {
+                    foreach (var pooledArraysOfCurrentType in pooledTypesKVP.Value.Array)
+                    {
+                        pooledTypesKVP.Value.Releaser(pooledArraysOfCurrentType);
+                    }
+                }
+
+                _pooledArrays = null;
+            }
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -1286,6 +1300,28 @@ namespace Sparrow.Json
             {
                 _parent._arenaAllocator.AvoidOverAllocation = false;
             }
+        }
+
+        private Dictionary<Type, (Action<Array> Releaser, List<Array> Array)> _pooledArrays = null;
+
+        public T[] AllocatePooledArray<T>(int size)
+        {
+            if (_pooledArrays == null)
+                _pooledArrays = new Dictionary<Type, (Action<Array> Releaser, List<Array> Array)>();
+            
+            
+
+            if (_pooledArrays.TryGetValue(typeof(T), out var allocationsArray) == false)
+            {
+                void Releaser(Array x) => ArrayPool<T>.Shared.Return((T[])x, true);
+
+                allocationsArray = (Releaser, new List<Array>());
+                _pooledArrays[typeof(T)] = allocationsArray;
+            }
+
+            var allocatedArray = ArrayPool<T>.Shared.Rent(size);
+            allocationsArray.Array.Add(allocatedArray);
+            return allocatedArray;
         }
     }
 }
