@@ -299,11 +299,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
+                Assert.True(SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                }, TimeSpan.FromSeconds(15)));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -313,11 +313,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                SpinWait.SpinUntil(() =>
+                Assert.True(SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromSeconds(15));
+                }, TimeSpan.FromSeconds(15)));
             }
 
             using (var store = GetDocumentStore(new Options
