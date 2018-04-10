@@ -87,27 +87,25 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 
             }
 
-            public unsafe class AlphanumericStringComparisonState:IDisposable
+            public struct AlphanumericStringComparisonState
             {
-                private const int TinyPooledStringSize = 10;
                 public int CurPositionInString;
                 public char CurCharacter;
-
                 public readonly string OriginalString;
                 public readonly int StringLength;
-                
                 public bool CurSequenceIsNumber;
-                
                 public int NumberLength;
-
                 public int CurSequenceStartPosition;
-
-
 
                 public AlphanumericStringComparisonState(string originalString)
                 {
                     OriginalString = originalString;
                     StringLength = originalString.Length;
+                    CurSequenceStartPosition = 0;
+                    NumberLength = 0;
+                    CurSequenceIsNumber = false;
+                    CurCharacter = (char)0;
+                    CurPositionInString = 0;
                 }
 
                 public void ScanNextAlphabeticOrNumericSequence()
@@ -185,10 +183,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     string1State.OriginalString, string1State.CurSequenceStartPosition, string1State.CurPositionInString - string1State.CurSequenceStartPosition,
                     string2State.OriginalString, string2State.CurSequenceStartPosition, string2State.CurPositionInString - string2State.CurSequenceStartPosition);
                 }
-
-                public void Dispose()
-                {
-                }
             }
 
             public unsafe int Compare(string string1, string string2)
@@ -202,31 +196,29 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 {
                     return 0;
                 }
-                
-                using (var string1State = new AlphanumericStringComparisonState(string1))
-                using (var string2State = new AlphanumericStringComparisonState(string2))
+
+                var string1State = new AlphanumericStringComparisonState(string1);
+                var string2State = new AlphanumericStringComparisonState(string2);
+
+                // Walk through two the strings with two markers.
+                while (string1State.CurPositionInString < string1State.StringLength &&
+                        string2State.CurPositionInString < string2State.StringLength)
                 {
+                    string1State.ScanNextAlphabeticOrNumericSequence();
+                    string2State.ScanNextAlphabeticOrNumericSequence();
 
-                    // Walk through two the strings with two markers.
-                    while (string1State.CurPositionInString < string1State.StringLength &&
-                           string2State.CurPositionInString < string2State.StringLength)
+                    var result = string1State.CompareWithAnotherState(string2State);
+
+                    if (result != 0)
                     {
-                        string1State.ScanNextAlphabeticOrNumericSequence();
-                        string2State.ScanNextAlphabeticOrNumericSequence();
-
-                        var result = string1State.CompareWithAnotherState(string2State);
-
-                        if (result != 0)
-                        {
-                            return result;
-                        }
+                        return result;
                     }
-
-                    if (string1State.CurPositionInString < string1State.StringLength)
-                        return 1;
-                    if (string2State.CurPositionInString < string2State.StringLength)
-                        return -1;
                 }
+
+                if (string1State.CurPositionInString < string1State.StringLength)
+                    return 1;
+                if (string2State.CurPositionInString < string2State.StringLength)
+                    return -1;
 
                 return 0;
             }
