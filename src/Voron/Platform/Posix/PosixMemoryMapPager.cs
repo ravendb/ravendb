@@ -110,7 +110,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName.FullPath);
 
-            if (_isSyncDirAllowed && Syscall.SyncDirectory(FileName.FullPath) == -1)
+            if (DeleteOnClose == false && _isSyncDirAllowed && Syscall.SyncDirectory(FileName.FullPath) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err);
