@@ -434,7 +434,6 @@ class sqlMigration {
             column.propertyName(collection.ColumnsMapping[sqlName]);
         });
     }
-
 }
 
 export = sqlMigration;
