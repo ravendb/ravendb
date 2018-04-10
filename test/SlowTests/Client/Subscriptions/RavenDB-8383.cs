@@ -13,13 +13,16 @@ namespace SlowTests.Client.Subscriptions
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
         [Fact]
-        public async Task RunningSubscriptionOnNonExistantCollectionShouldThrow()
+        public async Task RunningSubscriptionOnNonExistantCollectionShould_NOT_Throw()
         {
             using (var store = GetDocumentStore())
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync<User>();
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
-                Assert.True(await Assert.ThrowsAsync<SubscriptionException>(()=> subscription.Run(x => { })).WaitAsync(_reasonableWaitTime));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subscriptionName)
+                {
+                    CloseWhenNoDocsLeft = true
+                });
+                await Assert.ThrowsAsync<SubscriptionException>(() => subscription.Run(x => { })).WaitAsync(_reasonableWaitTime);
             }
         }
     }
