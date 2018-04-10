@@ -57,8 +57,9 @@ namespace Raven.Server.Documents
             public bool AllowSkip;
         }
 
-        public ChangesClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)
+        public ChangesClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase, bool fromStudio)
         {
+            IsChangesConnectionOriginatedFromStudio = fromStudio;
             _webSocket = webSocket;
             _documentDatabase = documentDatabase;
             _startedAt = SystemTime.UtcNow;
@@ -383,7 +384,10 @@ namespace Raven.Server.Documents
             }
         }
 
+        public bool IsChangesConnectionOriginatedFromStudio { get; }
+
         private SingleUseFlag _isDisposed = new SingleUseFlag();
+
         public bool IsDisposed => _isDisposed.IsRaised();
 
         public void Dispose()
