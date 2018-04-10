@@ -8,6 +8,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
+using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -37,6 +38,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             try
                             {
                                 var entry = archive.CreateEntry(entryName);
+                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
                                 using (var entryStream = entry.Open())
                                 using (var writer = new BlittableJsonTextWriter(context, entryStream))
                                 {
