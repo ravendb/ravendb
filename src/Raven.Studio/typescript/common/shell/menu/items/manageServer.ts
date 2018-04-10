@@ -97,6 +97,6 @@ function getManageServerMenuItem() {
         }),
     ];
 
-    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null, accessMainMenu.showManageServerMenuItem());
+    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null, accessMainMenu.showManageServerMenuItem);
 }
 

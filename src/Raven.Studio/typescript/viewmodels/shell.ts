@@ -178,6 +178,9 @@ class shell extends viewModelBase {
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 
         this.setupRouting();
+        
+        // we await here only for certificate task, as downloading license can take longer
+        return clientCertifiateTask;
     }
 
     private setupRouting() {
@@ -299,27 +302,8 @@ class shell extends viewModelBase {
         return false;
     }
 
-    loadServerConfig(): JQueryPromise<void> {
-        const deferred = $.Deferred<void>().resolve();
-        
-        // Todo - what should be here ?
-        
-        return deferred;
-    }
-
     connectToRavenServer() {
-        const serverConfigsLoadTask: JQueryPromise<void> = this.loadServerConfig();
-        const managerTask = this.databasesManager.init();
-        return $.when<any>(serverConfigsLoadTask, managerTask);
-    }
-
-    private handleRavenConnectionFailure(result: any) {
-        sys.log("Unable to connect to Raven.", result);
-        const tryAgain = "Try again";
-        this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain])
-            .done(() => {
-                this.connectToRavenServer();
-            });
+        return this.databasesManager.init();
     }
 
     fetchServerBuildVersion() {
