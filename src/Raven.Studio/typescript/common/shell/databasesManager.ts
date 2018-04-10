@@ -129,7 +129,6 @@ class databasesManager {
         this.fetchClientBuildVersion();
         shell.fetchLicenseStatus();
         this.fetchSupportCoverage();
-        this.loadServerConfig();
         this.fetchClusterTopology();
         */
 
