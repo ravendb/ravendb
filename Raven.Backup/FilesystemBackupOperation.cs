@@ -42,12 +42,10 @@ namespace Raven.Backup
                 return false;
             }
 
-
             var backupRequest = new
             {
-                BackupLocation = parameters,
+                BackupLocation = parameters.BackupPath
             };
-
 
             var json = RavenJObject.FromObject(backupRequest).ToString();
 
@@ -64,7 +62,7 @@ namespace Raven.Backup
 
                     var response = req.ReadResponseJson();
                     Console.WriteLine(response);
-                }  
+                }
             }
             catch (Exception exc)
             {
