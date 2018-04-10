@@ -30,7 +30,7 @@ using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreBackupTask
     {

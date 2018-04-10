@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using Raven.Client.ServerWide;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreSettings
     {
