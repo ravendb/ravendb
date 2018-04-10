@@ -334,8 +334,8 @@
     
     <table style="width:100%">
         <tbody data-bind="foreach: references">
-            <tr>
-                <td width="400" data-bind="attr: { 'data-ref-id': id }">
+            <tr data-bind="attr: { 'data-ref-id': id }">
+                <td width="400">
                     <span data-bind="visible: type === 'OneToMany'">
                         <span class="text-muted">PK</span>
                         <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
@@ -362,7 +362,7 @@
                 <td width="180">
                     <div class="btn-group link-actions">
                         <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
-                        <button class="btn btn-sm" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
+                        <button class="btn btn-sm js-btn-link" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
                         <button class="btn btn-sm" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
                     </div>
                     <span data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">

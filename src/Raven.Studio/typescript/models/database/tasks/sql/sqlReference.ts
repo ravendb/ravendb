@@ -2,6 +2,7 @@
 
 import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
+import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 
 class sqlReference {
     
@@ -81,6 +82,10 @@ class sqlReference {
             case "ManyToOne":
                 return "icon-sql-many-to-one";
         }
+    }
+    
+    canLinkTargetTable() {
+        return (this.targetTable as rootSqlTable).checked(); 
     }
 }
 

@@ -230,8 +230,9 @@ class importCollectionFromSql extends viewModelBase {
     
     private initSecondStep() {
         this.filterTables();
+        const $body = $("body");
         
-        this.registerDisposableHandler($("body"), "click", (event: JQueryEventObject) => {
+        this.registerDisposableHandler($body, "click", (event: JQueryEventObject) => {
             if ($(event.target).closest(".inline-edit").length === 0) {
                 // click outside edit area - close all of them
                 
@@ -240,7 +241,9 @@ class importCollectionFromSql extends viewModelBase {
             }
         });
         
-        $("#js-second-step").on("click", ".inline-edit", event => {
+        const $secondStep = $("#js-second-step"); 
+        
+        $secondStep.on("click", ".inline-edit", event => {
             event.preventDefault();
           
             $(".inline-edit.edit-mode")
@@ -249,7 +252,46 @@ class importCollectionFromSql extends viewModelBase {
             const container = $(event.target).closest(".inline-edit");
             container.addClass("edit-mode");
             $("input", container).focus();
-        })
+        });
+        
+        $secondStep.on("mouseenter", ".js-btn-link", event => {
+            const target = $(event.target);
+            
+            const reference = ko.dataFor(target[0]) as sqlReference;
+            
+            if (!target.data('has-popover')) {
+                target.data('has-popover', true);
+                
+                popoverUtils.longWithHover(target, {
+                    content: () => reference.canLinkTargetTable() ? undefined : this.provideSelectTablePopoverText(reference),
+                    placement: "top"
+                });
+            }
+            
+            target.popover('show');
+        });
+        
+        // handler for selecting table before linking
+        this.registerDisposableDelegateHandler($body, "click", ".popover-link-ref", (event: JQueryEventObject) => {
+            const $target = $(event.target);
+            const refId = $target.attr('data-popover-ref-id');
+            
+            const $ref = $("[data-ref-id=" + refId + "]");
+            
+            const reference = ko.dataFor($ref[0]) as sqlReference;
+            const targetTable = reference.targetTable as rootSqlTable;
+            
+            targetTable.checked(true);
+            messagePublisher.reportSuccess("Table " + targetTable.tableName + " was selected");
+            
+            $(".js-btn-link", $ref).popover('hide');
+        });
+    }
+    
+    private provideSelectTablePopoverText(reference: sqlReference) {
+        return 'Target table is currently not selected. <br />' 
+            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click to select target table</button><br />'
+            + ' before creating link to <strong>' + reference.targetTable.tableName + '</strong>';
     }
     
     private filterTables() {
@@ -328,27 +370,9 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     private onLinkTable(reference: sqlReference) {
-        const linkAction = () => {
+        if (reference.canLinkTargetTable()) {
             const tableToLink = this.model.findRootTable(reference.targetTable.tableSchema, reference.targetTable.tableName);
             reference.link(tableToLink);
-            
-            if (!tableToLink.checked()) {
-                tableToLink.checked(true);
-            }
-        };
-        
-        // if we want to link to unchecked table then warn
-        if ((reference.targetTable as rootSqlTable).checked()) {
-            linkAction();
-        } else {
-            this.confirmationMessage("Table not selected", 
-                "Table '" + reference.targetTable.tableName + "' you are trying to link is not selected. Would you like to select this table and create a link?", 
-                ["Cancel", "Select table and create link"]) 
-                .done(result => {
-                    if (result.can) {
-                        linkAction();
-                    }
-                });
         }
     }
     
@@ -424,7 +448,7 @@ class importCollectionFromSql extends viewModelBase {
             this.setCurrentPage(page);
             
             // navigate exactly to reference position
-            const $revReference = $("[data-ref-id=" + reverseReference.id + "]");
+            const $revReference = $("[data-ref-id=" + reverseReference.id + "] td:eq(0)");
             
             $(".js-scroll-tables").scrollTop($revReference.offset().top - originalTopPosition);
             

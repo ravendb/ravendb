@@ -139,6 +139,14 @@ class viewModelBase {
         this.disposed = true;
     }
 
+    protected registerDisposableDelegateHandler($element: JQuery, event: string, delegate: string, handler: Function) {
+        $element.on(event as any, delegate, handler);
+
+        this.disposableActions.push({
+             dispose: () => $element.off(event as any, delegate, handler as any)
+        });
+    }
+    
     protected registerDisposableHandler($element: JQuery, event: string, handler: Function) {
         $element.on(event as any, handler);
 
