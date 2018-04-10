@@ -8,6 +8,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Server.Routing;
@@ -18,6 +19,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ChangesHandler : DatabaseRequestHandler
     {
+        private static readonly string StudioMarker = "fromStudio";
         [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task GetChanges()
         {
@@ -92,9 +94,10 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
         {
+            var fromStudio = GetBoolValueQueryString(StudioMarker, false) ?? false;
             var throttleConnection = GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
 
-            var connection = new ChangesClientConnection(webSocket, Database);
+            var connection = new ChangesClientConnection(webSocket, Database, fromStudio);
             Database.Changes.Connect(connection);
             var sendTask = connection.StartSendingNotifications(throttleConnection);
             var debugTag = "changes/" + connection.Id;
