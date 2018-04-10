@@ -602,17 +602,17 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized == false)
                 throw new InvalidOperationException($"Index '{Name}' was not initialized.");
 
+            PoolOfThreads.LongRunningWork waiter;
             using (DrainRunningQueries())
             {
-                WaitForIndexingThreadToExit(disableIndex);
+                waiter = GetWaitForIndexingThreadToExit(disableIndex);
             }
+            // outside the DrainRunningQueries loop
+            waiter?.Join(Timeout.Infinite);
         }
 
-        private void WaitForIndexingThreadToExit(bool disableIndex)
+        private PoolOfThreads.LongRunningWork GetWaitForIndexingThreadToExit(bool disableIndex)
         {
-            if (_indexingThread == null)
-                return;
-
             if (disableIndex)
             {
                 lock (_disablingIndexLock)
@@ -623,16 +623,22 @@ namespace Raven.Server.Documents.Indexes
             }
             else
             {
-                _indexingProcessCancellationTokenSource.Cancel();
+                _indexingProcessCancellationTokenSource?.Cancel();
             }
+
+            if (_indexingThread == null)
+                return null;
+
 
             var indexingThread = _indexingThread;
             _indexingThread = null;
 
+            if (PoolOfThreads.LongRunningWork.Current != indexingThread)
+                return indexingThread;
+
             // cancellation was requested, the thread will exit the indexing loop and terminate.
             // if we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-            if (PoolOfThreads.LongRunningWork.Current != indexingThread)
-                indexingThread.Join(int.MaxValue);
+            return null;
         }
 
         public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
@@ -2885,7 +2891,7 @@ namespace Raven.Server.Documents.Indexes
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
             // are handled using the DrainRunningQueries porition
-            WaitForIndexingThreadToExit(disableIndex: false);
+            GetWaitForIndexingThreadToExit(disableIndex: false)?.Join(Timeout.Infinite);
             _environment.Dispose();
         }
 

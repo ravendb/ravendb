@@ -49,8 +49,6 @@ namespace FastTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var entities = session.Query<Entity>().Statistics(out QueryStatistics statistics).ToList();
-
-                    Console.WriteLine(statistics.IndexName);
                     Assert.NotEmpty(entities);
                 }
             }
