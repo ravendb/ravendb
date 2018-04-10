@@ -743,12 +743,17 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
-                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    //store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    // on Linux the stream.Position is reset to initial one
+                    // https://github.com/dotnet/corefx/issues/23782
+
+                    stream.Position = 2;
+
                     var exceptoin = Assert.Throws<InvalidOperationException>(
-                        () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg")));
-                    Assert.Equal($"Cannot put an attachment with a stream that have position which isn't zero (The position is: {3}) since this is most of the time not intended and it is a common mistake.", exceptoin.Message);
+                        () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", stream, "image/jpeg")));
+                    Assert.Equal($"Cannot put an attachment with a stream that have position which isn't zero (The position is: {2}) since this is most of the time not intended and it is a common mistake.", exceptoin.Message);
                 }
             }
         }
