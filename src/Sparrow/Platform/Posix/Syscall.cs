@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Text;
 using Voron.Platform.Posix;
 
 namespace Sparrow.Platform.Posix
@@ -164,6 +166,8 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int fsync(int fd);
 
+        [DllImport(LIBC_6, SetLastError = true)]
+        private static extern int readlink(string path, byte* buf, UIntPtr bufsiz);
 
         // read(2)
         //    ssize_t read(int fd, void *buf, size_t count);
@@ -333,16 +337,77 @@ namespace Sparrow.Platform.Posix
             return syncAllowed;
         }
 
-        public static int SyncDirectory(string file)
+        public static int SyncDirectory(string file, bool isRealPath = false)
         {
-            var dir = Path.GetDirectoryName(file);
+            var dir = isRealPath == false ? Path.GetDirectoryName(file) : file;
             var fd = open(dir, 0, 0);
             if (fd == -1)
-                return -1;
+            {
+                var err = Marshal.GetLastWin32Error();
+                ThrowLastError(err, "failed to open directory " + dir + " in order to sync for file " + file);
+            }
             var fsyncRc = FSync(fd);
             if (fsyncRc == -1)
-                return -1;
-            return close(fd);
+            {
+                var err = Marshal.GetLastWin32Error();
+                ThrowLastError(err, "failed to FSync directory " + dir + " with fd=" + fd + " in order to sync for file " + file);
+            }
+
+            if (close(fd) == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                ThrowLastError(err, "failed to close directory " + dir + " with fd=" + fd + " in order to sync for file " + file);
+            }
+
+            if (isRealPath)
+                return 0;
+
+            // now sync the real path if the above is a symlink
+            var buffSize = 64;
+            var realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
+            try
+            {
+                // determine buffSize passed to readlink should be using lstat (but this is not available right now)
+                // so we try with rented array of 1024 and if readlink needs more we double the buffSize until it 
+                // in the right length (TODO: change it to lstat / FileInfo(path).Target in the future when https://github.com/dotnet/corefx/issues/26310 is fixed)
+                int numOfBytes;
+                while (true)
+                {
+                    fixed (byte* pBuff = realpathToDir)
+                    {
+                        numOfBytes = readlink(dir, pBuff, (UIntPtr)buffSize);
+                        var err = Marshal.GetLastWin32Error();
+                        if (numOfBytes == -1)
+                        {
+                            if (err == (int)Errno.EINVAL) // EINVAL when applied on non symlink according to readlink's man page 
+                                return 0;
+                            ThrowLastError(err, "failed to readlink symlink directory " + dir + " with fd=" + fd + " in order to sync for file " + file);
+                        }
+
+                        if (numOfBytes >= buffSize - 1)
+                        {
+                            buffSize = Math.Min(buffSize * 2, buffSize + 1024);
+                            if (buffSize > 8192) // usually PATH_MAX is 4096
+                                return -1;
+
+                            ArrayPool<byte>.Shared.Return(realpathToDir);
+                            realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
+
+                            continue;
+                        }
+
+                        realpathToDir[numOfBytes] = 0;
+                        break;
+                    }
+                }
+
+                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes);
+                return SyncDirectory(realpathString, isRealPath: true);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(realpathToDir);
+            }
         }
 
         public static string GetRootMountString(DriveInfo[] drivesInfo, string filePath)
