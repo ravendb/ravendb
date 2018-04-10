@@ -10,6 +10,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Platform;
 
 namespace SlowTests.Client.Attachments
 {
@@ -640,7 +641,16 @@ namespace SlowTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
-                    Assert.Equal(3, profileStream.Position);
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(3, profileStream.Position);
+                    else
+                    {
+                        // on Posix the position is set to initial one automatically
+                        // https://github.com/dotnet/corefx/issues/23782
+                        Assert.Equal(0, profileStream.Position);
+                    }
+
                     profileStream.Position = 0;
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg"));
                 }
@@ -682,7 +692,15 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("IMAGE/png", result.ContentType);
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                     Assert.Equal(3, result.Size);
-                    Assert.Equal(3, profileStream.Position);
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(3, profileStream.Position);
+                    else
+                    {
+                        // on Posix the position is set to initial one automatically
+                        // https://github.com/dotnet/corefx/issues/23782
+                        Assert.Equal(0, profileStream.Position);
+                    }
 
                     profileStream.Position = 0;
                     result = store.Operations.Send(new PutAttachmentOperation("users/1", "PROFILE", profileStream, "image/PNG"));
