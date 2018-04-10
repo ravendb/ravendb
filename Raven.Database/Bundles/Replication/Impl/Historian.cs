@@ -19,11 +19,17 @@ namespace Raven.Database.Bundles.Replication.Impl
             if (existingMetadata == null || existingMetadata.Type == JTokenType.Null || incomingMetadata == null || incomingMetadata.Type == JTokenType.Null)
                 return false;
 
+            var existingMetadataInConflict = existingMetadata[Constants.RavenReplicationConflict]?.Value<bool>() ?? false;
+            existingMetadataInConflict |= existingMetadata[Constants.RavenReplicationConflictDocument]?.Value<bool>() ?? false;
+
+            //The existing document is a conflict document
+            if (existingMetadataInConflict)
+                return false;
+
             var history = incomingMetadata[Constants.RavenReplicationHistory];
 
-            //if we the source of the metadata we have is the same as the incoming
-            //and the incoming has a higher version than we can assume it is a parent
-            //since we now merge histories.
+            //if the source of the incoming metadata is equal to the existing metadata and the incoming version is greater we can assume 
+            //the incoming is a child document of ours,since we now merge histories.
             if (incomingMetadata[Constants.RavenReplicationSource].Value<string>() ==
                 existingMetadata[Constants.RavenReplicationSource].Value<string>()
                 && incomingMetadata[Constants.RavenReplicationVersion].Value<long>()
