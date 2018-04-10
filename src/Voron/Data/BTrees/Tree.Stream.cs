@@ -46,6 +46,8 @@ namespace Voron.Data.BTrees
             }
         }
 
+        private const int MaxNumberOfPagerPerChunk = 4 * Constants.Size.Megabyte / Constants.Storage.PageSize;
+
         [ThreadStatic]
         private static byte[] _localBuffer;
 
@@ -195,7 +197,7 @@ namespace Voron.Data.BTrees
                 ((StreamPageHeader*)_currentPage.Pointer)->StreamNextPageNumber = 0;
                 ((StreamPageHeader*)_currentPage.Pointer)->ChunkSize = 0;
                 _writePosEnd = _currentPage.Pointer + (_numberOfPagesPerChunk * Constants.Storage.PageSize);
-                _numberOfPagesPerChunk = Math.Min(_numberOfPagesPerChunk * 2, 4096);
+                _numberOfPagesPerChunk = Math.Min(_numberOfPagesPerChunk * 2, MaxNumberOfPagerPerChunk);
             }
         }
 
