@@ -127,7 +127,23 @@ namespace Voron
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
 
-        public long MaxScratchBufferSize { get; set; }
+        public long MaxScratchBufferSize
+        {
+            get => _maxScratchBufferSize;
+            set
+            {
+                if (value < 0)
+                    throw new InvalidOperationException($"Cannot set {nameof(MaxScratchBufferSize)} to negative value: {value}");
+
+                if (_forceUsing32BitsPager && _maxScratchBufferSize > 0)
+                {
+                    _maxScratchBufferSize = Math.Min(value, _maxScratchBufferSize);
+                    return;
+                }
+
+                _maxScratchBufferSize = value;
+            }
+        }
 
         public bool OwnsPagers { get; set; }
 
@@ -1064,6 +1080,7 @@ namespace Voron
         private int _timeToSyncAfterFlashInSec;
         public long CompressTxAboveSizeInBytes;
         private Guid _environmentId;
+        private long _maxScratchBufferSize;
 
         public virtual void SetPosixOptions()
         {

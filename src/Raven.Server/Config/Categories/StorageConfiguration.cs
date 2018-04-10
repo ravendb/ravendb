@@ -44,5 +44,11 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Kilobytes)]
         [ConfigurationEntry("Storage.CompressTxAboveSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size CompressTxAboveSize { get; set; }
+
+        [Description("Max size of .buffers files")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.MaxScratchBufferSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? MaxScratchBufferSize { get; set; }
     }
 }
