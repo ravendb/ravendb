@@ -281,12 +281,10 @@ namespace RachisTests.DatabaseCluster
                 }
                 // bring the node back to live and ensure that he moves to passive state
                 Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
-                await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
-                Assert.Equal(RachisState.Passive, Servers[1].ServerStore.CurrentRachisState);
+                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
                 // rejoin the node to the cluster
                 await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
-                await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(300));
-                Assert.Equal(RachisState.Follower, Servers[1].ServerStore.CurrentRachisState);
+                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(300)));
             }
         }
 
