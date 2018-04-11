@@ -39,7 +39,7 @@ namespace Raven.Server.Smuggler.Migration
             _buildVersion = configuration.BuildVersion;
 
             //because of backward compatibility useCompression == false here
-            var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression:false);
+            var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false);
             httpClientHandler.UseDefaultCredentials = false;
 
             if (string.IsNullOrWhiteSpace(configuration.ApiKey) == false)
@@ -101,7 +101,7 @@ namespace Raven.Server.Smuggler.Migration
                 buildInfo.TryGet(nameof(BuildInfo.FullVersion), out string fullVersion);
 
                 MajorVersion version;
-                if ((buildVersion >= 40 && buildVersion <= 49)|| buildVersion > 40000)
+                if ((buildVersion >= 40 && buildVersion <= 49) || buildVersion > 40000)
                 {
                     version = MajorVersion.V4;
                 }
