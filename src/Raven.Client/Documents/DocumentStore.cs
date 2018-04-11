@@ -42,7 +42,7 @@ namespace Raven.Client.Documents
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
-        private bool _aggressiveCachingUsed;        
+        private bool _aggressiveCachingUsed;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public override void Dispose()
         {
-            BeforeDispose?.Invoke(this,EventArgs.Empty);
+            BeforeDispose?.Invoke(this, EventArgs.Empty);
 #if DEBUG
             GC.SuppressFinalize(this);
 #endif
@@ -163,14 +163,14 @@ namespace Raven.Client.Documents
 
             RequestExecutor CreateRequestExecutor()
             {
-                var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions, Conventions.UseCompression);
+                var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions);
                 RequestExecutorCreated?.Invoke(this, requestExecutor);
                 return requestExecutor;
             }
 
             RequestExecutor CreateRequestExecutorForSingleNode()
             {
-                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions, Conventions.UseCompression);
+                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions);
                 RequestExecutorCreated?.Invoke(this, forSingleNode);
                 return forSingleNode;
             }
