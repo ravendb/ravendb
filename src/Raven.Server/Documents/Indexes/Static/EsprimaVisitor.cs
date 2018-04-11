@@ -18,6 +18,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitStatment(Statement statement)
         {
+            if (statement == null)
+                return;
+
             switch (statement.Type)
             {
                 case Nodes.BlockStatement:
