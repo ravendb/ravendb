@@ -12,9 +12,9 @@ namespace Raven.Server.Extensions
     {
         public static string TryGetFieldFromSimpleLambdaExpression(this IFunction function)
         {
-            if (!(function.Params.SingleOrDefault() is Identifier identifier))
+            if (!(function.Params.FirstOrDefault() is Identifier identifier))
                 return null;
-            if (!(function.Body.Body.SingleOrDefault() is ReturnStatement returnStatement))
+            if (!(function.Body.Body.FirstOrDefault() is ReturnStatement returnStatement))
                 return null;
             if (!(returnStatement.Argument is MemberExpression me))
                 return null;
