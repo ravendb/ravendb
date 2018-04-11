@@ -40,8 +40,9 @@ namespace Raven.Client.Http
 
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
-        internal static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClient = new ConcurrentDictionary<string, Lazy<HttpClient>>();
-        
+        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> _globalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
+        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> _globalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
+
         private static readonly GetStatisticsOperation FailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
 
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
@@ -125,10 +126,10 @@ namespace Raven.Client.Http
             FailedRequest?.Invoke(url, e);
         }
         
-        private HttpClient GetCachedOrCreateHttpClient() => 
-            GlobalHttpClient.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
+        private HttpClient GetCachedOrCreateHttpClient(ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache) => 
+            httpClientCache.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
 
-        protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls, bool useCompresssion)
+        protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
         {
             Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
 
@@ -141,8 +142,6 @@ namespace Raven.Client.Http
                 // shared instance, cannot dispose!
                 //_httpClient.Dispose();
             });
-
-            _useCompression = useCompresssion;
 
             _readBalanceBehavior = conventions.ReadBalanceBehavior;
             _databaseName = databaseName;
@@ -158,15 +157,19 @@ namespace Raven.Client.Http
             if (certificate != null)
                 thumbprint = certificate.Thumbprint;
             
-            _httpClient = GlobalHttpClient.TryGetValue(thumbprint, out var lazyClient) == false ? 
-                GetCachedOrCreateHttpClient() : lazyClient.Value;            
+            var httpClientCache = conventions.UseCompression ? 
+                _globalHttpClientWithCompression : 
+                _globalHttpClientWithoutCompression;
+
+            _httpClient = httpClientCache.TryGetValue(thumbprint, out var lazyClient) == false ? 
+                GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;            
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
         }
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool useCompression = true)
         {
-            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls, useCompression);            
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);            
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
             return executor;
         }
@@ -183,7 +186,7 @@ namespace Raven.Client.Http
         {
             var initialUrls = new[] { url };
             url = ValidateUrls(initialUrls, certificate)[0];
-            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls, useCompression)
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -1134,8 +1137,7 @@ namespace Raven.Client.Http
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
-        protected bool _useCompression;
-        private HttpClient _httpClient;
+        private readonly HttpClient _httpClient;
         protected bool Disposed => _disposeOnceRunner.Disposed;
 
         public virtual void Dispose()
@@ -1147,7 +1149,7 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression)
+        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
             var httpMessageHandler = new HttpClientHandler();
             if (httpMessageHandler.SupportsAutomaticDecompression)
@@ -1158,7 +1160,8 @@ namespace Raven.Client.Http
                         : DecompressionMethods.None;
             }
             else if (httpMessageHandler.SupportsAutomaticDecompression == false &&
-                     useCompression)
+                     useCompression &&
+                     hasExplicitlySetCompressionUsage)
             {
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
@@ -1204,7 +1207,10 @@ namespace Raven.Client.Http
 
         public HttpClient CreateClient()
         {        
-            var httpMessageHandler = CreateHttpMessageHandler(Certificate, setSslProtocols: true, useCompression: _useCompression);
+            var httpMessageHandler = CreateHttpMessageHandler(Certificate, 
+                setSslProtocols: true, 
+                useCompression: Conventions.UseCompression, 
+                hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage);
             return new HttpClient(httpMessageHandler)
             {
                 Timeout = GlobalHttpClientTimeout                

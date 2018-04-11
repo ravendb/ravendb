@@ -14,7 +14,7 @@ namespace Raven.Client.Http
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls, bool useCompression) : base(null, certificate, conventions, initialUrls, useCompression)
+        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls, bool useCompression) : base(null, certificate, conventions, initialUrls)
         {
            
         }
