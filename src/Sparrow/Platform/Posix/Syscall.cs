@@ -415,7 +415,7 @@ namespace Sparrow.Platform.Posix
                     }
                 }
 
-                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes - 1);
+                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes);
                 return SyncDirectory(realpathString, isRealPath: true);
             }
             finally
