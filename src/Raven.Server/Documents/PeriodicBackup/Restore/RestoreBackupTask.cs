@@ -328,17 +328,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private List<string> GetFilesForRestore(string backupLocation)
         {
             var orderedFiles = Directory.GetFiles(backupLocation)
-                .Where(file =>
-                {
-                    var extension = Path.GetExtension(file);
-                    return
-                        Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-                })
-                .OrderBy(Path.GetFileNameWithoutExtension)
-                .ThenBy(Path.GetExtension, PeriodicBackupFileExtensionComparer.Instance)
-                .ThenBy(File.GetLastWriteTimeUtc);
+                .Where(RestoreUtils.IsBackupOrSnapshot)
+                .OrderBackups();
 
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.LastFileNameToRestore))
                 return orderedFiles.ToList();
@@ -368,14 +359,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // the files are already ordered by name
             // take only the files that are relevant for smuggler restore
             _filesToRestore = _filesToRestore
-                .Where(file =>
-                {
-                    var extension = Path.GetExtension(file);
-                    return
-                        Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-                })
-                .OrderBy(x => x)
+                .Where(RestoreUtils.IsBackup)
+                .OrderBackups()
                 .ToList();
 
             if (_filesToRestore.Count == 0)

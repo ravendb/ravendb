@@ -393,7 +393,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupToMovePath = $"{backupPath}\\IncrementalBackupTemp";
                 Directory.CreateDirectory(backupToMovePath);
-                var incrementalBackupFile = Directory.GetFiles(backupDirectory).Last();
+                var incrementalBackupFile = Directory.GetFiles(backupDirectory).OrderBackups().Last();
                 var fileName = Path.GetFileName(incrementalBackupFile);
                 File.Move(incrementalBackupFile, $"{backupToMovePath}\\{fileName}");
 
@@ -544,7 +544,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
-
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
@@ -554,6 +553,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (var session = store.OpenAsyncSession(restoredDatabaseName))
                     {
                         var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.NotNull(users["users/1"]);
+                        Assert.NotNull(users["users/2"]);
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
                     }
