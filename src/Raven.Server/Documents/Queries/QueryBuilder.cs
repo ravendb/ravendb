@@ -734,11 +734,7 @@ namespace Raven.Server.Documents.Queries
             var wktValue = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsString(fieldName, wktValue.Type);
 
-            SpatialUnits? spatialUnits = null;
-            if (expression.Arguments.Count == 2)
-                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
-
-            return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
+            return spatialField.ReadShape(GetValueAsString(wktValue.Value));
         }
 
         private static Shape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
