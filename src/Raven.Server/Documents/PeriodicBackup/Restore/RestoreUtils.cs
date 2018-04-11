@@ -5,30 +5,32 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Client;
+using Raven.Client.Documents.Smuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreUtils
+    public static class RestoreUtils
     {
         private static readonly Regex BackupFolderRegex = new Regex(@".ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
         private const string LegacyIncrementalBackupExtension = "ravendb-incremental-dump";
         private const string LegacyFullBackupExtension = "ravendb-full-dump";
-        private const string LegacyEsentBackupFile = "RavenDB.Backup";
-        private const string LegacyVoronBackupFile = "RavenDB.Voron.Backup";
-
+        
         public static void FetchRestorePoints(
             string directoryPath,
             SortedList<DateTime, RestorePoint> sortedList,
             bool assertLegacyBackups = false)
         {
+            const string legacyEsentBackupFile = "RavenDB.Backup";
+            const string legacyVoronBackupFile = "RavenDB.Voron.Backup";
+
             var files = Directory.GetFiles(directoryPath)
                 .Where(filePath =>
                 {
                     if (assertLegacyBackups)
                     {
                         var fileName = Path.GetFileName(filePath);
-                        if (fileName.Equals(LegacyEsentBackupFile, StringComparison.OrdinalIgnoreCase) ||
-                            fileName.Equals(LegacyVoronBackupFile, StringComparison.OrdinalIgnoreCase))
+                        if (fileName.Equals(legacyEsentBackupFile, StringComparison.OrdinalIgnoreCase) ||
+                            fileName.Equals(legacyVoronBackupFile, StringComparison.OrdinalIgnoreCase))
                         {
                             throw new InvalidOperationException("Cannot restore a legacy backup (v3.x and below). " +
                                                                 "You can restore a v3.x periodic export backup or " +
@@ -36,15 +38,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         }
                     }
 
-                    var extension = Path.GetExtension(filePath);
-                    return
-                        Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        LegacyFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                    return IsBackupOrSnapshot(filePath);
                 })
-                .OrderBy(x => x);
+                .OrderBackups();
+
 
             var folderDetails = ParseFolderName(directoryPath);
             var filesCount = 0;
@@ -85,6 +82,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     NodeTag = folderDetails.NodeTag
                 });
             }
+        }
+
+        public static bool IsBackupOrSnapshot(string filePath)
+        {
+            var extension = Path.GetExtension(filePath);
+            return
+                IsBackup(filePath) ||
+                Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsBackup(string filePath)
+        {
+            var extension = Path.GetExtension(filePath);
+            return
+                Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                LegacyFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
         private static DateTime TryExtractDateFromFileName(string fileName, string filePath)
