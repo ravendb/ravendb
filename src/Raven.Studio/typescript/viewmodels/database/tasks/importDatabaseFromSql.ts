@@ -369,7 +369,8 @@ class importCollectionFromSql extends viewModelBase {
                 "<span class=\"token keyword\">if</span> (age > <span class=\"token number\">18</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
                 "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
                 "<span class=\"token keyword\">this</span>.Adult = <span class=\"token keyword\">false</span>;<br />" +
-                "</pre>" 
+                "</pre>" ,
+                container: "#js-second-step"
             });
     }
     
@@ -522,7 +523,8 @@ class importCollectionFromSql extends viewModelBase {
             if (!target.data('bs.popover')) {
                 popoverUtils.longWithHover(target, {
                     content: () => reference.canLinkTargetTable() ? undefined : this.provideSelectTablePopoverText(reference),
-                    placement: "top"
+                    placement: "top",
+                    container: "#js-second-step"
                 });
             }
 
@@ -565,7 +567,8 @@ class importCollectionFromSql extends viewModelBase {
                             const links = this.model.findLinksToTable(rootTable);
                             
                             return links.length ? this.provideTableCheckboxHint(links.length) : undefined;
-                        }
+                        },
+                        container: "#js-second-step"
                     })
                 }
                 
@@ -598,6 +601,7 @@ class importCollectionFromSql extends viewModelBase {
                         }
                         return undefined;
                     },
+                    container: "#js-second-step",
                     placement: "top"
                 });
             }

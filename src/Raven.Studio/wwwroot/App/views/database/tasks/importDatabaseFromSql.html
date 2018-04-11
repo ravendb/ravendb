@@ -151,7 +151,7 @@
                             </div>
                         </div>
                         <button class="btn btn-primary" type="button"
-                                data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }, click: continueWithFile">
+                                data-bind="click: continueWithFile">
                             <span class="icon-import"></span> <span>Continue using configuration file</span>
                         </button>
                     </div>
@@ -370,13 +370,13 @@
                     </span>
                 </td>
                 <td>
-                    <div class="inline-edit inline-block" data-bind="with: effectiveInnerTable">
+                    <div class="inline-edit inline-block" data-bind="with: effectiveInnerTable, visible: action() === 'embed'">
                         <span class="static">
                             <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                         </span>
                         <input class="form-control input-sm" data-bind="textInput: $parent.name" />
                     </div>
-                    <div class="inline-edit inline-block" data-bind="with: effectiveLinkTable">
+                    <div class="inline-edit inline-block" data-bind="with: effectiveLinkTable, visible: action() === 'link'">
                         <div class="static">
                             <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                             <span class="text-muted" data-bind="visible: $parent.type === 'OneToMany'">[</span>

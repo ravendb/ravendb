@@ -34,6 +34,21 @@ class popoverUtils {
             hideHandler = undefined;
         };
         
+        popover.one("shown.bs.popover", () => {
+            const $tip = popover.data('bs.popover').$tip;
+            
+            $tip
+                .on("mouseleave.popover", () => {
+                    overElement = false;
+                    scheduleHide(popover[0]);
+                })
+                .on("mouseenter.popover", () => {
+                    overElement = true;
+                    maybeCancelHide();
+                })
+                .data("popover-utils-init", true);
+        });
+        
         return popover
             .on("mouseenter", function () {
                 overElement = true;
@@ -43,7 +58,6 @@ class popoverUtils {
                 if (sinceLastHide <= 150) {
                     // since bootstrap emulates hide event 150 milis after hide
                     // we schedule next show right after element will be actually removed from DOM
-                    
                     setTimeout(() => {
                         $(self).popover("show");
                     }, 155 - sinceLastHide);
@@ -51,17 +65,6 @@ class popoverUtils {
                     $(self).popover("show");
                     maybeCancelHide();
                 }
-                
-                $(".popover")
-                    .one("mouseleave.popover", () => {
-                        overElement = false;
-
-                        scheduleHide(self);
-                    })
-                    .one("mouseenter.popover", () => {
-                        overElement = true;
-                        maybeCancelHide();
-                    });
             }).on("mouseleave", function () {
                 const self = this;
                 overElement = false;
