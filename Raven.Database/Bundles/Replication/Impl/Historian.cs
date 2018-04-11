@@ -19,11 +19,7 @@ namespace Raven.Database.Bundles.Replication.Impl
             if (existingMetadata == null || existingMetadata.Type == JTokenType.Null || incomingMetadata == null || incomingMetadata.Type == JTokenType.Null)
                 return false;
 
-            var existingMetadataInConflict = existingMetadata[Constants.RavenReplicationConflict]?.Value<bool>() ?? false;
-            existingMetadataInConflict |= existingMetadata[Constants.RavenReplicationConflictDocument]?.Value<bool>() ?? false;
-
-            //The existing document is a conflict document
-            if (existingMetadataInConflict)
+            if (existingMetadata[Constants.RavenReplicationSource] == null || existingMetadata[Constants.RavenReplicationVersion] == null)
                 return false;
 
             var history = incomingMetadata[Constants.RavenReplicationHistory];
