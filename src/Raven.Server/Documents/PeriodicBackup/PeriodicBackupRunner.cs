@@ -411,6 +411,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 try
                 {
+                    // will rename the file after the backup is finished
+                    var tempBackupFilePath = backupFilePath + ".in-progress";
+
                     if (configuration.BackupType == BackupType.Backup ||
                         configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
@@ -422,7 +425,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (isFullBackup == false)
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
-                        var result = CreateBackup(options, backupFilePath, startDocumentEtag, context);
+                        var result = CreateBackup(options, tempBackupFilePath, startDocumentEtag, context);
                         lastEtag = isFullBackup ?
                             DocumentsStorage.ReadLastEtag(tx.InnerTransaction) :
                             result.GetLastEtag();
@@ -431,8 +434,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         // snapshot backup
                         lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        _database.FullBackupTo(backupFilePath);
+                        _database.FullBackupTo(tempBackupFilePath);
                     }
+
+                    IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
                 }
                 catch (Exception e)
                 {

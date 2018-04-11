@@ -3,6 +3,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Raven.Server.Extensions;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.Utils
 {
@@ -23,6 +25,21 @@ namespace Raven.Server.Utils
             catch (UnauthorizedAccessException)
             {
 
+            }
+        }
+
+        public static void RenameFile(string oldFile, string newFile)
+        {
+            if (PlatformDetails.RunningOnPosix)
+            {
+                Syscall.FsyncDirectoryFor(newFile);
+            }
+
+            File.Move(oldFile, newFile);
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                Syscall.FsyncDirectoryFor(newFile);
             }
         }
 
