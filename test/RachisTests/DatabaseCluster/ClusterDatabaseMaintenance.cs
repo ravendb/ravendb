@@ -623,7 +623,7 @@ namespace RachisTests.DatabaseCluster
                 var customSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = newUrl,
-                    [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = UnsecuredAccessAddressRange.PrivateNetwork.ToString()
+                    [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = UnsecuredAccessAddressRange.PublicNetwork.ToString()
                 };
                 Servers[1] = GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 // ensure that at this point we still can't talk to node 
