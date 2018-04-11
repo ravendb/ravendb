@@ -1011,7 +1011,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     if (ShouldReplace())
                                     {
-                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
+                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.InvariantCultureIgnoreCase);
 
                                         // this can fail if the indexes lock is currently held, so we'll retry
                                         // however, we might be requested to shutdown, so we want to skip replacing
