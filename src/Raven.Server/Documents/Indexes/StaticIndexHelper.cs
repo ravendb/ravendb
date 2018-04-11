@@ -11,16 +11,6 @@ namespace Raven.Server.Documents.Indexes
 {
     public static class StaticIndexHelper
     {
-        public static bool CanReplace(MapIndex index, bool isStale, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
-        {
-            return isStale == false;
-        }
-
-        public static bool CanReplace(MapReduceIndex index, bool isStale, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
-        {
-            return isStale == false;
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsStale(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff, List<string> stalenessReasons)
         {

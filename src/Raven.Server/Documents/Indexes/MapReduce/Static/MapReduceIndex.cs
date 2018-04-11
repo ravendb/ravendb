@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 using (indexContext.OpenReadTransaction())
                 using (databaseContext.OpenReadTransaction())
                 {
-                    var canReplace = StaticIndexHelper.CanReplace(this, IsStale(databaseContext, indexContext), DocumentDatabase, databaseContext, indexContext);
+                    var canReplace = IsStale(databaseContext, indexContext) == false;
                     if (canReplace)
                         _isSideBySide = null;
 
