@@ -13,10 +13,10 @@ namespace Raven.Client.ServerWide.Operations
         private readonly ClusterRequestExecutor _requestExecutor;
 
         public ServerOperationExecutor(DocumentStoreBase store)
-        {            
+        {
             _requestExecutor = store.Conventions.DisableTopologyUpdates
-                ? ClusterRequestExecutor.CreateForSingleNode(store.Urls[0], store.Certificate, null, store.Conventions.UseCompression)
-                : ClusterRequestExecutor.Create(store.Urls, store.Certificate, null, store.Conventions.UseCompression);
+                ? ClusterRequestExecutor.CreateForSingleNode(store.Urls[0], store.Certificate, store.Conventions)
+                : ClusterRequestExecutor.Create(store.Urls, store.Certificate, store.Conventions);
 
             store.AfterDispose += (sender, args) => _requestExecutor.Dispose();
         }
