@@ -714,7 +714,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database,
                         _server.Server.Certificate.Certificate,
-                        DocumentConventions.Default))
+                        DocumentConventions.Default,true))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
                         var database = exNode.ConnectionString.Database;

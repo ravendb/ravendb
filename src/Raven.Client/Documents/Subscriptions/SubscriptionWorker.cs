@@ -229,7 +229,7 @@ namespace Raven.Client.Documents.Subscriptions
                 await _stream.FlushAsync().ConfigureAwait(false);
 
                 _subscriptionLocalRequestExecutor?.Dispose();
-                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions,true);
 
                 return _stream;
             }
