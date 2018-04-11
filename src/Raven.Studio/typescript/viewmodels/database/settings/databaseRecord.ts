@@ -36,7 +36,7 @@ class databaseRecord extends viewModelBase {
         super.canActivate(args);
         var deferred = $.Deferred();
         
-        this.isForbidden(!accessManager.default.clusterAdmin());
+        this.isForbidden(!accessManager.default.clusterAdminOrClusterNode());
         
         if (this.isForbidden()) {
             deferred.resolve({ can: true });
