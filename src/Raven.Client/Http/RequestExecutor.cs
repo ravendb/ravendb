@@ -40,7 +40,7 @@ namespace Raven.Client.Http
 
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
-        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClient = new ConcurrentDictionary<string, Lazy<HttpClient>>();
+        internal static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClient = new ConcurrentDictionary<string, Lazy<HttpClient>>();
         
         private static readonly GetStatisticsOperation FailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
 
@@ -66,8 +66,6 @@ namespace Raven.Client.Http
         public Topology Topology => _nodeSelector?.Topology;
 
         private ServerNode _topologyTakenFromNode;
-
-        public HttpClient HttpClient { get; }
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
@@ -126,8 +124,11 @@ namespace Raven.Client.Http
         {
             FailedRequest?.Invoke(url, e);
         }
+        
+        private HttpClient GetCachedOrCreateHttpClient() => 
+            GlobalHttpClient.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
 
-        protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
+        protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls, bool useCompresssion)
         {
             Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
 
@@ -141,6 +142,8 @@ namespace Raven.Client.Http
                 //_httpClient.Dispose();
             });
 
+            _useCompression = useCompresssion;
+
             _readBalanceBehavior = conventions.ReadBalanceBehavior;
             _databaseName = databaseName;
             Certificate = certificate;
@@ -150,41 +153,37 @@ namespace Raven.Client.Http
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
-
-            string thumbprint = string.Empty;
+            
+            var thumbprint = string.Empty;
             if (certificate != null)
                 thumbprint = certificate.Thumbprint;
-
-            if (GlobalHttpClient.TryGetValue(thumbprint, out var lazyClient) == false)
-            {
-                lazyClient = GlobalHttpClient.GetOrAdd(thumbprint, new Lazy<HttpClient>(CreateClient));
-            }
-
-            HttpClient = lazyClient.Value;
+            
+            _httpClient = GlobalHttpClient.TryGetValue(thumbprint, out var lazyClient) == false ? 
+                GetCachedOrCreateHttpClient() : lazyClient.Value;            
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
         }
 
-        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool useCompression = true)
         {
-            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls, useCompression);            
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
             return executor;
         }
 
-        public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool useCompression = true)
         {
-            var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, certificate, conventions);
+            var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, certificate, conventions, useCompression);
             executor._disableClientConfigurationUpdates = false;
 
             return executor;
         }
 
-        public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool useCompression = true)
         {
             var initialUrls = new[] { url };
             url = ValidateUrls(initialUrls, certificate)[0];
-            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls)
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls, useCompression)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -647,7 +646,7 @@ namespace Raven.Client.Http
                             cts.CancelAfter(timeout.Value);
                             try
                             {
-                                var preferredTask = command.SendAsync(HttpClient, request, cts.Token);
+                                var preferredTask = command.SendAsync(_httpClient, request, cts.Token);
                                 if (ShouldExecuteOnAll(chosenNode, command))
                                 {
                                     await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token).ConfigureAwait(false);
@@ -680,7 +679,7 @@ namespace Raven.Client.Http
                     }
                     else
                     {
-                        var preferredTask = command.SendAsync(HttpClient, request, token);
+                        var preferredTask = command.SendAsync(_httpClient, request, token);
                         if (ShouldExecuteOnAll(chosenNode, command))
                         {
                             await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
@@ -861,7 +860,7 @@ namespace Raven.Client.Http
                     var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
 
                     Interlocked.Increment(ref NumberOfServerRequests);
-                    tasks[i] = command.SendAsync(HttpClient, request, token).ContinueWith(x =>
+                    tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
                     {
                         try
                         {
@@ -937,6 +936,7 @@ namespace Raven.Client.Http
 
             if (!request.Headers.Contains("Raven-Client-Version"))
                 request.Headers.Add("Raven-Client-Version", ClientVersion);
+               
             return request;
         }
 
@@ -1134,6 +1134,8 @@ namespace Raven.Client.Http
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+        protected bool _useCompression;
+        private HttpClient _httpClient;
         protected bool Disposed => _disposeOnceRunner.Disposed;
 
         public virtual void Dispose()
@@ -1145,9 +1147,21 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols)
+        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression)
         {
             var httpMessageHandler = new HttpClientHandler();
+            if (httpMessageHandler.SupportsAutomaticDecompression)
+            {
+                httpMessageHandler.AutomaticDecompression = 
+                    useCompression ? 
+                        DecompressionMethods.GZip | DecompressionMethods.Deflate
+                        : DecompressionMethods.None;
+            }
+            else if (httpMessageHandler.SupportsAutomaticDecompression == false &&
+                     useCompression)
+            {
+                throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
+            }
 
             if (PlatformDetails.RunningOnMacOsx)
             {
@@ -1167,7 +1181,7 @@ namespace Raven.Client.Http
                     // ServicePointManager.ServerCertificateValidationCallback += OnServerCertificateCustomValidationCallback;
                 }
             }
-
+            
             if (certificate != null)
             {
                 httpMessageHandler.ClientCertificates.Add(certificate);
@@ -1189,11 +1203,11 @@ namespace Raven.Client.Http
         }
 
         public HttpClient CreateClient()
-        {
-            var httpMessageHandler = CreateHttpMessageHandler(Certificate, setSslProtocols: true);
+        {        
+            var httpMessageHandler = CreateHttpMessageHandler(Certificate, setSslProtocols: true, useCompression: _useCompression);
             return new HttpClient(httpMessageHandler)
             {
-                Timeout = GlobalHttpClientTimeout
+                Timeout = GlobalHttpClientTimeout                
             };
         }
 

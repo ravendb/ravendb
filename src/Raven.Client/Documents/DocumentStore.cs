@@ -42,7 +42,7 @@ namespace Raven.Client.Documents
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
-        private bool _aggressiveCachingUsed;
+        private bool _aggressiveCachingUsed;        
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -158,22 +158,26 @@ namespace Raven.Client.Documents
             if (database == null)
                 database = Database;
 
-            if (_requestExecutors.TryGetValue(database, out Lazy<RequestExecutor> lazy))
+            if (_requestExecutors.TryGetValue(database, out var lazy))
                 return lazy.Value;
 
+            RequestExecutor CreateRequestExecutor()
+            {
+                var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions, Conventions.UseCompression);
+                RequestExecutorCreated?.Invoke(this, requestExecutor);
+                return requestExecutor;
+            }
+
+            RequestExecutor CreateRequestExecutorForSingleNode()
+            {
+                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions, Conventions.UseCompression);
+                RequestExecutorCreated?.Invoke(this, forSingleNode);
+                return forSingleNode;
+            }
+
             lazy = Conventions.DisableTopologyUpdates == false
-                ? new Lazy<RequestExecutor>(() =>
-                {
-                    var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions);
-                    RequestExecutorCreated?.Invoke(this, requestExecutor);
-                    return requestExecutor;
-                })
-                : new Lazy<RequestExecutor>(() =>
-                {
-                    var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions);
-                    RequestExecutorCreated?.Invoke(this, forSingleNode);
-                    return forSingleNode;
-                });
+                ? new Lazy<RequestExecutor>(CreateRequestExecutor)
+                : new Lazy<RequestExecutor>(CreateRequestExecutorForSingleNode);
 
             lazy = _requestExecutors.GetOrAdd(database, lazy);
 
