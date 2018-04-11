@@ -143,10 +143,10 @@ namespace StressTests.Voron
                 long Gb = 1024 * 1024 * 1024;
                 long inputSize = 3L * Gb;
                 byte* outputBuffer, inputBuffer, checkedBuffer;
-                var rnd = new Random().Next(int.MaxValue);
-                var outputPager = CreateScratchFile($"output-{devider}-{rnd}", env, inputSize, out outputBuffer);
-                var inputPager = CreateScratchFile($"input-{devider}-{rnd}", env, inputSize, out inputBuffer);
-                var checkedPager = CreateScratchFile($"checked-{devider}-{rnd}", env, inputSize, out checkedBuffer);
+                var guid = Guid.NewGuid();
+                var outputPager = CreateScratchFile($"output-{devider}-{guid}", env, inputSize, out outputBuffer);
+                var inputPager = CreateScratchFile($"input-{devider}-{guid}", env, inputSize, out inputBuffer);
+                var checkedPager = CreateScratchFile($"checked-{devider}-{guid}", env, inputSize, out checkedBuffer);
 
                 var random = new Random(123);
 
