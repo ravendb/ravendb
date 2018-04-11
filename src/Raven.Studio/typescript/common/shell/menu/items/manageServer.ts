@@ -27,7 +27,7 @@ function getManageServerMenuItem() {
             title: "Add Cluster Node",
             nav: false,
             dynamicHash: appUrl.forAddClusterNode,
-            enabled: accessManager.default.clusterAdmin,
+            enabled: accessManager.default.clusterAdminOrClusterNode,
             itemRouteToHighlight: 'admin/settings/cluster'
         }),           
         new leafMenuItem({
