@@ -503,7 +503,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         var innerArray = array[i] as BlittableJsonReaderArray;
 
                         for (var j = 0; j < 8; j++)
-                            Assert.Equal(i, int.Parse(innerArray[i].ToString(), CultureInfo.InvariantCulture));
+                            Assert.Equal(j, int.Parse(innerArray[j].ToString(), CultureInfo.InvariantCulture));
 
                     }
                     Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));

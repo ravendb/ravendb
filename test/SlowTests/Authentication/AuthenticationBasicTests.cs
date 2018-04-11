@@ -420,7 +420,6 @@ namespace SlowTests.Authentication
         {
             var routes = RouteScanner.Scan(attr =>
                 !attr.Path.Contains("/admin/") && (attr.RequiredAuthorization == AuthorizationStatus.Operator ||
-                                                   attr.RequiredAuthorization == AuthorizationStatus.Operator ||
                                                    attr.RequiredAuthorization == AuthorizationStatus.DatabaseAdmin));
             Assert.Empty(routes);
         }
