@@ -7,7 +7,9 @@ class accessManager {
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
 
     private allLevels = ko.pureComputed(() =>  true);
-    clusterAdmin = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin");
+    
+    // cluster node has the same privileges as cluster admin
+    clusterAdminOrClusterNode = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "ClusterNode");
         
     operatorAndAbove = ko.pureComputed(() => { 
          const clearance = this.securityClearance();
@@ -21,15 +23,15 @@ class accessManager {
     };
     
     clusterView = {
-        canAddNode: this.clusterAdmin,
-        canDeleteNode: this.clusterAdmin,
-        showCoresInfo: this.clusterAdmin
+        canAddNode: this.clusterAdminOrClusterNode,
+        canDeleteNode: this.clusterAdminOrClusterNode,
+        showCoresInfo: this.clusterAdminOrClusterNode
     };
     
     aboutView = {
-        canReplaceLicense: this.clusterAdmin, 
-        canForceUpdate: this.clusterAdmin,
-        canUpgrade: this.clusterAdmin
+        canReplaceLicense: this.clusterAdminOrClusterNode, 
+        canForceUpdate: this.clusterAdminOrClusterNode,
+        canUpgrade: this.clusterAdminOrClusterNode
     };
     
     databasesView = {
@@ -42,9 +44,9 @@ class accessManager {
     };
     
     certificatesView = {
-        canDeleteClusterNodeCertificate: this.clusterAdmin,
-        canDeleteClusterAdminCertificate: this.clusterAdmin,
-        canGenerateClientCertificateForAdmin: this.clusterAdmin
+        canDeleteClusterNodeCertificate: this.clusterAdminOrClusterNode,
+        canDeleteClusterAdminCertificate: this.clusterAdminOrClusterNode,
+        canGenerateClientCertificateForAdmin: this.clusterAdminOrClusterNode
     };
 
     // *** Menus Access *** //
@@ -54,22 +56,22 @@ class accessManager {
     };
     
     manageServerMenu = {
-        showAdminJSConsoleMenuItem: this.clusterAdmin,
+        showAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
         enableClusterMenuItem: this.allLevels,
-        enableClientConfigurationMenuItem: this.clusterAdmin,
-        enableAdminJSConsoleMenuItem: this.clusterAdmin,
-        enableCertificatesMenuItem: this.clusterAdmin,
-        enableAdminLogsMenuItem: this.clusterAdmin,
-        enableTrafficWatchMenuItem: this.clusterAdmin,
-        enableGatherDebugInfoMenuItem: this.clusterAdmin,
-        enableAdvancedMenuItem: this.clusterAdmin
+        enableClientConfigurationMenuItem: this.clusterAdminOrClusterNode,
+        enableAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
+        enableCertificatesMenuItem: this.clusterAdminOrClusterNode,
+        enableAdminLogsMenuItem: this.clusterAdminOrClusterNode,
+        enableTrafficWatchMenuItem: this.clusterAdminOrClusterNode,
+        enableGatherDebugInfoMenuItem: this.clusterAdminOrClusterNode,
+        enableAdvancedMenuItem: this.clusterAdminOrClusterNode
     };
     
     databaseSettingsMenu = {
         showDatabaseRecordMenuItem: this.operatorAndAbove,
         showConnectionStringsMenuItem: this.operatorAndAbove,
-        enableConnectionStringsMenuItem: this.clusterAdmin, 
-        enableConflictResolutionMenuItem: this.clusterAdmin
+        enableConnectionStringsMenuItem: this.clusterAdminOrClusterNode, 
+        enableConflictResolutionMenuItem: this.clusterAdminOrClusterNode
     };
 }
 
