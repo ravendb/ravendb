@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         throw new ArgumentException(
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
-					
+
                     indexDefinition.Type = indexDefinition.DetectStaticIndexType();
                    
                     var index = await Database.IndexStore.CreateIndex(indexDefinition);
