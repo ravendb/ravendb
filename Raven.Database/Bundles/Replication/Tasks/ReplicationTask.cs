@@ -1413,12 +1413,12 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
                 var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
-                var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+                var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag??Etag.Empty;
 
                 int docsSinceLastReplEtag = 0;
                 List<JsonDocument> fetchedDocs;
                 List<JsonDocument> docsToReplicate;
-                result.LastEtag = lastEtag;
+                result.LastEtag = lastEtag??Etag.Empty;
                 var isEtl = destination.IsETL;
 
                 var collections = isEtl == false ? null :
