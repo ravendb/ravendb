@@ -1128,10 +1128,24 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
 
-            // stop the indexing to allow renaming the index
-            ExecuteIndexAction(() => newIndex.Stop());
-            newIndex.Rename(oldIndexName);
-            ExecuteIndexAction(newIndex.Start);
+            var needToStop = PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
+
+            if (needToStop)
+            {
+                // stop the indexing to allow renaming the index 
+                // the write tx required to rename it might be hold by indexing thread
+                ExecuteIndexAction(() => newIndex.Stop());
+            }
+
+            try
+            {
+                newIndex.Rename(oldIndexName);
+            }
+            finally
+            {
+                if (needToStop)
+                    ExecuteIndexAction(newIndex.Start);
+            }
 
             newIndex.ResetIsSideBySideAfterReplacement();
 
