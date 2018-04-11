@@ -465,7 +465,8 @@ class importCollectionFromSql extends viewModelBase {
     
     showIncomingReferences(table: rootSqlTable) {
         const links = this.model.findLinksToTable(table);
-        app.showBootstrapDialog(new referenceUsageDialog(table, links, (ref, action) => this.onActionClicked(ref, action)));
+        app.showBootstrapDialog(new referenceUsageDialog(table, links, (ref, action) => this.onActionClicked(ref, action), 
+                table => this.goToTable(table, true)));
     }
     
     exportConfiguration() {
