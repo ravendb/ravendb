@@ -36,7 +36,11 @@ namespace SlowTests.Issues
                     failureStats = handler.GetStats(environmentId);
 
                     Assert.True(failureStats.WillUnloadDatabase);
-                    Assert.True(failureStats.DatabaseUnloadTask.Wait(TimeSpan.FromSeconds(30)));
+
+                    var unloadTask = failureStats.DatabaseUnloadTask;
+
+                    if (unloadTask != null) // could already unload it and null DatabaseUnloadTask 
+                        Assert.True(unloadTask.Wait(TimeSpan.FromSeconds(30)));
                 }
 
                 handler.Execute(db.Name, new Exception("Catastrophic"), Guid.Empty);
