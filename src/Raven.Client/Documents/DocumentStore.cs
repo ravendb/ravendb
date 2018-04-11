@@ -163,14 +163,14 @@ namespace Raven.Client.Documents
 
             RequestExecutor CreateRequestExecutor()
             {
-                var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions, Conventions.UseCompression ?? true);
+                var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions, Conventions.UseCompression);
                 RequestExecutorCreated?.Invoke(this, requestExecutor);
                 return requestExecutor;
             }
 
             RequestExecutor CreateRequestExecutorForSingleNode()
             {
-                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions, Conventions.UseCompression ?? true);
+                var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions, Conventions.UseCompression);
                 RequestExecutorCreated?.Invoke(this, forSingleNode);
                 return forSingleNode;
             }
