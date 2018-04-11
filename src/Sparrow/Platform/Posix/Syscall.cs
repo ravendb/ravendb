@@ -299,7 +299,6 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-
         public static void FsyncDirectoryFor(string file)
         {
             if (CheckSyncDirectoryAllowed(file) && SyncDirectory(file) == -1)
