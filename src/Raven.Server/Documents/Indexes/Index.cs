@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal DocumentDatabase DocumentDatabase;
 
-        private PoolOfThreads.LongRunningWork _indexingThread;
+        internal PoolOfThreads.LongRunningWork _indexingThread;
 
         private bool _initialized;
 
