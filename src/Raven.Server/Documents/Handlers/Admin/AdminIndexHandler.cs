@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
@@ -39,6 +40,13 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                         throw new ArgumentException("Index must have a 'Maps' fields");
+
+                    if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new ArgumentException(
+                            $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
+                    }
+
                     var index = await Database.IndexStore.CreateIndex(indexDefinition);
                     createdIndexes.Add(index.Name);
                 }
