@@ -14,36 +14,36 @@ namespace Raven.Client.Http
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls) : base(null, certificate, conventions, initialUrls)
+        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls, bool useCompression) : base(null, certificate, conventions, initialUrls, useCompression)
         {
            
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool useCompression = true)
         {
             throw new NotSupportedException();
         }
 
         [Obsolete("Not supported", error: true)]
         public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate,
-            DocumentConventions conventions)
+            DocumentConventions conventions, bool useCompression = true)
         {
             throw new NotSupportedException();
         }
 
         [Obsolete("Not supported", error: true)]
         public new static ClusterRequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate,
-            DocumentConventions conventions)
+            DocumentConventions conventions, bool useCompression = true)
         {
             throw new NotSupportedException();
         }
 
-        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions = null)
+        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions = null,bool useCompression = true)
         {
             var initialUrls = new[] {url};
             url = ValidateUrls(initialUrls, certificate)[0];
-            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls,useCompression)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -63,9 +63,9 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        public static ClusterRequestExecutor Create(string[] initialUrls, X509Certificate2 certificate, DocumentConventions conventions = null)
+        public static ClusterRequestExecutor Create(string[] initialUrls, X509Certificate2 certificate, DocumentConventions conventions = null,bool useCompression = true)
         {
-            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls, useCompression)
             {
                 _disableClientConfigurationUpdates = true
             };
