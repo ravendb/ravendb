@@ -28,15 +28,17 @@ namespace Raven.Server.Documents.Indexes.Static
         private static readonly string MoreArgsProperty = "moreArgs";
         private static readonly string ReduceProperty = "reduce";
 
+        private JintPreventResolvingTasksReferenceResolver _resolver;
         public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
             _definitions = definition;
+            _resolver = new JintPreventResolvingTasksReferenceResolver();
             // we create the Jint instance directly instead of using SingleRun
             // because the index is single threaded and long lived
             _engine = new Engine(options =>
             {
                 options.LimitRecursion(64)
-                    .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
+                    .SetReferencesResolver(_resolver)
                     .MaxStatements(configuration.Indexing.MaxStepsForScript)
                     .Strict()
                     .AddObjectConverter(new JintGuidConverter())
@@ -125,7 +127,7 @@ namespace Raven.Server.Documents.Indexes.Static
             HasDynamicFields = false;
             foreach (var (key, val) in collectionFunctions)
             {
-                Maps.Add(key, val.Select(x => (IndexingFunc)new JintMapFuncWrapper(x, _engine).IndexingFunction).ToList());
+                Maps.Add(key, val.Select(x => (IndexingFunc)new JintMapFuncWrapper(x, _engine, _resolver).IndexingFunction).ToList());
 
                 //TODO: Validation of matches fields between group by / collections / etc
                 foreach (var operation in val)
@@ -278,10 +280,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private class JintMapFuncWrapper
         {
-            public JintMapFuncWrapper(MapOperation operation, Engine engine)
+            public JintMapFuncWrapper(MapOperation operation, Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
             {
                 _operation = operation;
                 _engine = engine;
+                _resolver = resolver;
             }
             private readonly JsValue[] _oneItemArray = new JsValue[1];
 
@@ -291,6 +294,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     foreach (var item in items)
                     {
+                        _engine.ResetCallStack();
+                        _engine.ResetStatementsCount();
+                        _engine.ResetTimeoutTicks();
+
                         if (GetValue(_engine, item, out JsValue jsItem) == false)
                             continue;
                         {
@@ -313,6 +320,8 @@ namespace Raven.Server.Documents.Indexes.Static
                             // objects and arrays, anything else is discarded
                         }
 
+                        _resolver.ExplodeArgsOn(null, null);
+
                     }
                 }
                 finally
@@ -323,6 +332,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             private readonly MapOperation _operation;
             private readonly Engine _engine;
+            private readonly JintPreventResolvingTasksReferenceResolver _resolver;
         }
 
         public static bool GetValue(Engine engine, object item, out JsValue jsItem)
