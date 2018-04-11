@@ -22,6 +22,14 @@ namespace Raven.Server.Documents.Indexes.Static
         public static StaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
             var list = new List<string>();
+
+            // we do not want to reuse javascript indexes definitions, because they have the Engine, which can't be reused.
+            // todo: when portingt javascript indexes to use ScriptRunner (RavenDB-10918), check if we can generate and/or pool the single runs, allowing to remove this code
+            if (definition.Type == IndexType.JavaScriptMap || definition.Type == IndexType.JavaScriptMapReduce)
+            {
+                list.Add(definition.Name);
+            }
+            
             list.AddRange(definition.Maps);
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
@@ -35,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var key = new CacheKey(list);
-            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration)));
+            Lazy<StaticIndexBase> result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration)));
 
             try
             {
