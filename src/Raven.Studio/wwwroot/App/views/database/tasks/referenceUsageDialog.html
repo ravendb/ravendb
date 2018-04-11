@@ -29,7 +29,7 @@
                                 skip
                             </button>
                             <button class="btn btn-sm"
-                                    data-bind="css: { 'btn-danger': $root.enforceNoLinks && action() === 'link', active: !$root.enforceNoLinks && action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">
+                                    data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">
                                 link
                             </button>
                             <button class="btn btn-sm"
@@ -41,15 +41,9 @@
                 </tr>
                 </tbody>
             </table>
-            
-            <p data-bind="visible: enforceNoLinks">
-                Select <strong>skip</strong> or <strong>embed</strong> on each reference before unselecting table.
-            </p>
-            
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
-            <button type="button" class="btn btn-primary" data-bind="click: unselect, enable: allResolved, visible: enforceNoLinks">Unselect table</button>
         </div>
     </div>
 </div>

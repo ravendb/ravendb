@@ -55,7 +55,7 @@ class importCollectionFromSql extends viewModelBase {
     importedFileName = ko.observable<string>();
     
     continueFlowValidationGroup: KnockoutValidationGroup;
-
+    
     constructor() {
         super();
         
@@ -232,6 +232,8 @@ class importCollectionFromSql extends viewModelBase {
         this.filterTables();
         const $body = $("body");
         
+        this.initHints();
+        
         this.registerDisposableHandler($body, "click", (event: JQueryEventObject) => {
             if ($(event.target).closest(".inline-edit").length === 0) {
                 // click outside edit area - close all of them
@@ -241,7 +243,7 @@ class importCollectionFromSql extends viewModelBase {
             }
         });
         
-        const $secondStep = $("#js-second-step"); 
+        const $secondStep = $("#js-second-step");
         
         $secondStep.on("click", ".inline-edit", event => {
             event.preventDefault();
@@ -253,45 +255,6 @@ class importCollectionFromSql extends viewModelBase {
             container.addClass("edit-mode");
             $("input", container).focus();
         });
-        
-        $secondStep.on("mouseenter", ".js-btn-link", event => {
-            const target = $(event.target);
-            
-            const reference = ko.dataFor(target[0]) as sqlReference;
-            
-            if (!target.data('has-popover')) {
-                target.data('has-popover', true);
-                
-                popoverUtils.longWithHover(target, {
-                    content: () => reference.canLinkTargetTable() ? undefined : this.provideSelectTablePopoverText(reference),
-                    placement: "top"
-                });
-            }
-            
-            target.popover('show');
-        });
-        
-        // handler for selecting table before linking
-        this.registerDisposableDelegateHandler($body, "click", ".popover-link-ref", (event: JQueryEventObject) => {
-            const $target = $(event.target);
-            const refId = $target.attr('data-popover-ref-id');
-            
-            const $ref = $("[data-ref-id=" + refId + "]");
-            
-            const reference = ko.dataFor($ref[0]) as sqlReference;
-            const targetTable = reference.targetTable as rootSqlTable;
-            
-            targetTable.checked(true);
-            messagePublisher.reportSuccess("Table " + targetTable.tableName + " was selected");
-            
-            $(".js-btn-link", $ref).popover('hide');
-        });
-    }
-    
-    private provideSelectTablePopoverText(reference: sqlReference) {
-        return 'Target table is currently not selected. <br />' 
-            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click to select target table</button><br />'
-            + ' before creating link to <strong>' + reference.targetTable.tableName + '</strong>';
     }
     
     private filterTables() {
@@ -357,16 +320,8 @@ class importCollectionFromSql extends viewModelBase {
     private onEmbedTable(reference: sqlReference) {
         this.model.onEmbedTable(reference);
         
-        const links = this.model.findLinksToTable(reference.targetTable);
-        const targetTable = reference.targetTable as rootSqlTable;
-        if (links.length === 0 && targetTable.checked()) {
-            this.confirmationMessage("Deselect table?", "Table '" + reference.targetTable.tableName + "' can be deselected, after being embedded. Do you want to deselect?", ["No", "Yes, deselect"])
-                .done(result => {
-                    if (result.can) {
-                        targetTable.checked(false);
-                    }
-                });
-        }
+        // this *may* show popover (based on content provider) 
+        $("[data-ref-id=" + reference.id + "] .js-btn-embed").popover('show');
     }
     
     private onLinkTable(reference: sqlReference) {
@@ -478,24 +433,6 @@ class importCollectionFromSql extends viewModelBase {
         }
     }
     
-    onCollapseTable(table: rootSqlTable, $event: JQueryMouseEventObject) {
-        if (table.checked()) {
-            // we are about to uncheck this, find if we have any links to this table
-            const links = this.model.findLinksToTable(table);
-            if (links.length > 0) {
-                app.showBootstrapDialog(new referenceUsageDialog(table, links, true, (ref, action) => this.onActionClicked(ref, action)));
-                    
-                $event.preventDefault();
-                $event.stopImmediatePropagation();
-                return false;
-            }
-            
-            table.setAllLinksToSkip();
-        }
-        
-        return true; // allow checked handler to be executed
-    }
-    
     onToggleAllClick(_: any, $event: JQueryMouseEventObject) {
         if (this.model.getSelectedTablesCount()) {
             
@@ -527,7 +464,7 @@ class importCollectionFromSql extends viewModelBase {
     
     showIncomingReferences(table: rootSqlTable) {
         const links = this.model.findLinksToTable(table);
-        app.showBootstrapDialog(new referenceUsageDialog(table, links, false,  (ref, action) => this.onActionClicked(ref, action)));
+        app.showBootstrapDialog(new referenceUsageDialog(table, links, (ref, action) => this.onActionClicked(ref, action)));
     }
     
     exportConfiguration() {
@@ -549,6 +486,147 @@ class importCollectionFromSql extends viewModelBase {
 
     exitFullScreen() {
         $("#js-second-step").fullScreen(false);
+    }
+    
+    onCollapseTable(table: rootSqlTable, $event: JQueryMouseEventObject) {
+        if (table.checked()) {
+            // we are about to uncheck this, find if we have any links to this table
+            const links = this.model.findLinksToTable(table);
+            if (links.length > 0) {
+                $event.preventDefault();
+                $event.stopImmediatePropagation();
+                return false;
+            }
+            
+            table.setAllLinksToSkip();
+        }
+        
+        return true; // allow checked handler to be executed
+    }
+    
+    initHints() {
+        this.initLinkHints();
+        this.initTableCheckboxHints();
+        this.initUnselectEmbeddedTablesHints();
+    }
+    
+    private initLinkHints() {
+        const $body = $("body");
+        const $secondStep = $("#js-second-step");
+        
+        $secondStep.on("mouseenter", ".js-btn-link", event => {
+            const target = $(event.target);
+
+            const reference = ko.dataFor(target[0]) as sqlReference;
+
+            if (!target.data('bs.popover')) {
+                popoverUtils.longWithHover(target, {
+                    content: () => reference.canLinkTargetTable() ? undefined : this.provideSelectTablePopoverText(reference),
+                    placement: "top"
+                });
+            }
+
+            target.popover('show');
+        });
+
+        // handler for selecting table before linking
+        this.registerDisposableDelegateHandler($body, "click", ".popover-link-ref", (event: JQueryEventObject) => {
+            const $target = $(event.target);
+            const refId = $target.attr('data-popover-ref-id');
+
+            const $ref = $("[data-ref-id=" + refId + "]");
+
+            const reference = ko.dataFor($ref[0]) as sqlReference;
+            const targetTable = reference.targetTable as rootSqlTable;
+
+            targetTable.checked(true);
+            messagePublisher.reportSuccess("Table " + targetTable.tableName + " was selected");
+
+            $(".js-btn-link", $ref).popover('hide');
+        });
+    }
+
+    private provideSelectTablePopoverText(reference: sqlReference) {
+        return 'Target table is currently not selected. <br />'
+            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click to select target table</button><br />'
+            + ' before creating link to <strong>' + reference.targetTable.tableName + '</strong>';
+    }
+    
+    private initTableCheckboxHints() {
+        const $secondStep = $("#js-second-step");
+        $secondStep.on("mouseenter", ".js-table-checkbox", event => {
+                const target = $(event.target);
+
+                const rootTable = ko.dataFor(target[0]) as rootSqlTable;
+
+                if (!target.data('bs.popover')) {
+                    popoverUtils.longWithHover(target, {
+                        content: () => {
+                            const links = this.model.findLinksToTable(rootTable);
+                            
+                            return links.length ? this.provideTableCheckboxHint(links.length) : undefined;
+                        }
+                    })
+                }
+                
+                target.popover('show');
+            }
+        );
+    }
+    
+    private provideTableCheckboxHint(incomingLinksCount: number) {
+        return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em>Skip</em> or <em>embed</em> all of them before continue.<br/> "
+            + "<small><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
+    }
+    
+    private initUnselectEmbeddedTablesHints() {
+        const $body = $("body");
+        const $secondStep = $("#js-second-step");
+        
+        $secondStep.on("mouseenter", ".js-btn-embed", event => {
+            const target = $(event.target);
+
+            const reference = ko.dataFor(target[0]) as sqlReference;
+
+            if (!target.data('bs.popover')) {
+                popoverUtils.longWithHover(target, {
+                    content: () => { 
+                        const links = this.model.findLinksToTable(reference.targetTable);
+                        const targetTable = reference.targetTable as rootSqlTable;
+                        if (reference.action() === "embed" && links.length === 0 && targetTable.checked()) {
+                            return this.provideDeselectTableHint(reference, targetTable);
+                        }
+                        return undefined;
+                    },
+                    placement: "top"
+                });
+            }
+            
+            // this *may* show popover - based on logic in content provider 
+            target.popover('show');
+        });
+        
+        // handler for selecting table before linking
+        this.registerDisposableDelegateHandler($body, "click", ".popover-embed-ref", (event: JQueryEventObject) => {
+            const $target = $(event.target);
+            const refId = $target.attr('data-popover-ref-id');
+
+            const $ref = $("[data-ref-id=" + refId + "]");
+
+            const reference = ko.dataFor($ref[0]) as sqlReference;
+            const targetTable = reference.targetTable as rootSqlTable;
+
+            targetTable.checked(false);
+            messagePublisher.reportSuccess("Table " + targetTable.tableName + " was deselected");
+
+            $(".js-btn-embed", $ref).popover('hide');
+        });
+    }
+    
+    private provideDeselectTableHint(reference: sqlReference, targetTable: rootSqlTable) {
+        return "Table <strong>" + targetTable.tableName + "</strong> doesn't have incoming links and it is embed. <br />"
+            + "Probably you can deselect this table to avoid data duplication.<br/>" 
+            + '<button class="btn btn-sm btn-primary popover-embed-ref" data-popover-ref-id="' + reference.id + '">Deselect ' + targetTable.tableName + '</button>';
     }
 }
 

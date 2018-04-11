@@ -4,31 +4,10 @@ import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class referenceUsageDialog extends dialogViewModelBase {
     
-    allResolved: KnockoutComputed<boolean>;
-    
-    constructor(private table: rootSqlTable, private references: Array<sqlReference>, private enforceNoLinks: boolean, private action: (ref: sqlReference, action: sqlMigrationAction) => void) {
+    constructor(private table: rootSqlTable, private references: Array<sqlReference>, private action: (ref: sqlReference, action: sqlMigrationAction) => void) {
         super();
         
         this.bindToCurrentInstance("onActionClicked");
-        
-        this.allResolved = ko.pureComputed(() => {
-            let result = true;
-            
-            this.references.forEach(ref => {
-                if (ref.action() === "link") {
-                    result = false;
-                }
-            });
-            
-            return result;
-        })
-    }
-    
-    unselect() {
-        this.table.setAllLinksToSkip();
-        this.table.checked(false);
-        
-        this.close();
     }
     
     onActionClicked(reference: sqlReference, action: sqlMigrationAction) {
