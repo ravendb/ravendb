@@ -340,6 +340,20 @@ namespace Sparrow.Platform.Posix
             return syncAllowed;
         }
 
+        private static int ReadLinkOrThrow(string path, byte *pBuff, int buffSize)
+        {
+            var numOfBytes = readlink(path, pBuff, (UIntPtr)buffSize);
+            var err = Marshal.GetLastWin32Error();
+            if (numOfBytes == -1)
+            {
+                if (err == (int)Errno.EINVAL) // EINVAL when applied on non symlink according to readlink's man page 
+                    return 0;
+                ThrowLastError(err, "failed to readlink symlink directory " + path);
+            }
+
+            return numOfBytes;
+        }
+
         public static int SyncDirectory(string file, bool isRealPath = false)
         {
             var dir = isRealPath == false ? Path.GetDirectoryName(file) : file;
@@ -371,40 +385,37 @@ namespace Sparrow.Platform.Posix
             try
             {
                 // determine buffSize passed to readlink should be using lstat (but this is not available right now)
-                // so we try with rented array of 1024 and if readlink needs more we double the buffSize until it 
-                // in the right length (TODO: change it to lstat / FileInfo(path).Target in the future when https://github.com/dotnet/corefx/issues/26310 is fixed)
+                // so we try with rented array of 64 bytes and if readlink needs more we will try again with 8K and fail otherwise
+                // (TODO: change it to lstat / FileInfo(path).Target in the future when https://github.com/dotnet/corefx/issues/26310 is fixed)
                 int numOfBytes;
-                while (true)
+                fixed (byte* pBuff = realpathToDir)
                 {
-                    fixed (byte* pBuff = realpathToDir)
+                    numOfBytes = ReadLinkOrThrow(dir, pBuff, buffSize);
+                    if (numOfBytes == 0)
+                        return 0; // non symlink dir
+ 
+                    if (numOfBytes >= buffSize) // 64 bytes are not enough for path legnth. lets try with 8192
                     {
-                        numOfBytes = readlink(dir, pBuff, (UIntPtr)buffSize);
-                        var err = Marshal.GetLastWin32Error();
-                        if (numOfBytes == -1)
+                        buffSize = 8192; // usually PATH_MAX is 4096
+                        ArrayPool<byte>.Shared.Return(realpathToDir);
+                        realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
+                        
+                        fixed (byte* pBuff8K = realpathToDir)
                         {
-                            if (err == (int)Errno.EINVAL) // EINVAL when applied on non symlink according to readlink's man page 
-                                return 0;
-                            ThrowLastError(err, "failed to readlink symlink directory " + dir + " with fd=" + fd + " in order to sync for file " + file);
+                            numOfBytes = ReadLinkOrThrow(dir, pBuff8K, buffSize);
+                            if (numOfBytes == 0)
+                                return 0; // non symlink dir
+                            
+                            if (numOfBytes >= buffSize)
+                            {
+                                throw new InvalidOperationException("readlink to " + dir +
+                                                                    " failed due to the need of more then 8192 bytes for path legnth. Failed to sync directory");
+                            }
                         }
-
-                        if (numOfBytes >= buffSize - 1)
-                        {
-                            buffSize = Math.Min(buffSize * 2, buffSize + 1024);
-                            if (buffSize > 8192) // usually PATH_MAX is 4096
-                                return -1;
-
-                            ArrayPool<byte>.Shared.Return(realpathToDir);
-                            realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
-
-                            continue;
-                        }
-
-                        realpathToDir[numOfBytes] = 0;
-                        break;
                     }
                 }
 
-                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes);
+                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes - 1);
                 return SyncDirectory(realpathString, isRealPath: true);
             }
             finally
