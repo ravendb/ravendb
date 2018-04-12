@@ -17,10 +17,11 @@ namespace Voron.Debugging
     {
         public long Id;
         public TransactionFlags Flags;
+        public bool AsyncCommit;
 
         public override string ToString()
         {
-            return $"{nameof(Id)}: {Id}: {Flags}";
+            return $"{nameof(Id)}: {Id}: {Flags} ({nameof(AsyncCommit)}: {AsyncCommit})";
         }
     }
 }

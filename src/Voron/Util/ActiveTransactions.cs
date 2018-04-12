@@ -119,7 +119,8 @@ namespace Voron.Util
                         list.Add(new ActiveTransaction
                         {
                             Id = transaction.Id,
-                            Flags = transaction.Flags
+                            Flags = transaction.Flags,
+                            AsyncCommit = transaction.AsyncCommit != null
                         });
                     }
                 }
