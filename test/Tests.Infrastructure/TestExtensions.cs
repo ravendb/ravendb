@@ -19,7 +19,7 @@ namespace Tests.Infrastructure
             if (task.IsCompletedSuccessfully)
                 return true;
             if (task.Exception != null)
-                throw task.Exception;
+                throw task.Exception.GetBaseException();
             throw new Exception($"Should never reach this code path. {task.Status}, timeout: {timeout}");
         }
     }
