@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -14,27 +15,31 @@ namespace Raven.Client.Http
     /// </summary>
     public class AttachmentStreamContent : HttpContent
     {
-        private readonly byte[] _buffer = new byte[4096];
-
         private readonly Stream _stream;
         private readonly CancellationToken _cancellationToken;
 
         public AttachmentStreamContent(Stream stream, CancellationToken cancellationToken)
         {
-            if (stream == null)
-                throw new ArgumentNullException(nameof(stream));
-
-            _stream = stream;
+            _stream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
         }
 
         protected async Task CopyToStreamAsync(Stream stream)
         {
-            var count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false); 
-            while (count > 0)
+            var buffer = ArrayPool<byte>.Shared.Rent(4096);
+
+            try
             {
-                await stream.WriteAsync(_buffer, 0, count, _cancellationToken).ConfigureAwait(false);
-                count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false);
+                var count = await _stream.ReadAsync(buffer, 0, buffer.Length, _cancellationToken).ConfigureAwait(false);
+                while (count > 0)
+                {
+                    await stream.WriteAsync(buffer, 0, count, _cancellationToken).ConfigureAwait(false);
+                    count = await _stream.ReadAsync(buffer, 0, buffer.Length, _cancellationToken).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 
