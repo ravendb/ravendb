@@ -25,6 +25,7 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
@@ -1097,18 +1098,33 @@ namespace Raven.Server.Commercial
 
         public static void WriteSettingsJsonLocally(string settingsPath, string json)
         {
-            var tmpPath = settingsPath + ".tmp";
-            using (var file = SafeFileStream.Create(tmpPath, FileMode.Create))
-            using (var writer = new StreamWriter(file))
+            var tmpPath = string.Empty;
+            try
             {
-                writer.Write(json);
-                writer.Flush();
-                file.Flush(true);
+                tmpPath = settingsPath + ".tmp";
+                using (var file = SafeFileStream.Create(tmpPath, FileMode.Create))
+                using (var writer = new StreamWriter(file))
+                {
+                    writer.Write(json);
+                    writer.Flush();
+                    file.Flush(true);
+                }
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                throw new UnsuccessfulFileAccessException(e, tmpPath);
             }
 
-            File.Replace(tmpPath, settingsPath, settingsPath + ".bak");
-            if (PlatformDetails.RunningOnPosix)
-                Syscall.FsyncDirectoryFor(settingsPath);
+            try
+            {
+                File.Replace(tmpPath, settingsPath, settingsPath + ".bak");
+                if (PlatformDetails.RunningOnPosix)
+                    Syscall.FsyncDirectoryFor(settingsPath);
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                throw new UnsuccessfulFileAccessException(e, settingsPath);
+            }
         }
 
         private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
