@@ -513,7 +513,7 @@ namespace FastTests
             SecurityClearance clearance,
             RavenServer server = null)
         {
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out _);
+            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out var clietnCertBytes);
             var serverCertificate = new X509Certificate2(serverCertPath);
             using (var store = GetDocumentStore(new Options
             {
@@ -530,7 +530,7 @@ namespace FastTests
                     requestExecutor.Execute(command, context);
                 }
             }
-            return clientCertificate;
+            return new X509Certificate2(clietnCertBytes);
         }
 
         protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)

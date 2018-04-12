@@ -208,7 +208,7 @@ namespace Raven.Server.Commercial
                 {
                     try
                     {
-                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out serverCert, out clientCert, out otherNodesUrls, out license);
+                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out _, out serverCert, out clientCert, out otherNodesUrls, out license);
                     }
                     catch (Exception e)
                     {
@@ -257,9 +257,9 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls, out License license)
+        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls, out License license)
         {
-            byte[] certBytes = null;
+            certBytes = null;
             byte[] clientCertBytes = null;
             BlittableJsonReaderObject currentNodeSettingsJson = null;
             license = null;
