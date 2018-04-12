@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
@@ -151,10 +152,10 @@ namespace Tryouts
     }
     public static class Program
     {
-        public static async Task Main(string[] args)
+
+
+        public static void Main(string[] args)
         {
-            using (var test = new AlphaNumericSorting())
-                test.basic_alphanumeric_sort();
         }
     }
 }
