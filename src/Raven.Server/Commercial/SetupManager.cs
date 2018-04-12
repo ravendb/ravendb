@@ -186,6 +186,7 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
 
                 byte[] zipBytes;
+                byte[] serverCertBytes;
                 X509Certificate2 serverCert;
                 X509Certificate2 clientCert;
                 BlittableJsonReaderObject settingsJsonObject;
@@ -209,7 +210,7 @@ namespace Raven.Server.Commercial
                 {
                     try
                     {
-                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out _, out serverCert, out clientCert, out otherNodesUrls, out license);
+                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out serverCertBytes, out serverCert, out clientCert, out otherNodesUrls, out license);
                     }
                     catch (Exception e)
                     {
@@ -236,7 +237,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCert, clientCert, serverStore, otherNodesUrls, license);
+                        await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert, clientCert, serverStore, otherNodesUrls, license);
                     }
                     catch (Exception e)
                     {
@@ -1185,6 +1186,7 @@ namespace Raven.Server.Commercial
             SetupProgressAndResult progress,
             ContinueSetupInfo continueSetupInfo,
             BlittableJsonReaderObject settingsJsonObject,
+            byte[] serverCertBytes,
             X509Certificate2 serverCert,
             X509Certificate2 clientCert,
             ServerStore serverStore,
@@ -1206,7 +1208,7 @@ namespace Raven.Server.Commercial
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePath), out string certificateFileName);
 
-            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCert.Export(X509ContentType.Pfx, certPassword), certPassword, serverStore);
+            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword, serverStore);
             
             if (continueSetupInfo.NodeTag.Equals("A"))
             {
@@ -1287,7 +1289,7 @@ namespace Raven.Server.Commercial
 
                 using (var certfile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
-                    var certBytes = serverCert.Export(X509ContentType.Pfx, certPassword);
+                    var certBytes = serverCertBytes;
                     certfile.Write(certBytes, 0, certBytes.Length);
                     certfile.Flush(true);
                 }
