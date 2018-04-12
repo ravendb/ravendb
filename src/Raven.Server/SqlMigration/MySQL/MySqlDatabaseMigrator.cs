@@ -77,7 +77,7 @@ namespace Raven.Server.SqlMigration.MySQL
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping,
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, MySqlConnection connection, int? rowsLimit,
+            HashSet<string> specialColumns, Dictionary<string, string> attachmentNameMapping, MySqlConnection connection, int? rowsLimit,
             Dictionary<string, object> queryParameters = null)
         {
             using (var cmd = new MySqlCommand(LimitRowsNumber(tableQuery, rowsLimit), connection))
@@ -98,7 +98,7 @@ namespace Raven.Server.SqlMigration.MySQL
                         {
                             Object = ExtractFromReader(reader, documentPropertiesMapping),
                             SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
-                            Attachments = ExtractAttachments(reader, attachmentColumns)
+                            Attachments = ExtractAttachments(reader, attachmentNameMapping)
                         };
                         yield return migrationDocument;
                     }

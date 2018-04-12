@@ -28,13 +28,12 @@ namespace Raven.Server.SqlMigration
                 var collectionToImport = settings.Collection;
                 var tableSchema = dbSchema.GetTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
                 var specialColumns = dbSchema.FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
-                var attachmentColumns = tableSchema.GetAttachmentColumns(settings.BinaryToAttachment);
 
                 string CollectionNameProvider(string schema, string name) => settings.CollectionsMapping.Single(x => x.TableSchema == schema && x.TableName == name).CollectionName;
                 
                 using (var patcher = new JsPatcher(collectionToImport, context))
                 {
-                    var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider, settings.BinaryToAttachment);
+                    var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
 
                     InitializeDataProviders(references, referencesConnection);
 
@@ -46,7 +45,7 @@ namespace Raven.Server.SqlMigration
                             : GetQueryByPrimaryKey(collectionToImport, tableSchema.PrimaryKeyColumns, settings.PrimaryKeyValues, out queryParameters);
                         
                         foreach (var doc in EnumerateTable(queryToUse, collectionToImport.ColumnsMapping, specialColumns,
-                            attachmentColumns, enumerationConnection, rowsLimit: 1, queryParameters: queryParameters))
+                            collectionToImport.AttachmentNameMapping, enumerationConnection, rowsLimit: 1, queryParameters: queryParameters))
                         {
                             doc.SetCollection(collectionToImport.Name);
                             
@@ -101,18 +100,17 @@ namespace Raven.Server.SqlMigration
 
                     var tableSchema = dbSchema.GetTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
                     var specialColumns = dbSchema.FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
-                    var attachmentColumns = tableSchema.GetAttachmentColumns(settings.BinaryToAttachment);
 
                     using (var patcher = new JsPatcher(collectionToImport, context))
                     {
-                        var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider, settings.BinaryToAttachment);
+                        var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
 
                         InitializeDataProviders(references, referencesConnection);
 
                         try
                         {
                             foreach (var doc in EnumerateTable(GetQueryForCollection(collectionToImport), collectionToImport.ColumnsMapping, specialColumns,
-                                attachmentColumns, enumerationConnection, settings.MaxRowsPerTable))
+                                collectionToImport.AttachmentNameMapping, enumerationConnection, settings.MaxRowsPerTable))
                             {
                                 token.ThrowIfCancellationRequested();
                                 
@@ -276,7 +274,7 @@ namespace Raven.Server.SqlMigration
         }
 
         private List<ReferenceInformation> ResolveReferences(CollectionWithReferences sourceCollection, DatabaseSchema dbSchema, 
-            Func<string, string, string> collectionNameProvider, bool binaryToAttachment)
+            Func<string, string, string> collectionNameProvider)
         {
             var result = new List<ReferenceInformation>();
 
@@ -284,8 +282,8 @@ namespace Raven.Server.SqlMigration
             {
                 foreach (var embeddedCollection in sourceCollection.NestedCollections)
                 {
-                    var reference = CreateReference(binaryToAttachment, dbSchema, collectionNameProvider, sourceCollection, embeddedCollection);
-                    var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, collectionNameProvider, binaryToAttachment);
+                    var reference = CreateReference(dbSchema, collectionNameProvider, sourceCollection, embeddedCollection);
+                    var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, collectionNameProvider);
                     reference.ChildReferences = resolvedReferences.Count > 0 ? resolvedReferences : null;
                     result.Add(reference);
                 }
@@ -294,13 +292,13 @@ namespace Raven.Server.SqlMigration
             if (sourceCollection.LinkedCollections != null)
             {
                 foreach (var linkedCollection in sourceCollection.LinkedCollections)
-                    result.Add(CreateReference(binaryToAttachment, dbSchema, collectionNameProvider, sourceCollection, linkedCollection));
+                    result.Add(CreateReference(dbSchema, collectionNameProvider, sourceCollection, linkedCollection));
             }
 
             return result;
         }
 
-        private ReferenceInformation CreateReference(bool binaryToAttachment, DatabaseSchema dbSchema,
+        private ReferenceInformation CreateReference(DatabaseSchema dbSchema,
             Func<string, string, string> collectionNameProvider, AbstractCollection sourceCollection,
             ICollectionReference destinationCollection)
         {
@@ -318,7 +316,6 @@ namespace Raven.Server.SqlMigration
             }
 
             var specialColumns = dbSchema.FindSpecialColumns(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);
-            var attachmentColumns = destinationSchema.GetAttachmentColumns(binaryToAttachment);
 
             var referenceInformation = new ReferenceInformation
             {
@@ -330,7 +327,7 @@ namespace Raven.Server.SqlMigration
                 ForeignKeyColumns = reference.Columns,
                 TargetDocumentColumns = destinationCollection.ColumnsMapping,
                 TargetSpecialColumnsNames = specialColumns,
-                TargetAttachmentColumns = attachmentColumns,
+                TargetAttachmentColumns = destinationCollection.AttachmentNameMapping,
                 Type = (destinationCollection is EmbeddedCollection)
                     ? (destinationCollection.Type == RelationType.ManyToOne ? ReferenceType.ObjectEmbed : ReferenceType.ArrayEmbed)
                     : (destinationCollection.Type == RelationType.ManyToOne ? ReferenceType.ObjectLink : ReferenceType.ArrayLink),
@@ -345,16 +342,16 @@ namespace Raven.Server.SqlMigration
             return referenceInformation;
         }
 
-        protected Dictionary<string, byte[]> ExtractAttachments(IDataReader reader, HashSet<string> attachmentColumns)
+        protected Dictionary<string, byte[]> ExtractAttachments(IDataReader reader, Dictionary<string, string> attachmentNameMapping)
         {
             var result = new Dictionary<string, byte[]>();
 
-            foreach (var attachmentColumn in attachmentColumns)
+            foreach (var attachmentKvp in attachmentNameMapping)
             {
-                var value = reader[attachmentColumn];
+                var value = reader[attachmentKvp.Key];
                 if (value != null && (value is DBNull) == false)
                 {
-                    result[attachmentColumn] = (byte[])value;
+                    result[attachmentKvp.Value] = (byte[])value;
                 }
             }
 
@@ -432,7 +429,7 @@ namespace Raven.Server.SqlMigration
         protected abstract string GetSelectAllQueryForTable(string tableSchema, string tableName);
 
         protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping,
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, TConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null);
+            HashSet<string> specialColumns, Dictionary<string, string> attachmentNameMapping, TConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null);
 
         protected abstract IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
         protected abstract IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, TConnection connection);

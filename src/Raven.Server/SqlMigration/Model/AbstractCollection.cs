@@ -15,6 +15,9 @@ namespace Raven.Server.SqlMigration.Model
         
         // SQL Column Name -> Document Id Property Name
         public Dictionary<string, string> ColumnsMapping { get; set; }
+        
+        // SQL Column Name -> Attachment Name
+        public Dictionary<string, string> AttachmentNameMapping { get; set; }
 
 
         protected AbstractCollection(string sourceTableSchema, string sourceTableName, string name)

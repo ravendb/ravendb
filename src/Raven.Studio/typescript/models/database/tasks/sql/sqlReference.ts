@@ -38,16 +38,17 @@ class sqlReference {
         } as Raven.Server.SqlMigration.Model.LinkedCollection; 
     }
     
-    toEmbeddedDto(): Raven.Server.SqlMigration.Model.EmbeddedCollection {
+    toEmbeddedDto(binaryToAttachment: boolean): Raven.Server.SqlMigration.Model.EmbeddedCollection {
         return {
             Name: this.name(),
             SourceTableSchema: this.effectiveInnerTable().tableSchema,
             SourceTableName: this.effectiveInnerTable().tableName,
             Type: this.type, 
             JoinColumns: this.joinColumns,
-            ColumnsMapping: this.effectiveInnerTable().getColumnsMapping(),
+            ColumnsMapping: this.effectiveInnerTable().getColumnsMapping(binaryToAttachment),
+            AttachmentNameMapping: this.effectiveInnerTable().getAttachmentsMapping(binaryToAttachment),
             LinkedCollections: this.effectiveInnerTable().getLinkedReferencesDto(),
-            NestedCollections: this.effectiveInnerTable().getEmbeddedReferencesDto()
+            NestedCollections: this.effectiveInnerTable().getEmbeddedReferencesDto(binaryToAttachment)
         } as Raven.Server.SqlMigration.Model.EmbeddedCollection;
     }
     

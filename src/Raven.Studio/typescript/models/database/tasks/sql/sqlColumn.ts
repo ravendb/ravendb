@@ -17,6 +17,13 @@ class sqlColumn {
             Type: this.type
         });
     }
+    
+    columnTypeAsHtml(binaryAsAttachment: boolean) {
+        if (binaryAsAttachment && this.type === "Binary") {
+            return ': <i title="Attachment" class="icon-attachment"></i>';
+        }
+        return ': ' + this.type;
+    }
 }
 
 

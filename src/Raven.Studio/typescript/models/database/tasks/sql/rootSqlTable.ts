@@ -68,16 +68,17 @@ class rootSqlTable extends abstractSqlTable {
         });
     }
     
-    toDto() {
+    toDto(binaryToAttachment: boolean) {
         return {
             SourceTableName: this.tableName,
             SourceTableSchema: this.tableSchema,
             Name: this.collectionName(),
             Patch: this.transformResults() ? this.patchScript() : undefined,
             SourceTableQuery: this.customizeQuery() ? this.query() : undefined,
-            NestedCollections: this.getEmbeddedReferencesDto(),
+            NestedCollections: this.getEmbeddedReferencesDto(binaryToAttachment),
             LinkedCollections: this.getLinkedReferencesDto(),
-            ColumnsMapping: this.getColumnsMapping(),
+            ColumnsMapping: this.getColumnsMapping(binaryToAttachment),
+            AttachmentNameMapping: this.getAttachmentsMapping(binaryToAttachment)
         } as Raven.Server.SqlMigration.Model.RootCollection;
     }
     

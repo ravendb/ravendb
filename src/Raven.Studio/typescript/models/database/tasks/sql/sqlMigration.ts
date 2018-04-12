@@ -275,16 +275,16 @@ class sqlMigration {
     }
     
     toDto(): Raven.Server.SqlMigration.Model.MigrationRequest {
+        const binaryToAttachment = this.binaryToAttachment();
         return {
             Source: this.toSourceDto(),
             Settings: {
                 BatchSize: this.batchSize(),
-                BinaryToAttachment: this.binaryToAttachment(),
                 MaxRowsPerTable: this.testImport() ? this.maxDocumentsToImportPerTable() : undefined,
                 
                 Collections: this.tables()
                     .filter(x => x.checked())
-                    .map(x => x.toDto())
+                    .map(x => x.toDto(binaryToAttachment))
             }
         } as Raven.Server.SqlMigration.Model.MigrationRequest;
     }
@@ -391,7 +391,6 @@ class sqlMigration {
         this.connectionStringOverride(source.ConnectionString);
         
         const settings = config.Settings;
-        this.binaryToAttachment(settings.BinaryToAttachment);
         this.batchSize(settings.BatchSize);
         this.testImport(!!settings.MaxRowsPerTable);
         this.maxDocumentsToImportPerTable(this.testImport() ? settings.MaxRowsPerTable : 1000);

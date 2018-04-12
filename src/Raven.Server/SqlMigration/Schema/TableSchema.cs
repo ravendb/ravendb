@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Extensions;
 using Raven.Server.SqlMigration.Model;
@@ -47,13 +46,6 @@ namespace Raven.Server.SqlMigration.Schema
             return References.FirstOrDefault(x => x.Table == collection.SourceTableName
                                                    && x.Schema == collection.SourceTableSchema
                                                    && EnumerableExtension.ContentEquals(x.Columns, columns));
-        }
-        
-        public HashSet<string> GetAttachmentColumns(bool binaryToAttachment)
-        {
-            return binaryToAttachment
-                ? Columns.Where(x => x.Type == ColumnType.Binary).Select(x => x.Name).ToHashSet()
-                : new HashSet<string>();
         }
     }
 }
