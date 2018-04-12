@@ -100,8 +100,7 @@ namespace SlowTests.Client.Subscriptions
 
                         if (i > 0)
                         {
-                            Assert.True(await subscriptions[i - 1].Task.WaitAsync(TimeSpan.FromSeconds(60)));
-                            await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscriptions[i - 1].Task);
+                            await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscriptions[i - 1].Task.WaitAsync(TimeSpan.FromSeconds(60)));
                         }
 
                         using (var s = store.OpenSession())
