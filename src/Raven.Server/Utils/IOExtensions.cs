@@ -30,11 +30,6 @@ namespace Raven.Server.Utils
 
         public static void RenameFile(string oldFile, string newFile)
         {
-            if (PlatformDetails.RunningOnPosix)
-            {
-                Syscall.FsyncDirectoryFor(newFile);
-            }
-
             File.Move(oldFile, newFile);
 
             if (PlatformDetails.RunningOnPosix)
