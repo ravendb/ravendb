@@ -8,11 +8,10 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Patch;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration
@@ -21,6 +20,63 @@ namespace Raven.Server.SqlMigration
     {
         public abstract DatabaseSchema FindSchema();
 
+        public (BlittableJsonReaderObject Document, string Id) Test(MigrationTestSettings settings, DatabaseSchema dbSchema, DocumentsOperationContext context)
+        {
+            using (var enumerationConnection = OpenConnection())
+            using (var referencesConnection = OpenConnection())
+            {
+                var collectionToImport = settings.Collection;
+                var tableSchema = dbSchema.GetTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
+                var specialColumns = dbSchema.FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
+                var attachmentColumns = tableSchema.GetAttachmentColumns(settings.BinaryToAttachment);
+
+                string CollectionNameProvider(string schema, string name) => settings.CollectionsMapping.Single(x => x.TableSchema == schema && x.TableName == name).CollectionName;
+                
+                using (var patcher = new JsPatcher(collectionToImport, context))
+                {
+                    var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider, settings.BinaryToAttachment);
+
+                    InitializeDataProviders(references, referencesConnection);
+
+                    try
+                    {
+                        Dictionary<string, object> queryParameters = null;
+                        var queryToUse = settings.Mode == MigrationTestMode.First 
+                            ? GetQueryForCollection(collectionToImport) // we limit rows count internally by passing rowsLimit: 1
+                            : GetQueryByPrimaryKey(collectionToImport, tableSchema.PrimaryKeyColumns, settings.PrimaryKeyValues, out queryParameters);
+                        
+                        foreach (var doc in EnumerateTable(queryToUse, collectionToImport.ColumnsMapping, specialColumns,
+                            attachmentColumns, enumerationConnection, rowsLimit: 1, queryParameters: queryParameters))
+                        {
+                            doc.SetCollection(collectionToImport.Name);
+                            
+                            var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
+
+                            FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
+
+                            return (patcher.Patch(doc.ToBllitable(context)), id);
+                        }
+                    } 
+                    catch (JavaScriptException e)
+                    {
+                        if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidOperationException("Document was skipped", e);
+                        } 
+                        else
+                        {
+                            throw;
+                        }             
+                    }
+                    finally
+                    {
+                        DisposeDataProviders(references);
+                    }
+                }
+            }
+            throw new InvalidOperationException("Unable to find document to test. Query returned empty result.");
+        }
+        
         public async Task Migrate(MigrationSettings settings, DatabaseSchema dbSchema, DocumentDatabase db, DocumentsOperationContext context,
             MigrationResult result, Action<IOperationProgress> onProgress, CancellationToken token = default)
         {
@@ -29,6 +85,8 @@ namespace Raven.Server.SqlMigration
 
             if (onProgress == null)
                 onProgress = progress => { };
+
+            string CollectionNameProvider(string tableSchema, string tableName) => settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
 
             using (var enumerationConnection = OpenConnection())
             using (var referencesConnection = OpenConnection())
@@ -47,7 +105,7 @@ namespace Raven.Server.SqlMigration
 
                     using (var patcher = new JsPatcher(collectionToImport, context))
                     {
-                        var references = ResolveReferences(collectionToImport, dbSchema, settings.Collections, settings);
+                        var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider, settings.BinaryToAttachment);
 
                         InitializeDataProviders(references, referencesConnection);
 
@@ -217,8 +275,8 @@ namespace Raven.Server.SqlMigration
             });
         }
 
-        private List<ReferenceInformation> ResolveReferences(CollectionWithReferences sourceCollection, DatabaseSchema dbSchema, List<RootCollection> allCollections,
-            MigrationSettings migrationSettings)
+        private List<ReferenceInformation> ResolveReferences(CollectionWithReferences sourceCollection, DatabaseSchema dbSchema, 
+            Func<string, string, string> collectionNameProvider, bool binaryToAttachment)
         {
             var result = new List<ReferenceInformation>();
 
@@ -226,8 +284,8 @@ namespace Raven.Server.SqlMigration
             {
                 foreach (var embeddedCollection in sourceCollection.NestedCollections)
                 {
-                    var reference = CreateReference(migrationSettings, dbSchema, allCollections, sourceCollection, embeddedCollection);
-                    var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, allCollections, migrationSettings);
+                    var reference = CreateReference(binaryToAttachment, dbSchema, collectionNameProvider, sourceCollection, embeddedCollection);
+                    var resolvedReferences = ResolveReferences(embeddedCollection, dbSchema, collectionNameProvider, binaryToAttachment);
                     reference.ChildReferences = resolvedReferences.Count > 0 ? resolvedReferences : null;
                     result.Add(reference);
                 }
@@ -236,14 +294,14 @@ namespace Raven.Server.SqlMigration
             if (sourceCollection.LinkedCollections != null)
             {
                 foreach (var linkedCollection in sourceCollection.LinkedCollections)
-                    result.Add(CreateReference(migrationSettings, dbSchema, allCollections, sourceCollection, linkedCollection));
+                    result.Add(CreateReference(binaryToAttachment, dbSchema, collectionNameProvider, sourceCollection, linkedCollection));
             }
 
             return result;
         }
 
-        private ReferenceInformation CreateReference(MigrationSettings migrationSettings, DatabaseSchema dbSchema,
-            List<RootCollection> allCollections, AbstractCollection sourceCollection,
+        private ReferenceInformation CreateReference(bool binaryToAttachment, DatabaseSchema dbSchema,
+            Func<string, string, string> collectionNameProvider, AbstractCollection sourceCollection,
             ICollectionReference destinationCollection)
         {
             var sourceSchema = dbSchema.GetTable(sourceCollection.SourceTableSchema, sourceCollection.SourceTableName);
@@ -260,7 +318,7 @@ namespace Raven.Server.SqlMigration
             }
 
             var specialColumns = dbSchema.FindSpecialColumns(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);
-            var attachmentColumns = destinationSchema.GetAttachmentColumns(migrationSettings.BinaryToAttachment);
+            var attachmentColumns = destinationSchema.GetAttachmentColumns(binaryToAttachment);
 
             var referenceInformation = new ReferenceInformation
             {
@@ -281,10 +339,7 @@ namespace Raven.Server.SqlMigration
             if (destinationCollection is LinkedCollection)
             {
                 // linked connection
-                var collectionToUseInLinks = allCollections.Single(x => x.SourceTableName == destinationCollection.SourceTableName)
-                    .Name;
-
-                referenceInformation.CollectionNameToUseInLinks = collectionToUseInLinks;
+                referenceInformation.CollectionNameToUseInLinks = collectionNameProvider(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);
             }
 
             return referenceInformation;
@@ -372,10 +427,12 @@ namespace Raven.Server.SqlMigration
 
         protected abstract string GetQueryForCollection(RootCollection collection);
         
+        protected abstract string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues, out Dictionary<string, object> queryParameters);
+        
         protected abstract string GetSelectAllQueryForTable(string tableSchema, string tableName);
 
         protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping,
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, TConnection connection, int? rowsLimit);
+            HashSet<string> specialColumns, HashSet<string> attachmentColumns, TConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null);
 
         protected abstract IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
         protected abstract IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, TConnection connection);

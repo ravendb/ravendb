@@ -239,20 +239,29 @@ namespace Raven.Server.SqlMigration.MsSQL
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, SqlConnection connection, int? rowsLimit)
+            HashSet<string> specialColumns, HashSet<string> attachmentColumns, SqlConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null)
         {
             using (var cmd = new SqlCommand(LimitRowsNumber(tableQuery, rowsLimit), connection))
-            using (var reader = cmd.ExecuteReader())
             {
-                while (reader.Read())
+                if (queryParameters != null)
                 {
-                    var migrationDocument = new SqlMigrationDocument
+                    foreach (var kvp in queryParameters)
                     {
-                        Object = ExtractFromReader(reader, documentPropertiesMapping),
-                        SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
-                        Attachments = ExtractAttachments(reader, attachmentColumns)
-                    };
-                    yield return migrationDocument;
+                        cmd.Parameters.AddWithValue(kvp.Key, kvp.Value);
+                    }
+                }
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var migrationDocument = new SqlMigrationDocument
+                        {
+                            Object = ExtractFromReader(reader, documentPropertiesMapping),
+                            SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
+                            Attachments = ExtractAttachments(reader, attachmentColumns)
+                        };
+                        yield return migrationDocument;
+                    }
                 }
             }
         }
@@ -358,6 +367,28 @@ namespace Raven.Server.SqlMigration.MsSQL
             dbNames.Sort();
 
             return dbNames;
+        }
+
+        protected override string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
+        {
+            if (primaryKeyColumns.Count != primaryKeyValues.Length)
+            {
+                queryParameters = null;
+                throw new InvalidOperationException("Invalid paramaters count. Primary key has " + primaryKeyColumns.Count + " columns, but " + primaryKeyValues.Length + " values were provided.");
+            }
+            
+            var parameters = new Dictionary<string, object>();
+            
+            var wherePart = string.Join(" and ", primaryKeyColumns.Select((column, idx) =>
+            {
+                parameters["p" + idx] = primaryKeyValues[idx];
+                return QuoteColumn(column) + " = @p" + idx;
+            }));
+            
+            queryParameters = parameters;
+            
+            // here we ignore custom query - as we want to get row based on primary key
+            return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName) + " where " + wherePart;
         }
     }
 }

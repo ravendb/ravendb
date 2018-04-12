@@ -378,6 +378,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MigrationRequest));
             scripter.AddType(typeof(MigrationResult));
             scripter.AddType(typeof(MigrationProgress));
+            scripter.AddType(typeof(MigrationTestRequest));
 
             return scripter;
         }
