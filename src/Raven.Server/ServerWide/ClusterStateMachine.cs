@@ -412,6 +412,7 @@ namespace Raven.Server.ServerWide
                         if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                            NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
                             continue;
                         }
                     }
@@ -550,8 +551,6 @@ namespace Raven.Server.ServerWide
 
             // delete all values linked to database record - for subscription, etl etc.
             CleanupDatabaseRelatedValues(context, items, databaseName);
-
-            NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
         }
 
         private void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string databaseName)
