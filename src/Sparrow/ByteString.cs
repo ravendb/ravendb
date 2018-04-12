@@ -1015,24 +1015,58 @@ namespace Sparrow
             Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
             Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
 
+            if (value._pointer->Size < 0)
+                ThrowInvalidReleaseException("Negative size", value._pointer);
+
             _currentlyAllocated -= value._pointer->Size;
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
-            int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
+            int reusablePoolIndex = -1;
+            try
+            {
+                reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
+            }
+            catch (IndexOutOfRangeException e)
+            {
+                ThrowInvalidReleaseException("GetPoolIndexForReuse errored", value._pointer, e);
+            }
 
             if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
-                FastStack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
-                if (pool == null)
+                FastStack<IntPtr> pool = null;
+                try
                 {
-                    pool = new FastStack<IntPtr>();
-                    _internalReusableStringPool[reusablePoolIndex] = pool;
+                    pool = _internalReusableStringPool[reusablePoolIndex];
+                    if (pool == null)
+                    {
+                        pool = new FastStack<IntPtr>();
+                        _internalReusableStringPool[reusablePoolIndex] = pool;
+                    }
+                }
+                catch (IndexOutOfRangeException e)
+                {
+                    ThrowInvalidReleaseException($"_internalReusableStringPool errored, reusablePoolIndex: {reusablePoolIndex}, _internalReusableStringPool: {_internalReusableStringPool.Length}", value._pointer, e);
                 }
 
-                pool.Push(new IntPtr(value._pointer));
-                _internalReusableStringPoolCount[reusablePoolIndex]++;
+                try
+                {
+                    pool.Push(new IntPtr(value._pointer));
+                }
+                catch (IndexOutOfRangeException e)
+                {
+                    ThrowInvalidReleaseException($"pool.Push errored, reusablePoolIndex: {reusablePoolIndex}, pool.Count: {pool.Count}, pool._array.Length: {pool._array.Length}", value._pointer, e);
+                }
+
+                try
+                {
+                    _internalReusableStringPoolCount[reusablePoolIndex]++;
+                }
+                catch (IndexOutOfRangeException e)
+                {
+                    ThrowInvalidReleaseException($"_internalReusableStringPoolCount errored, reusablePoolIndex: {reusablePoolIndex}, _internalReusableStringPoolCount: {_internalReusableStringPoolCount.Length}", value._pointer, e);
+                }
             }
             else  // The released memory is big enough, we will just release it as a new segment. 
             {
@@ -1056,6 +1090,14 @@ namespace Sparrow
 
             // WE WANT it to happen, no matter what. 
             value._pointer = null;
+        }
+
+        private static void ThrowInvalidReleaseException(string message, ByteStringStorage* value, Exception actualException = null)
+        {
+            if (actualException != null)
+                throw new InvalidOperationException(message + $" Value: size: {value->Size}, length: {value->Length}, flags: {value->Flags}", actualException);
+
+            throw new InvalidOperationException(message);
         }
 
         private SegmentInformation AllocateSegment(int size)
