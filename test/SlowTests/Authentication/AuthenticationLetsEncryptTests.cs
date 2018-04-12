@@ -82,6 +82,7 @@ namespace SlowTests.Authentication
             };
 
             X509Certificate2 serverCert;
+            byte[] serverCertBytes;
             string firstServerCertThumbprint;
             BlittableJsonReaderObject settingsJsonObject;
 
@@ -99,7 +100,7 @@ namespace SlowTests.Authentication
 
                 try
                 {
-                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCert, out _, out _, out _);
+                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCertBytes, out serverCert, out _, out _, out _);
                     firstServerCertThumbprint = serverCert.Thumbprint;
                 }
                 catch (Exception e)
@@ -119,8 +120,7 @@ namespace SlowTests.Authentication
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
 
             var tempFileName = Path.GetTempFileName();
-            byte[] certData = serverCert.Export(X509ContentType.Pfx);
-            File.WriteAllBytes(tempFileName, certData);
+            File.WriteAllBytes(tempFileName, serverCertBytes);
 
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>
             {
