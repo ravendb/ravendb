@@ -67,7 +67,6 @@ namespace Raven.Server.Web.Studio
             {
                 using (var sqlImportDoc = context.ReadForMemory(RequestBodyStream(), "sql-migration-request"))
                 {
-                    //TODO: progress + convert this to operation
                     MigrationRequest migrationRequest;
                     
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
@@ -117,6 +116,50 @@ namespace Raven.Server.Web.Studio
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteOperationId(context, operationId);
+                    }
+                    
+                    return Task.CompletedTask;
+                }
+            }
+        }
+        
+        [RavenAction("/databases/*/admin/sql-migration/test", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task TestSql()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (var sqlImportTestDoc = context.ReadForMemory(RequestBodyStream(), "sql-migration-test-request"))
+                {
+                    MigrationTestRequest testRequest;
+                    
+                    // we can't use JsonDeserializationServer here as it doesn't support recursive processing
+                    var serializer = DocumentConventions.Default.CreateSerializer();
+                    using (var blittableJsonReader = new BlittableJsonReader())
+                    {
+                        blittableJsonReader.Init(sqlImportTestDoc);
+                        testRequest = serializer.Deserialize<MigrationTestRequest>(blittableJsonReader);
+                    }
+                    
+                    var sourceSqlDatabase = testRequest.Source;
+                    
+                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                    var schema = dbDriver.FindSchema();
+                    
+                    var (testResultDocument, documentId) = dbDriver.Test(testRequest.Settings, schema, context);
+                    
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        
+                        writer.WritePropertyName("DocumentId");
+                        writer.WriteString(documentId);
+                        
+                        writer.WriteComma();
+                        
+                        writer.WritePropertyName("Document");
+                        writer.WriteObject(testResultDocument);
+                        
+                        writer.WriteEndObject();
                     }
                     
                     return Task.CompletedTask;

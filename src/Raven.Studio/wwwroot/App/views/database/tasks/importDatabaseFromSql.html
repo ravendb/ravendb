@@ -307,7 +307,54 @@
                         </div>
                     </div>
                     
-                    <div class="margin-top">
+                    <hr />
+                    
+                    <div class="flex-form">
+                         <div class="form-group">
+                            <label class="control-label">Test mode:</label>
+                            <div class="flex-grow">
+                                <div class="btn-group">
+                                    <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="visible: testMode() === 'First'">
+                                            <span>Use first record matching query</span>
+                                        </span>
+                                        <span data-bind="visible: testMode() === 'ByPrimaryKey'">
+                                            <span>Specify primary key values to use</span>
+                                        </span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a href="#" data-bind="click: _.partial(testMode, 'First')">
+                                                <span>Use first record matching query</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: _.partial(testMode, 'ByPrimaryKey')">
+                                                Specify primary key values to use
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div data-bind="foreach: testPrimaryKeys, visible: testMode() === 'ByPrimaryKey'">
+                            <div class="form-group" data-bind="validationElement: value">
+                                <label class="control-label" data-bind="text: $parent.primaryKeyColumns()[$index()].sqlName"></label>
+                                <div class="flex-grow">
+                                    <input data-bind="textInput: value" class="form-control"  />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                   
+                    
+                    <div class="margin-top text-right">
+                        <button title="Test" class="btn btn-primary" data-bind="click: $root.runTest, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
+                            <i class="icon-rocket"></i><span>Test</span>
+                        </button>
                         <button title="Close" class="btn btn-default" data-bind="click: $root.closeEditedTransformation"><i class="icon-cancel"></i> <span>Close</span></button>
                     </div>
                 </div>

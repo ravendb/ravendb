@@ -289,6 +289,18 @@ class sqlMigration {
         } as Raven.Server.SqlMigration.Model.MigrationRequest;
     }
     
+    toCollectionsMappingDto(): Array<Raven.Server.SqlMigration.Model.CollectionNamesMapping> {
+        return this.tables()
+            .filter(x => x.checked())
+            .map(table => {
+                return {
+                    CollectionName: table.collectionName(),
+                    TableSchema: table.tableSchema,
+                    TableName: table.tableName
+                } as Raven.Server.SqlMigration.Model.CollectionNamesMapping;
+            });
+    }
+    
     advancedSettingsDto(): sqlMigrationAdvancedSettingsDto {
         return {
             UsePascalCase: this.advanced.usePascalCase(),
@@ -336,7 +348,9 @@ class sqlMigration {
                 
                 const reverseTable = reverseReference.sourceTable as rootSqlTable;
                 reverseTable.transformResults(true);
-                const innerPropertyName = reverseReference.effectiveInnerTable().references()[0].name();
+                const firstInnerReference = reverseReference.effectiveInnerTable().references()[0];
+                const innerPropertyName = firstInnerReference.name();
+                firstInnerReference.link(firstInnerReference.targetTable);
                 
                 const script = "// flatten many-to-many relationship\r\n"
                     + "this." + reverseReference.name() + " = this." + reverseReference.name() + ".map(x => x." + innerPropertyName + ");\r\n";

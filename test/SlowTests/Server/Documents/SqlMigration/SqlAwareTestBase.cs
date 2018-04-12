@@ -22,42 +22,41 @@ namespace SlowTests.Server.Documents.SqlMigration
         {
             foreach (var collection in settings.Collections)
             {
-                Map(collection);
+                ApplyDefaultColumnNamesMapping(dbSchema, collection, settings.BinaryToAttachment);
             }
+        }
 
-            void Map(AbstractCollection collection)
+        protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, AbstractCollection collection, bool binaryToAttachment)
+        {
+            var tableSchema = dbSchema.Tables.First(x => x.Schema == collection.SourceTableSchema && x.TableName == collection.SourceTableName);
+
+            var specialColumns = dbSchema.FindSpecialColumns(collection.SourceTableSchema, collection.SourceTableName);
+            var attachmentColumns = tableSchema.GetAttachmentColumns(binaryToAttachment);
+
+            var mapping = tableSchema.Columns
+                .Where(x => specialColumns.Contains(x.Name) == false && attachmentColumns.Contains(x.Name) == false)
+                .Select(c => (c.Name, c.Name.First().ToString().ToUpper() + c.Name.Substring(1)))
+                .ToDictionary(x => x.Name, x => x.Item2);
+
+            collection.ColumnsMapping = mapping;
+
+            if (collection is CollectionWithReferences collectionWithRefs)
             {
-                var tableSchema = dbSchema.Tables.First(x => x.Schema == collection.SourceTableSchema && x.TableName == collection.SourceTableName);
-                
-                var specialColumns = dbSchema.FindSpecialColumns(collection.SourceTableSchema, collection.SourceTableName);
-                var attachmentColumns = tableSchema.GetAttachmentColumns(settings.BinaryToAttachment);
-                
-                var mapping = tableSchema.Columns
-                    .Where(x => specialColumns.Contains(x.Name) == false && attachmentColumns.Contains(x.Name) == false)
-                    .Select(c => (c.Name, c.Name.First().ToString().ToUpper() + c.Name.Substring(1)))
-                    .ToDictionary(x => x.Name, x => x.Item2);
-
-                collection.ColumnsMapping = mapping;
-                
-                if (collection is CollectionWithReferences collectionWithRefs)
+                if (collectionWithRefs.LinkedCollections != null)
                 {
-                    if (collectionWithRefs.LinkedCollections != null)
+                    foreach (var linkedCollection in collectionWithRefs.LinkedCollections)
                     {
-                        foreach (var linkedCollection in collectionWithRefs.LinkedCollections)
-                        {
-                            Map(linkedCollection);
-                        }
-                    }
-
-                    if (collectionWithRefs.NestedCollections != null)
-                    {
-                        foreach (var embeddedCollection in collectionWithRefs.NestedCollections)
-                        {
-                            Map(embeddedCollection);
-                        }
+                        ApplyDefaultColumnNamesMapping(dbSchema, linkedCollection, binaryToAttachment);
                     }
                 }
-                
+
+                if (collectionWithRefs.NestedCollections != null)
+                {
+                    foreach (var embeddedCollection in collectionWithRefs.NestedCollections)
+                    {
+                        ApplyDefaultColumnNamesMapping(dbSchema, embeddedCollection, binaryToAttachment);
+                    }
+                }
             }
         }
 

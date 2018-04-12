@@ -4,18 +4,36 @@ import abstractSqlTable = require("models/database/tasks/sql/abstractSqlTable");
 import innerSqlTable = require("models/database/tasks/sql/innerSqlTable");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 
+class valueHolder<T> {
+    value = ko.observable<T>();
+    
+    validationGroup: KnockoutValidationGroup;
+    
+    constructor() {
+        this.value.extend({
+            required: true
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            value: this.value
+        })
+    }
+}
+
 class rootSqlTable extends abstractSqlTable {
     collectionName = ko.observable<string>();
     checked = ko.observable<boolean>(true);
     documentIdTemplate: KnockoutComputed<string>;
     
-    customizeQuery = ko.observable<boolean>(false); //TODO: validation  required onlyif
+    customizeQuery = ko.observable<boolean>(false);
     query = ko.observable<string>();
-    //TODO: autocomplete columns names?
-    transformResults = ko.observable<boolean>(false);  //TODO: validation  required onlyif
+    transformResults = ko.observable<boolean>(false);
     patchScript = ko.observable<string>();
     
     hasDuplicateProperties: KnockoutComputed<boolean>;
+    
+    testMode = ko.observable<Raven.Server.SqlMigration.Model.MigrationTestMode>("First");
+    testPrimaryKeys = [] as Array<valueHolder<string>>;
     
     constructor() {
         super();
@@ -44,6 +62,9 @@ class rootSqlTable extends abstractSqlTable {
             this.references().forEach(ref => refCheck(ref));
             
             return hasDuplicates;
+        });
+        this.primaryKeyColumns.subscribe(() => {
+            this.testPrimaryKeys = this.primaryKeyColumns().map(() => new valueHolder());
         });
     }
     

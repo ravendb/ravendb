@@ -4,6 +4,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
+import testSqlMigrationCommand = require("commands/database/tasks/testSqlMigrationCommand");
 import listSqlDatabasesCommand = require("commands/database/tasks/listSqlDatabasesCommand");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
@@ -14,6 +15,8 @@ import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageDialog");
+import showDataDialog = require("viewmodels/common/showDataDialog");
+import documentMetadata = require("models/database/documents/documentMetadata");
 
 interface exportDataDto {
     Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,
@@ -22,13 +25,14 @@ interface exportDataDto {
     DatabaseName: string
 }
 
-class importCollectionFromSql extends viewModelBase {
+class importDatabaseFromSql extends viewModelBase {
     
     static pageCount = 5; //TODO: set to 100!
     
     spinners = {
         schema: ko.observable<boolean>(false),
-        importing: ko.observable<boolean>(false)
+        importing: ko.observable<boolean>(false),
+        test: ko.observable<boolean>(false)
     };
     
     completer = defaultAceCompleter.completer();
@@ -56,13 +60,16 @@ class importCollectionFromSql extends viewModelBase {
     
     continueFlowValidationGroup: KnockoutValidationGroup;
     
+    testMode = ko.observable<Raven.Server.SqlMigration.Model.MigrationTestMode>("First");
+    testPrimaryKeys = ko.observableArray<KnockoutObservable<string>>([]);
+    
     constructor() {
         super();
         
         aceEditorBindingHandler.install();
 
         this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences", "fileSelected",
-            "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable");
+            "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable", "runTest");
         
         this.initObservables();
         this.initValidation();
@@ -78,18 +85,18 @@ class importCollectionFromSql extends viewModelBase {
     }
     
     private initObservables() {
-        this.pageCount = ko.pureComputed(() => Math.ceil(this.filteredTables().length / importCollectionFromSql.pageCount) );
+        this.pageCount = ko.pureComputed(() => Math.ceil(this.filteredTables().length / importDatabaseFromSql.pageCount) );
         
         this.currentTables = ko.pureComputed(() => {
-            const start = this.currentPage() * importCollectionFromSql.pageCount;
-            return this.filteredTables().slice(start, start + importCollectionFromSql.pageCount);
+            const start = this.currentPage() * importDatabaseFromSql.pageCount;
+            return this.filteredTables().slice(start, start + importDatabaseFromSql.pageCount);
         });
         
         this.currentLocationHumane = ko.pureComputed(() => {
             const total = this.filteredTables().length;
             
-            const start = this.currentPage() * importCollectionFromSql.pageCount + 1;
-            const end = Math.min(total, start + importCollectionFromSql.pageCount - 1);
+            const start = this.currentPage() * importDatabaseFromSql.pageCount + 1;
+            const end = Math.min(total, start + importDatabaseFromSql.pageCount - 1);
             
             return "Tables " + start.toLocaleString() + "-" + end.toLocaleString() + " out of " + total.toLocaleString() + (this.searchText() ? " - filtered" : "");
         });
@@ -400,7 +407,7 @@ class importCollectionFromSql extends viewModelBase {
             // first find page
             const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
             
-            const page = Math.floor(targetTableIndex / importCollectionFromSql.pageCount);
+            const page = Math.floor(targetTableIndex / importDatabaseFromSql.pageCount);
             this.setCurrentPage(page);
             
             // navigate exactly to reference position
@@ -420,10 +427,10 @@ class importCollectionFromSql extends viewModelBase {
         // first find page
         const targetTableIndex = this.model.tables().findIndex(x => x.tableSchema === table.tableSchema && x.tableName === table.tableName);
         if (targetTableIndex !== -1) {
-            const page = Math.floor(targetTableIndex / importCollectionFromSql.pageCount);
+            const page = Math.floor(targetTableIndex / importDatabaseFromSql.pageCount);
             this.setCurrentPage(page);
             
-            const onPagePosition = targetTableIndex % importCollectionFromSql.pageCount;
+            const onPagePosition = targetTableIndex % importDatabaseFromSql.pageCount;
             const $targetElement = $(".js-scroll-tables .js-root-table-panel:eq(" + onPagePosition + ")");
             
             $(".js-scroll-tables").scrollTop($targetElement[0].offsetTop - 20);
@@ -504,6 +511,42 @@ class importCollectionFromSql extends viewModelBase {
         }
         
         return true; // allow checked handler to be executed
+    }
+    
+    runTest(table: rootSqlTable) {
+        let allValid = true;
+        
+        if (table.testMode() === 'ByPrimaryKey') {
+            table.testPrimaryKeys.forEach(key => {
+                if (!this.isValid(key.validationGroup)) {
+                    allValid = false;
+                }
+            });
+        }
+        
+        if (!allValid) {
+            return;
+        }
+        
+        this.spinners.test(true);
+        new testSqlMigrationCommand(this.activeDatabase(), {
+            Source: this.model.toSourceDto(),
+            Settings: {
+                Mode: table.testMode(),
+                Collection: table.toDto(),
+                BinaryToAttachment: this.model.binaryToAttachment(),
+                PrimaryKeyValues: table.testPrimaryKeys.map(x => x.value()),
+                CollectionsMapping: this.model.toCollectionsMappingDto()
+            }
+        }).execute()
+            .done(result => {
+                const metaDto = result.Document["@metadata"];
+                documentMetadata.filterMetadata(metaDto);
+                
+                const text = JSON.stringify(result.Document, null, 4);
+                app.showBootstrapDialog(new showDataDialog("Document: " + result.DocumentId, text, "javascript"));
+            })
+            .always(() => this.spinners.test(false));
     }
     
     initHints() {
@@ -635,4 +678,4 @@ class importCollectionFromSql extends viewModelBase {
     }
 }
 
-export = importCollectionFromSql; 
+export = importDatabaseFromSql; 
