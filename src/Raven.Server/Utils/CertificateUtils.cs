@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -21,12 +22,13 @@ namespace Raven.Server.Utils
     {
         private const int BitsPerByte = 8; 
 
-        public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
+        public static byte[] CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName);
-            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out _);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes);
+            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
-            return selfSignedCertificateBasedOnPrivateKey;
+            return certBytes;
         }
 
         public static void RegisterCertificateInOperatingSystem(X509Certificate2 cert)
@@ -101,17 +103,19 @@ namespace Raven.Server.Utils
         {
             var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
             
-            return CreateSelfSignedCertificateBasedOnPrivateKey(
+            CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue,
                 readCertificate.SubjectDN,
                 (certificateHolder.PrivateKey.Key, readCertificate.GetPublicKey()),
                 true,
                 false,
                 -1,
-                out _);
+                out var certBytes);
+
+            return new X509Certificate2(certBytes);
         }
 
-        public static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
+        public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
             X509Name issuer, 
             (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) key,
             bool isClientCertificate,
@@ -177,13 +181,6 @@ namespace Raven.Server.Utils
             var stream = new MemoryStream();
             store.Save(stream, new char[0], random);
             certBytes = stream.ToArray();
-            var convertedCertificate =
-                new X509Certificate2(
-                    certBytes, (string)null,
-                    X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
-            stream.Position = 0;
-
-            return convertedCertificate;
         }
 
         public static void CreateCertificateAuthorityCertificate(string commonNameValue, 

@@ -77,7 +77,8 @@ namespace SlowTests.Authentication
                     await session.SaveChangesAsync();
                 }
 
-                var newServerCert = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
+                var certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
+                var newServerCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
 
                 var mre = new ManualResetEventSlim();
 
