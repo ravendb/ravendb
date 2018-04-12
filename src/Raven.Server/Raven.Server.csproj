@@ -98,7 +98,7 @@
     <None Update="Properties\Settings\settings_posix.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="settings.json">
+    <None Update="settings.default.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Properties\Settings\settings_windows.json">
