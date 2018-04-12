@@ -58,6 +58,10 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
     }
 
     protected calculateProcessingSpeed(processed: number): number {
+        if (!this.op.endTime()) {
+            this.op.endTime(moment.utc());
+        }
+        
         const duration = this.op.durationInSeconds();
         if (duration <= 0) {
             return 0;
