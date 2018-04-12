@@ -122,6 +122,8 @@ namespace Raven.Server.Config
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
         {
+            CeateConfigFileFromDefaultIfNeeded();
+
             if (string.IsNullOrEmpty(customConfigPath) == false)
             {
                 if (File.Exists(customConfigPath) == false)
@@ -132,6 +134,15 @@ namespace Raven.Server.Config
             else
             {
                 _configBuilder.AddJsonFile("settings.json", optional: true);
+            }
+        }
+
+        private void CeateConfigFileFromDefaultIfNeeded()
+        {
+            if (File.Exists("settings.json") == false &&
+                File.Exists("settings.default.json")) //just in case
+            {                
+                File.Move("settings.default.json","settings.json");
             }
         }
 
