@@ -482,6 +482,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     options: options);
 
                 result = smuggler.Execute();
+                file.Flush(flushToDisk: true);
             }
             return result;
         }
