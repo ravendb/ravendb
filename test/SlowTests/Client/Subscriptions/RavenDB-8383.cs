@@ -22,7 +22,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     CloseWhenNoDocsLeft = true
                 });
-                await Assert.ThrowsAsync<SubscriptionException>(() => subscription.Run(x => { })).WaitAsync(_reasonableWaitTime);
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => subscription.Run(x => { }).WaitAsync(_reasonableWaitTime));
             }
         }
     }

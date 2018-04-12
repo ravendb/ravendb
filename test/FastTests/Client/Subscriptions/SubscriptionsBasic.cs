@@ -550,8 +550,7 @@ namespace FastTests.Client.Subscriptions
                     PutUserDoc(store);
                     var subscriptionTask = subscription.Run(x => throw new Exception("Fake exception"));
 
-                    await subscriptionTask.WaitAsync(_reasonableWaitTime);
-                    Assert.True(await Assert.ThrowsAsync<SubscriberErrorException>(() => subscriptionTask).WaitAsync(_reasonableWaitTime));
+                    await Assert.ThrowsAsync<SubscriberErrorException>(() => subscriptionTask.WaitAsync(_reasonableWaitTime));
 
                     Assert.Equal("Fake exception", subscriptionTask.Exception.InnerExceptions[0].InnerException.Message);
                     var subscriptionConfig = store.Subscriptions.GetSubscriptions(0, 1).First();
