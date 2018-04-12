@@ -380,7 +380,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 catch (ObjectDisposedException)
                                 {
                                     //if this happens, this means we are disposing, so don't care..
-                                    //(this peace of code happens asynchronously to external using(tcpStream) statement)
+                                    //(this piece of code happens asynchronously to external using(tcpStream) statement)
                                 }
                             });
                         }
@@ -389,7 +389,10 @@ namespace Raven.Client.Documents.Subscriptions
             }
             catch (OperationCanceledException)
             {
-                // this is thrown when shutting down, it
+                if (_disposed == false)
+                    throw;
+
+                // otherwise this is thrown when shutting down, it
                 // isn't an error, so we don't need to treat
                 // it as such
             }
@@ -503,7 +506,11 @@ namespace Raven.Client.Documents.Subscriptions
                     try
                     {
                         if (_processingCts.Token.IsCancellationRequested)
+                        {
+                            if (_disposed == false)
+                                throw;
                             return;
+                        }
 
                         if (_logger.IsInfoEnabled)
                         {
