@@ -239,7 +239,7 @@ namespace Raven.Server.SqlMigration.MsSQL
         }
 
         protected override IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
-            HashSet<string> specialColumns, HashSet<string> attachmentColumns, SqlConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null)
+            HashSet<string> specialColumns, Dictionary<string, string> attachmentNameMapping, SqlConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null)
         {
             using (var cmd = new SqlCommand(LimitRowsNumber(tableQuery, rowsLimit), connection))
             {
@@ -258,7 +258,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                         {
                             Object = ExtractFromReader(reader, documentPropertiesMapping),
                             SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
-                            Attachments = ExtractAttachments(reader, attachmentColumns)
+                            Attachments = ExtractAttachments(reader, attachmentNameMapping)
                         };
                         yield return migrationDocument;
                     }

@@ -15,5 +15,7 @@ namespace Raven.Server.SqlMigration.Model
         RelationType Type { get; set; }
         
         Dictionary<string, string> ColumnsMapping { get; set; }
+        
+        Dictionary<string, string> AttachmentNameMapping { get; set; }
     }
 }

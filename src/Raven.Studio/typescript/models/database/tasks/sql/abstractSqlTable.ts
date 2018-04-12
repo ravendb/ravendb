@@ -21,10 +21,10 @@ abstract class abstractSqlTable {
             .map(x => x.toLinkDto());
     }
     
-    getEmbeddedReferencesDto() {
+    getEmbeddedReferencesDto(binaryToAttachment: boolean) {
         return this.references()
             .filter(x => x.action() === 'embed')
-            .map(x => x.toEmbeddedDto());
+            .map(x => x.toEmbeddedDto(binaryToAttachment));
     }
     
     checkForDuplicateProperties() {
@@ -32,11 +32,28 @@ abstract class abstractSqlTable {
         return localProperties.length !== _.uniq(localProperties).length;
     }
     
-    getColumnsMapping() {
+    getColumnsMapping(binaryToAttachment: boolean) {
         const mapping = {} as dictionary<string>;
-        this.documentColumns().forEach(column => {
-            mapping[column.sqlName] = column.propertyName();
-        });
+        this.documentColumns()
+            .filter(x => binaryToAttachment ? x.type !== "Binary" : true)
+            .forEach(column => {
+                mapping[column.sqlName] = column.propertyName();
+            });
+        return mapping;
+    }
+    
+    getAttachmentsMapping(binaryToAttachment: boolean) {
+        const mapping = {} as dictionary<string>;
+        
+        if (!binaryToAttachment) {
+            return mapping;
+        }
+        
+        this.documentColumns()
+            .filter(x => x.type === "Binary")
+            .forEach(column => {
+                mapping[column.sqlName] = column.propertyName();
+            });
         return mapping;
     }
     

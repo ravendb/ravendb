@@ -371,7 +371,7 @@
                 <td><i class="icon-arrow-right"></i></td>
                 <td class="inline-edit">
                     <div class="static">
-                        <span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="text: ': ' + type"></span>
+                        <span class="raven-property-name" data-bind="text: propertyName"></span> <span class="text-muted" data-bind="html: columnTypeAsHtml($root.model.binaryToAttachment())"></span>
                     </div>
                     <input class="form-control input-sm" data-bind="textInput: propertyName" />
                 </td>

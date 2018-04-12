@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
-using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlMigration
@@ -29,7 +26,6 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     var settings = new MigrationSettings
                     {
-                        BinaryToAttachment = true,
                         Collections = new List<RootCollection>
                         {
                             new RootCollection(schemaName, "actor", "Actors")
@@ -51,21 +47,25 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
-                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        ApplyDefaultColumnNamesMapping(schema, settings, true);
                         await driver.Migrate(settings, schema, db, context);
                     }
                     
                     using (var session  = store.OpenSession())
                     {
                         var actor32 = session.Load<JObject>("Actors/32");
+                        Assert.False(actor32.ContainsKey("Photo"));
+                        Assert.False(actor32.ContainsKey("photo"));
                         var attachments = session.Advanced.Attachments.GetNames(actor32)
                             .Select(x => x.Name)
                             .OrderBy(x => x)
                             .ToArray();
                         
-                        Assert.Equal(new string[] { "Movies_0_Movie_file", "Movies_1_Movie_file", "photo" }, attachments);
+                        Assert.Equal(new[] { "Movies_0_Movie_File", "Movies_1_Movie_File", "Photo" }, attachments);
                         
                         var actor34 = session.Load<JObject>("Actors/34");
+                        Assert.False(actor34.ContainsKey("Photo"));
+                        Assert.False(actor34.ContainsKey("photo"));
                         Assert.Equal(0, session.Advanced.Attachments.GetNames(actor34).Length);
                     }
                 }
@@ -86,7 +86,6 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     var settings = new MigrationSettings
                     {
-                        BinaryToAttachment = false,
                         Collections = new List<RootCollection>
                         {
                             new RootCollection(schemaName, "actor", "Actors")
@@ -108,7 +107,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
-                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        ApplyDefaultColumnNamesMapping(schema, settings, binaryToAttachment: false);
                         await driver.Migrate(settings, schema, db, context);
                     }
                     

@@ -23,6 +23,7 @@ interface exportDataDto {
     Configuration: Raven.Server.SqlMigration.Model.MigrationRequest,
     Advanced: sqlMigrationAdvancedSettingsDto,
     DatabaseName: string
+    BinaryToAttachment: boolean;
 }
 
 class importDatabaseFromSql extends viewModelBase {
@@ -199,6 +200,7 @@ class importDatabaseFromSql extends viewModelBase {
             
             this.initSecondStep();
             this.model.applyConfiguration(importedData.Configuration);
+            this.model.binaryToAttachment(importedData.BinaryToAttachment);
             
             this.togglingAll(false);
         }
@@ -483,7 +485,8 @@ class importDatabaseFromSql extends viewModelBase {
             Schema: this.model.dbSchema,
             Configuration: this.model.toDto(),
             Advanced: this.model.advancedSettingsDto(),
-            DatabaseName: this.model.sourceDatabaseName()
+            DatabaseName: this.model.sourceDatabaseName(),
+            BinaryToAttachment: this.model.binaryToAttachment()
         } as exportDataDto;
         
         fileDownloader.downloadAsJson(exportData, exportFileName + ".json", exportFileName);
@@ -529,12 +532,13 @@ class importDatabaseFromSql extends viewModelBase {
         }
         
         this.spinners.test(true);
+        const binaryToAttachment = this.model.binaryToAttachment();
         new testSqlMigrationCommand(this.activeDatabase(), {
             Source: this.model.toSourceDto(),
             Settings: {
                 Mode: table.testMode(),
-                Collection: table.toDto(),
-                BinaryToAttachment: this.model.binaryToAttachment(),
+                Collection: table.toDto(binaryToAttachment),
+                BinaryToAttachment: binaryToAttachment,
                 PrimaryKeyValues: table.testPrimaryKeys.map(x => x.value()),
                 CollectionsMapping: this.model.toCollectionsMappingDto()
             }

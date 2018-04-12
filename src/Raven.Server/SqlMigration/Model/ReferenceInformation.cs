@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Raven.Server.SqlMigration.Schema;
-using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
 
 namespace Raven.Server.SqlMigration.Model
 {
@@ -20,7 +17,7 @@ namespace Raven.Server.SqlMigration.Model
         public IDataProvider<object> DataProvider {get; set; }
         public HashSet<string> TargetSpecialColumnsNames { get; set; }
         public Dictionary<string, string> TargetDocumentColumns { get; set; }
-        public HashSet<string> TargetAttachmentColumns { get; set; }
+        public Dictionary<string, string> TargetAttachmentColumns { get; set; }
         
         public ReferenceType Type { get; set; }
         

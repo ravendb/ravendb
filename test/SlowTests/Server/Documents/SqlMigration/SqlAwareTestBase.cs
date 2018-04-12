@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data.SqlClient;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -11,18 +10,17 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using SlowTests.Server.Documents.ETL.SQL;
 using Tests.Infrastructure;
-using Voron.Util;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace SlowTests.Server.Documents.SqlMigration
 {
     public abstract class SqlAwareTestBase : RavenTestBase
     {
-        protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, MigrationSettings settings)
+        protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, MigrationSettings settings, bool binaryToAttachment = false)
         {
             foreach (var collection in settings.Collections)
             {
-                ApplyDefaultColumnNamesMapping(dbSchema, collection, settings.BinaryToAttachment);
+                ApplyDefaultColumnNamesMapping(dbSchema, collection, binaryToAttachment);
             }
         }
 
@@ -31,14 +29,16 @@ namespace SlowTests.Server.Documents.SqlMigration
             var tableSchema = dbSchema.Tables.First(x => x.Schema == collection.SourceTableSchema && x.TableName == collection.SourceTableName);
 
             var specialColumns = dbSchema.FindSpecialColumns(collection.SourceTableSchema, collection.SourceTableName);
-            var attachmentColumns = tableSchema.GetAttachmentColumns(binaryToAttachment);
 
-            var mapping = tableSchema.Columns
-                .Where(x => specialColumns.Contains(x.Name) == false && attachmentColumns.Contains(x.Name) == false)
+            collection.ColumnsMapping = tableSchema.Columns
+                .Where(x => specialColumns.Contains(x.Name) == false && (binaryToAttachment ? x.Type != ColumnType.Binary : true))
                 .Select(c => (c.Name, c.Name.First().ToString().ToUpper() + c.Name.Substring(1)))
                 .ToDictionary(x => x.Name, x => x.Item2);
-
-            collection.ColumnsMapping = mapping;
+            
+            collection.AttachmentNameMapping = tableSchema.Columns
+                .Where(x => binaryToAttachment ? x.Type == ColumnType.Binary : false)
+                .Select(c => (c.Name, c.Name.First().ToString().ToUpper() + c.Name.Substring(1)))
+                .ToDictionary(x => x.Name, x => x.Item2);
 
             if (collection is CollectionWithReferences collectionWithRefs)
             {
