@@ -21,16 +21,29 @@ namespace SlowTests.Voron.Storage
         {
             RequireFileBasedPager();
 
-            using (var tx1 = Env.WriteTransaction())
-            using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction())
+            var tx1 = Env.WriteTransaction();
+
+            try
             {
-                tx2.CreateTree("test");
+                using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction())
+                {
+                    using (tx1)
+                    {
+                        tx2.CreateTree("test");
 
-                tx1.EndAsyncCommit();
+                        tx1.EndAsyncCommit();
+                    }
 
-                tx2.Commit();
+                    tx1 = null;
+
+                    tx2.Commit();
+                }
             }
-
+            finally
+            {
+                tx1?.Dispose();
+            }
+            
             RestartDatabase();
         }
     }
