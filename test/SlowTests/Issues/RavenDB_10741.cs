@@ -2,7 +2,7 @@
 using FastTests;
 using Xunit;
 
-namespace SlowTests.Client
+namespace SlowTests.Issues
 {
     public class RavenDB_10741 : RavenTestBase
     {

@@ -39,7 +39,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task DontPurgeTombstonesWhenNodeIsDown()
         {
             var clusterSize = 3;
@@ -82,7 +82,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task MoveToRehabOnServerDown()
         {
             var clusterSize = 3;
@@ -109,7 +109,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task PromoteOnCatchingUp()
         {
             var clusterSize = 3;
@@ -157,7 +157,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SuccessfulMaintenanceOnLeaderChange()
         {
             var clusterSize = 3;
@@ -190,7 +190,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task PromoteDatabaseNodeBackAfterReconnection()
         {
             var clusterSize = 3;
@@ -231,7 +231,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task MoveToPassiveWhenRefusedConnectionFromAllNodes()
         {
             //DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -288,7 +288,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task RedistrebuteDatabaseIfNodeFailes()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -329,7 +329,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task RedistrebuteDatabaseOnMultiFailure()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -372,7 +372,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task RemoveNodeFromClusterWhileDeletion()
         {
             var databaseName = "RemoveNodeFromClusterWhileDeletion" + Guid.NewGuid();
@@ -415,7 +415,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
             var databaseName = "DontRemoveNodeWhileItHasNotReplicatedDocs" + Guid.NewGuid();
@@ -513,7 +513,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task Promote_immedtialty_should_work()
         {
             var databaseName = "Promote_immedtialty_should_work" + Guid.NewGuid();
@@ -549,7 +549,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ChangeUrlOfSingleNodeCluster()
         {
             var databaseName = "ChangeUrlOfSingleNodeCluster" + Guid.NewGuid();
@@ -589,7 +589,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ChangeUrlOfMultiNodeCluster()
         {
             var fromSeconds = TimeSpan.FromSeconds(8);

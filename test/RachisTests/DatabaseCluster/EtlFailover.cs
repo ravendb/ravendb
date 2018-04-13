@@ -21,7 +21,7 @@ namespace RachisTests.DatabaseCluster
 {
     public class EtlFailover : ReplicationTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task ReplicateFromSingleSource()
         {
             var srcDb = "ReplicateFromSingleSourceSrc";
@@ -124,7 +124,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task EtlDestinationFailoverBetweenNodesWithinSameCluster()
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
