@@ -28,7 +28,7 @@ namespace Sparrow.Collections
     [DebuggerDisplay("Count = {Count}")]
     public class FastStack<T> : IEnumerable<T>       
     {
-        internal T[] _array;     // Storage for stack elements
+        private T[] _array;     // Storage for stack elements
         private int _size;           // Number of items in the stack.
         private int _version;        // Used to keep enumerator in sync w/ collection.
 
