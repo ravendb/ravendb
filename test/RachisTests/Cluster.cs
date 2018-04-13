@@ -27,7 +27,7 @@ namespace RachisTests
             return res.Topology.Members.Count;
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task PutUniqeValueToDifferentNode()
         {
             var clusterSize = 3;
@@ -56,7 +56,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
             var clusterSize = 3;
