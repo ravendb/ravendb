@@ -1,12 +1,8 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Documents.Session.Operations.Lazy;
-using Sparrow.Json;
 using Xunit;
 
-namespace SlowTests.Client
+namespace SlowTests.Issues
 {
     public class RavenDB_10524 : RavenTestBase
     {

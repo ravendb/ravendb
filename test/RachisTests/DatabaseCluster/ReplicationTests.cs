@@ -27,7 +27,7 @@ namespace RachisTests.DatabaseCluster
 {
     public class ReplicationTests : ReplicationTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task WaitForCommandToApply()
         {
             var clusterSize = 5;
@@ -58,7 +58,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildTheory]
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task EnsureDocumentsReplication(bool useSsl)
@@ -131,7 +131,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildTheory]
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task EnsureReplicationToWatchers(bool useSsl)
@@ -221,7 +221,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(5, count);
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task WaitForReplicaitonShouldWaitOnlyForInternalNodes()
         {
             var clusterSize = 5;
@@ -344,7 +344,7 @@ namespace RachisTests.DatabaseCluster
             return handler;
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SetMentorToExternalReplication()
         {
             var clusterSize = 5;
@@ -418,7 +418,7 @@ namespace RachisTests.DatabaseCluster
         }
 
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task CanAddAndModifySingleWatcher()
         {
             var clusterSize = 3;
@@ -561,7 +561,7 @@ namespace RachisTests.DatabaseCluster
         }
 
 
-        [NightlyBuildTheory]
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DoNotReplicateBack(bool useSsl)
@@ -624,7 +624,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildTheory]
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task AddGlobalChangeVectorToNewDocument(bool useSsl)
@@ -710,7 +710,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ReplicateToWatcherWithAuth()
         {
             var serverCertPath = SetupServerAuthentication();
@@ -746,7 +746,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ReplicateToWatcherWithInvalidAuth()
         {
             var serverCertPath = SetupServerAuthentication();
@@ -786,7 +786,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ExternalReplicationFailover()
         {
             var clusterSize = 3;

@@ -39,7 +39,7 @@ namespace RachisTests
         }
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
 
-        [NightlyBuildTheory]
+        [Theory]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(10)]
@@ -100,7 +100,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SubscripitonDeletionFromCluster()
         {
             const int nodesAmount = 5;
@@ -198,7 +198,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SetMentorToSubscriptionWithFailover()
         {
             const int nodesAmount = 5;
@@ -253,7 +253,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildTheory]
+        [Theory]
         [InlineData(3)]
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
@@ -579,7 +579,7 @@ namespace RachisTests
         }
 
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SubscriptionShouldFailIfLeaderIsDownAndItIsOnlyOpening()
         {
             const int nodesAmount = 2;
@@ -633,7 +633,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SubscriptionShouldFailIfLeaderIsDownBeforeAck()
         {
             const int nodesAmount = 2;
@@ -693,7 +693,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry()
         {
             const int nodesAmount = 2;

@@ -15,7 +15,7 @@ namespace RachisTests
 {
     public class EmergencyOperations : ClusterTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected()
         {
             var clusterSize = 3;
@@ -39,7 +39,7 @@ namespace RachisTests
             Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitAsync(TimeSpan.FromSeconds(2)),"New leader was not elected after old leader left the cluster.");            
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task FollowerCanCecedeFromCluster()
         {
             var clusterSize = 3;
