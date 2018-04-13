@@ -13,17 +13,29 @@ namespace FastTests.Voron.Bugs
         [Fact]
         public void Flushing_should_not_throw_on_freeing_scratch_page_async_commit()
         {
-            using (var tx1 = Env.WriteTransaction())
+            var tx1 = Env.WriteTransaction();
+
+            try
             {
                 var allocatePage = tx1.LowLevelTransaction.AllocatePage(1);
 
                 using (var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction())
                 {
-                    tx2.LowLevelTransaction.FreePage(allocatePage.PageNumber); // free the same page that was allocated by the parent tx
+                    using (tx1)
+                    {
+                        tx2.LowLevelTransaction.FreePage(allocatePage.PageNumber); // free the same page that was allocated by the parent tx
 
-                    tx1.EndAsyncCommit();
+                        tx1.EndAsyncCommit();
+                    }
+
+                    tx1 = null;
+
                     tx2.Commit();
                 }
+            }
+            finally
+            {
+                tx1?.Dispose();
             }
 
             using (var tx = Env.WriteTransaction())
