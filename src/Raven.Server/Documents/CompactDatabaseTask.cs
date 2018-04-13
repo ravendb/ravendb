@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,16 +30,16 @@ namespace Raven.Server.Documents
             _token = token;
         }
 
-        public async Task Execute(Action<IOperationProgress>  onProgress, CompactionResult result)
+        public async Task Execute(Action<IOperationProgress> onProgress, CompactionResult result)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Database '{_database}' cannot be compacted because compaction is already in progress.");
-            
+
             result.AddMessage($"Started database compaction for {_database}");
             onProgress?.Invoke(result);
 
-            _isCompactionInProgress = true;           
-            bool done = false; 
+            _isCompactionInProgress = true;
+            bool done = false;
             string compactDirectory = null;
             string tmpDirectory = null;
 
@@ -56,16 +58,7 @@ namespace Raven.Server.Documents
                     compactDirectory = basePath + "-compacting";
                     tmpDirectory = basePath + "-old";
 
-                    //Making sure we can read and write to both the tmp (backup) folder and compaction folder before we do any real work.
-                    if (IOExtensions.EnsureReadWritePermissionForDirectory(compactDirectory) == false)
-                    {
-                        throw new UnauthorizedAccessException($"Couldn't gain read/write access to compact directory {compactDirectory}");
-                    }
-
-                    if (IOExtensions.EnsureReadWritePermissionForDirectory(tmpDirectory) == false)
-                    {
-                        throw new UnauthorizedAccessException($"Couldn't gain read/write access to tmp directory {tmpDirectory}");
-                    }
+                    EnsureDirectoriesPermission(basePath, compactDirectory, tmpDirectory);
 
                     IOExtensions.DeleteDirectory(compactDirectory);
                     IOExtensions.DeleteDirectory(tmpDirectory);
@@ -89,26 +82,47 @@ namespace Raven.Server.Documents
                     }
 
                     result.TreeName = null;
-                    
+
                     _token.ThrowIfCancellationRequested();
+
+                    EnsureDirectoriesPermission(basePath, compactDirectory, tmpDirectory);
+                    IOExtensions.DeleteDirectory(tmpDirectory);
 
                     SwitchDatabaseDirectories(basePath, tmpDirectory, compactDirectory);
                     done = true;
-                }                
-                
+                }
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to execute compaction for {_database}", e);
             }
             finally
-            {                
+            {
                 IOExtensions.DeleteDirectory(compactDirectory);
                 if (done)
                 {
                     IOExtensions.DeleteDirectory(tmpDirectory);
                 }
                 _isCompactionInProgress = false;
+            }
+        }
+
+        private static void EnsureDirectoriesPermission(params string[] directories)
+        {
+            var missingPermissions = new List<string>();
+
+            foreach (var directory in directories)
+            {
+                if (IOExtensions.EnsureReadWritePermissionForDirectory(directory) == false)
+                {
+                    missingPermissions.Add(directory);
+                }
+            }
+
+            if (missingPermissions.Count > 0)
+            {
+                throw new UnauthorizedAccessException(
+                    $"Couldn't gain read/write access to the following directories:{Environment.NewLine}{string.Join(Environment.NewLine, missingPermissions)}");
             }
         }
 
@@ -128,16 +142,30 @@ namespace Raven.Server.Documents
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)
         {
-            IOExtensions.MoveDirectory(basePath, backupDirectory);
-            IOExtensions.MoveDirectory(compactDirectory, basePath);
+            foreach (var moveDir in new(string Src, string Dst)[]
+            {
+                (basePath, backupDirectory),
+                (compactDirectory, basePath),
+                (new PathSetting(backupDirectory).Combine("Indexes").FullPath, new PathSetting(basePath).Combine("Indexes").FullPath),
+                (new PathSetting(backupDirectory).Combine("Configuration").FullPath, new PathSetting(basePath).Combine("Configuration").FullPath)
+            })
+            {
+                try
+                {
+                    IOExtensions.MoveDirectory(moveDir.Src, moveDir.Dst);
+                }
+                catch (Exception e)
+                {
+                    ThrowCantMoveDirectory(moveDir.Src, moveDir.Dst, e, basePath);
+                }
+            }
+        }
 
-            var oldIndexesPath = new PathSetting(backupDirectory).Combine("Indexes");
-            var newIndexesPath = new PathSetting(basePath).Combine("Indexes");
-            IOExtensions.MoveDirectory(oldIndexesPath.FullPath, newIndexesPath.FullPath);
-
-            var oldConfigPath = new PathSetting(backupDirectory).Combine("Configuration");
-            var newConfigPath = new PathSetting(basePath).Combine("Configuration");
-            IOExtensions.MoveDirectory(oldConfigPath.FullPath, newConfigPath.FullPath);
+        private static void ThrowCantMoveDirectory(string src, string dst, Exception e, string databasePath)
+        {
+            throw new IOException(
+                $"Cannot move directory '{src}' to '{dst}'. Please verify the directory '{databasePath}' exists and contains the database's data before loading the database",
+                e);
         }
     }
 }
