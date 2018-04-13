@@ -468,8 +468,9 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently",
                                     e);
                             }
-                            using (previous)
+                            
                             using (context.Transaction)
+                            using (previous)
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
