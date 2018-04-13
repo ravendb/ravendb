@@ -13,7 +13,7 @@ namespace RachisTests
 {
     public class DisableNodeOnClusterTest : ReplicationTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task BackToFirstNodeAfterRevive()
         {
             var db = "BackToFirstNodeAfterRevive";
