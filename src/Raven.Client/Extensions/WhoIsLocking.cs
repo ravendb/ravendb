@@ -1,15 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Sparrow.Platform;
-using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace Raven.Server.Extensions
+namespace Raven.Client.Extensions
 {
-    public static class WhoIsLocking
+     public static class WhoIsLocking
     {
         private const int RmRebootReasonNone = 0;
         private const int CCH_RM_MAX_APP_NAME = 255;
@@ -49,7 +49,7 @@ namespace Raven.Server.Extensions
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmStartSession");
             try
             {
-                // Let the restart manager know what files we�re interested in
+                // Let the restart manager know what files we’re interested in
                 var pathStrings = new[]{filePath};
                 rv = RmRegisterResources(sessionHandle,
                                          (uint) pathStrings.Length, pathStrings,
