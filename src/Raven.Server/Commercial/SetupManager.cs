@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -1077,10 +1078,10 @@ namespace Raven.Server.Commercial
                     writer.Flush();
                     file.Flush(true);
                 }
-            }
-            catch (UnauthorizedAccessException e)
+            }       
+            catch (Exception e) when (e is UnauthorizedAccessException || e is SecurityException)
             {
-                throw new UnsuccessfulFileAccessException(e, tmpPath);
+                throw new UnsuccessfulFileAccessException(e, tmpPath, FileAccess.Write);
             }
 
             try
@@ -1091,7 +1092,7 @@ namespace Raven.Server.Commercial
             }
             catch (UnauthorizedAccessException e)
             {
-                throw new UnsuccessfulFileAccessException(e, settingsPath);
+                throw new UnsuccessfulFileAccessException(e, settingsPath, FileAccess.Write);
             }
         }
 
