@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
@@ -44,6 +45,16 @@ namespace Raven.Server
             }
 
             new WelcomeMessage(Console.Out).Print();
+
+            var targetSettingsFile = string.IsNullOrEmpty(CommandLineSwitches.CustomConfigPath)
+                ? "settings.json"
+                : CommandLineSwitches.CustomConfigPath;
+            
+            if (File.Exists(targetSettingsFile) == false &&
+                File.Exists("settings.default.json")) //just in case
+            {                
+                File.Copy("settings.default.json",targetSettingsFile);
+            }
 
             var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
 
