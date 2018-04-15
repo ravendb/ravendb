@@ -78,7 +78,7 @@ function CopyTools ( $outDirs ) {
 function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $target ) {
     write-host "Create package server directory layout..."
 
-    $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.json")
+    $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.default.json")
 
     if ($target.IsUnix) { 
         $settingsFileName = "settings.posix.json" 
