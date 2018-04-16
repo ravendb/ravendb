@@ -1,7 +1,4 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using Lucene.Net.Search;
+﻿using Lucene.Net.Search;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
@@ -9,7 +6,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
     public class AlphaNumericComparatorSource : FieldComparatorSource
     {
         private readonly DocumentsOperationContext _context;
-        private readonly Func<int, string[]> _valuesArrayFactory;
 
         public AlphaNumericComparatorSource(DocumentsOperationContext context)
         {
