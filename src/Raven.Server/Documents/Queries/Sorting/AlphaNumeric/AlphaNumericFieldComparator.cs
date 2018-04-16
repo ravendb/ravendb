@@ -1,22 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.System.Buffers;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
-using Microsoft.Extensions.ObjectPool;
-using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Server.Utils;
-using Sparrow.Collections.LockFree;
-using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
@@ -81,10 +67,10 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
         internal sealed class AlphanumComparer : IComparer<string>
         {
             public static readonly AlphanumComparer Instance = new AlphanumComparer();
-            
+
             private AlphanumComparer()
             {
-                
+
             }
 
             public struct AlphanumericStringComparisonState
@@ -117,7 +103,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
                     var curCharacterIsDigit = CurSequenceIsNumber;
                     var insideZeroPrefix = CurCharacter == '0';
-                    
+
                     // Walk through all following characters that are digits or
                     // characters in BOTH strings starting at the appropriate marker.
                     // Collect char arrays.
@@ -148,14 +134,14 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                             break;
                         }
                     } while (curCharacterIsDigit == CurSequenceIsNumber);
-                    
+
                 }
 
                 public int CompareWithAnotherState(AlphanumericStringComparisonState other)
                 {
                     var string1State = this;
                     var string2State = other;
-                         
+
                     // if both seqeunces are numbers, compare between them
                     if (string1State.CurSequenceIsNumber && string2State.CurSequenceIsNumber)
                     {
@@ -166,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                         }
 
                         // else, it means they should be compared by string, again, we compare only the effective numbers
-                        return  System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
+                        return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
                             string1State.OriginalString, string1State.CurPositionInString - string1State.NumberLength, string1State.NumberLength,
                             string2State.OriginalString, string2State.CurPositionInString - string2State.NumberLength, string1State.NumberLength);
                     }
