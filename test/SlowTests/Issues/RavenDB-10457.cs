@@ -125,12 +125,12 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                                     GeorgeAlbums = georgeAlbums.ToList(),
                                 };
 
-/*                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(item) {
 	var georgeAlbums = Object.keys(item.MusicCollection).map(function(a){return{Key: a,Value:item.MusicCollection[a]};}).filter(function(x){return x.Key.startsWith(""G"");}).map(function(s){return s.Value.map(function(x){return {Title:x.Title,ReleaseDate:new Date(Date.parse(x.ReleaseDate))};});});
 	return { Name : item.Name, GeorgeAlbums : georgeAlbums };
 }
-from index 'TestDocumentByName' as item select output(item)", query.ToString());*/
+from index 'TestDocumentByName' as item select output(item)", query.ToString());
 
                     var queryResult = query.ToList();
 
