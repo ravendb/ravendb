@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             BackupType backupType,
             out string backupFilePath)
         {
-            var backupExtension = GetBackupExtension(backupType);
+            var backupExtension = GetBackupExtension(backupType, isFullBackup);
             var fileName = isFullBackup ? 
                 GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath, throwWhenFileExists: true) : 
                 GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath);
@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var counter = 1;
                 while (true)
                 {
-                    fileName = $"{now}-{counter:D2}${backupExtension}";
+                    fileName = $"{now}-{counter:D2}{backupExtension}";
                     backupFilePath = Path.Combine(backupFolder, fileName);
 
                     if (File.Exists(backupFilePath) == false)
@@ -451,8 +451,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             return lastEtag;
         }
 
-        private static string GetBackupExtension(BackupType type)
+        private static string GetBackupExtension(BackupType type, bool isFullBackup)
         {
+            if (isFullBackup == false)
+                return Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
+
             switch (type)
             {
                 case BackupType.Backup:
@@ -460,7 +463,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case BackupType.Snapshot:
                     return Constants.Documents.PeriodicBackup.SnapshotExtension;
                 default:
-                    return Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
         }
 
