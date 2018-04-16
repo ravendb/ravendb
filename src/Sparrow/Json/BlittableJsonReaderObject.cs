@@ -127,7 +127,8 @@ namespace Sparrow.Json
                 _propNamesDataOffsetSize = sizeof(short);
             else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
                 _propNamesDataOffsetSize = sizeof(int);
-            else ThrowOutOfRangeException(propNamesOffsetFlag);
+            else
+                ThrowOutOfRangeException(propNamesOffsetFlag);
 
             _objStart = _mem + pos;
             byte propCountOffset;
@@ -316,7 +317,7 @@ namespace Sparrow.Json
                     {
                         if (ChangeTypeToString(result, out string timeSpanString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false) 
+                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false)
                             ThrowFormatException(result, result.GetType().FullName, "TimeSpan");
                         obj = (T)(object)timeSpan;
                     }
@@ -339,11 +340,10 @@ namespace Sparrow.Json
                                 obj = (T)Convert.ChangeType(lazyNumberValue, type);
                                 break;
                             case LazyCompressedStringValue lazyCompressStringValue:
-                                if (typeof(T) == typeof(LazyStringValue))
-                                {
+                                if (type == typeof(LazyStringValue))
                                     obj = (T)(object)lazyCompressStringValue.ToLazyStringValue();
-                                }
-                                obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
+                                else
+                                    obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
                                 break;
                             default:
                                 obj = (T)Convert.ChangeType(result, type);
@@ -479,9 +479,11 @@ namespace Sparrow.Json
                 AddToCache(name, result, index);
             }
 
-            Return: return opResult;
+Return:
+            return opResult;
 
-            ThrowDisposed: ThrowObjectDisposed();
+ThrowDisposed:
+            ThrowObjectDisposed();
             result = null;
             return false;
         }
@@ -603,7 +605,8 @@ namespace Sparrow.Json
 
             } while (min <= max);
 
-            NotFound: return -1;
+NotFound:
+            return -1;
         }
 
         /// <summary>
@@ -676,7 +679,7 @@ namespace Sparrow.Json
                 var propRelativePos = (int)(_propNames - propertyNameOffset - _mem);
                 var size = ReadVariableSizeInt(propRelativePos, out var offset);
 
-                hash = Hashing.XXHash64.Calculate( _mem + propRelativePos + offset, (ulong)size, hash);
+                hash = Hashing.XXHash64.Calculate(_mem + propRelativePos + offset, (ulong)size, hash);
             }
             return hash;
         }
@@ -797,7 +800,7 @@ namespace Sparrow.Json
                     cloned.Modifications.Properties.Enqueue(property);
                 }
             }
-            
+
             return cloned;
         }
 
@@ -969,19 +972,19 @@ namespace Sparrow.Json
                     case BlittableJsonToken.Integer:
                         ReadVariableSizeLong(propValueOffset);
                         break;
-                    case BlittableJsonToken.LazyNumber:                        
+                    case BlittableJsonToken.LazyNumber:
                         var numberLength = ReadVariableSizeInt(propValueOffset, out byte lengthOffset);
                         var escCount = ReadVariableSizeInt(propValueOffset + lengthOffset + numberLength, out byte escOffset);
 
                         // if number has any non-ascii symbols, we rull it out immediately
-                        if (escCount > 0)                            
+                        if (escCount > 0)
                             ThrowInvalidNumber(propValueOffset);
 
                         var numberCharsStart = _mem + objStartOffset - propOffset + lengthOffset;
 
                         // try and validate number using double's validation
-                        if (_context.TryParseDouble(numberCharsStart, numberLength, out _) == false )                                               
-                            ThrowInvalidNumber(propValueOffset);                            
+                        if (_context.TryParseDouble(numberCharsStart, numberLength, out _) == false)
+                            ThrowInvalidNumber(propValueOffset);
                         break;
                     case BlittableJsonToken.String:
                         StringValidation(propValueOffset);
