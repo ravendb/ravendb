@@ -457,14 +457,19 @@ namespace Voron.Data.Tables
                 }
 
                 // Serialize the schema into the table's tree
-                var serializer = SerializeSchema();
+                SerializeSchemaIntoTableTree(tableTree);
+            }
+        }
 
-                using (tableTree.DirectAdd(SchemasSlice, serializer.Length, out ptr))
+        internal void SerializeSchemaIntoTableTree(Tree tableTree)
+        {
+            var serializer = SerializeSchema();
+
+            using (tableTree.DirectAdd(SchemasSlice, serializer.Length, out var ptr))
+            {
+                fixed (byte* source = serializer)
                 {
-                    fixed (byte* source = serializer)
-                    {
-                        Memory.Copy(ptr, source, serializer.Length);
-                    }
+                    Memory.Copy(ptr, source, serializer.Length);
                 }
             }
         }
