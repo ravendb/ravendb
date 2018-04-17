@@ -16,10 +16,6 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="Data\RavenDB_10958.json" />
-    <None Remove="Data\RavenDB_10958.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
