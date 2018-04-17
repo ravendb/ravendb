@@ -399,12 +399,12 @@ namespace Raven.Client.Documents.Changes
                         await _client.ConnectAsync(url, _cts.Token).ConfigureAwait(false);
 
                         Interlocked.Exchange(ref _immediateConnection, 1);
-                        
+
                         foreach (var counter in _counters)
                         {
                             counter.Value.Set(counter.Value.OnConnect());
                         }
-                        
+
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
                     }
 
@@ -415,25 +415,27 @@ namespace Raven.Client.Documents.Changes
                     NotifyAboutError(e);
                     return;
                 }
-                catch (ChangeProcessingException e)
+                catch (ChangeProcessingException)
                 {
-                    NotifyAboutError(e);
                     continue;
                 }
                 catch (Exception e)
                 {
-                    if (_cts.IsCancellationRequested)
-                        return;
-
-                    using (_client)
+                    //We don't report this error since we can automatically recover from it and we can't
+                    // recover from the OnError accessing the faulty WebSocket.
+                    try
                     {
-                        Interlocked.Exchange(ref _immediateConnection, 0);
-                        _client = CreateClientWebSocket(_requestExecutor);
+                        ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+
+                        if (ReconnectClient() == false)
+                            return;
                     }
-
-                    ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
-
-                    NotifyAboutError(e);
+                    catch
+                    {
+                        // we couldn't reconnect
+                        NotifyAboutError(e); 
+                        throw;
+                    }
                 }
                 finally
                 {
@@ -453,6 +455,21 @@ namespace Raven.Client.Documents.Changes
                     return;
                 }
             }
+        }
+
+        private bool ReconnectClient()
+        {
+            if (_cts.IsCancellationRequested)
+                return false;
+
+            using (_client)
+            {
+                Interlocked.Exchange(ref _immediateConnection, 0);
+                _client = CreateClientWebSocket(_requestExecutor);
+            }
+
+            ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+            return true;
         }
 
         private async Task ProcessChanges()
