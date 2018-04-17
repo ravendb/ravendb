@@ -227,19 +227,19 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer()
+        public void UseNewLocalServer(string customConfigPath = null)
         {
             _localServer?.Dispose();
-            _localServer = GetNewServer(_customServerSettings);
+            _localServer = GetNewServer(_customServerSettings, customConfigPath: customConfigPath);
         }
 
         private readonly object _getNewServerSync = new object();
 
-        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null)
+        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
         {
             lock (_getNewServerSync)
             {
-                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server);
+                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server, customConfigPath);
 
                 if (customSettings != null)
                 {
