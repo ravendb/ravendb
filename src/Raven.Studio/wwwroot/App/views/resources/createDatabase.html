@@ -238,7 +238,12 @@
                        class="form-control" placeholder="Enter backup directory path" />
             </div>
         </div>
-        
+
+        <div class="toggle">
+            <input class="styled" type="checkbox" id="disable-ongoing-tasks" data-bind="checked: disableOngoingTasks">
+            <label for="disable-ongoing-tasks">Disable ongoing tasks after restore</label>
+        </div>
+
         <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
             <div class="col-md-4">
                 <label class="control-label">Restore point</label>
@@ -284,7 +289,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                     </div>
                     <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
                 </div>
