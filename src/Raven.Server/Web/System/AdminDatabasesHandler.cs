@@ -1005,41 +1005,51 @@ namespace Raven.Server.Web.System
                     Documents.Operations.Operations.OperationType.DatabaseCompact,
                     taskFactory: onProgress => Task.Run(async () =>
                     {
-                        using (token)
+                        try
                         {
-                            var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
-                            var overallResult = new CompactionResult(compactSettings.DatabaseName);
-
-                            // first fill in data 
-                            foreach (var indexName in compactSettings.Indexes)
+                            using (token)
                             {
-                                var indexCompactionResult = new CompactionResult(indexName);
-                                overallResult.IndexesResults.Add(indexName, indexCompactionResult);
-                            }
+                                var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
+                                var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
-                            // then do actual compaction
-                            foreach (var indexName in compactSettings.Indexes)
-                            {
-                                var index = database.IndexStore.GetIndex(indexName);
-                                var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                index.Compact(onProgress, (CompactionResult)indexCompactionResult);
-                                indexCompactionResult.Processed = true;
-                            }
+                                // first fill in data 
+                                foreach (var indexName in compactSettings.Indexes)
+                                {
+                                    var indexCompactionResult = new CompactionResult(indexName);
+                                    overallResult.IndexesResults.Add(indexName, indexCompactionResult);
+                                }
 
-                            if (!compactSettings.Documents)
-                            {
-                                overallResult.Skipped = true;
+                                // then do actual compaction
+                                foreach (var indexName in compactSettings.Indexes)
+                                {
+                                    var index = database.IndexStore.GetIndex(indexName);
+                                    var indexCompactionResult = overallResult.IndexesResults[indexName];
+                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult);
+                                    indexCompactionResult.Processed = true;
+                                }
+
+                                if (compactSettings.Documents == false)
+                                {
+                                    overallResult.Skipped = true;
+                                    overallResult.Processed = true;
+                                    return overallResult;
+                                }
+
+                                await compactDatabaseTask.Execute(onProgress, overallResult);
                                 overallResult.Processed = true;
-                                return overallResult;
+
+                                overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
+                                overallResult.SizeBeforeCompactionInMb = before;
+
+                                return (IOperationResult)overallResult;
                             }
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Compaction process failed", e);
 
-                            await compactDatabaseTask.Execute(onProgress, overallResult);
-                            overallResult.Processed = true;
-
-                            overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
-                            overallResult.SizeBeforeCompactionInMb = before;
-
-                            return (IOperationResult)overallResult;
+                            throw;
                         }
                     }, token.Token),
                     id: operationId, token: token);
