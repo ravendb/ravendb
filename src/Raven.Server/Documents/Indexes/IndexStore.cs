@@ -1177,17 +1177,16 @@ namespace Raven.Server.Documents.Indexes
                             var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
                             var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
 
-                            newIndex.ShutdownEnvironment();
-
-                            IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
-
-                            newIndex.RestartEnvironment();
-
-                            if (newIndex.Configuration.TempPath != null)
+                            using (newIndex.RestartEnvironment())
                             {
-                                IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                                    newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                    newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                                if (newIndex.Configuration.TempPath != null)
+                                {
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                }
                             }
                         }
                         break;

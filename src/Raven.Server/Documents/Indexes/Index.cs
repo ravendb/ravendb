@@ -2801,49 +2801,49 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var storageEnvironmentOptions = _environment.Options;
 
-                    ShutdownEnvironment();
-
-                    var environmentOptions =
-                        (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
-                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
-                        DocumentDatabase.CatastrophicFailureNotification);
-
-                    InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
-
-                    compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
-
-                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
-                            DocumentDatabase.CatastrophicFailureNotification))
+                    using (RestartEnvironment())
                     {
-                        InitializeOptions(compactOptions, DocumentDatabase, Name, schemaUpgrader: false);
+                        var environmentOptions =
+                                                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
+                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
+                            DocumentDatabase.CatastrophicFailureNotification);
 
-                        StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                        InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
+
+                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+
+                        using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
+                                DocumentDatabase.CatastrophicFailureNotification))
                         {
-                            result.Progress.TreeProgress = progressReport.TreeProgress;
-                            result.Progress.TreeTotal = progressReport.TreeTotal;
-                            result.Progress.TreeName = progressReport.TreeName;
-                            result.Progress.GlobalProgress = progressReport.GlobalProgress;
-                            result.Progress.GlobalTotal = progressReport.GlobalTotal;
-                            result.AddMessage(progressReport.Message);
-                            onProgress?.Invoke(result.Progress);
-                        });
+                            InitializeOptions(compactOptions, DocumentDatabase, Name, schemaUpgrader: false);
+
+                            StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                            {
+                                result.Progress.TreeProgress = progressReport.TreeProgress;
+                                result.Progress.TreeTotal = progressReport.TreeTotal;
+                                result.Progress.TreeName = progressReport.TreeName;
+                                result.Progress.GlobalProgress = progressReport.GlobalProgress;
+                                result.Progress.GlobalTotal = progressReport.GlobalTotal;
+                                result.AddMessage(progressReport.Message);
+                                onProgress?.Invoke(result.Progress);
+                            });
+                        }
+
+                        // reset tree name back to null after processing
+                        result.TreeName = null;
+
+                        IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
+                        IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
                     }
 
-                    // reset tree name back to null after processing
-                    result.TreeName = null;
-
-                    IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
-                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
-
-                    RestartEnvironment();
                     result.SizeAfterCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations("Unable to complete compaction, index is not usable and my require db restart or reset of the index to recover", e);
-                    Dispose();
+                        _logger.Operations("Unable to complete compaction, index is not usable and may require reset of the index to recover", e);
+                    
                     throw;
                 }
                 finally
@@ -2856,28 +2856,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void RestartEnvironment()
+        public IDisposable RestartEnvironment()
         {
-            if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
-                throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
-
-            var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
-            try
-            {
-                _environment = LayoutUpdater.OpenEnvironment(options);
-                InitializeInternal(_environment, DocumentDatabase, Configuration, PerformanceHints);
-            }
-            catch
-            {
-                Dispose();
-                options.Dispose();
-                throw;
-            }
-            StartIndexingThread();
-        }
-
-        public void ShutdownEnvironment()
-        {
+            // shutdown environment
             if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
@@ -2886,6 +2867,27 @@ namespace Raven.Server.Documents.Indexes
             // are handled using the DrainRunningQueries porition
             GetWaitForIndexingThreadToExit(disableIndex: false)?.Join(Timeout.Infinite);
             _environment.Dispose();
+
+            return new DisposableAction(() =>
+            {
+                // restart environment
+                if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+                    throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
+
+                var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
+                try
+                {
+                    _environment = LayoutUpdater.OpenEnvironment(options);
+                    InitializeInternal(_environment, DocumentDatabase, Configuration, PerformanceHints);
+                }
+                catch
+                {
+                    Dispose();
+                    options.Dispose();
+                    throw;
+                }
+                StartIndexingThread();
+            });
         }
 
         public long CalculateIndexStorageSizeInBytes(string indexName)
