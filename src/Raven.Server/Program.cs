@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
@@ -46,14 +47,16 @@ namespace Raven.Server
 
             new WelcomeMessage(Console.Out).Print();
 
-            var targetSettingsFile = string.IsNullOrEmpty(CommandLineSwitches.CustomConfigPath)
+            var targetSettingsFile = new PathSetting(string.IsNullOrEmpty(CommandLineSwitches.CustomConfigPath)
                 ? "settings.json"
-                : CommandLineSwitches.CustomConfigPath;
-            
-            if (File.Exists(targetSettingsFile) == false &&
-                File.Exists("settings.default.json")) //just in case
-            {                
-                File.Copy("settings.default.json",targetSettingsFile);
+                : CommandLineSwitches.CustomConfigPath);
+
+            var destinationSettingsFile = new PathSetting("settings.default.json");
+
+            if (File.Exists(targetSettingsFile.FullPath) == false &&
+                File.Exists(destinationSettingsFile.FullPath)) //just in case
+            {
+                File.Copy(destinationSettingsFile.FullPath, targetSettingsFile.FullPath);
             }
 
             var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
@@ -67,7 +70,7 @@ namespace Raven.Server
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
 
-            if(Logger.IsOperationsEnabled)
+            if (Logger.IsOperationsEnabled)
                 Logger.Operations(RavenCli.GetInfoText());
 
             if (WindowsServiceRunner.ShouldRunAsWindowsService())
@@ -246,7 +249,7 @@ namespace Raven.Server
 
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
-            
+
             // set log mode to the previous original mode:
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
 
