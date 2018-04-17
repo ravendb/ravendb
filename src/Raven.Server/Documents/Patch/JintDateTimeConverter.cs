@@ -11,12 +11,12 @@ namespace Raven.Server.Documents.Patch
         {
             if (value is DateTime dateTime)
             {
-                result = new JsValue(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                result = dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 return true;
             }
             if (value is DateTimeOffset dateTimeOffset)
             {
-                result = new JsValue(dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                result = dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 return true;
             }
 

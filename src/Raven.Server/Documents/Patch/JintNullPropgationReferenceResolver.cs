@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryGetCallable(Engine engine, object callee, out JsValue value)
         {
-            value = new JsValue(new ClrFunctionInstance(engine, (thisObj, values) => thisObj));
+            value = new ClrFunctionInstance(engine, (thisObj, values) => thisObj);
             return true;
         }
 

@@ -176,8 +176,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public class VarcharFunctionCall
         {
-            public static JsValue AnsiStringType = new JsValue(DbType.AnsiString.ToString());
-            public static JsValue StringType = new JsValue(DbType.String.ToString());
+            public static JsValue AnsiStringType = DbType.AnsiString.ToString();
+            public static JsValue StringType = DbType.String.ToString();
 
             public DbType Type { get; set; }
             public object Value { get; set; }

@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Patch
             var value = $"{{Ignoring Task.Result as task's status is {task.Status.ToString()}}}.";
             if (task.IsFaulted)
                 value += Environment.NewLine + "Exception: " + task.Exception;
-            var jsValue = new JsValue(value);
+            var jsValue = value;
             var descriptor = new PropertyDescriptor(jsValue, false, false, false);
             return descriptor;
         }

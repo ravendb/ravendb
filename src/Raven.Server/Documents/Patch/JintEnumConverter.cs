@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Patch
         {
             if (value.GetType().IsEnum)
             {
-                result = new JsValue(value.ToString());
+                result = value.ToString();
                 return true;
             }
 

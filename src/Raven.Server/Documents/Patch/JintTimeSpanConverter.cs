@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Patch
         {
             if (value is TimeSpan timeSpan)
             {
-                result = new JsValue(timeSpan.ToString());
+                result = timeSpan.ToString();
                 return true;
             }
 

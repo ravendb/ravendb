@@ -628,7 +628,7 @@ namespace Raven.Server.Documents.Queries.Results
                     json.Put(Constants.Documents.Metadata.Key, metadata, false);
                 }
 
-                metadata.Put(Constants.Documents.Metadata.Projection, JsValue.True, false);
+                metadata.Put(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
             }
         }
     }

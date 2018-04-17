@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.Patch
             }
             catch (Exception e)
             {
-                return new JsValue(e.ToString());
+                return e.ToString();
             }
         }
 

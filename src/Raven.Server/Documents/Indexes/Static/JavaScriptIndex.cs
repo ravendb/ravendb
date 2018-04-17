@@ -464,8 +464,8 @@ function groupBy(lambda) {
                     }
                 }
 
-                var functionExp = new FunctionExpression(function.Id,new []{ new Identifier("self") },
-                    new BlockStatement(new []
+                var functionExp = new FunctionExpression(function.Id,new List<INode>{ new Identifier("self") },
+                    new BlockStatement(new List<StatementListItem>
                     {
                         new ReturnStatement(new ObjectExpression(properties))
                     }),false ,function.HoistingScope, function.Strict );

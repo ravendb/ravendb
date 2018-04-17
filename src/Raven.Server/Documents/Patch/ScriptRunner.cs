@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Patch
                     var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                     var jsTime = doc.LastModified.Value.Subtract(epoch)
                         .TotalMilliseconds;
-                    return new JsValue(jsTime);
+                    return jsTime;
                 }
                 return Undefined.Instance;
             }
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Patch
                 if (DebugMode)
                     DebugActions.DeleteDocument.Add(id);
                 var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
-                return new JsValue(result != null);
+                return result != null;
             }
 
             private void AssertNotReadOnly()
@@ -461,7 +461,7 @@ namespace Raven.Server.Documents.Patch
                 var objectInstance = args[0].AsObject();
 
                 if (objectInstance is BlittableObjectInstance doc && doc.DocumentId != null)
-                    return new JsValue(doc.DocumentId);
+                    return doc.DocumentId;
 
                 var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
                 // search either @metadata.@id or @id
@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Patch
 
                 var asTimeSpan = new TimeSpan(ticks);
 
-                return new JsValue(asTimeSpan.ToString());
+                return asTimeSpan.ToString();
             }
 
             private static JsValue StartsWith(JsValue self, JsValue[] args)
@@ -607,7 +607,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
                 
-                return new JsValue(args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
+                return args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
             }
 
             private static JsValue EndsWith(JsValue self, JsValue[] args)
@@ -615,7 +615,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
                     throw new InvalidOperationException("endsWith(text, contained) must be called with two string paremters");
 
-                return new JsValue(args[0].AsString().EndsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
+                return args[0].AsString().EndsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
             }
 
             private JsValue Regex(JsValue self, JsValue[] args)
@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.Patch
 
                 var regex = _regexCache.Get(args[1].AsString());
 
-                return new JsValue(regex.IsMatch(args[0].AsString()));
+                return regex.IsMatch(args[0].AsString());
             }
 
             private static JsValue ScalarToRawString(JsValue self2, JsValue[] args)
@@ -656,10 +656,10 @@ namespace Raven.Server.Documents.Patch
 
                         if (propertyIndex == -1)
                         {
-                            return new JsValue(new ObjectInstance(selfInstance.Engine)
+                            return new ObjectInstance(selfInstance.Engine)
                             {
                                 Extensible = true
-                            });
+                            };
                         }
 
                         BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -671,15 +671,15 @@ namespace Raven.Server.Documents.Patch
                             case BlittableJsonToken.Null:
                                 return JsValue.Null;
                             case BlittableJsonToken.Boolean:
-                                return new JsValue((bool)propDetails.Value);
+                                return (bool)propDetails.Value;
                             case BlittableJsonToken.Integer:
-                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                                return new ObjectWrapper(selfInstance.Engine, value);
                             case BlittableJsonToken.LazyNumber:
-                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                                return new ObjectWrapper(selfInstance.Engine, value);
                             case BlittableJsonToken.String:
-                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                                return new ObjectWrapper(selfInstance.Engine, value);
                             case BlittableJsonToken.CompressedString:
-                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                                return new ObjectWrapper(selfInstance.Engine, value);
                             default:
                                 throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
                         }
@@ -849,7 +849,7 @@ namespace Raven.Server.Documents.Patch
                 if (o == null)
                     return Undefined.Instance;
                 if (o is long lng)
-                    return new JsValue(lng);
+                    return lng;
                 if (o is BlittableJsonReaderArray bjra)
                 {
                     var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
@@ -883,19 +883,19 @@ namespace Raven.Server.Documents.Patch
                 if (o is ObjectInstance j)
                     return j;
                 if (o is bool b)
-                    return new JsValue(b);
+                    return b;
                 if (o is int integer)
-                    return new JsValue(integer);
+                    return integer;
                 if (o is double dbl)
-                    return new JsValue(dbl);
+                    return dbl;
                 if (o is string s)
-                    return new JsValue(s);
+                    return s;
                 if (o is LazyStringValue ls)
-                    return new JsValue(ls.ToString());
+                    return ls.ToString();
                 if (o is LazyCompressedStringValue lcs)
-                    return new JsValue(lcs.ToString());
+                    return lcs.ToString();
                 if (o is LazyNumberValue lnv)
-                    return new JsValue(lnv.ToString());
+                    return lnv.ToString();
                 if (o is JsValue js)
                     return js;
                 throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");

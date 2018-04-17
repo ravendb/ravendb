@@ -60,10 +60,10 @@ namespace Raven.Server.Documents.Patch
                 var prop = new BlittableObjectProperty(this, propertyName);
                 if (propertyIndex == -1)
                 {
-                    prop.Value = new JsValue(new ObjectInstance(Engine)
+                    prop.Value = new ObjectInstance(Engine)
                     {
                         Extensible = true
-                    });
+                    };
                 }
 
                 return prop;
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Patch
                         {
                             _value = fieldType.IsJson
                                 ? new JsonParser(_parent.Engine).Parse(values[0])
-                                : new JsValue(values[0]);
+                                : values[0];
                         }
                         else
                         {
@@ -151,13 +151,13 @@ namespace Raven.Server.Documents.Patch
                     case BlittableJsonToken.Null:
                         return JsValue.Null;
                     case BlittableJsonToken.Boolean:
-                        return new JsValue((bool)value);
+                        return (bool)value;
                     case BlittableJsonToken.Integer:
 
                         // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
                         owner.RecordNumericFieldType(key, BlittableJsonToken.Integer);                                                
 
-                        return new JsValue((long)value);
+                        return (long)value;
                     case BlittableJsonToken.LazyNumber:
                         owner.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                         var num = (LazyNumberValue)value;
@@ -167,22 +167,22 @@ namespace Raven.Server.Documents.Patch
                         // But that are Jint's limitations
                         if (num.TryParseDouble(out double doubleVal))
                         {                          
-                            return new JsValue(doubleVal);
+                            return doubleVal;
                         }
 
                         // If number is not in double boundaries, we return the LazyNumberValue
-                        return new JsValue(new ObjectWrapper(owner.Engine, value));
+                        return new ObjectWrapper(owner.Engine, value);
                     case BlittableJsonToken.String:
                                                 
-                        return new JsValue(value.ToString());
+                        return value.ToString();
                     case BlittableJsonToken.CompressedString:                        
-                        return new JsValue(value.ToString());
+                        return value.ToString();
                     case BlittableJsonToken.StartObject:
                         Changed = true;
                         _parent.MarkChanged();
-                        return new JsValue(new BlittableObjectInstance(owner.Engine,
+                        return new BlittableObjectInstance(owner.Engine,
                             owner,
-                            (BlittableJsonReaderObject)value, null, null));
+                            (BlittableJsonReaderObject)value, null, null);
                     case BlittableJsonToken.StartArray:
                         Changed = true;
                         _parent.MarkChanged();

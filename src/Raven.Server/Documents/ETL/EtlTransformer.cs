@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.ETL
             if(args.Length != 1 || args[0].IsString() == false)
                 throw new InvalidOperationException("loadAttachment(name) must have a single string argument");
             
-            return new JsValue(Transformation.AttachmentMarker + args[0].AsString());
+            return Transformation.AttachmentMarker + args[0].AsString();
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
