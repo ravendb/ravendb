@@ -68,7 +68,8 @@ class databaseCreationModel {
         }),
         restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
         isFocusOnBackupDirectory: ko.observable<boolean>(),
-        restorePointsCount: ko.observable<number>(0)
+        restorePointsCount: ko.observable<number>(0),
+        disableOngoingTasks: ko.observable<boolean>(true)
     };
     
     restoreValidationGroup = ko.validatedObservable({ 
@@ -444,6 +445,7 @@ class databaseCreationModel {
         return {
             DatabaseName: this.name(),
             BackupLocation: this.restore.selectedRestorePoint().location,
+            DisableOngoingTasks: this.restore.disableOngoingTasks(),
             LastFileNameToRestore: this.restore.selectedRestorePoint().fileName,
             DataDirectory: dataDirectory,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
