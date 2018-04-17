@@ -263,6 +263,7 @@ namespace FastTests
                 configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100, TimeUnit.Milliseconds);
                 configuration.Replication.RetryReplicateAfter = new TimeSetting(3, TimeUnit.Seconds);
                 configuration.Cluster.AddReplicaTimeout = new TimeSetting(10, TimeUnit.Seconds);
+                configuration.Licensing.EulaAccepted = true;
 
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
