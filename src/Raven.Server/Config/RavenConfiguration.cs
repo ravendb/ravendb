@@ -77,7 +77,7 @@ namespace Raven.Server.Config
         protected IConfigurationRoot Settings { get; set; }
 
         internal string ConfigPath => _customConfigPath
-                       ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
+                       ?? Path.Combine(AppContext.BaseDirectory, "settings.default.json");
 
         internal CommandLineConfigurationSource CommandLineSettings =>
             _configBuilder.Sources.OfType<CommandLineConfigurationSource>().FirstOrDefault();
