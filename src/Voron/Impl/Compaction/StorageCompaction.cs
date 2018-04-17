@@ -400,15 +400,16 @@ namespace Voron.Impl.Compaction
                         // There is no primary key, or there is one that is global to multiple tables
                         // we require a table to have at least a single local index that we'll use
 
-                        var variableSizeIndex = schema.Indexes.Values.FirstOrDefault(x=>x.IsGlobal == false);
+                        var variableSizeIndex = schema.Indexes.Values.FirstOrDefault(x => x.IsGlobal == false);
 
-                        if (variableSizeIndex!= null)
+                        if (variableSizeIndex != null)
                         {
                             // We have a variable size index, use it
 
                             // In case we continue an existing compaction, skip to the next slice
                             var skip = 0;
-                            if (SliceComparer.Compare(lastSlice, Slices.BeforeAllKeys) != 0)
+                            // can't use SliceComparer.Compare here
+                            if (lastSlice.Options != Slices.BeforeAllKeys.Options)
                                 skip = 1;
 
                             foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
