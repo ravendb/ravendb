@@ -61,6 +61,7 @@ namespace Raven.Client.Documents.Operations
         protected virtual void StopProcessing()
         {
             _subscription?.Dispose();
+            _subscription = null;
         }
 
         /// <summary>
@@ -175,7 +176,24 @@ namespace Raven.Client.Documents.Operations
 
                 var completed = await _result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
                 if (completed == false)
+                {
+                    await _lock.WaitAsync().ConfigureAwait(false);
+
+                    try
+                    {
+                        StopProcessing();
+                    }
+                    catch
+                    {
+                        // ignoring
+                    }
+                    finally
+                    {
+                        _lock.Release();
+                    }
+                    
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
+                }
 
                 return (TResult)await _result.Task.ConfigureAwait(false);
             }
