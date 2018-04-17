@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/storage/fsttree-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
+        [RavenAction("/databases/*/debug/storage/fst-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
         public Task FixedSizeTreeStructure()
         {
             var treeName = GetStringQueryString("name", required: false);
