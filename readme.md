@@ -35,11 +35,11 @@ You can create issues and track them at our [YouTrack](http://issues.hibernating
 If you have any questions please visit our [community group](http://groups.google.com/group/ravendb/). The solutions for the most common challenges are available. You are welcome to join!
 
 ## Submit a Pull Request
-Each Pull Request will be checked against following rules:
+Each Pull Request will be checked against the following rules:
 
-- `cla/signed` - all commit authors need to sign CLA. This can be done using our [CLA sign form](http://ravendb.net/contributors/cla/sign)
-- `commit/whitespace` - all changed files cannot contain TABs inside them. Before doing any work we suggest executing our `git_setup.cmd`. This will install git pre-commit hook that will normalize all whitespaces during commit
-- `commit/message/conventions` - all commit messages (except in merge commits) must contain issue number from our [YouTrack](http://issues.hibernatingrhinos.com) e.g. 'RavenDB-1234 Fixed issue with something'
+- `cla/signed` - all commit authors need to sign a CLA. This can be done using our [CLA sign form](http://ravendb.net/contributors/cla/sign).
+- `commit/whitespace` - all changed files cannot contain TABs inside them. Before doing any work we suggest executing our `git_setup.cmd`. This will install a git pre-commit hook that will normalize all whitespaces during commits.
+- `commit/message/conventions` - all commit messages (except in merge commits) must contain an issue number from our [YouTrack](http://issues.hibernatingrhinos.com) e.g. 'RavenDB-1234 Fixed issue with something'
 - `tests` - this executes `build.cmd Test` on our CI to check if no constraints were violated
 
  <br><br>
@@ -57,12 +57,12 @@ It is recommended that you update your OS before launching an instance of RavenD
 For example, Ubuntu-16.x as an updated OS doesn't require any additional packages.
 libsodium (1.0.13 or up) must be installed prior to RavenDB launch.
 ```
-In Ubuntu 16.x: apt-get install libsodium-18
+In Ubuntu 16.x: apt-get install libsodium18
 In MacOS 10.12: brew install libsodium
 ```
 You might need to also install additional packages, for example:
 ```
-apt-get install libunwind8 liblttng-ust0 libcurl3 libssl1.0.0 libuuid1 libkrb5 zlib1g libicu55
+apt-get install libunwind8 liblttng-ust0 libcurl3 libssl1.0.0 libuuid1 libkrb5-3 zlib1g libicu55
 ```
 
 See also: [Linux Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites) or [MacOS Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites)
@@ -87,7 +87,7 @@ Running as service in Linux, add to your daemon script:
 
 #### Server Side
 
-- Launch RavenDB server instance as follows:
+- Launch a RavenDB server instance as follows:
 ```
    <path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
 ```
@@ -100,7 +100,7 @@ Running as service in Linux, add to your daemon script:
 
 - Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
 
-- Open terminal and type:
+- Open a terminal and type:
 
 ```
    mkdir HelloWorld
@@ -108,7 +108,7 @@ Running as service in Linux, add to your daemon script:
    dotnet new console
 ```
 
-- Add RavenDB Client package:
+- Add the RavenDB Client package:
 
 ```
    dotnet add package RavenDB.Client --version 4.0.0-*
