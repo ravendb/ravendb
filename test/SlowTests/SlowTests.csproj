@@ -16,6 +16,10 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Data\RavenDB_10958.json" />
+    <None Remove="Data\RavenDB_10958.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -24,6 +28,8 @@
     </Content>
     <EmbeddedResource Include="Data\create.sql" />
     <EmbeddedResource Include="Data\insert.sql" />
+    <EmbeddedResource Include="Data\RavenDB_10958.txt" />
+    <EmbeddedResource Include="Data\RavenDB_10958.json" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
