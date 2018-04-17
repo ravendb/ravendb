@@ -609,9 +609,7 @@ namespace Raven.Server.Web.System
                     ServerStore.NodeTag,
                     cancelToken);
 
-#pragma warning disable 4014
-                ServerStore.Operations.AddOperation(
-#pragma warning restore 4014
+                var t = ServerStore.Operations.AddOperation(
                     null,
                     $"Database restore: {databaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
@@ -966,7 +964,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
-        public Task CompactDatabase()
+        public async Task CompactDatabase()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -989,7 +987,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
                 }
 
-                var database = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).Result;
+                var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).ConfigureAwait(false);
 
                 var token = new OperationCancelToken(ServerStore.ServerShutdown);
                 var compactDatabaseTask = new CompactDatabaseTask(
@@ -999,7 +997,7 @@ namespace Raven.Server.Web.System
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
-                ServerStore.Operations.AddOperation(
+                var t = ServerStore.Operations.AddOperation(
                     null,
                     "Compacting database: " + compactSettings.DatabaseName,
                     Documents.Operations.Operations.OperationType.DatabaseCompact,
@@ -1009,7 +1007,7 @@ namespace Raven.Server.Web.System
                         {
                             using (token)
                             {
-                                var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
+                                var before = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
                                 var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
                                 // first fill in data 
@@ -1038,7 +1036,7 @@ namespace Raven.Server.Web.System
                                 await compactDatabaseTask.Execute(onProgress, overallResult);
                                 overallResult.Processed = true;
 
-                                overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
+                                overallResult.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
                                 overallResult.SizeBeforeCompactionInMb = before;
 
                                 return (IOperationResult)overallResult;
@@ -1059,7 +1057,6 @@ namespace Raven.Server.Web.System
                     writer.WriteOperationId(context, operationId);
                 }
             }
-            return Task.CompletedTask;
         }
 
         public async Task<long> CalculateStorageSizeInBytes(string databaseName)
