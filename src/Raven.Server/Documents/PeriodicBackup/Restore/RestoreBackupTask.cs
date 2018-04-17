@@ -183,18 +183,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         databaseRecord.Disabled = true; // we are currently restoring, shouldn't try to access it
                         _serverStore.EnsureNotPassive();
 
+                        DisableOngoingTasksIfNeeded(databaseRecord);
+
                         var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
                         await _serverStore.Cluster.WaitForIndexNotification(index);
 
                         // restore identities & cmpXchg values
                         RestoreFromLastFile(onProgress, database, lastFile, context, result);
-
                     }
                 }
 
                 // after the db for restore is done, we can safely set the db status to active
-
-
                 databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
                 databaseRecord.Disabled = false;
 
@@ -235,6 +234,44 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             finally
             {
                 _operationCancelToken.Dispose();
+            }
+        }
+
+        private void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
+        {
+            if (_restoreConfiguration.DisableOngoingTasks == false)
+                return;
+
+            if (databaseRecord.ExternalReplications != null)
+            {
+                foreach (var task in databaseRecord.ExternalReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.RavenEtls != null)
+            {
+                foreach (var task in databaseRecord.RavenEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.SqlEtls != null)
+            {
+                foreach (var task in databaseRecord.SqlEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.PeriodicBackups != null)
+            {
+                foreach (var task in databaseRecord.PeriodicBackups)
+                {
+                    task.Disabled = true;
+                }
             }
         }
 
