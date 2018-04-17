@@ -69,7 +69,7 @@ class databaseCreationModel {
         restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
         isFocusOnBackupDirectory: ko.observable<boolean>(),
         restorePointsCount: ko.observable<number>(0),
-        disableOngoingTasks: ko.observable<boolean>(true)
+        disableOngoingTasks: ko.observable<boolean>(false)
     };
     
     restoreValidationGroup = ko.validatedObservable({ 
