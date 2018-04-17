@@ -17,6 +17,7 @@ using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -28,7 +29,11 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
-            UseNewLocalServer();
+            var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");
+            var defaultSettingsPath = new PathSetting("settings.default.json").FullPath;
+            File.Copy(defaultSettingsPath, settingPath);
+
+            UseNewLocalServer(customConfigPath: settingPath);
 
             var acmeStaging = "https://acme-staging.api.letsencrypt.org/directory";
             Server.Configuration.Core.AcmeUrl = acmeStaging;
