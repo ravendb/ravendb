@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string property)
-                : base(null, true, true, null)
+                : base(null, PropertyFlag.Writable | PropertyFlag.Enumerable | PropertyFlag.CustomJsValue)
             {
                 _parent = parent;
                 _property = property;
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            public override JsValue Value
+            protected override JsValue CustomValue
             {
                 get => _value;
                 set
