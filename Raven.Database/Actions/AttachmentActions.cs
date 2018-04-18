@@ -106,7 +106,7 @@ namespace Raven.Database.Actions
                 }
                 else //We put the locker
                 {
-                    putAttachmentSerialLock[name] = new AttachmentLocker { Count = 0 };
+                    locker = putAttachmentSerialLock[name] = new AttachmentLocker { Count = 0 };
                 }
             }
 
@@ -149,7 +149,7 @@ namespace Raven.Database.Actions
                 lock(putAttachmentSerialLock)
                 {
                     //Nobody can modify the locker now it is safe to check its sate
-                    if(locker.Count == 0)
+                    if (locker.Count == 0)
                     {
                         putAttachmentSerialLock.Remove(name);
                     }
