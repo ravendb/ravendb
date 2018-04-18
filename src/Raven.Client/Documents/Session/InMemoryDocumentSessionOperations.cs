@@ -807,9 +807,12 @@ more responsive application.
         {
             foreach (var entity in DocumentsByEntity)
             {
+                if (entity.Value.IgnoreChanges)
+                    continue;
+
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
+                if (EntityChanged(document, entity.Value, null) == false)
                     continue;
 
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachment, null), out ICommandData command))
@@ -820,7 +823,7 @@ more responsive application.
                 {
                     var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                     onOnBeforeStore(this, beforeStoreEventArgs);
-                    if (beforeStoreEventArgs.MetadataAccessed)
+                    if (metadataUpdated || beforeStoreEventArgs.MetadataAccessed)
                         metadataUpdated |= UpdateMetadataModifications(entity.Value);
                     if (beforeStoreEventArgs.MetadataAccessed ||
                         EntityChanged(document, entity.Value, null))
