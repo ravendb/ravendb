@@ -63,6 +63,7 @@ namespace Raven.Client.Json
                 }
 
                 _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+                _documentInfo.Metadata.Modifications = null;
             }
             else if (_documentInfo.Metadata != null)
             {
