@@ -27,7 +27,7 @@ namespace Raven.Database.Actions
         /// <summary>
         /// Requires to avoid having serialize writes to the same attachments
         /// </summary>
-        private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, AttachmentLocker> putAttachmentSerialLock = new Dictionary<string, AttachmentLocker>(StringComparer.OrdinalIgnoreCase);
 
         public AttachmentActions(DocumentDatabase database, IUuidGenerator uuidGenerator, ILog log)
             : base(database, uuidGenerator, log)
@@ -96,7 +96,21 @@ namespace Raven.Database.Actions
             if (Encoding.Unicode.GetByteCount(name) >= 2048)
                 throw new ArgumentException("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters", "name");
 
-            var locker = putAttachmentSerialLock.GetOrAdd(name, s => new object());
+            AttachmentLocker locker = null;
+            lock(putAttachmentSerialLock)
+            {
+                //There is somebody modifying the attachment we will mark it as used so nobody removes the locker
+                if(putAttachmentSerialLock.TryGetValue(name, out locker) == true)
+                {
+                    locker.Count++;
+                }
+                else //We put the locker
+                {
+                    putAttachmentSerialLock[name] = new AttachmentLocker { Count = 0 };
+                }
+            }
+
+            //Here we either wait or lock on the specific attachment
             Monitor.Enter(locker);
             try
             {
@@ -129,8 +143,22 @@ namespace Raven.Database.Actions
             }
             finally
             {
+                //We first leave the attachment locker to prevent deadlock
                 Monitor.Exit(locker);
-                putAttachmentSerialLock.TryRemove(name, out locker);
+                //Now we must lock the dictionary and check the ussage count
+                lock(putAttachmentSerialLock)
+                {
+                    //Nobody can modify the locker now it is safe to check its sate
+                    if(locker.Count == 0)
+                    {
+                        putAttachmentSerialLock.Remove(name);
+                    }
+                    else
+                    {
+                        //Somebody else will remove it
+                        locker.Count--;
+                    }
+                }
             }
         }
 
@@ -298,6 +326,11 @@ namespace Raven.Database.Actions
                 throw new OperationVetoedException("DELETE vetoed on attachment " + key + " by " + vetoResult.Trigger +
                                                    " because: " + vetoResult.VetoResult.Reason);
             }
+        }
+
+        private class AttachmentLocker
+        {
+            public volatile int Count;
         }
     }
 }
