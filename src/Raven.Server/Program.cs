@@ -21,6 +21,8 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
             string[] configurationArgs;
             try
             {
