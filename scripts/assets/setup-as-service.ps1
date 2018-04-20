@@ -23,7 +23,7 @@ function SetAclOnServerDirectory($dir) {
 }
 
 $scriptDirectory = Get-ScriptDirectory;
-$settingsJson = "settings.json";
+$settingsJson = "settings.default.json";
 $rvn = "rvn.exe";
 $serverDir = Join-Path $scriptDirectory "Server"
 $settingsJsonPath = Join-Path $serverDir $settingsJson;
