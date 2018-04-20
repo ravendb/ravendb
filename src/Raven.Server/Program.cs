@@ -21,7 +21,7 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
-            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            SetCurrentDirectoryToServerPath();
 
             string[] configurationArgs;
             try
@@ -206,6 +206,20 @@ namespace Raven.Server
             } while (rerun);
 
             return 0;
+        }
+
+        private static void SetCurrentDirectoryToServerPath()
+        {
+            try
+            {
+                Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            }
+            catch (Exception exception)
+            {
+                var msg = $"Error setting current directory: {AppContext.BaseDirectory}.";
+                Logger.Operations(msg, exception);
+                Console.WriteLine($"{msg} Exception: {exception}");
+            }
         }
 
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
