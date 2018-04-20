@@ -23,42 +23,53 @@ function SetAclOnServerDirectory($dir) {
 }
 
 $scriptDirectory = Get-ScriptDirectory;
+$settingsTemplateJson = "settings.default.json";
 $settingsJson = "settings.json";
 $rvn = "rvn.exe";
 $serverDir = Join-Path $scriptDirectory "Server"
-$settingsJsonPath = Join-Path $serverDir $settingsJson;
+
+SetAclOnServerDirectory $(Join-Path -Path $scriptDirectory -ChildPath "Server")
+
+$settingsJsonPath = Join-Path $serverDir $settingsJson
+$settingsTemplateJsonPath = Join-Path $serverDir $settingsTemplateJson;
 
 $name = 'RavenDB'
-$secure = Read-Host -Prompt 'Would you like to setup a secure server? (y/n)'
+ 
+$isAlreadyConfigured = Test-Path $settingsJsonPath
 
-if ($secure -match '^\s*?[yY]') {
-    $port = 443
+if ($isAlreadyConfigured) {
+    write-host "Server was run before - attempt to use existing configuration."
+    $serverUrl = $(Get-Content $settingsJsonPath -raw | ConvertFrom-Json).ServerUrl
 } else {
-    $port = 8080
-}
+    write-host "Server run for the first time."
+    $secure = Read-Host -Prompt 'Would you like to setup a secure server? (y/n)'
 
-if ($port -lt 0 -Or $port -gt 65535){
-    Write-Error "Error. Port must be in the range 0-65535."
-    exit 1
-}
+    if ($secure -match '^\s*?[yY]') {
+        $port = 443
+    }
+    else {
+        $port = 8080
+    }
 
-if ((CheckPortIsClosed $port) -eq $false) {
-    Write-Error "Port $port is not available.";
-    exit 2
-}
+    if ($port -lt 0 -Or $port -gt 65535) {
+        Write-Error "Error. Port must be in the range 0-65535."
+        exit 1
+    }
 
-SetAclOnServerDirectory $(Join-Path -Path $(Get-ScriptDirectory) -ChildPath "Server")
+    if ((CheckPortIsClosed $port) -eq $false) {
+        Write-Error "Port $port is not available.";
+        exit 2
+    }
 
-try
-{
-    $json = Get-Content $settingsJsonPath -raw | ConvertFrom-Json
-    $json.ServerUrl="http://127.0.0.1:$port"
-    $json | ConvertTo-Json  | Set-Content $settingsJsonPath
-}
-catch
-{
-    Write-Error $_.Exception
-    exit 3
+    try {
+        $json = Get-Content $settingsTemplateJsonPath -raw | ConvertFrom-Json
+        $serverUrl = $json.ServerUrl = "http://127.0.0.1:$port"
+        $json | ConvertTo-Json  | Set-Content $settingsTemplateJsonPath
+    }
+    catch {
+        Write-Error $_.Exception
+        exit 3
+    }
 }
 
 Push-Location $serverDir;
@@ -78,9 +89,8 @@ finally
     Pop-Location;
 }
 
-$url = "http://127.0.0.1:$port" 
-Write-Host "Service started, server listening to $url"
-Write-Host "You can now finish setting up the RavenDB service in the browser"
+Write-Host "Service started, server listening on $serverUrl."
+Write-Host "You can now finish setting up the RavenDB service in the browser."
 
 Start-Sleep -Seconds 3
-Start-Process $url 
+Start-Process $serverUrl 
