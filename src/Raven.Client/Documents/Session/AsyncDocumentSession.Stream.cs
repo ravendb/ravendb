@@ -44,12 +44,14 @@ namespace Raven.Client.Documents.Session
             {
                 while (true)
                 {
+                    var prev = _enumerator.Current;
                     if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
                         return false;
 
                     _query?.InvokeAfterStreamExecuted(_enumerator.Current);
-
+                    
                     Current = CreateStreamResult(_enumerator.Current);
+                    prev?.Dispose();
                     return true;
                 }
             }
