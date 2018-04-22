@@ -522,6 +522,12 @@ namespace Raven.Server.Documents.Revisions
             long revisionEtag;
             if (table.ReadByKey(key, out TableValueReader tvr))
             {
+                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr, out Slice lowerId))
+                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+                {
+                    IncrementCountOfRevisions(context, prefixSlice, -1);
+                }
+
                 revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
                 table.Delete(tvr.Id);
             }

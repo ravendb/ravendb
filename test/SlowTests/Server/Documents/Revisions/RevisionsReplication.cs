@@ -118,20 +118,27 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 WaitForMarker(store1, store2);
-                using (var session = store2.OpenAsyncSession())
+                await AssertRevisions(store1, company, "1");
+                await AssertRevisions(store2, company, "2");
+            }
+        }
+
+        private async Task AssertRevisions(DocumentStore store, Company company, string tag)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var revisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                try
                 {
-                    var revisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
-                    try
-                    {
-                        Assert.Equal(5, revisions.Count);
-                        Assert.Equal("Company #2: 9", revisions[0].Name);
-                        Assert.Equal("Company #2: 5", revisions[4].Name);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new XunitException($"Revisions: {string.Join(", ", revisions.Select(r => r.Name))}. " +
-                                                 $"Exception: {e}");
-                    }
+                    Assert.Equal(5, revisions.Count);
+                    Assert.Equal("Company #2: 9", revisions[0].Name);
+                    Assert.Equal("Company #2: 5", revisions[4].Name);
+                }
+                catch (Exception e)
+                {
+                    throw new XunitException($"Tag: {tag}. " +
+                                             $"Revisions: {string.Join(", ", revisions.Select(r => r.Name))}. " +
+                                             $"Exception: {e}");
                 }
             }
         }
