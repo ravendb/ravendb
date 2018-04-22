@@ -524,18 +524,18 @@ ThrowDisposed:
             if (index < 0 || index >= _propCount)
                 ThrowOutOfRangeException();
 
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-            BlittableJsonToken token;
-            int position;
-            int propertyId;
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            
+            GetPropertyTypeAndPosition(index, metadataSize, 
+                out var token, 
+                out var position, 
+                out var propertyId);
 
             var stringValue = GetPropertyName(propertyId);
 
             prop.Token = token;
             prop.Name = stringValue;
-            object result;
-            if (_objectsPathCacheByIndex != null && _objectsPathCacheByIndex.TryGetValue(index, out result))
+            if (_objectsPathCacheByIndex != null && _objectsPathCacheByIndex.TryGetValue(index, out var result))
             {
                 prop.Value = result;
                 return;
