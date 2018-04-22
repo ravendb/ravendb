@@ -3,23 +3,21 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -805,6 +803,37 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(ScriptEngine, context, o);
             }
 
+            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine engine, JsonOperationContext context, BlittableJsonReaderArray bjra)
+            {
+                ArrayInstance jsArray;
+                bjra.NoCache = true;
+                if (bjra.Length < ArrayInstance.MaxDenseArrayLength)
+                {
+                    PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
+                    for (var i = 0; i < bjra.Length; i++)
+                    {
+                        JsValue item = TranslateToJs(engine, context, bjra[i]);                        
+                        items[i] = new PropertyDescriptor(item, true, true, true);
+                    }
+                    jsArray = new ArrayInstance(engine, items);
+                    jsArray.Prototype = engine.Array.PrototypeObject;
+                    jsArray.Extensible = true;
+                }
+                else
+                {
+                    Dictionary<uint, PropertyDescriptor> items = new Dictionary<uint, PropertyDescriptor>(bjra.Length);
+                    for (uint i = 0; i < bjra.Length; i++)
+                    {
+                        var item = TranslateToJs(engine, context, bjra[(int)i]);
+                        items[i] = new PropertyDescriptor(item, true, true, true);
+                    }
+                    jsArray = new ArrayInstance(engine, items);
+                    jsArray.Prototype = engine.Array.PrototypeObject;
+                    jsArray.Extensible = true;
+                }
+                return jsArray;
+            }
+
             private JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
             {
                 BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
@@ -812,6 +841,8 @@ namespace Raven.Server.Documents.Patch
                     if (ReadOnly)
                         return origin;
 
+                    var noCache = origin.NoCache;
+                    origin.NoCache = true;
                     // RavenDB-8286
                     // here we need to make sure that we aren't sending a value to 
                     // the js engine that might be modified by the actions of the js engine
@@ -819,7 +850,10 @@ namespace Raven.Server.Documents.Patch
                     // because we defrag the data that we looked at. We are handling this by
                     // ensuring that we have our own, safe, copy.
                     var cloned = origin.Clone(context);
+                    cloned.NoCache = true;
                     _disposables.Add(cloned);
+
+                    origin.NoCache = noCache;
                     return cloned;
                 }
                                 
@@ -833,7 +867,7 @@ namespace Raven.Server.Documents.Patch
                     };                    
                 }
                 if (o is Document doc)
-                {
+                {                    
                     return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);                    
                 }
                 if (o is DocumentConflict dc)
@@ -849,15 +883,14 @@ namespace Raven.Server.Documents.Patch
                 if (o == null)
                     return Undefined.Instance;
                 if (o is long lng)
-                    return lng;
+                    return new JsNumber(lng);
                 if (o is BlittableJsonReaderArray bjra)
                 {
                     var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
                     var args = new JsValue[1];
                     for (var i = 0; i < bjra.Length; i++)
                     {
-                        var value = TranslateToJs(engine, context, bjra[i]);
-                        args[0] = value as JsValue ?? JsValue.FromObject(engine, value);
+                        args[0] = TranslateToJs(engine, context, bjra[i]);
                         engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;
@@ -868,8 +901,7 @@ namespace Raven.Server.Documents.Patch
                     var args = new JsValue[1];
                     for (var i = 0; i < list.Count; i++)
                     {
-                        var value = TranslateToJs(engine, context, list[i]);
-                        args[0] = value as JsValue ?? JsValue.FromObject(engine, value);
+                        args[0] = TranslateToJs(engine, context, list[i]);
                         engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;
@@ -883,19 +915,21 @@ namespace Raven.Server.Documents.Patch
                 if (o is ObjectInstance j)
                     return j;
                 if (o is bool b)
-                    return b;
+                    return b ? JsBoolean.True : JsBoolean.False;
                 if (o is int integer)
-                    return integer;
+                    return new JsNumber(integer);
                 if (o is double dbl)
-                    return dbl;
+                    return new JsNumber(dbl);
                 if (o is string s)
-                    return s;
+                    return new JsString(s);
                 if (o is LazyStringValue ls)
-                    return ls.ToString();
+                    return new JsString(ls.ToString());
                 if (o is LazyCompressedStringValue lcs)
-                    return lcs.ToString();
+                    return new JsString(lcs.ToString());
                 if (o is LazyNumberValue lnv)
-                    return lnv.ToString();
+                {
+                    return BlittableObjectInstance.BlittableObjectProperty.GetJSNumberForLazyNumber(engine, lnv);
+                }
                 if (o is JsValue js)
                     return js;
                 throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
