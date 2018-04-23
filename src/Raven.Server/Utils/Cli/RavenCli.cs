@@ -751,9 +751,9 @@ namespace Raven.Server.Utils.Cli
 
             // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
             // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
-            if (PlatformDetails.RunningOnLinux && string.IsNullOrWhiteSpace(password) == false)
-                throw new NotSupportedException("Replacing the cluster certificate in Linux does not support password protected certificates.");
-            
+            if (string.IsNullOrWhiteSpace(password) == false)
+                throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
+
             X509Certificate2 cert;
             byte[] certBytes;
             try
