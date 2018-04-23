@@ -73,4 +73,14 @@ namespace Raven.Client.Documents.Session
 
         public IDocumentQueryCustomization QueryCustomization { get; }
     }
+
+    public class SessionCreatedEventArgs : EventArgs
+    {
+        public SessionCreatedEventArgs(InMemoryDocumentSessionOperations session)
+        {
+            Session = session;
+        }
+
+        public InMemoryDocumentSessionOperations Session { get; }
+    }
 }
