@@ -10,31 +10,31 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 {
     public class ReplaceClusterCertificateOperation : IServerOperation
     {
-        private readonly X509Certificate2 _certificate;
+        private readonly byte[] _certBytes;
         private readonly string _name;
         private readonly bool _replaceImmediately;
 
-        public ReplaceClusterCertificateOperation(string name, X509Certificate2 certificate, bool replaceImmediately)
+        public ReplaceClusterCertificateOperation(string name, byte[] certBytes, bool replaceImmediately)
         {
-            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+            _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _replaceImmediately = replaceImmediately;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ReplaceClusterCertificateCommand(_name, _certificate, _replaceImmediately);
+            return new ReplaceClusterCertificateCommand(_name, _certBytes, _replaceImmediately);
         }
 
         private class ReplaceClusterCertificateCommand : RavenCommand
         {
-            private readonly X509Certificate2 _certificate;
+            private readonly byte[] _certBytes;
             private readonly string _name;
             private readonly bool _replaceImmediately;
 
-            public ReplaceClusterCertificateCommand(string name, X509Certificate2 certificate, bool replaceImmediately)
+            public ReplaceClusterCertificateCommand(string name, byte[] certBytes, bool replaceImmediately)
             {
-                _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+                _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _replaceImmediately = replaceImmediately;
             }
@@ -58,7 +58,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WriteString(_name.ToString());
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
-                            writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Pfx))); // keep the private key -> this is a server cert
+                            writer.WriteString(Convert.ToBase64String(_certBytes)); // keep the private key -> this is a server cert
 
                             writer.WriteEndObject();
                         }
