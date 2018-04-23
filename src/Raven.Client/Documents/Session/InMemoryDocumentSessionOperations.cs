@@ -281,7 +281,7 @@ namespace Raven.Client.Documents.Session
 
         internal bool IsLoadedOrDeleted(string id)
         {
-            return DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null ||
+            return DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && (documentInfo.Document != null || documentInfo.Entity != null) ||
                    IsDeleted(id) ||
                    IncludedDocumentsById.ContainsKey(id);
         }
