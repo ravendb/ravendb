@@ -58,6 +58,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
