@@ -58,6 +58,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
@@ -793,7 +794,9 @@ namespace Raven.Server.ServerWide
                             var bytesToSave = Convert.FromBase64String(certBase64);
                             var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
 
-                            if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
+                            // Until we upgrade to .net core 2.1 we cannot use X509certificate.Export() in Linux.
+                            // If the server is currently running with a password protected certificate, apply the same password to the new certificate.
+                            if (PlatformDetails.RunningOnLinux == false && string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
                             {
                                 bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
                             }

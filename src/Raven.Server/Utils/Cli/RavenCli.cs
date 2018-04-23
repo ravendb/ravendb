@@ -24,6 +24,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
@@ -747,10 +748,17 @@ namespace Raven.Server.Utils.Cli
             }
 
             cli._server.ServerStore.EnsureNotPassive();
+
+            // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
+            // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
+            if (PlatformDetails.RunningOnLinux && string.IsNullOrWhiteSpace(password) == false)
+                throw new NotSupportedException("Replacing the cluster certificate in Linux does not support password protected certificates.");
             
             X509Certificate2 cert;
+            byte[] certBytes;
             try
             {
+                certBytes = File.ReadAllBytes(path);
                 cert = new X509Certificate2(path, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             }
             catch (Exception e)
@@ -766,7 +774,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(cert, name, replaceImmediately);
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(Convert.ToBase64String(certBytes), name, replaceImmediately);
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)

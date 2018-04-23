@@ -333,12 +333,12 @@ namespace Raven.Server
 
                 // same certificate, but now we need to see if we are need to auto update it
                 var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
-                if (remainingDays > 30)
+                if (remainingDays > 30 && forceRenew == false)
                     return; // nothing to do, the certs are the same and we have enough time
 
                 // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
                 // but if we have less than 20 days, we'll try anyway
-                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
+                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
                     return;
                 
                 if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
@@ -356,16 +356,17 @@ namespace Raven.Server
                     return;
                 }
 
+                byte[] newCertBytes;
                 try
                 {
-                    newCertificate = await RenewLetsEncryptCertificate(currentCertificate);
+                    newCertBytes = await RenewLetsEncryptCertificate(currentCertificate);
                 }
                 catch (Exception e)
                 {
                     throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
                 }
 
-                await StartCertificateReplicationAsync(newCertificate.Certificate, "Updated Let's Encrypt Certificate", false);
+                await StartCertificateReplicationAsync(Convert.ToBase64String(newCertBytes), "Updated Let's Encrypt Certificate", false);
             }
             catch (Exception e)
             {
@@ -384,7 +385,7 @@ namespace Raven.Server
             }
         }
 
-        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string name, bool replaceImmediately)
+        public async Task StartCertificateReplicationAsync(string base64Cert, string name, bool replaceImmediately)
         {
             // the process of updating a new certificate is the same as deleting database
             // we first send the certificate to all the nodes, then we get aknowledgments
@@ -395,17 +396,35 @@ namespace Raven.Server
 
             try
             {
+                byte[] certBytes;
+                try
+                {
+                    certBytes = Convert.FromBase64String(base64Cert);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to parse the {nameof(base64Cert)} property, expected a Base64 value", e);
+                }
+
+                X509Certificate2 newCertificate;
+                try
+                {
+                    newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to load the new certificate.", e);
+                }
+
                 // we first register it as a valid cluster node certificate in the cluster
                 await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Got new certificate from Lets Encrypt! Starting certificate replication.");
 
-                var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
-
                 await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
                 {
-                    Certificate = base64Cert,
+                    Certificate = base64Cert, // includes the private key
                     ReplaceImmediately = replaceImmediately
                 });
             }
@@ -426,7 +445,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task<CertificateHolder> RenewLetsEncryptCertificate(CertificateHolder existing)
+        private async Task<byte[]> RenewLetsEncryptCertificate(CertificateHolder existing)
         {
             var license = ServerStore.LoadLicense();
 
@@ -505,9 +524,12 @@ namespace Raven.Server
             }
 
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
+            var certBytes = Convert.FromBase64String(setupInfo.Certificate);
 
-            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, Convert.FromBase64String(setupInfo.Certificate),
+            SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, certBytes,
                 setupInfo.Password, ServerStore);
+
+            return certBytes;
         }
 
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
