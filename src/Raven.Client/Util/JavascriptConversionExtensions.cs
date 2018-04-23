@@ -1313,32 +1313,6 @@ namespace Raven.Client.Util
                         writer.Write("\"");
                     }
 
-                    if (nodeAsConst.Type == typeof(bool))
-                    {
-                        context.PreventDefault();
-
-                        var val = (bool)nodeAsConst.Value ? "true" : "false";
-
-                        using (writer.Operation(nodeAsConst))
-                        {
-                            writer.Write(val);
-                        }
-
-                        return;
-                    }
-
-                    if (nodeAsConst.Type == typeof(char))
-                    {
-                        context.PreventDefault();
-
-                        writer.Write("\"");
-                        writer.Write(nodeAsConst.Value);
-                        writer.Write("\"");
-
-                        return;
-
-                    }
-
                     if (nodeAsConst.Type.IsArray || LinqMethodsSupport.IsCollection(nodeAsConst.Type))
                     {
                         var arr = nodeAsConst.Value as object[] ?? (nodeAsConst.Value as IEnumerable<object>)?.ToArray();

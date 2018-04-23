@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <RuntimeFrameworkVersion>2.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.0.7</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>

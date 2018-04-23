@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <RuntimeFrameworkVersion>2.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.0.7</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Tryouts</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -16,11 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Lambda2Js.Signed.Custom">
-      <HintPath>..\..\libs\Lambda2Js.Signed.Custom.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />

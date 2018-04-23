@@ -27,9 +27,7 @@ namespace Raven.Client.Documents
     {
         private readonly AtomicDictionary<IDatabaseChanges> _databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-        private ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
-
-        private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
+        private readonly ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutors = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
@@ -73,8 +71,13 @@ namespace Raven.Client.Documents
             GC.SuppressFinalize(this);
 #endif
 
-            foreach (var observeChangesAndEvictItemsFromCacheForDatabase in _observeChangesAndEvictItemsFromCacheForDatabases)
-                observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
+            foreach (var value in _aggressiveCacheChanges.Values)
+            {
+                if (value.IsValueCreated == false)
+                    continue;
+
+                value.Value.Dispose();
+            }
 
             var tasks = new List<Task>();
             foreach (var changes in _databaseChanges)
