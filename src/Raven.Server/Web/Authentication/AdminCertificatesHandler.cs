@@ -836,10 +836,10 @@ namespace Raven.Server.Web.Authentication
                     if (string.IsNullOrWhiteSpace(certificate.Name))
                         certificate.Name = "Cluster-Wide Certificate";
 
-                    // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
+                    // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed in Linux.
                     // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
-                    if (PlatformDetails.RunningOnLinux && string.IsNullOrWhiteSpace(certificate.Password) == false)
-                        throw new NotSupportedException("Replacing the cluster certificate in Linux does not support password protected certificates.");
+                    if (string.IsNullOrWhiteSpace(certificate.Password) == false)
+                        throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
 
                     if (string.IsNullOrWhiteSpace(certificate.Certificate))
                         throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
