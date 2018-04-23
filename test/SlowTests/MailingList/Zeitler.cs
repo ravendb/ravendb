@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
             public DateTimeOffset LastModified { get; set; }
         }
 
-        [Fact(Skip = "RavenDB-6305")]
+        [Fact]
         public void AddTest()
         {
             // want a green test? comment this	

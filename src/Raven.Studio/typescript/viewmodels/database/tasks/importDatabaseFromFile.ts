@@ -13,6 +13,9 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import EVENTS = require("common/constants/events");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
+import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class importDatabaseFromFile extends viewModelBase {
 
@@ -54,7 +57,9 @@ class importDatabaseFromFile extends viewModelBase {
 
         this.showTransformScript.subscribe(v => {
             if (v) {
-                this.model.transformScript("function transform(doc) {\r\n  var id = doc['@metadata']['@id'];\r\n  return doc;\r\n}");
+                this.model.transformScript(
+                    "var id = this['@metadata']['@id'];\r\n" +
+                    "// current object is available under 'this' variable");
             } else {
                 this.model.transformScript("");
             }
@@ -103,12 +108,11 @@ class importDatabaseFromFile extends viewModelBase {
             {
                 content:
                 "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
-                "<pre><span class=\"token keyword\">function </span>transform(doc) " +
-                "{<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
-                "<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
-                "<span class=\"token keyword\">return null</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
-                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
-                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
+                "<pre><span class=\"token keyword\">var</span> id = doc[<span class=\"token string\">'@metadata'</span>][<span class=\"token string\">'@id'</span>];<br />" +
+                "<span class=\"token keyword\">if</span> (id === <span class=\"token string\">'orders/999'</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
+                "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
+                "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
+                "</pre>" 
             });
         
         this.updateHelpLink("YD9M1R");
@@ -175,15 +179,46 @@ class importDatabaseFromFile extends viewModelBase {
 
         const fileInput = document.querySelector(importDatabaseFromFile.filePickerTag) as HTMLInputElement;
         const db = this.activeDatabase();
-
-        this.getNextOperationId(db)
-            .done((operationId: number) => {
-                notificationCenter.instance.openDetailsForOperationById(db, operationId);
-
-                new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
-                    .execute()
-                    .always(() => this.isUploading(false));
+        
+        const dtoToValidate = {
+            TransformScript: this.model.transformScript()
+        } as Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide;
+        
+        new validateSmugglerOptionsCommand(dtoToValidate, db)
+            .execute()
+            .done(() => {
+                this.getNextOperationId(db)
+                .done((operationId: number) => {
+                    notificationCenter.instance.openDetailsForOperationById(db, operationId);
+    
+                    this.checkIfRevisionsWasEnabled(db, operationId);
+                    
+                    new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
+                        .execute()
+                        .always(() => this.isUploading(false));
+                });                
+            })
+            .fail((response: JQueryXHR) => {
+                messagePublisher.reportError("Invalid import options", response.responseText, response.statusText);
+                this.isUploading(false);
             });
+    }
+    
+    private checkIfRevisionsWasEnabled(db: database, operationId: number) {
+        if (!db.hasRevisionsConfiguration()) {
+            notificationCenter.instance.databaseOperationsWatch.monitorOperation(operationId)
+            .done(() => {
+                new getDatabaseCommand(db.name)
+                    .execute()
+                    .done(dbInfo => {
+                        if (dbInfo.HasRevisionsConfiguration) {
+                            db.hasRevisionsConfiguration(true);
+                            
+                            collectionsTracker.default.configureRevisions(db);
+                        }
+                    })
+            });    
+        }
     }
 
     copyCommandToClipboard() {

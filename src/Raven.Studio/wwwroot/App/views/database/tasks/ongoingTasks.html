@@ -69,7 +69,7 @@
 
                 <!-- External Replication -->
 
-                <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All tasks' )">
+                <div data-bind="if: showReplicationSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i><span>External Replication</span></h5><hr>
                     </div>
@@ -88,12 +88,16 @@
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
-                            <div class="collapse panel-addon" data-bind="collapse: showReplicationDetails">
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
                                             <li><span>Task Status:</span>
                                                 <span class="text-details" data-bind="text: badgeText"></span>
+                                            </li>
+                                            <li data-bind="visible: showDelayReplication">
+                                                <span>Replication Delay Time:</span>
+                                                <span class="text-details" data-bind="text: delayHumane" title="Replication Delay Time"></span>                                           
                                             </li>
                                             <li>
                                                 <span>Connection String:</span>
@@ -127,7 +131,7 @@
 
                 <!-- Ravan Etl -->
                 
-                <div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All tasks' )">
+                <div data-bind="if: showEtlSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item ravendb-etl no-text-transform"><i class="icon-etl"></i><span>RavenDB ETL</span></h5><hr> 
                     </div>
@@ -146,7 +150,7 @@
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
-                            <div class="collapse panel-addon" data-bind="collapse: showRavenEtlDetails">
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
@@ -185,7 +189,7 @@
                
                 <!-- Sql Etl -->
                 
-                <div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
+                <div data-bind="if: showSqlSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item sql-etl no-text-transform"><i class="icon-sql-etl"></i><span>SQL ETL</span></h5><hr>
                     </div>
@@ -204,7 +208,7 @@
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
-                            <div class="collapse panel-addon" data-bind="collapse: showSqlEtlDetails">
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
@@ -233,7 +237,7 @@
                
                 <!-- Backup -->
             
-                <div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
+                <div data-bind="if: showBackupSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-backup"></i><span>Backup</span></h5><hr>
                     </div>
@@ -252,15 +256,14 @@
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
-                            <div class="collapse panel-addon" data-bind="collapse: showBackupDetails">
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
                                             <li><span>Task Status:</span><span class="text-details" data-bind="text: badgeText"></span></li>
                                             <li><span>Destinations:</span><span data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></span></li>
                                             <li data-bind="visible: lastFullBackupHumanized">
-                                                <span data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></span>
-                                                <span class="text-details" data-bind="text: lastFullBackupHumanized"></span>
+                                                <span data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span>
                                             </li>
                                             <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last Incremental Backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
                                             <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next Estimated Backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>
@@ -271,7 +274,7 @@
                                         <button class="btn" data-bind="click: backupNow, enable: isBackupNowEnabled(),
                                              css: { 'btn-spinner': backupNowInProgress, 'btn-default': !neverBackedUp(), 'btn-warning': neverBackedUp }, 
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
-                                            <i class="icon-backup"></i><span>Backup now</span>
+                                            <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Backup in progress' : 'Backup now'"></span>
                                         </button>
                                         <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>
@@ -283,7 +286,7 @@
             
                 <!-- Subscription -->
 
-                <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">
+                <div data-bind="if: showSubscriptionsSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item subscription no-text-transform"><i class="icon-subscription"></i><span>Subscription</span></h5><hr>
                     </div>
@@ -302,7 +305,7 @@
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
-                            <div class="collapse panel-addon" data-bind="collapse: showSubscriptionDetails">
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">

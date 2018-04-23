@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Sparrow.Json;
-using static Sparrow.Json.JsonOperationContext;
 
 namespace Sparrow
 {
@@ -11,11 +10,11 @@ namespace Sparrow
     {
         public const int BufferWindowSize = 4096;
 
-        private readonly ManagedPinnedBuffer _bufferWindow;
+        private readonly JsonOperationContext.ManagedPinnedBuffer _bufferWindow;
         private int _pos;
         private readonly Stream _stream;
         private bool _firstWindow = true;
-        private ReturnBuffer _returnedBuffer;
+        private JsonOperationContext.ReturnBuffer _returnedBuffer;
 
         public PeepingTomStream(Stream stream, JsonOperationContext context)
         {
@@ -81,10 +80,20 @@ namespace Sparrow
             // search for the first byte which represent a single UTF charcter
             // (because 'start' might point to a byte in a middle of set of bytes
             // representing single character, so 0x80 represent start of char in utf8)
+            var originalStart = start;            
             while ((_bufferWindow.Buffer.Array[start] & 0x80) != 0)
             {
-                start++;
+                start++;                
                 size--;
+                
+                // requested size doesn't contains utf8 character
+                if (size == 0)
+                    return new byte[0];
+                
+                // looped through the entire buffer without utf8 character found
+                if (start == originalStart)
+                    return new byte[0];
+
                 if (start >= BufferWindowSize)
                     start = 0;
             }

@@ -61,7 +61,6 @@ namespace Raven.Client.Documents.Linq
             "AS",
             "SELECT",
             "WHERE",
-            "LOAD",
             "GROUP",
             "ORDER",
             "INCLUDE",
@@ -69,6 +68,7 @@ namespace Raven.Client.Documents.Linq
         };
         private List<string> _projectionParameters { get; set; }
 
+        private int _aliasesCount;
 
         private readonly LinqPathProvider _linqPathProvider;
         /// <summary>
@@ -190,6 +190,11 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitBinaryExpression(BinaryExpression expression)
         {
+            if (_insideWhere > 0)
+            {
+                VerifyLegalBinaryExpression(expression);
+            }
+
             switch (expression.NodeType)
             {
                 case ExpressionType.OrElse:
@@ -218,6 +223,29 @@ namespace Raven.Client.Documents.Linq
                     break;
             }
 
+        }
+
+        private void VerifyLegalBinaryExpression(BinaryExpression expression)
+        {
+            if (expression.Left is BinaryExpression left)
+            {
+                VerifyLegalBinaryExpression(left);
+            }
+
+            if (expression.Right is BinaryExpression right)
+            {
+                VerifyLegalBinaryExpression(right);
+            }
+
+            if (IsMemberAccessForQuerySource(expression.Left) &&
+                IsMemberAccessForQuerySource(expression.Right))
+            {
+                // x.Foo < x.Bar
+                throw new NotSupportedException("Where clauses containing a Binary Expression between two fields are not supported. " +
+                                                "All Binary Expressions inside a Where clause should be between a field and a constant value. " +
+                                                $"`{expression.Left}` and `{expression.Right}` are both fields.");
+            }
+          
         }
 
         private void VisitAndAlso(BinaryExpression andAlso)
@@ -1680,7 +1708,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             for (int index = 0; index < newExpression.Arguments.Count; index++)
             {
-                var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
+                if (!(newExpression.Arguments[index] is MemberExpression memberExpression))
+                {
+                    throw new InvalidOperationException($"Illegal expression of type {newExpression.Arguments[index].GetType()} " +
+                                                        $"in GroupBy clause : {newExpression.Arguments[index]}." +  Environment.NewLine +
+                                                        "You cannot do computation in group by dynamic query, " +
+                                                        "you can group on properties / fields only.");
+                }
+
+                var originalField = GetSelectPath(memberExpression);
 
                 if (prefix != null)
                     originalField = string.Join(".", prefix.Union(new[] { originalField }));
@@ -1841,13 +1877,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
-                        if (field.Expression is UnaryExpression
-                            || field.Expression is LabelExpression
-                            || (field.Expression is MemberExpression member && HasComputation(member) == false))
+                        if (TryGetMemberExpression(field.Expression, out var member) && HasComputation(member) == false)
                         {
-                            var expression = LinqPathProvider.GetMemberExpression(field.Expression);
-                            var renamedField = GetSelectPathOrConstantValue(expression);
-
+                            var renamedField = GetSelectPathOrConstantValue(member);
                             AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
                             continue;
                         }
@@ -1953,28 +1985,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
 
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
-            var js = expression.Arguments[1].CompileToJavascript(
-                new JavascriptCompilationOptions(
-                    new JavascriptConversionExtensions.MathSupport(),
-                    new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.TransparentIdentifierSupport(),
-                    new JavascriptConversionExtensions.InvokeSupport(),
-                    new JavascriptConversionExtensions.DateTimeSupport(),
-                    new JavascriptConversionExtensions.NullCoalescingSupport(),
-                    new JavascriptConversionExtensions.NestedConditionalSupport(),
-                    new JavascriptConversionExtensions.StringSupport(),
-                    new JavascriptConversionExtensions.ConstSupport(),
-                    new JavascriptConversionExtensions.MetadataSupport(),
-                    new JavascriptConversionExtensions.CompareExchangeSupport(),
-                    new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
-                    new JavascriptConversionExtensions.NullComparisonSupport(),
-                    new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.NewSupport(),
-                    new JavascriptConversionExtensions.ListInitSupport(),
-                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                    new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions },
-                    MemberInitAsJson.ForAllTypes,
-                    loadSupport));
+            var js = ToJs(expression.Arguments[1], false, loadSupport);
 
             if (loadSupport.HasLoad == false)
             {
@@ -2015,9 +2026,38 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 arg = _documentQuery.ProjectionParameter(constantExpression.Value);
             }
-            else if (loadSupport.Arg is MemberExpression)
+            else if (loadSupport.Arg is MemberExpression memberExpression)
             {
-                arg = ToJs(loadSupport.Arg);
+                // if memberExpression is <>h__TransparentIdentifierN...TransparentIdentifier1.TransparentIdentifier0.something
+                // then the load-argument is 'something' which is not a real path (a real path should be 'x.something')
+                // but a name of a variable that was previously defined in a 'let' statment.
+
+                var param = memberExpression.Expression is ParameterExpression parameter
+                    ? parameter.Name
+                    : memberExpression.Expression is MemberExpression innerMemberExpression
+                        ? innerMemberExpression.Member.Name
+                        : string.Empty;
+
+                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith("__ravenDefaultAlias") || _aliasKeywords.Contains(param))
+                {
+                    // (1) the load argument was defined in a previous let statment, i.e :
+                    //     let detailId = "details/1-A" 
+                    //     let deatil = session.Load<Detail>(detailId)
+                    //     ...
+                    // (2) OR the from-alias was a reserved word and we have a let statment,
+                    //     so we changed it to "__ravenDefaultAlias".
+                    //     the load-argument might be a path with respect to the original from-alias name.
+                    // (3) OR the parameter name of the load argument is a reserved word
+                    //     that was defined in a previous let statment, i.e : 
+                    //     let update = session.Load<Order>("orders/1-A")
+                    //     let employee = session.Load<Employee>(update.Employee)
+
+                    //so we use js load() method (inside output function) instead of using a LoadToken
+
+                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    return;
+                }
+                arg = ToJs(loadSupport.Arg, true);
             }
             else
             {
@@ -2027,12 +2067,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
-            var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
-
             if (_loadTokens == null)
             {
                 _loadTokens = new List<LoadToken>();
             }
+
+            name = RenameAliasIfNeeded(name);
 
             var indexOf = arg.IndexOf('.');
             if (indexOf != -1)
@@ -2103,18 +2143,40 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _declareBuilder = new StringBuilder();
             }
 
+            name = RenameAliasIfReservedInJs(name);
+
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);
         }
 
         private void AddFromAlias(string alias)
         {
-            if (_aliasKeywords.Contains(alias))
-            {
-                alias = "'" + alias + "'";
-            }
-            _fromAlias = alias;
+            _fromAlias = RenameAliasIfNeeded(alias);
             _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
-            var id = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType)?.Name ?? "Id";
+        }
+
+        private string RenameAliasIfNeeded(string alias)
+        {
+            if (_aliasKeywords.Contains(alias) == false)
+                return RenameAliasIfReservedInJs(alias);
+
+            if (_insideLet > 0)
+            {
+                var newAlias = $"__ravenDefaultAlias{_aliasesCount++}";
+                AppendLineToOutputFunction(alias, newAlias);
+                return newAlias;
+            }
+
+            return "'" + alias + "'";
+        }
+
+        private static string RenameAliasIfReservedInJs(string alias)
+        {
+            if (JavascriptConversionExtensions.ReservedWordsSupport.JsReservedWords.Contains(alias))
+            {
+                return "_" + alias;
+            }
+
+            return alias;
         }
 
         private string TranslateSelectBodyToJs(Expression expression)
@@ -2185,31 +2247,42 @@ The recommended method is to use full text search (mark the field as Analyzed an
             sb.Append(name).Append(" : ").Append(js);
         }
 
-        private string ToJs(Expression expression)
+        private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
         {
-            var js = expression.CompileToJavascript(
-                new JavascriptCompilationOptions(
-                    new JavascriptConversionExtensions.MathSupport(),
-                    new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.TransparentIdentifierSupport(),
-                    new JavascriptConversionExtensions.InvokeSupport(),
-                    new JavascriptConversionExtensions.DateTimeSupport(),
-                    new JavascriptConversionExtensions.NullCoalescingSupport(),
-                    new JavascriptConversionExtensions.NestedConditionalSupport(),
-                    new JavascriptConversionExtensions.StringSupport(),
-                    new JavascriptConversionExtensions.ConstSupport(),
-                    new JavascriptConversionExtensions.LoadSupport(),
-                    new JavascriptConversionExtensions.MetadataSupport(),
-                    new JavascriptConversionExtensions.CompareExchangeSupport(),
-                    new JavascriptConversionExtensions.ValueTypeParseSupport(),
-                    new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
-                    new JavascriptConversionExtensions.NullComparisonSupport(),
-                    new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.NewSupport(),
-                    new JavascriptConversionExtensions.ListInitSupport(),
-                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                    new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions },
-                    MemberInitAsJson.ForAllTypes));
+            var extensions = new JavascriptConversionExtension[]
+            {
+                new JavascriptConversionExtensions.DictionarySupport(),
+                JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
+                JavascriptConversionExtensions.MathSupport.Instance,
+                new JavascriptConversionExtensions.TransparentIdentifierSupport(),
+                JavascriptConversionExtensions.ReservedWordsSupport.Instance,
+                JavascriptConversionExtensions.InvokeSupport.Instance,
+                JavascriptConversionExtensions.DateTimeSupport.Instance,
+                JavascriptConversionExtensions.NullCoalescingSupport.Instance,
+                JavascriptConversionExtensions.NestedConditionalSupport.Instance,
+                JavascriptConversionExtensions.StringSupport.Instance,
+                new JavascriptConversionExtensions.ConstSupport(_documentQuery.Conventions),
+                JavascriptConversionExtensions.MetadataSupport.Instance,
+                JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                JavascriptConversionExtensions.ValueTypeParseSupport.Instance,
+                JavascriptConversionExtensions.JsonPropertyAttributeSupport.Instance,
+                JavascriptConversionExtensions.NullComparisonSupport.Instance,
+                JavascriptConversionExtensions.NullableSupport.Instance,
+                JavascriptConversionExtensions.NewSupport.Instance,
+                JavascriptConversionExtensions.ListInitSupport.Instance,
+                loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
+                MemberInitAsJson.ForAllTypes
+            };
+
+            if (loadArg == false)
+            {
+                Array.Resize(ref extensions, extensions.Length + 1);
+
+                extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
+            }
+
+            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extensions));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
@@ -2220,14 +2293,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return js;
         }
 
-
-        private bool HasComputation(MemberExpression memberExpression)
+        private static bool HasComputation(MemberExpression memberExpression)
         {
             var cur = memberExpression;
 
             while (cur != null)
             {
-                switch (cur.Expression.NodeType)
+                switch (cur.Expression?.NodeType)
                 {
                     case ExpressionType.Call:
                     case ExpressionType.Invoke:
@@ -2249,12 +2321,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     case ExpressionType.Block:
                     case ExpressionType.Conditional:
                     case ExpressionType.ArrayIndex:
-
+                    case null:
                         return true;
                 }
                 cur = cur.Expression as MemberExpression;
             }
             return false;
+        }
+
+        private static bool TryGetMemberExpression(Expression expression, out MemberExpression member)
+        {
+            if (expression is UnaryExpression unaryExpression)
+                return TryGetMemberExpression(unaryExpression.Operand, out member);
+
+            if (expression is LambdaExpression lambdaExpression)
+                return TryGetMemberExpression(lambdaExpression.Body, out member);
+
+            member = expression as MemberExpression;
+            return member != null;
         }
 
         private void VisitSelectAfterGroupBy(Expression operand, Expression elementSelectorPath)
@@ -2480,6 +2564,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
+            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
+                _aliasKeywords.Contains(alias))
+            {
+                alias = "'" + alias + "'";
+            }
+
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
             if (identityProperty != null && identityProperty.Name == field)
             {
@@ -2579,6 +2669,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
         {
             var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
+            if (_afterQueryExecuted != null)
+                documentQuery.AfterQueryExecuted(_afterQueryExecuted);
+
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
 
             try
@@ -2615,6 +2708,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
         {
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
+            if (_afterQueryExecuted != null)
+                asyncDocumentQuery.AfterQueryExecuted(_afterQueryExecuted);
+
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
             try
             {
@@ -2684,8 +2780,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var executeQuery = GetQueryResult(finalQuery);
 
-            var queryResult = finalQuery.GetQueryResult();
-            _afterQueryExecuted?.Invoke(queryResult);
             return executeQuery;
         }
 
@@ -2716,9 +2810,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case SpecialQueryType.Count:
                 case SpecialQueryType.LongCount:
                     {
-                        if (finalQuery.IsDistinct)
-                            throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together." + Environment.NewLine +
-                                                            "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
                         var qr = finalQuery.GetQueryResult();
                         if (_queryType != SpecialQueryType.Count)
                             return (long)qr.TotalResults;

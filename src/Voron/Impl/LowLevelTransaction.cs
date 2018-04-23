@@ -226,7 +226,9 @@ namespace Voron.Impl
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
             TxStartTime = DateTime.UtcNow;
-            env.Options.AssertNoCatastrophicFailure();
+
+            if (flags == TransactionFlags.ReadWrite)
+                env.Options.AssertNoCatastrophicFailure();
 
             DataPager = env.Options.DataPager;
             _env = env;
@@ -706,34 +708,40 @@ namespace Voron.Impl
             if (_disposed)
                 return;
 
-            if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
-                Rollback();
-
-            _disposed = true;
-
-            PersistentContext.FreePageLocator(_pageLocator);
-
-            _env.TransactionCompleted(this);
-
-            foreach (var pagerState in _pagerStates)
+            try
             {
-                pagerState.Release();
+                if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
+                    Rollback();
+
+                _disposed = true;
+
+                PersistentContext.FreePageLocator(_pageLocator);
             }
-            if (JournalFiles != null)
+            finally
             {
-                foreach (var journalFile in JournalFiles)
+                _env.TransactionCompleted(this);
+
+                foreach (var pagerState in _pagerStates)
                 {
-                    journalFile.Release();
+                    pagerState.Release();
                 }
+
+                if (JournalFiles != null)
+                {
+                    foreach (var journalFile in JournalFiles)
+                    {
+                        journalFile.Release();
+                    }
+                }
+
+                _root?.Dispose();
+                _freeSpaceTree?.Dispose();
+
+                if (_disposeAllocator)
+                    _allocator.Dispose();
+
+                OnDispose?.Invoke(this);
             }
-
-            _root?.Dispose();
-            _freeSpaceTree?.Dispose();
-
-            if (_disposeAllocator)
-                _allocator.Dispose();
-
-            OnDispose?.Invoke(this);
         }
 
         internal void FreePageOnCommit(long pageNumber)

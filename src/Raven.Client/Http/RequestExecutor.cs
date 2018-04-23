@@ -40,8 +40,9 @@ namespace Raven.Client.Http
 
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
-        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClient = new ConcurrentDictionary<string, Lazy<HttpClient>>();
-        
+        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
+        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
+
         private static readonly GetStatisticsOperation FailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
 
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
@@ -127,6 +128,9 @@ namespace Raven.Client.Http
             FailedRequest?.Invoke(url, e);
         }
 
+        private HttpClient GetCachedOrCreateHttpClient(ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache) =>
+            httpClientCache.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
+
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
         {
             Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
@@ -151,16 +155,16 @@ namespace Raven.Client.Http
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
 
-            string thumbprint = string.Empty;
+            var thumbprint = string.Empty;
             if (certificate != null)
                 thumbprint = certificate.Thumbprint;
 
-            if (GlobalHttpClient.TryGetValue(thumbprint, out var lazyClient) == false)
-            {
-                lazyClient = GlobalHttpClient.GetOrAdd(thumbprint, new Lazy<HttpClient>(CreateClient));
-            }
+            var httpClientCache = conventions.UseCompression ?
+                GlobalHttpClientWithCompression :
+                GlobalHttpClientWithoutCompression;
 
-            HttpClient = lazyClient.Value;
+            HttpClient = httpClientCache.TryGetValue(thumbprint, out var lazyClient) == false ?
+                GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
         }
@@ -595,8 +599,22 @@ namespace Raven.Client.Http
                         cachedItem.MightHaveBeenModified == false &&
                         command.CanCacheAggressively)
                     {
-                        command.SetResponse(context, cachedValue, fromCache: true);
-                        return;
+                        if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
+                        {
+                            // if this is a cached delete, we only respect it if it _came_ from an aggresively cached
+                            // block, otherwise, we'll run the request again
+                            if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggresivelyCached) == HttpCache.ItemFlags.AggresivelyCached)
+                            {
+                                command.SetResponse(context, cachedValue, fromCache: true);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            command.SetResponse(context, cachedValue, fromCache: true);
+                            return;
+                        }
+
                     }
 
                     request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
@@ -606,10 +624,10 @@ namespace Raven.Client.Http
                     ThrowInvalidConcurrentSessionUsage(command.GetType().Name, sessionInfo);
 
                 if (_disableClientConfigurationUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag}\"");
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
 
                 if (_disableTopologyUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag}\"");
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
 
                 var sp = Stopwatch.StartNew();
                 HttpResponseMessage response = null;
@@ -801,7 +819,7 @@ namespace Raven.Client.Http
             }
 
             throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology,
-                new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));            
+                new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
         }
 
         private static void ThrowInvalidConcurrentSessionUsage(string command, SessionInfo sessionInfo)
@@ -923,6 +941,7 @@ namespace Raven.Client.Http
 
             if (!request.Headers.Contains("Raven-Client-Version"))
                 request.Headers.Add("Raven-Client-Version", ClientVersion);
+
             return request;
         }
 
@@ -933,7 +952,7 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    Cache.SetNotFound(url);
+                    Cache.SetNotFound(url, AggressiveCaching.Value != null);
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
@@ -957,8 +976,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo).ConfigureAwait(false);
-                    break;
+                    return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo).ConfigureAwait(false);
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
@@ -988,7 +1006,7 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, 
+        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo)
         {
             if (command.FailedNodes == null)
@@ -1077,7 +1095,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false);
         }
 
-        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, 
+        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (response != null)
@@ -1131,9 +1149,22 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols)
+        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
             var httpMessageHandler = new HttpClientHandler();
+            if (httpMessageHandler.SupportsAutomaticDecompression)
+            {
+                httpMessageHandler.AutomaticDecompression =
+                    useCompression ?
+                        DecompressionMethods.GZip | DecompressionMethods.Deflate
+                        : DecompressionMethods.None;
+            }
+            else if (httpMessageHandler.SupportsAutomaticDecompression == false &&
+                     useCompression &&
+                     hasExplicitlySetCompressionUsage)
+            {
+                throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
+            }
 
             if (PlatformDetails.RunningOnMacOsx)
             {
@@ -1176,7 +1207,10 @@ namespace Raven.Client.Http
 
         public HttpClient CreateClient()
         {
-            var httpMessageHandler = CreateHttpMessageHandler(Certificate, setSslProtocols: true);
+            var httpMessageHandler = CreateHttpMessageHandler(Certificate,
+                setSslProtocols: true,
+                useCompression: Conventions.UseCompression,
+                hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage);
             return new HttpClient(httpMessageHandler)
             {
                 Timeout = GlobalHttpClientTimeout

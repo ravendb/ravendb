@@ -6,28 +6,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
-using Orders;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Config.Categories;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -91,7 +77,8 @@ namespace SlowTests.Authentication
                     await session.SaveChangesAsync();
                 }
 
-                var newServerCert = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
+                var certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
+                var newServerCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
 
                 var mre = new ManualResetEventSlim();
 
@@ -100,7 +87,7 @@ namespace SlowTests.Authentication
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new ReplaceClusterCertificateOperation("Replacement Server Cert", newServerCert, false)
+                    var command = new ReplaceClusterCertificateOperation("Replacement Server Cert", certBytes, false)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);

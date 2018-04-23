@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
@@ -373,50 +374,62 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                if (current is long)
+                if (current is long l)
                 {
-                    _state.Long = (long)current;
+                    _state.Long = l;
+                    _state.CurrentTokenType = JsonParserToken.Integer;
+                    return true;
+                }
+                
+                
+                if (current is ulong ul)
+                {
+                    _state.Long = (long)ul;
+                    _state.CurrentTokenType = JsonParserToken.Integer;
+                    return true;
+                }
+                
+                if (current is uint ui)
+                {
+                    _state.Long = (long)ui;
                     _state.CurrentTokenType = JsonParserToken.Integer;
                     return true;
                 }
 
-                if (current is bool)
+                if (current is bool b)
                 {
-                    _state.CurrentTokenType = ((bool)current) ? JsonParserToken.True : JsonParserToken.False;
+                    _state.CurrentTokenType = b ? JsonParserToken.True : JsonParserToken.False;
                     return true;
                 }
 
-                if (current is float)
+                if (current is float f)
                 {
-                    var d = (double)(float)current;
+                    var d = (double)f;
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
                     return true;
                 }
 
-                if (current is double)
+                if (current is double d1)
                 {
-                    var d = (double)current;
-                    var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
+                    var s = EnsureDecimalPlace(d1, d1.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
                     return true;
                 }
 
-                if (current is DateTime)
+                if (current is DateTime dateTime1)
                 {
-                    var dateTime = (DateTime)current;
-                    var s = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+                    var s = dateTime1.GetDefaultRavenFormat(isUtc: dateTime1.Kind == DateTimeKind.Utc);
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
                     return true;
                 }
 
-                if (current is DateTimeOffset)
+                if (current is DateTimeOffset dateTime)
                 {
-                    var dateTime = (DateTimeOffset)current;
                     var s = dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
                     SetStringBuffer(s);
@@ -424,9 +437,8 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                if (current is TimeSpan)
+                if (current is TimeSpan timeSpan)
                 {
-                    var timeSpan = (TimeSpan)current;
                     var s = timeSpan.ToString("c");
 
                     SetStringBuffer(s);
@@ -434,19 +446,19 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                if (current is decimal)
+                if (current is decimal d2)
                 {
                     var d = (decimal)current;
 
-                    if (DecimalHelper.Instance.IsDouble(ref d))
+                    if (DecimalHelper.Instance.IsDouble(ref d) || d> long.MaxValue || d < long.MinValue)
                     {
-                        var s = EnsureDecimalPlace((double)d, d.ToString(CultureInfo.InvariantCulture));
+                        var s = EnsureDecimalPlace((double)d2, d2.ToString(CultureInfo.InvariantCulture));
                         SetStringBuffer(s);
                         _state.CurrentTokenType = JsonParserToken.Float;
                         return true;
                     }
 
-                    current = (long)d;
+                    current = (long)d2;
                     continue;
                 }
 
@@ -560,7 +572,8 @@ namespace Sparrow.Json.Parsing
 
         public string GenerateErrorState()
         {
-            return string.Empty;
+            var last = _elements.LastOrDefault();
+            return last?.ToString() ?? string.Empty;
         }
     }
 }

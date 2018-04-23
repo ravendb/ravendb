@@ -419,13 +419,14 @@ class query extends viewModelBase {
 
         this.queryFetcher.subscribe(() => grid.reset());
 
-        this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install("virtual-grid", ".js-query-tooltip", 
+            (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
                     const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html);
+                    onValue(html, json);
                 }
             }
         });

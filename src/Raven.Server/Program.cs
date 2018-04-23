@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
@@ -19,6 +21,8 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
+            SetCurrentDirectoryToServerPath();
+
             string[] configurationArgs;
             try
             {
@@ -45,6 +49,18 @@ namespace Raven.Server
 
             new WelcomeMessage(Console.Out).Print();
 
+            var targetSettingsFile = new PathSetting(string.IsNullOrEmpty(CommandLineSwitches.CustomConfigPath)
+                ? "settings.json"
+                : CommandLineSwitches.CustomConfigPath);
+
+            var destinationSettingsFile = new PathSetting("settings.default.json");
+
+            if (File.Exists(targetSettingsFile.FullPath) == false &&
+                File.Exists(destinationSettingsFile.FullPath)) //just in case
+            {
+                File.Copy(destinationSettingsFile.FullPath, targetSettingsFile.FullPath);
+            }
+
             var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
 
             if (configurationArgs != null)
@@ -56,7 +72,7 @@ namespace Raven.Server
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
 
-            if(Logger.IsOperationsEnabled)
+            if (Logger.IsOperationsEnabled)
                 Logger.Operations(RavenCli.GetInfoText());
 
             if (WindowsServiceRunner.ShouldRunAsWindowsService())
@@ -192,6 +208,20 @@ namespace Raven.Server
             return 0;
         }
 
+        private static void SetCurrentDirectoryToServerPath()
+        {
+            try
+            {
+                Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            }
+            catch (Exception exception)
+            {
+                var msg = $"Error setting current directory: {AppContext.BaseDirectory}.";
+                Logger.Operations(msg, exception);
+                Console.WriteLine($"{msg} Exception: {exception}");
+            }
+        }
+
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
         public static Action RestartServer;
@@ -235,7 +265,7 @@ namespace Raven.Server
 
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
-            
+
             // set log mode to the previous original mode:
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
 

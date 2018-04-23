@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.AST
             return "<Field>: " + string.Join(".", Compound);
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
             return FieldValue;
         }

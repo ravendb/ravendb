@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
                     database.Scripts.GetScriptRunner(req, true, out var run);
                     run.DebugMode = true;
-                    run.Run(context, "execute", new object[] { document });
+                    run.Run(context, context, "execute", new object[] { document });
                     var array = run.DebugOutput;
 
                     Assert.Equal(8, array.Count); 

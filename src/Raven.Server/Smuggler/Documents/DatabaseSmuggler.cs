@@ -217,6 +217,9 @@ namespace Raven.Server.Smuggler.Documents
 
             void OnSkipped(long skipped)
             {
+                if (type == DatabaseItemType.Documents)
+                    result.Documents.SkippedCount = skipped;
+
                 if (skipped % 10000 != 0)
                     return;
 
@@ -748,14 +751,16 @@ namespace Raven.Server.Smuggler.Documents
             if (buildType != BuildVersionType.V3)
                 return false;
 
-            // skipping "Raven/Replication/DatabaseIdsCache" and
+            // skipping 
+            // "Raven/Replication/DatabaseIdsCache" and
             // "Raven/Replication/Sources/{GUID}" and
+            // "Raven/Replication/Destinations" and
             // "Raven/Backup/Periodic/Setup" and
             // "Raven/Backup/Status" and 
             // "Raven/Backup/Periodic/Status"
             if (document.Id.Size != 34 && document.Id.Size != 62 &&
-                document.Id.Size != 27 && document.Id.Size != 19 &&
-                document.Id.Size != 28)
+                document.Id.Size != 30 && document.Id.Size != 27 && 
+                document.Id.Size != 19 && document.Id.Size != 28)
                 return false;
 
             if (document.Id.StartsWith("Raven/") == false)
@@ -763,6 +768,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return document.Id == "Raven/Replication/DatabaseIdsCache" ||
                    document.Id == "Raven/Backup/Periodic/Setup" ||
+                   document.Id == "Raven/Replication/Destinations" ||
                    document.Id == "Raven/Backup/Status" ||
                    document.Id == "Raven/Backup/Periodic/Status" ||
                    document.Id.StartsWith("Raven/Replication/Sources/");

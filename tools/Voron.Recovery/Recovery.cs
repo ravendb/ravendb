@@ -62,317 +62,326 @@ namespace Voron.Recovery
 
         public RecoveryStatus Execute(CancellationToken ct)
         {
-            var sw = new Stopwatch();
-            StorageEnvironment se = null;
-            sw.Start();
-            if (_copyOnWrite)
+            try
             {
-                Console.WriteLine("Recovering journal files, this may take a while...");
-                try
+                var sw = new Stopwatch();
+                StorageEnvironment se = null;
+                sw.Start();
+                if (_copyOnWrite)
                 {
-
-                    se = new StorageEnvironment(_option);
-                    Console.WriteLine(
-                        $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
-                }
-                finally
-                {
-                    se?.Dispose();
-                }
-            }
-            _option = StorageEnvironmentOptions.ForPath(Path.GetDirectoryName(_datafile));            
-            var mem = Pager.AcquirePagePointer(null, 0);
-            long startOffset = (long)mem;
-            var fi = new FileInfo(_datafile);
-            var fileSize = fi.Length;
-            //making sure eof is page aligned
-            var eof = mem + (fileSize / _pageSize) * _pageSize;
-            DateTime lastProgressReport = DateTime.MinValue;
-            using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
-            using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
-            using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
-            using (var gZipStreamDocuments = new GZipStream(destinationStreamDocuments, CompressionMode.Compress, true))
-            using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
-            using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
-            using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
-            using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
-            using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
-            using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
-            {
-                WriteSmugglerHeader(documentsWriter, 40018, "Docs");
-                WriteSmugglerHeader(revisionsWriter, 40018, nameof(DatabaseItemType.RevisionDocuments));
-                WriteSmugglerHeader(conflictsWriter, 40018, nameof(DatabaseItemType.Conflicts));
-
-                while (mem < eof)
-                {
+                    Console.WriteLine("Recovering journal files, this may take a while...");
                     try
                     {
-                        if (ct.IsCancellationRequested)
-                        {
-                            if (_logger.IsOperationsEnabled)
-                                _logger.Operations($"Cancellation requested while recovery was in position {GetFilePosition(startOffset, mem)}");
-                            _cancellationRequested = true;
-                            break;
-                        }
-                        var now = DateTime.UtcNow;
-                        if ((now - lastProgressReport).TotalSeconds >= _progressIntervalInSec)
-                        {
-                            if (lastProgressReport != DateTime.MinValue)
-                            {
-                                Console.Clear();
-                                Console.WriteLine("Press 'q' to quit the recovery process");
-                            }
-                            lastProgressReport = now;
-                            var currPos = GetFilePosition(startOffset, mem);
-                            var eofPos = GetFilePosition(startOffset, eof);
-                            Console.WriteLine(
-                                $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
-                        }
 
-                        var pageHeader = (PageHeader*)mem;
-
-                        //this page is not raw data section move on
-                        if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false && pageHeader->Flags.HasFlag(PageFlags.Stream) == false)
-                        {
-                            mem += _pageSize;
-                            continue;
-                        }
-
-                        if (pageHeader->Flags.HasFlag(PageFlags.Single) &&
-                            pageHeader->Flags.HasFlag(PageFlags.Overflow))
-                        {
-                            var message =
-                                $"page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)}) has both Overflow and Single flag turned";
-                            mem = PrintErrorAndAdvanceMem(message, mem);
-                            continue;
-                        }
-                        //overflow page
-                        ulong checksum;
-                        if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
-                        {
-                            if (ValidateOverflowPage(pageHeader, eof, startOffset, ref mem) == false)
-                                continue;
-
-                            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-
-                            if (pageHeader->Flags.HasFlag(PageFlags.Stream))
-                            {
-                                var streamPageHeader = (StreamPageHeader*)pageHeader;
-                                if (streamPageHeader->StreamPageFlags.HasFlag(StreamPageFlags.First) == false)
-                                {
-                                    mem += numberOfPages * _pageSize;
-                                    continue;
-                                }
-
-                                int rc;
-                                fixed (byte* hashStatePtr = _streamHashState)
-                                fixed (byte* hashResultPtr = _streamHashResult)
-                                {
-                                    long totalSize = 0;
-                                    _attachmentChunks.Clear();
-                                    rc = Sodium.crypto_generichash_init(hashStatePtr, null, UIntPtr.Zero, (UIntPtr)_streamHashResult.Length);
-                                    if (rc != 0)
-                                    {
-                                        if (_logger.IsOperationsEnabled)
-                                            _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
-                                        mem += numberOfPages * _pageSize;
-                                        continue;
-                                    }
-                                    // write document header, including size
-                                    PageHeader* nextPage = pageHeader;
-                                    byte* nextPagePtr = (byte*)nextPage;
-                                    bool valid = true;
-                                    string tag = null;
-                                    while (true) // has next
-                                    {
-                                        streamPageHeader = (StreamPageHeader*)nextPage;
-                                        //this is the last page and it contains only stream info + maybe the stream tag
-                                        if (streamPageHeader->ChunkSize == 0)
-                                        {
-                                            ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
-                                            break;
-                                        }
-                                        totalSize += streamPageHeader->ChunkSize;                                        
-                                        var dataStart = (byte*)nextPage + PageHeader.SizeOf;
-                                        _attachmentChunks.Add(((IntPtr)dataStart, (int)streamPageHeader->ChunkSize));
-                                        rc = Sodium.crypto_generichash_update(hashStatePtr, dataStart, (ulong)streamPageHeader->ChunkSize);
-                                        if (rc != 0)
-                                        {
-                                            if (_logger.IsOperationsEnabled)
-                                                _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
-                                            valid = false;
-                                            break;
-                                        }
-                                        if (streamPageHeader->StreamNextPageNumber == 0)
-                                        {
-                                            ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
-                                            break;
-                                        }
-                                        nextPage = (PageHeader*)(streamPageHeader->StreamNextPageNumber * _pageSize + startOffset);
-                                        //This is the case that the next page isn't a stream page
-                                        if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
-                                        {
-                                            valid = false;
-                                            if (_logger.IsOperationsEnabled)
-                                                _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunck but isn't marked as Overflow | Stream");
-                                            break;
-                                        }
-                                        valid = ValidateOverflowPage(nextPage, eof, (long)nextPage, ref nextPagePtr);
-                                        if (valid == false)
-                                        {
-                                            break;
-                                        }                                        
-
-                                    }
-                                    if (valid == false)
-                                    {
-                                        //The first page was valid so we can skip the entire overflow
-                                        mem += numberOfPages * _pageSize;
-                                        continue;
-                                    }
-
-                                    rc = Sodium.crypto_generichash_final(hashStatePtr, hashResultPtr, (UIntPtr)_streamHashResult.Length);
-                                    if (rc != 0)
-                                    {
-                                        if (_logger.IsOperationsEnabled)
-                                            _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
-                                        mem += numberOfPages * _pageSize;
-                                        continue;
-                                    }
-                                    var hash = new string(' ', 44);
-                                    fixed (char* p = hash)
-                                    {
-                                        var len = Base64.ConvertToBase64Array(p, hashResultPtr, 0, 32);
-                                        Debug.Assert(len == 44);
-                                    }
-
-                                    WriteAttachment(documentsWriter, totalSize, hash, tag);
-                                }
-                                mem += numberOfPages * _pageSize;
-                            }
-
-                            else if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter,
-                                conflictsWriter, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
-                            {
-
-                                mem += numberOfPages * _pageSize;
-                            }
-                            else //write document failed 
-                            {
-                                mem += _pageSize;
-                            }
-                            continue;
-                        }
-
-                        checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, 0);
-
-                        if (checksum != pageHeader->Checksum)
-                        {
-                            var message =
-                                $"Invalid checksum for page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
-                            mem = PrintErrorAndAdvanceMem(message, mem);
-                            continue;
-                        }
-
-                        // small raw data section 
-                        var rawHeader = (RawDataSmallPageHeader*)mem;
-
-                        // small raw data section header
-                        if (rawHeader->RawDataFlags.HasFlag(RawDataPageFlags.Header))
-                        {
-                            mem += _pageSize;
-                            continue;
-                        }
-                        if (rawHeader->NextAllocation > _pageSize)
-                        {
-                            var message =
-                                $"RawDataSmallPage #{rawHeader->PageNumber} at {GetFilePosition(startOffset, mem)} next allocation is larger than {_pageSize} bytes";
-                            mem = PrintErrorAndAdvanceMem(message, mem);
-                            continue;
-                        }
-
-                        for (var pos = PageHeader.SizeOf; pos < rawHeader->NextAllocation;)
-                        {
-                            var currMem = mem + pos;
-                            var entry = (RawDataSection.RawDataEntrySizes*)currMem;
-                            //this indicates that the current entry is invalid because it is outside the size of a page
-                            if (pos > _pageSize)
-                            {
-                                var message =
-                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}";
-                                mem = PrintErrorAndAdvanceMem(message, mem);
-                                //we can't retrive entries past the invalid entry
-                                break;
-                            }
-                            //Allocated size of entry exceed the bound of the page next allocation
-                            if (entry->AllocatedSize + pos + sizeof(RawDataSection.RawDataEntrySizes) >
-                                rawHeader->NextAllocation)
-                            {
-                                var message =
-                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
-                                    "the allocated entry exceed the bound of the page next allocation.";
-                                mem = PrintErrorAndAdvanceMem(message, mem);
-                                //we can't retrive entries past the invalid entry
-                                break;
-                            }
-                            if (entry->UsedSize > entry->AllocatedSize)
-                            {
-                                var message =
-                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
-                                    "the size of the entry exceed the allocated size";
-                                mem = PrintErrorAndAdvanceMem(message, mem);
-                                //we can't retrive entries past the invalid entry
-                                break;
-                            }
-                            pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
-                            if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
-                                continue;
-
-                            if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,
-                                conflictsWriter, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
-                                break;
-                        }
-                        mem += _pageSize;
+                        se = new StorageEnvironment(_option);
+                        Console.WriteLine(
+                            $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
                     }
                     catch (Exception e)
                     {
-                        var message =
-                            $"Unexpected exception at position {GetFilePosition(startOffset, mem)}:{Environment.NewLine} {e}";
-                        mem = PrintErrorAndAdvanceMem(message, mem);
+                        Console.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
+                    }
+                    finally
+                    {
+                        se?.Dispose();
                     }
                 }
-
-                ReportOrphanAttachmentsAndMissingAttachments(ct, documentsWriter);
-
-                //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
-                //last document
-                if (_lastWriteIsDocument == false)
+                _option = StorageEnvironmentOptions.ForPath(Path.GetDirectoryName(_datafile));            
+                var mem = Pager.AcquirePagePointer(null, 0);
+                long startOffset = (long)mem;
+                var fi = new FileInfo(_datafile);
+                var fileSize = fi.Length;
+                //making sure eof is page aligned
+                var eof = mem + (fileSize / _pageSize) * _pageSize;
+                DateTime lastProgressReport = DateTime.MinValue;
+                using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
+                using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
+                using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
+                using (var gZipStreamDocuments = new GZipStream(destinationStreamDocuments, CompressionMode.Compress, true))
+                using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
+                using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
+                using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
+                using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
+                using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
+                using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
                 {
-                    WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.hash, _lastAttachmentInfo.size, _lastAttachmentInfo.tag);
+                    WriteSmugglerHeader(documentsWriter, 40018, "Docs");
+                    WriteSmugglerHeader(revisionsWriter, 40018, nameof(DatabaseItemType.RevisionDocuments));
+                    WriteSmugglerHeader(conflictsWriter, 40018, nameof(DatabaseItemType.Conflicts));
+
+                    while (mem < eof)
+                    {
+                        try
+                        {
+                            if (ct.IsCancellationRequested)
+                            {
+                                if (_logger.IsOperationsEnabled)
+                                    _logger.Operations($"Cancellation requested while recovery was in position {GetFilePosition(startOffset, mem)}");
+                                _cancellationRequested = true;
+                                break;
+                            }
+                            var now = DateTime.UtcNow;
+                            if ((now - lastProgressReport).TotalSeconds >= _progressIntervalInSec)
+                            {
+                                if (lastProgressReport != DateTime.MinValue)
+                                {
+                                    Console.Clear();
+                                    Console.WriteLine("Press 'q' to quit the recovery process");
+                                }
+                                lastProgressReport = now;
+                                var currPos = GetFilePosition(startOffset, mem);
+                                var eofPos = GetFilePosition(startOffset, eof);
+                                Console.WriteLine(
+                                    $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
+                            }
+
+                            var pageHeader = (PageHeader*)mem;
+
+                            //this page is not raw data section move on
+                            if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false && pageHeader->Flags.HasFlag(PageFlags.Stream) == false)
+                            {
+                                mem += _pageSize;
+                                continue;
+                            }
+
+                            if (pageHeader->Flags.HasFlag(PageFlags.Single) &&
+                                pageHeader->Flags.HasFlag(PageFlags.Overflow))
+                            {
+                                var message =
+                                    $"page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)}) has both Overflow and Single flag turned";
+                                mem = PrintErrorAndAdvanceMem(message, mem);
+                                continue;
+                            }
+                            //overflow page
+                            ulong checksum;
+                            if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
+                            {
+                                if (ValidateOverflowPage(pageHeader, eof, startOffset, ref mem) == false)
+                                    continue;
+
+                                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+
+                                if (pageHeader->Flags.HasFlag(PageFlags.Stream))
+                                {
+                                    var streamPageHeader = (StreamPageHeader*)pageHeader;
+                                    if (streamPageHeader->StreamPageFlags.HasFlag(StreamPageFlags.First) == false)
+                                    {
+                                        mem += numberOfPages * _pageSize;
+                                        continue;
+                                    }
+
+                                    int rc;
+                                    fixed (byte* hashStatePtr = _streamHashState)
+                                    fixed (byte* hashResultPtr = _streamHashResult)
+                                    {
+                                        long totalSize = 0;
+                                        _attachmentChunks.Clear();
+                                        rc = Sodium.crypto_generichash_init(hashStatePtr, null, UIntPtr.Zero, (UIntPtr)_streamHashResult.Length);
+                                        if (rc != 0)
+                                        {
+                                            if (_logger.IsOperationsEnabled)
+                                                _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
+                                            mem += numberOfPages * _pageSize;
+                                            continue;
+                                        }
+                                        // write document header, including size
+                                        PageHeader* nextPage = pageHeader;
+                                        byte* nextPagePtr = (byte*)nextPage;
+                                        bool valid = true;
+                                        string tag = null;
+                                        while (true) // has next
+                                        {
+                                            streamPageHeader = (StreamPageHeader*)nextPage;
+                                            //this is the last page and it contains only stream info + maybe the stream tag
+                                            if (streamPageHeader->ChunkSize == 0)
+                                            {
+                                                ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
+                                                break;
+                                            }
+                                            totalSize += streamPageHeader->ChunkSize;                                        
+                                            var dataStart = (byte*)nextPage + PageHeader.SizeOf;
+                                            _attachmentChunks.Add(((IntPtr)dataStart, (int)streamPageHeader->ChunkSize));
+                                            rc = Sodium.crypto_generichash_update(hashStatePtr, dataStart, (ulong)streamPageHeader->ChunkSize);
+                                            if (rc != 0)
+                                            {
+                                                if (_logger.IsOperationsEnabled)
+                                                    _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
+                                                valid = false;
+                                                break;
+                                            }
+                                            if (streamPageHeader->StreamNextPageNumber == 0)
+                                            {
+                                                ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
+                                                break;
+                                            }
+                                            nextPage = (PageHeader*)(streamPageHeader->StreamNextPageNumber * _pageSize + startOffset);
+                                            //This is the case that the next page isn't a stream page
+                                            if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
+                                            {
+                                                valid = false;
+                                                if (_logger.IsOperationsEnabled)
+                                                    _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunck but isn't marked as Overflow | Stream");
+                                                break;
+                                            }
+                                            valid = ValidateOverflowPage(nextPage, eof, (long)nextPage, ref nextPagePtr);
+                                            if (valid == false)
+                                            {
+                                                break;
+                                            }                                        
+
+                                        }
+                                        if (valid == false)
+                                        {
+                                            //The first page was valid so we can skip the entire overflow
+                                            mem += numberOfPages * _pageSize;
+                                            continue;
+                                        }
+
+                                        rc = Sodium.crypto_generichash_final(hashStatePtr, hashResultPtr, (UIntPtr)_streamHashResult.Length);
+                                        if (rc != 0)
+                                        {
+                                            if (_logger.IsOperationsEnabled)
+                                                _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
+                                            mem += numberOfPages * _pageSize;
+                                            continue;
+                                        }
+                                        var hash = new string(' ', 44);
+                                        fixed (char* p = hash)
+                                        {
+                                            var len = Base64.ConvertToBase64Array(p, hashResultPtr, 0, 32);
+                                            Debug.Assert(len == 44);
+                                        }
+
+                                        WriteAttachment(documentsWriter, totalSize, hash, tag);
+                                    }
+                                    mem += numberOfPages * _pageSize;
+                                }
+
+                                else if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter,
+                                    conflictsWriter, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
+                                {
+
+                                    mem += numberOfPages * _pageSize;
+                                }
+                                else //write document failed 
+                                {
+                                    mem += _pageSize;
+                                }
+                                continue;
+                            }
+
+                            checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, 0);
+
+                            if (checksum != pageHeader->Checksum)
+                            {
+                                var message =
+                                    $"Invalid checksum for page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
+                                mem = PrintErrorAndAdvanceMem(message, mem);
+                                continue;
+                            }
+
+                            // small raw data section 
+                            var rawHeader = (RawDataSmallPageHeader*)mem;
+
+                            // small raw data section header
+                            if (rawHeader->RawDataFlags.HasFlag(RawDataPageFlags.Header))
+                            {
+                                mem += _pageSize;
+                                continue;
+                            }
+                            if (rawHeader->NextAllocation > _pageSize)
+                            {
+                                var message =
+                                    $"RawDataSmallPage #{rawHeader->PageNumber} at {GetFilePosition(startOffset, mem)} next allocation is larger than {_pageSize} bytes";
+                                mem = PrintErrorAndAdvanceMem(message, mem);
+                                continue;
+                            }
+
+                            for (var pos = PageHeader.SizeOf; pos < rawHeader->NextAllocation;)
+                            {
+                                var currMem = mem + pos;
+                                var entry = (RawDataSection.RawDataEntrySizes*)currMem;
+                                //this indicates that the current entry is invalid because it is outside the size of a page
+                                if (pos > _pageSize)
+                                {
+                                    var message =
+                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}";
+                                    mem = PrintErrorAndAdvanceMem(message, mem);
+                                    //we can't retrive entries past the invalid entry
+                                    break;
+                                }
+                                //Allocated size of entry exceed the bound of the page next allocation
+                                if (entry->AllocatedSize + pos + sizeof(RawDataSection.RawDataEntrySizes) >
+                                    rawHeader->NextAllocation)
+                                {
+                                    var message =
+                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
+                                        "the allocated entry exceed the bound of the page next allocation.";
+                                    mem = PrintErrorAndAdvanceMem(message, mem);
+                                    //we can't retrive entries past the invalid entry
+                                    break;
+                                }
+                                if (entry->UsedSize > entry->AllocatedSize)
+                                {
+                                    var message =
+                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
+                                        "the size of the entry exceed the allocated size";
+                                    mem = PrintErrorAndAdvanceMem(message, mem);
+                                    //we can't retrive entries past the invalid entry
+                                    break;
+                                }
+                                pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
+                                if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
+                                    continue;
+
+                                if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,
+                                        conflictsWriter, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
+                                    break;
+                            }
+                            mem += _pageSize;
+                        }
+                        catch (Exception e)
+                        {
+                            var message =
+                                $"Unexpected exception at position {GetFilePosition(startOffset, mem)}:{Environment.NewLine} {e}";
+                            mem = PrintErrorAndAdvanceMem(message, mem);
+                        }
+                    }
+
+                    ReportOrphanAttachmentsAndMissingAttachments(ct, documentsWriter);
+
+                    //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
+                    //last document
+                    if (_lastWriteIsDocument == false)
+                    {
+                        WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.hash, _lastAttachmentInfo.size, _lastAttachmentInfo.tag);
+                    }
+
+                    documentsWriter.WriteEndArray();
+                    conflictsWriter.WriteEndArray();
+                    revisionsWriter.WriteEndArray();                
+                    documentsWriter.WriteEndObject();
+                    conflictsWriter.WriteEndObject();
+                    revisionsWriter.WriteEndObject();
+
+
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations(Environment.NewLine +
+                            $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds." + Environment.NewLine +
+                            $"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments. " + Environment.NewLine + 
+                            $"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
+                    }
+                
                 }
-
-                documentsWriter.WriteEndArray();
-                conflictsWriter.WriteEndArray();
-                revisionsWriter.WriteEndArray();                
-                documentsWriter.WriteEndObject();
-                conflictsWriter.WriteEndObject();
-                revisionsWriter.WriteEndObject();
-
-
-                if (_logger.IsOperationsEnabled)
-                {
-                    _logger.Operations($"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds." + Environment.NewLine +
-                                       $"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments. " + Environment.NewLine + 
-                                       $"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
-                }
+                if (_cancellationRequested)
+                    return RecoveryStatus.CancellationRequested;
+                return RecoveryStatus.Success;
             }
-            if (_cancellationRequested)
-                return RecoveryStatus.CancellationRequested;
-            return RecoveryStatus.Success;
+            finally
+            {
+                LoggingSource.Instance.EndLogging();
+            }
         }
 
         private static void ExtractTagFromLastPage(PageHeader* nextPage, StreamPageHeader* streamPageHeader, ref string tag)

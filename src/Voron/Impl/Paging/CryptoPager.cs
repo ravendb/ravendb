@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
@@ -25,6 +23,7 @@ namespace Voron.Impl.Paging
         public int? OriginalSize;
         public byte* Hash;
         public NativeMemory.ThreadStats AllocatingThread;
+        public bool SkipOnTxCommit;
     }
 
     public sealed unsafe class CryptoPager : AbstractPager
@@ -116,10 +115,25 @@ namespace Voron.Impl.Paging
 
         public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
-            // New page -> no need to read page, just allocate a new buffer
             var state = GetTransactionState(tx);
             var size = numberOfPages * Constants.Storage.PageSize;
-            var buffer = GetBufferAndAddToTxState(pageNumber, state, size);
+
+            if (state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
+            {
+                if (size == buffer.Size)
+                {
+                    Sodium.sodium_memzero(buffer.Pointer, (UIntPtr)size);
+                    Sodium.sodium_memzero(buffer.Hash, (UIntPtr)EncryptionBuffer.HashSizeInt);
+
+                    buffer.SkipOnTxCommit = false;
+                    return buffer.Pointer;
+                }
+
+                ReturnBuffer(buffer);
+            }
+
+            // allocate new buffer
+            buffer = GetBufferAndAddToTxState(pageNumber, state, size);
 
             return buffer.Pointer;
         }
@@ -246,6 +260,9 @@ namespace Voron.Impl.Paging
             var pageHash = stackalloc byte[EncryptionBuffer.HashSizeInt];
             foreach (var buffer in state.LoadedBuffers)
             {
+                if (buffer.Value.SkipOnTxCommit)
+                    continue;
+
                 if(Sodium.crypto_generichash(pageHash, EncryptionBuffer.HashSize, buffer.Value.Pointer, (ulong)buffer.Value.Size, null, UIntPtr.Zero) != 0)
                     ThrowInvalidHash();
 
@@ -254,11 +271,11 @@ namespace Voron.Impl.Paging
 
                 // Encrypt the local buffer, then copy the encrypted value to the pager
                 var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                EncryptPage(pageHeader);
+                var dataSize = EncryptPage(pageHeader);
 
                 var pagePointer = Inner.AcquirePagePointer(null, buffer.Key);
 
-                Memory.Copy(pagePointer, buffer.Value.Pointer, buffer.Value.Size);
+                Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
             }
 
         }
@@ -282,26 +299,35 @@ namespace Voron.Impl.Paging
             {
                 if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize == 0)
                 {
-                    // Pages that are marked with OriginalSize = 0 were seperated from a larger allocation, we cannot free them directly.
+                    // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
                     // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
-                    continue;
-                }
-
-                if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize != 0)
-                {
-                    // First page of a seperated section, returned with its original size.
-                    _encryptionBuffersPool.Return(buffer.Value.Pointer, (int)buffer.Value.OriginalSize, buffer.Value.AllocatingThread);
+                    // We still need to return the buffer allocated for the hash
                     _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
+
                     continue;
                 }
 
-                // Normal buffers
-                _encryptionBuffersPool.Return(buffer.Value.Pointer, buffer.Value.Size, buffer.Value.AllocatingThread);
-                _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
+                ReturnBuffer(buffer.Value);
             }
         }
 
-        private void EncryptPage(PageHeader* page)
+        private void ReturnBuffer(EncryptionBuffer buffer)
+        {
+            if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
+            {
+                // First page of a separated section, returned with its original size.
+                _encryptionBuffersPool.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread);
+                _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+            }
+            else
+            {
+                // Normal buffers
+                _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
+                _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+            }
+        }
+
+        private int EncryptPage(PageHeader* page)
         {
             var num = page->PageNumber;
             var destination = (byte*)page;
@@ -313,7 +339,7 @@ namespace Voron.Impl.Paging
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = GetNumberOfPages(page) * Constants.Storage.PageSize;
 
                 var npub = (byte*)page + PageHeader.NonceOffset;
                 // here we generate 128(!) bits of random data, but xchacha20poly1305 needs
@@ -327,7 +353,7 @@ namespace Voron.Impl.Paging
                     destination + PageHeader.MacOffset,
                     &macLen,
                     (byte*)page + PageHeader.SizeOf,
-                    dataSize - PageHeader.SizeOf,
+                    (ulong)dataSize - PageHeader.SizeOf,
                     (byte*)page,
                     (ulong)PageHeader.NonceOffset,
                     null,
@@ -341,6 +367,8 @@ namespace Voron.Impl.Paging
 
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to encrypt page {num}, rc={rc}");
+
+                return dataSize;
             }
         }
 

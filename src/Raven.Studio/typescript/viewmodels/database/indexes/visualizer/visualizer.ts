@@ -5,6 +5,7 @@ import visualizerGraphDetails = require("viewmodels/database/indexes/visualizer/
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexMapReduceTreeCommand = require("commands/database/index/getIndexMapReduceTreeCommand");
 import getIndexDebugSourceDocumentsCommand = require("commands/database/index/getIndexDebugSourceDocumentsCommand");
+import eventsCollector = require("common/eventsCollector");
 
 type autoCompleteItem = {
     label: string;
@@ -90,6 +91,8 @@ class visualizer extends viewModelBase {
     setSelectedIndex(indexName: string) {
         this.currentIndex(indexName);
 
+        eventsCollector.default.reportEvent("visualizer", "set-index");
+        
         this.resetGraph();
     }
 
@@ -298,10 +301,6 @@ class visualizer extends viewModelBase {
             })
             .always(() => this.spinners.addDocument(false));
     }
-
-    /*
-        TODO @gregolsky apply google analytics
-    */
 }
 
 export = visualizer;

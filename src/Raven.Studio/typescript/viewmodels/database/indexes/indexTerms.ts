@@ -5,6 +5,7 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import appUrl = require("common/appUrl");
+import eventsCollector = require("common/eventsCollector");
 
 type termsForField = {
     name: string;
@@ -98,6 +99,8 @@ class indexTerms extends viewModelBase {
     }
 
     loadMore(fieldName: string) {
+        eventsCollector.default.reportEvent("terms", "load-more");
+        
         const field = this.fields().find(x => x.name === fieldName);
 
         if (!field || !field.hasMoreTerms()) {

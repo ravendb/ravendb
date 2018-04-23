@@ -39,7 +39,6 @@ class editRavenEtlTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
     
-    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 

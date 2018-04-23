@@ -4,6 +4,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import generalUtils = require("common/generalUtils");
 import getDebugMemoryStatsCommand = require("commands/database/debug/getDebugMemoryStatsCommand");
 
 type memoryMappingItem = {
@@ -11,20 +12,70 @@ type memoryMappingItem = {
     FileName: string;
     HumaneFileSize: string;
     HumaneTotalMapped: string;
+    FileSize: number;
+    TotalMapped: number;
     Mappings: Raven.Server.Documents.Handlers.Debugging.MemoryStatsHandler.MemoryInfoMappingDetails[];
 }
 
 class memoryMappedFiles extends viewModelBase {
 
-    data = ko.observable<memoryMappingItem[]>();
+    allData = ko.observable<memoryMappingItem[]>();
+    filteredData = ko.observable<memoryMappingItem[]>();
+    filter = ko.observable<string>();
     
     private gridController = ko.observable<virtualGridController<memoryMappingItem>>();
     columnsSelector = new columnsSelector<memoryMappingItem>();
     private columnPreview = new columnPreviewPlugin<memoryMappingItem>();
     
+    filesCount: KnockoutComputed<number>;
+    totalSizeOnDisk: KnockoutComputed<string>;
+    totalMappedSize: KnockoutComputed<string>;
+    
     spinners = {
         refresh: ko.observable<boolean>(false),
     };
+    
+    constructor() {
+        super();
+        
+        this.filesCount = ko.pureComputed(() => {
+            return this.filteredData().length;
+        });
+        
+        this.totalSizeOnDisk = ko.pureComputed(() => {
+            return generalUtils.formatBytesToSize(_.sum(this.filteredData().map(x => x.FileSize))); 
+        });
+        
+        this.totalMappedSize = ko.pureComputed(() => {
+            return generalUtils.formatBytesToSize(_.sum(this.filteredData().map(x => x.TotalMapped)));
+        });
+        
+        this.filter.throttle(500).subscribe(() => this.filterEntries());
+    }
+    
+    private filterEntries() {
+        if (this.gridController()) {
+            const filter = this.filter();
+            if (filter) {
+                this.filteredData(this.allData().filter(item => this.matchesFilter(item)));
+            } else {
+                this.filteredData(this.allData().slice());
+            }
+    
+            this.gridController().reset(true);    
+        } else {
+            this.filteredData(this.allData().slice());
+        }
+    }
+    
+    private matchesFilter(item: memoryMappingItem) {
+        const filter = this.filter();
+        if (!filter) {
+            return true;
+        }
+        const filterLowered = filter.toLocaleLowerCase();
+        return item.FileName.toLocaleLowerCase().includes(filterLowered) || item.Directory.toLocaleLowerCase().includes(filterLowered);
+    }
     
     activate(args: any) {
         super.activate(args);
@@ -36,7 +87,7 @@ class memoryMappedFiles extends viewModelBase {
         super.compositionComplete();
         
         const fetcher = () => {
-            const data = this.data() || [];
+            const data = this.filteredData() || [];
             
             return $.when({
                 totalResultCount: data.length,
@@ -55,14 +106,14 @@ class memoryMappedFiles extends viewModelBase {
             ]
         );
 
-        this.columnPreview.install("virtual-grid", ".tooltip",
+        this.columnPreview.install("virtual-grid", ".js-memory-mapped-files-tooltip",
             (entry: memoryMappingItem, 
                                     column: textColumn<memoryMappingItem>, 
-                                    e: JQueryEventObject, onValue: (context: any) => void) => {
+                                    e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Total Mapped") {
                 const json = JSON.stringify(entry.Mappings, null, 4);
                 const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);
+                onValue(html, json);
             } else {
                 const value = column.getCellValue(entry);
                 onValue(value);
@@ -82,12 +133,15 @@ class memoryMappedFiles extends viewModelBase {
                             FileName: fileName,
                             HumaneFileSize: details.HumaneFileSize,
                             HumaneTotalMapped: details.HumaneTotalMapped,
+                            FileSize: details.FileSize,
+                            TotalMapped: details.TotalMapped,
                             Mappings: details.Mappings
                         } as memoryMappingItem;
                     })
                 });
                 
-                this.data(mappedResults);
+                this.allData(_.sortBy(mappedResults, x => x.Directory + x.FileName));
+                this.filterEntries();
             });
     }
     

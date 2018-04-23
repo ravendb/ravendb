@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         ApplyDeleteCommands(item, OperationType.Put);
                     }
 
-                    SingleRun.Run(Context, "execute", new object[] {Current.Document}).Dispose();
+                    SingleRun.Run(Context, Context, "execute", new object[] {Current.Document}).Dispose();
                 }
                 else
                 {

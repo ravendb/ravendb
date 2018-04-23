@@ -116,12 +116,19 @@ namespace Raven.Server.Documents.Queries
             bool exact = false,
             AutoSpatialOptions spatial = null,
             OperatorType? operatorType = null,
-            bool isNegated = false
+            bool isNegated = false,
+            string methodName = null
             )
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
-            if (search || exact || spatial != null || operatorType != OperatorType.Equal || (operatorType == OperatorType.Equal && isNegated))
+            if (operatorType == null && 
+                // to support startsWith(id(), ...)
+                string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
+                operatorType = OperatorType.Equal;
+
+            if (search || exact || spatial != null || isNegated || 
+                operatorType != OperatorType.Equal )
             {
                 IsCollectionQuery = false;
             }
@@ -1026,7 +1033,7 @@ namespace Raven.Server.Documents.Queries
             }
             else if (expression is ValueExpression val)
             {
-                name = new QueryFieldName(val.GetText(), false);
+                name = new QueryFieldName(val.GetText(null), false);
             }
             else
                 throw new InvalidQueryException($"Unsupported expression type '{expression.Type}' in GROUP BY", QueryText, parameters);
@@ -1132,12 +1139,12 @@ namespace Raven.Server.Documents.Queries
 
         private void ThrowInvalidArgumentExpressionInFacetQuery(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText()}.", QueryText, parameters);
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
         private void ThrowFacetQueryMustContainsOnlyFacetInSelect(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText()}.", QueryText, parameters);
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
         private void ThrowSuggestionQueryCannotBeFacet(BlittableJsonReaderObject parameters)
@@ -1395,9 +1402,9 @@ namespace Raven.Server.Documents.Queries
                                 parameters);
 
                         if (methodType == MethodType.Search || methodType == MethodType.Lucene)
-                            _metadata.AddWhereField(fieldName, parameters, search: true);
+                            _metadata.AddWhereField(fieldName, parameters, search: true, methodName: methodName);
                         else
-                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName);
                         break;
                     case MethodType.Exists:
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
@@ -1518,7 +1525,7 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
 
-                    fieldName = new QueryFieldName(spatialExpression.GetText(), false);
+                    fieldName = new QueryFieldName(spatialExpression.GetText(null), false);
                 }
 
                 if (arguments.Count < 2 || arguments.Count > 3)

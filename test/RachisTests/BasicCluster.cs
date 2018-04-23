@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -13,7 +14,7 @@ namespace RachisTests
 {
     public class BasicCluster : RachisConsensusTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
             PredictableSeeds = true;
@@ -31,7 +32,7 @@ namespace RachisTests
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
 
-            var leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader).ContinueWith(_ => x)).ToArray();
+            var leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_ => x)).ToArray();
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -61,7 +62,7 @@ namespace RachisTests
 
             followers = followers.Except(new[] { leader }).ToArray();
 
-            leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader).ContinueWith(_ => x)).ToArray();
+            leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_ => x)).ToArray();
 
             foreach (var follower in followers)
             {
@@ -90,7 +91,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ClusterWithThreeNodesAndElections()
         {
             var a = SetupServer(true);
@@ -108,8 +109,8 @@ namespace RachisTests
             await bUpgraded;
             await cUpgraded;
 
-            var bLeader = b.WaitForState(RachisState.Leader);
-            var cLeader = c.WaitForState(RachisState.Leader);
+            var bLeader = b.WaitForState(RachisState.Leader, CancellationToken.None);
+            var cLeader = c.WaitForState(RachisState.Leader, CancellationToken.None);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -126,7 +127,7 @@ namespace RachisTests
             await Task.WhenAny(bLeader, cLeader);
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
             var expected = 45;
@@ -163,7 +164,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ClusterWithTwoNodes()
         {
             var expected = 45;
@@ -201,7 +202,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task CanSetupSingleNode()
         {
             var rachis = SetupServer(true);

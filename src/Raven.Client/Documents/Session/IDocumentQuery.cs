@@ -43,9 +43,13 @@ namespace Raven.Client.Documents.Session
         T SingleOrDefault();
 
         /// <summary>
+        ///     Checks if the given query matches any records
+        /// </summary>
+        bool Any();
+
+        /// <summary>
         /// Gets the total count of records for this query
         /// </summary>
-        /// <returns></returns>
         int Count();
 
         /// <summary>

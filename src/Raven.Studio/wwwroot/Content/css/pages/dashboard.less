@@ -1,7 +1,6 @@
 ﻿
 @resource-usage-primary-color: @brand-primary-light;
 @resource-usage-secondary-color: @brand-primary-dark;
-@resource-usage-tertiary-color: @dashboard-requests-color;
 @dashboard-requests-color: #27c5da;
 @dashboard-writes-color: #7051ad;
 @dashboard-written-color: #d08f27;
@@ -11,6 +10,9 @@
 @dashboard-reduce-color: #d83731;
 
 #dashboard-container {
+    .tooltip-inner {
+        max-width: 215px;
+    }
 
     .tooltip {
         padding: 10px;
@@ -89,16 +91,6 @@
         .fill {
             fill-opacity: 0.3;
             stroke: none;
-        }
-
-        .physical {
-            .line {
-                stroke: @resource-usage-tertiary-color;
-            }
-
-            .fill {
-                fill: @resource-usage-tertiary-color;
-            }
         }
 
         .machine {
@@ -372,10 +364,6 @@
 
     .machine-usage {
         color: @resource-usage-secondary-color;
-    }
-
-    .physical-memory {
-        color: @resource-usage-tertiary-color;
     }
 }
 

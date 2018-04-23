@@ -14,6 +14,8 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDatabaseGroup");
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
 import license = require("models/auth/licenseModel");
+import eventsCollector = require("common/eventsCollector");
+import messagePublisher = require("common/messagePublisher");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -29,7 +31,9 @@ class manageDatabaseGroup extends viewModelBase {
     nodes: KnockoutComputed<databaseGroupNode[]>;
     deletionInProgress: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
-    showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
+    showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
+    
+    anyNodeHasError: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -40,6 +44,31 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     private initObservables() {
+        
+        this.anyNodeHasError = ko.pureComputed(() => {
+            if (clusterTopologyManager.default.votingInProgress()) {
+                return true;
+            }
+            
+            const topology = clusterTopologyManager.default.topology();
+            
+            if (!topology) {
+                return true;
+            }
+            
+            const nodes = topology.nodes();
+            
+            let allConnected = true;
+            
+            for (let i = 0; i < nodes.length; i++) {
+                if (!nodes[i].connected()) {
+                    allConnected = false;
+                }
+            }
+            
+            return !allConnected;
+        });
+        
         this.nodes = ko.pureComputed(() => {
             const dbInfo = this.currentDatabaseInfo();
             return dbInfo.nodes();
@@ -56,14 +85,23 @@ class manageDatabaseGroup extends viewModelBase {
             return dbInfo ? dbInfo.deletionInProgress() : [];
         });
 
-        this.showDynamicNodeDistributionWarning = ko.pureComputed(() => {
+        this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
             return !license.licenseStatus().HasDynamicNodesDistribution;
+        });
+        
+        this.anyNodeHasError.subscribe((error) => {
+            if (error && this.inSortableMode()) {
+                messagePublisher.reportWarning("Can't reorder nodes, when at least one node is down or voting is in progress.");
+                this.cancelReorder();
+            }
         });
     }
 
     activate(args: any) {
         super.activate(args);
-
+        
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchClusterTopologyChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications()
             .watchAllDatabaseChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
@@ -109,6 +147,7 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     saveNewOrder() {
+        eventsCollector.default.reportEvent("db-group", "save-order");
         const newOrder = this.currentDatabaseInfo().nodes().map(x => x.tag());
         
         new reorderNodesInDatabaseGroupCommand(this.activeDatabase().name, newOrder)
@@ -163,7 +202,7 @@ class manageDatabaseGroup extends viewModelBase {
         
         this.currentDatabaseInfo(dbInfo);
         
-        dbInfo.dynamicNodesDistribution.subscribe((dynamic) => {
+        dbInfo.dynamicDatabaseDistribution.subscribe((dynamic) => {
             new toggleDynamicNodeAssignmentCommand(this.activeDatabase().name, dynamic)
                 .execute();
         });

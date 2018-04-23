@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -7,12 +8,83 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data;
+using Voron.Data.Fixed;
 using Voron.Debugging;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class StorageHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/debug/storage/btree-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
+        public Task BTreeStructure()
+        {
+            var treeName = GetStringQueryString("name", required: false);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using(var tx = context.OpenReadTransaction())
+            {
+                var tree = tx.InnerTransaction.ReadTree(treeName)
+                    ?? throw new InvalidOperationException("Tree name '" + treeName + "' was not found. Existing trees: " +
+                        string.Join(", ", GetTreeNames(tx.InnerTransaction, RootObjectType.VariableSizeTree))
+                    );
+
+                HttpContext.Response.ContentType = "text/html";
+                DebugStuff.DumpTreeToStream(tree, ResponseBodyStream());
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/debug/storage/fst-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
+        public Task FixedSizeTreeStructure()
+        {
+            var treeName = GetStringQueryString("name", required: false);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                FixedSizeTree tree;
+                try
+                {
+                    tree = tx.InnerTransaction.FixedTreeFor(treeName);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Existing trees: " +
+                            string.Join(", ", GetTreeNames(tx.InnerTransaction, RootObjectType.FixedSizeTree))
+                        , e);
+                }
+                
+
+                HttpContext.Response.ContentType = "text/html";
+                DebugStuff.DumpFixedSizedTreeToStream(tx.InnerTransaction.LowLevelTransaction, tree, ResponseBodyStream());
+            }
+
+            return Task.CompletedTask;
+        }
+
+
+        private IEnumerable<string> GetTreeNames(Transaction tx, RootObjectType type)
+        {
+            using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
+            {
+                if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    if (tx.GetRootObjectType(rootIterator.CurrentKey) != type)
+                        continue;
+
+                    yield return rootIterator.CurrentKey.ToString();
+
+                } while (rootIterator.MoveNext());
+            }
+        }
+
         [RavenAction("/databases/*/debug/storage/report", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task Report()
         {

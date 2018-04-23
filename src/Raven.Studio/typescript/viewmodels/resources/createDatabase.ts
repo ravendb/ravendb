@@ -6,6 +6,7 @@ import createDatabaseCommand = require("commands/resources/createDatabaseCommand
 import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
 import migrateLegacyDatabaseFromDatafilesCommand = require("commands/resources/migrateLegacyDatabaseFromDatafilesCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import getDatabaseLocationCommand = require("commands/resources/getDatabaseLocationCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
@@ -36,12 +37,15 @@ class createDatabase extends dialogViewModelBase {
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
-    showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
+    showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
     showReplicationFactorWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
     disableReplicationFactorInput: KnockoutComputed<boolean>;
     selectionState: KnockoutComputed<checkbox>;
     canUseDynamicOption: KnockoutComputed<boolean>; 
+    
+    databaseLocationCalculated = ko.observable<string>();
+    databaseLocationShowing: KnockoutComputed<string>;
 
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
@@ -90,8 +94,14 @@ class createDatabase extends dialogViewModelBase {
             });
 
         const getEncryptionKeyTask = this.encryptionSection.generateEncryptionKey();
-
-        return $.when<any>(getTopologyTask, getEncryptionKeyTask)
+        
+        const getDefaultDatabaseLocationTask = new getDatabaseLocationCommand(this.databaseModel.name(), this.databaseModel.path.dataPath())
+            .execute()
+            .done((fullPath: string) => {
+                this.databaseLocationCalculated(fullPath);
+            });
+        
+        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask)
             .done(() => {
                 // setup validation after we fetch and populate form with data
                 this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name), this.clusterNodes.length);
@@ -126,6 +136,11 @@ class createDatabase extends dialogViewModelBase {
 
         if (this.databaseModel.isFromBackupOrFromOfflineMigration) {
             this.databaseModel.replication.replicationFactor(1);
+        }
+        
+        // if we have single node - select it to make things easier
+        if (this.clusterNodes.length === 1) {
+            this.databaseModel.replication.nodes([this.clusterNodes[0]]);
         }
     }
 
@@ -169,12 +184,12 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
-        this.showDynamicNodeDistributionWarning = ko.pureComputed(() => {
-            const hasDynamicNodesDistribution = license.licenseStatus().HasDynamicNodesDistribution;
-            if (!hasDynamicNodesDistribution) {
+        this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
+            const hasDynamicDatabaseDistribution = license.licenseStatus().HasDynamicNodesDistribution;
+            if (!hasDynamicDatabaseDistribution) {
                 this.databaseModel.replication.dynamicMode(false);
             }
-            return !hasDynamicNodesDistribution;
+            return !hasDynamicDatabaseDistribution;
         });
 
         this.showReplicationFactorWarning = ko.pureComputed(() => {
@@ -198,11 +213,26 @@ class createDatabase extends dialogViewModelBase {
             const selectedCount = this.databaseModel.replication.nodes().length;
 
             if (clusterNodes.length && selectedCount === clusterNodes.length)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
+        
+        
+        this.databaseLocationShowing = ko.pureComputed(() => {
+            return this.databaseLocationCalculated();
+        });
+        
+        this.databaseModel.name.throttle(300).subscribe((newNameValue) => 
+            new getDatabaseLocationCommand(newNameValue, this.databaseModel.path.dataPath())
+                .execute()
+                .done((fullPath: string) => this.databaseLocationCalculated(fullPath)));
+
+        this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) =>
+            new getDatabaseLocationCommand(this.databaseModel.name(), newPathValue)
+                .execute()
+                .done((fullPath: string) => this.databaseLocationCalculated(fullPath)));
     }
 
     getAvailableSections() {

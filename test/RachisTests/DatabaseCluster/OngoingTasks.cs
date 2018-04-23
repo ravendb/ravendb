@@ -18,7 +18,7 @@ namespace RachisTests.DatabaseCluster
 {
     public class OngoingTasks : ReplicationTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task CanGetTaskInfo()
         {
             var clusterSize = 3;
@@ -189,7 +189,7 @@ loadToOrders(orderData);
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task CanToggleTaskState()
         {
             var clusterSize = 3;

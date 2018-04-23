@@ -5,6 +5,7 @@ namespace Sparrow.Json.Parsing
 {
     public unsafe class JsonParserState
     {
+        public const int EscapePositionItemSize = 5;
         public byte* StringBuffer;
         public int StringSize;
         public int? CompressedSize;
@@ -67,7 +68,7 @@ namespace Sparrow.Json.Parsing
             // plus 1 for the actual number of positions
 
             // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
-            return (count + 1) * 5; 
+            return (count + 1) * EscapePositionItemSize; 
         }
 
         public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
@@ -78,7 +79,7 @@ namespace Sparrow.Json.Parsing
         public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
         {
             buffer.Clear();
-            if (previousComputedMaxSize == 5)
+            if (previousComputedMaxSize == EscapePositionItemSize)
             {
                 // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
                 // and we don't have to do any work

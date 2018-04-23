@@ -2,9 +2,9 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
-                <button data-bind="click: addNode, enable: canAddNodes" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
+                <button data-bind="click: addNode, enable: canAddNodes, visible: accessManager.canAddNode" class="btn btn-primary"><i class="icon-plus"></i><span>Add Node to cluster</span></button>
                 <div class="flex-separator"></div>
-                <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0">
+                <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0, visible: accessManager.showCoresInfo">
                     <div class="text-center"><small>Available cores:</small></div>
                     <div class="text-center">
                         <small>
@@ -55,21 +55,23 @@
                         <div class="actions-container">
                             <div class="actions">
                                 <button class="btn btn-default" title="Promote watcher to become member/promotable" 
-                                        data-bind="click: _.partial($parent.promote, $data), css: { 'btn-spinner': _.includes($root.spinners.promote(), tag()) }, disable: _.includes($root.spinners.promote(), tag()), visible: createCanBePromotedObservable($root.topology)" >
+                                        data-bind="click: _.partial($parent.promote, $data), css: { 'btn-spinner': _.includes($root.spinners.promote(), tag()) }, 
+                                                   disable: _.includes($root.spinners.promote(), tag()), visible: createCanBePromotedObservable($root.topology)" >
                                     <i class="icon-promote"></i> <span>Promote</span>
                                 </button>
                                 <button class="btn btn-default" title="Demote cluster node to watcher" 
-                                        data-bind="click: _.partial($parent.demote, $data), css: { 'btn-spinner': _.includes($root.spinners.demote(), tag()) }, disable: _.includes($root.spinners.demote(), tag()), visible: createCanBeDemotedObservable($root.topology)" >
+                                        data-bind="click: _.partial($parent.demote, $data), css: { 'btn-spinner': _.includes($root.spinners.demote(), tag()) }, 
+                                                   disable: _.includes($root.spinners.demote(), tag()), visible: createCanBeDemotedObservable($root.topology)" >
                                     <i class="icon-demote"></i> <span>Demote</span>
                                 </button>
 
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: connected() && !isPassive()">
                                         <span>Operations</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
-                                    <ul class="dropdown-menu">
+                                    <ul class="dropdown-menu dropdown-menu-right">
                                         <li>
                                             <a href="#" data-bind="click: _.partial($parent.assignCores, $data)">
                                                 <i class="icon-reassign-cores"></i>
@@ -90,7 +92,8 @@
                                     </ul>
                                 </div>
                                 <button class="btn btn-danger" 
-                                        data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()), css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }" 
+                                        data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()), 
+                                                   css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }, visible: $root.accessManager.canDeleteNode" 
                                         title="Remove node from cluster">
                                     <i class="icon-trash"></i>
                                 </button>
@@ -152,10 +155,7 @@
                     </ul>
                 </div> -->
             </div>
-            <div class="panel flex-grow" id="clusterGraphContainer" data-bind="css: { graphHidden: !$root.showConnectivity() }">
-                <div class="absolute-center" data-bind="visible: !$root.showConnectivity()">
-                    Go to <a target="_blank" href="#" data-bind="attr: { href: $root.leaderUrl }">Leader</a> node to see connectivity status.
-                </div>
+            <div class="panel flex-grow" id="clusterGraphContainer">
             </div>
             <div class="legend">
                 <div class="row">

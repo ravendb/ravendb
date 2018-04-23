@@ -33,7 +33,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
@@ -41,6 +40,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -206,6 +206,15 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                var clientCert = GetCurrentCertificate();
+
+                var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                auditLog.Info($"Database {name} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+            }
+
 
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -375,12 +384,11 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
                 var parameters = JsonDeserializationServer.Parameters.MembersOrder(json);
 
-                if (record.Topology.Members.Count != parameters.MembersOrder.Count
-                    || record.Topology.Members.All(parameters.MembersOrder.Contains) == false)
-                {
-                    throw new ArgumentException("The reordered list doesn't correspond to the existing members of the database group.");
-                }
-                record.Topology.Members = parameters.MembersOrder;
+                var reorderedTopology = DatabaseTopology.Reorder(record.Topology, parameters.MembersOrder);
+
+                record.Topology.Members = reorderedTopology.Members;
+                record.Topology.Promotables = reorderedTopology.Promotables;
+                record.Topology.Rehabs = reorderedTopology.Rehabs;
 
                 var reorder = new UpdateTopologyCommand
                 {
@@ -530,21 +538,23 @@ namespace Raven.Server.Web.System
                 if (Directory.Exists(restorePathJson.Path) == false)
                     throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
 
+                var sortedList = new SortedList<DateTime, RestorePoint>(new RestoreUtils.DescendedDateComparer());
                 var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
                 if (directories.Count == 0)
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List, assertLegacyBackups: true);
+                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, assertLegacyBackups: true);
                 }
                 else
                 {
                     foreach (var directory in directories)
                     {
-                        Restore.FetchRestorePoints(directory, restorePoints.List);
+                        RestoreUtils.FetchRestorePoints(directory, sortedList);
                     }
                 }
 
+                restorePoints.List = sortedList.Values.ToList();
                 if (restorePoints.List.Count == 0)
                     throw new InvalidOperationException("Couldn't locate any backup files!");
 
@@ -599,9 +609,7 @@ namespace Raven.Server.Web.System
                     ServerStore.NodeTag,
                     cancelToken);
 
-#pragma warning disable 4014
-                ServerStore.Operations.AddOperation(
-#pragma warning restore 4014
+                var t = ServerStore.Operations.AddOperation(
                     null,
                     $"Database restore: {databaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
@@ -626,6 +634,14 @@ namespace Raven.Server.Web.System
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
                 var parameters = JsonDeserializationServer.Parameters.DeleteDatabasesParameters(json);
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Delete [{string.Join(", ", parameters.DatabaseNames)}] database from ({string.Join(", ", parameters.FromNodes)}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                }
 
                 if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                 {
@@ -723,7 +739,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
-        public async Task ToggleDynamicNodeDistribution()
+        public async Task ToggleDynamicDatabaseDistribution()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var enable = GetBoolValueQueryString("enable") ?? true;
@@ -948,7 +964,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
-        public Task CompactDatabase()
+        public async Task CompactDatabase()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -971,7 +987,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
                 }
 
-                var database = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).Result;
+                var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).ConfigureAwait(false);
 
                 var token = new OperationCancelToken(ServerStore.ServerShutdown);
                 var compactDatabaseTask = new CompactDatabaseTask(
@@ -981,47 +997,57 @@ namespace Raven.Server.Web.System
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
-                ServerStore.Operations.AddOperation(
+                var t = ServerStore.Operations.AddOperation(
                     null,
                     "Compacting database: " + compactSettings.DatabaseName,
                     Documents.Operations.Operations.OperationType.DatabaseCompact,
                     taskFactory: onProgress => Task.Run(async () =>
                     {
-                        using (token)
+                        try
                         {
-                            var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
-                            var overallResult = new CompactionResult(compactSettings.DatabaseName);
-
-                            // first fill in data 
-                            foreach (var indexName in compactSettings.Indexes)
+                            using (token)
                             {
-                                var indexCompactionResult = new CompactionResult(indexName);
-                                overallResult.IndexesResults.Add(indexName, indexCompactionResult);
-                            }
+                                var before = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                                var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
-                            // then do actual compaction
-                            foreach (var indexName in compactSettings.Indexes)
-                            {
-                                var index = database.IndexStore.GetIndex(indexName);
-                                var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                index.Compact(onProgress, (CompactionResult)indexCompactionResult);
-                                indexCompactionResult.Processed = true;
-                            }
+                                // first fill in data 
+                                foreach (var indexName in compactSettings.Indexes)
+                                {
+                                    var indexCompactionResult = new CompactionResult(indexName);
+                                    overallResult.IndexesResults.Add(indexName, indexCompactionResult);
+                                }
 
-                            if (!compactSettings.Documents)
-                            {
-                                overallResult.Skipped = true;
+                                // then do actual compaction
+                                foreach (var indexName in compactSettings.Indexes)
+                                {
+                                    var index = database.IndexStore.GetIndex(indexName);
+                                    var indexCompactionResult = overallResult.IndexesResults[indexName];
+                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult);
+                                    indexCompactionResult.Processed = true;
+                                }
+
+                                if (compactSettings.Documents == false)
+                                {
+                                    overallResult.Skipped = true;
+                                    overallResult.Processed = true;
+                                    return overallResult;
+                                }
+
+                                await compactDatabaseTask.Execute(onProgress, overallResult);
                                 overallResult.Processed = true;
-                                return overallResult;
+
+                                overallResult.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                                overallResult.SizeBeforeCompactionInMb = before;
+
+                                return (IOperationResult)overallResult;
                             }
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Compaction process failed", e);
 
-                            await compactDatabaseTask.Execute(onProgress, overallResult);
-                            overallResult.Processed = true;
-
-                            overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
-                            overallResult.SizeBeforeCompactionInMb = before;
-
-                            return (IOperationResult)overallResult;
+                            throw;
                         }
                     }, token.Token),
                     id: operationId, token: token);
@@ -1031,7 +1057,6 @@ namespace Raven.Server.Web.System
                     writer.WriteOperationId(context, operationId);
                 }
             }
-            return Task.CompletedTask;
         }
 
         public async Task<long> CalculateStorageSizeInBytes(string databaseName)

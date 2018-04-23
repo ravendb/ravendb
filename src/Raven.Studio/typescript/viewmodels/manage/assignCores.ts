@@ -1,4 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import eventsCollector = require("common/eventsCollector");
 import setLicenseLimitsCommand = require("commands/database/cluster/setLicenseLimitsCommand");
 
 class assignCores extends dialogViewModelBase {
@@ -10,7 +11,7 @@ class assignCores extends dialogViewModelBase {
         const coresCount = this.assignedCores;
         
         return coresCount() && (coresCount.isValid()) ?
-            `${this.pluralize(coresCount(), 'core', 'cores')} will be leased from license limits` : "";          
+            `${this.pluralize(coresCount(), 'core', 'cores')} will be leased from Cluster License limit` : "";          
     });
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
@@ -50,6 +51,8 @@ class assignCores extends dialogViewModelBase {
         if (!this.isValid(this.validationGroup)) 
             return;
 
+        eventsCollector.default.reportEvent("assign-cores", "save");
+        
         this.spinners.save(true);
 
         new setLicenseLimitsCommand(this.nodeTag, this.assignedCores())

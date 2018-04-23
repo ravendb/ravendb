@@ -164,6 +164,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
+        private bool? _useCompression;
 
         public TimeSpan? RequestTimeout
         {
@@ -172,6 +173,21 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _requestTimeout = value;
+            }
+        }
+
+        internal bool HasExplicitlySetCompressionUsage => _useCompression.HasValue;
+
+        /// <summary>
+        /// Should accept gzip/deflate headers be added to all requests?
+        /// </summary>
+        public bool UseCompression
+        {
+            get => _useCompression ?? true;
+            set
+            {
+                AssertNotFrozen();
+                _useCompression = value;
             }
         }
 

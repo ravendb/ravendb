@@ -19,7 +19,7 @@ namespace RachisTests
             public string Name { get; set; }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
             var leader = await CreateRaftClusterAndGetLeader(1);
@@ -48,12 +48,12 @@ namespace RachisTests
 
                 using (var session = store.OpenSession(databaseName))
                 {
-                    Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
+                    Assert.Throws<RavenException>(() => session.Load<User>("users/1"));
                 }
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);

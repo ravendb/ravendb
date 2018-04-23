@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -30,6 +31,7 @@ namespace Raven.Server.ServerWide.Maintenance
             public bool IsSideBySide;
             public long LastIndexedEtag;
             public bool IsStale;
+            public IndexState State;
         }
 
         public long LastEtag;
@@ -62,7 +64,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     [nameof(stat.Value.LastIndexedEtag)] = stat.Value.LastIndexedEtag,
                     [nameof(stat.Value.IsSideBySide)] = stat.Value.IsSideBySide,
-                    [nameof(stat.Value.IsStale)] = stat.Value.IsStale
+                    [nameof(stat.Value.IsStale)] = stat.Value.IsStale,
+                    [nameof(stat.Value.State)] = stat.Value.State
                 };
             }
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;

@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions.Streams;
+using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
@@ -200,7 +201,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                 $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
                         }
 
-                        _etl.Statistics.RecordLoadError(e);
+                        _etl.Statistics.RecordLoadError($"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}",
+                            itemToReplicate.DocumentId);
                     }
                     finally
                     {
@@ -310,9 +312,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Failure to replicate changes to relational database for: " + _etl.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
+                            _logger.Info($"Failure to replicate deletions to relational database for: {_etl.Name}, " +
+                                         "will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        _etl.Statistics.RecordLoadError(e);
+                        _etl.Statistics.RecordLoadError($"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}", null);
                     }
                     finally
                     {
@@ -339,11 +342,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private void HandleSlowSql(long elapsedMiliseconds, string stmt)
         {
-            var message = $"[{_etl.Name}] Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
             if (_logger.IsInfoEnabled)
-                _logger.Info(message);
+                _logger.Info($"[{_etl.Name}] Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}");
 
-            _database.NotificationCenter.Add(AlertRaised.Create(_database.Name,_etl.Tag, message, AlertType.SqlEtl_SlowSql, NotificationSeverity.Warning));
+            _etl.Statistics.RecordSlowSql(new SlowSqlStatementInfo
+            {
+                Date = SystemTime.UtcNow,
+                Duration = elapsedMiliseconds,
+                Statement = stmt
+            });
         }
 
         private string GetTableNameString(string tableName)

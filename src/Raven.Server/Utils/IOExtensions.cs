@@ -2,7 +2,10 @@
 using System.IO;
 using System.Text;
 using System.Threading;
+using Raven.Client.Extensions;
 using Raven.Server.Extensions;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.Utils
 {
@@ -23,6 +26,55 @@ namespace Raven.Server.Utils
             catch (UnauthorizedAccessException)
             {
 
+            }
+        }
+
+        public static void RenameFile(string oldFile, string newFile)
+        {
+            File.Move(oldFile, newFile);
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                Syscall.FsyncDirectoryFor(newFile);
+            }
+        }
+
+        public static bool EnsureReadWritePermissionForDirectory(string directory)
+        {
+            string tmpFileName = null;
+            string testString = "I can write here!";
+            try
+            {
+                if (string.IsNullOrWhiteSpace(directory))
+                {
+                    return false;
+                }
+
+                if (Directory.Exists(directory) == false)
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                tmpFileName = Path.Combine(directory, Path.GetRandomFileName());
+                File.WriteAllText(tmpFileName, testString);
+                var read = File.ReadAllText(tmpFileName); //I can read too!
+                File.Delete(tmpFileName);
+                return read == testString;
+            }
+            catch
+            {
+                //We need to try and delete the file here too since we can't modify the return value from a finally block.                
+                try
+                {
+                    if (File.Exists(tmpFileName))
+                    {
+                        File.Delete(tmpFileName);
+                    }
+                }
+                catch
+                {
+                }                
+                return false;
             }
         }
 

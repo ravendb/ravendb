@@ -14,17 +14,19 @@ import router = require("plugins/router");
 import clusterGraph = require("models/database/cluster/clusterGraph");
 import assignCores = require("viewmodels/manage/assignCores");
 import license = require("models/auth/licenseModel");
+import eventsCollector = require("common/eventsCollector");
+import accessManager = require("common/shell/accessManager");
 
 class cluster extends viewModelBase {
 
     private graph = new clusterGraph();
 
     topology = clusterTopologyManager.default.topology;
+    accessManager = accessManager.default.clusterView;
 
     canDeleteNodes: KnockoutComputed<boolean>;
     canAddNodes: KnockoutComputed<boolean>;
-    showConnectivity: KnockoutComputed<boolean>;
-
+    
     leaderUrl: KnockoutComputed<string>;
     utilizedCores: KnockoutComputed<number>;
     maxCores: KnockoutComputed<number>;
@@ -92,10 +94,6 @@ class cluster extends viewModelBase {
             return appUrl.toExternalUrl(serverUrl, localPart);
         });
 
-        this.showConnectivity = ko.pureComputed(() => {
-            return !this.topology().leader() || this.topology().leader() === this.topology().nodeTag();
-        });
-
         this.utilizedCores = ko.pureComputed(() => {
             const nodes = this.topology().nodes();
             const utilizedCores = _.sumBy(nodes, x => !x.utilizedCores() ? 0 : x.utilizedCores());
@@ -128,6 +126,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to promote current node to become member/promotable?", ["Cancel", "Yes, promote"])
             .done(result => {
                if (result.can) {
+                   eventsCollector.default.reportEvent("cluster", "promote");
                    this.spinners.promote.push(node.tag());
                    new promoteClusterNodeCommand(node.tag())
                        .execute()
@@ -140,6 +139,7 @@ class cluster extends viewModelBase {
          this.confirmationMessage("Are you sure?", "Do you want to demote current node to become watcher?", ["Cancel", "Yes, demote"])
             .done(result => {
                if (result.can) {
+                   eventsCollector.default.reportEvent("cluster", "demote");
                    this.spinners.demote.push(node.tag());
                    new demoteClusterNodeCommand(node.tag())
                        .execute()
@@ -152,6 +152,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, ["Cancel", "Step down"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("cluster", "step-down");
                     this.spinners.stepdown(true);
                     new leaderStepDownCommand()
                         .execute()
@@ -164,6 +165,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Remove"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("cluster", "delete-node");
                     this.spinners.delete.push(node.tag());
                     new removeNodeFromClusterCommand(node.tag())
                         .execute()
@@ -176,12 +178,13 @@ class cluster extends viewModelBase {
         router.navigate(appUrl.forAddClusterNode());
     }
 
-    forceTimeout() {
+    forceTimeout(node: clusterNode) {
         this.confirmationMessage("Are you sure?", `Do you want force timeout on waiting for leader?`, ["Cancel", "Yes, force"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("cluster", "timeout");
                     this.spinners.forceTimeout(true);
-                    new forceLeaderTimeoutCommand()
+                    new forceLeaderTimeoutCommand(node.serverUrl())
                         .execute()
                         .always(() => this.spinners.forceTimeout(false));
                 }

@@ -15,7 +15,7 @@
                 <div class="modal-settings-panel">
                     <div class="modal-settings-panel-main">
                         <div class="form-group" data-bind="validationElement: databaseModel.name">
-                            <h3>NAME</h3>
+                            <h3>NAME<i class="required"></i></h3>
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
                         </div>
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
@@ -74,7 +74,7 @@
 
 <script type="text/html" id="create-db-legacy-migration">
     <div data-bind="with: databaseModel.legacyMigration">
-        <h3>Data source configuration</h3>
+        <h3>Data Source Configuration</h3>
 
         <div class="bg-info margin-bottom">
             <div class="padding">
@@ -227,7 +227,7 @@
 
 <script type="text/html" id="create-db-restore">
     <div data-bind="with: databaseModel.restore">
-        <h3>Backup source configuration</h3>
+        <h3>Backup Source Configuration</h3>
         <div class="form-group row" data-bind="validationElement: backupDirectory">
             <div class="col-md-4">
                 <label class="control-label">Backup directory</label>
@@ -238,22 +238,58 @@
                        class="form-control" placeholder="Enter backup directory path" />
             </div>
         </div>
-        
+
+        <div class="toggle">
+            <input class="styled" type="checkbox" id="disable-ongoing-tasks" data-bind="checked: disableOngoingTasks">
+            <label for="disable-ongoing-tasks">Disable ongoing tasks after restore</label>
+        </div>
+
         <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
             <div class="col-md-4">
                 <label class="control-label">Restore point</label>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-12">
                 <div>
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
                                 data-bind="disable: restorePoints().length === 0 || $parent.databaseModel.spinners.fetchingRestorePoints(), attr: { title: restorePoints().length == 0 ? 'No restore points in selected directory' : '' }">
-                            <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePoint() || 'Select restore point...' ), textInput: selectedRestorePoint"></span>
+                            <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePointText() || 'Select restore point... (' + restorePointsCount().toLocaleString() + ' options)' ), textInput: selectedRestorePoint"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu max-height" data-bind="foreach: restorePoints">
-                            <li><a href="#" data-bind="text: $data.Key, click: _.partial($root.databaseModel.useRestorePoint, $data), attr: { 'title': 'File name: ' + $data.Details.FileName }"></a></li>
-                        </ul>
+                        <div class="dropdown-menu has-info">
+                            <ul class="menu max-height" role="menu" data-bind="foreach: restorePoints">
+                                <!-- ko if: $index() !== 0 -->
+                                <li class="divider"></li>
+                                <!-- /ko -->
+                                <li class="dropdown-header" data-bind="attr: { title: $data.databaseNameTitle }">
+                                    <span class="text-success" data-bind="text: $data.databaseName"></span>
+                                </li>
+
+                                <!-- ko foreach: $data.restorePoints -->
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($root.databaseModel.useRestorePoint, $data)" title="">
+                                        <div class="row">
+                                            <strong class="col-xs-4" data-bind="text: dateTime"></strong>
+                                            <small class="col-xs-3" data-bind="text: backupType"></small>
+                                            <small class="col-xs-2 text-center" data-bind="text: nodeTag"></small>
+                                            <small class="col-xs-3 text-center" data-bind="text: filesToRestore.toLocaleString()"></small>
+                                        </div>
+                                    </a>
+                                </li>
+                                <!-- /ko -->
+                            </ul>
+
+                            <div class="divider"></div>
+                            <div class="dropdown-header header bg-info" title="">
+                                <div class="row">
+                                    <span class="col-xs-4">Date</span>
+                                    <span class="col-xs-3">Backup Type</span>
+                                    <span class="col-xs-2">Node Tag</span>
+                                    <span class="col-xs-3">Files to Restore</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                     <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
                 </div>
@@ -264,20 +300,29 @@
 
 <script type="text/html" id="create-db-path">
     <div data-bind="with: databaseModel.path">
-        <h3>Path configuration</h3>
+        <h3>Path Configuration</h3>
         <div class="form-group row" data-bind="validationElement: dataPath">
             <div class="col-md-4">
                 <label class="control-label">Path</label>
             </div>
             <div class="col-md-8">
-                <input type="text" class="form-control" data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() }" />
+                <input type="text" class="form-control" data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }" 
+                       title="Enter location for the database files."/>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-sm-12">
+                <p class="text-info bg-info padding padding-sm">
+                    The data files will be created in:<br/>
+                    <strong><small data-bind="text: $root.databaseLocationShowing"></small></strong>
+                </p>
             </div>
         </div>
     </div>
 </script>
 
 <script type="text/html" id="create-db-replication">
-    <h3>Replication configuration</h3>
+    <h3>Replication Configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group" style="min-height: 62px">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
@@ -286,23 +331,23 @@
                 <input class="form-control" type="number" min="0" title="Set the number of nodes that will contain the database" 
                        data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
-                    With replication factor set to 1 data won't be replicated.
+                    With the replication factor set to 1, the data won't be replicated!
                 </div>
                 <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
                     The backup will be restored only to the current node <br/>
-                    After restore this database can be added to other nodes using the 'Manage group' button
+                    After restore, this database can be added to other nodes using the 'Manage group' button.
                 </div>
             </div>
         </div>
         
-        <div data-bind="css: {'has-warning': $root.showDynamicNodeDistributionWarning()}">
+        <div data-bind="css: {'has-warning': $root.showDynamicDatabaseDistributionWarning()}">
             <div class="toggle">
-                <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, enable: $root.canUseDynamicOption() && !$root.showDynamicNodeDistributionWarning()">
-                <label for="dynamic_mode">Allow dynamic node distribution</label>
+                <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, enable: $root.canUseDynamicOption() && !$root.showDynamicDatabaseDistributionWarning()">
+                <label for="dynamic_mode">Allow dynamic database distribution</label>
             </div>
             <small class="toggle-caption">Maintain replication factor upon node failure.</small>
-            <div class="help-block" data-bind="visible: $root.showDynamicNodeDistributionWarning">
-                Your current license doesn't include the dynamic nodes distribution feature.
+            <div class="help-block" data-bind="visible: $root.showDynamicDatabaseDistributionWarning">
+                Your current license doesn't include the dynamic database distribution feature.
             </div>
         </div>
 
@@ -310,7 +355,7 @@
             <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
             <label for="manual_mode">Set replication nodes manually</label>
         </div>
-        <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</small>
+        <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among the cluster's nodes.</small>
         <small class="toggle-caption" data-bind="visible: manualMode()">Select replication nodes from the list below.</small>
 
         <div class="panel panel-info padding" data-bind="visible: manualMode()">
@@ -335,7 +380,7 @@
 </script>
 
 <script type="text/html" id="create-db-encryption">
-    <h3>Encryption configuration</h3>
+    <h3>Encryption Configuration</h3>
         <div data-bind="with: encryptionSection">
             <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
         </div>

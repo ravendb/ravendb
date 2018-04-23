@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Client;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Web.System
 {
@@ -61,6 +62,11 @@ namespace Raven.Server.Web.System
             if (WindowsReservedFileNames.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
             {
                 errorMessage = string.Format($"The name '{name}' is forbidden for use!");
+                return false;
+            }
+            if (NameUtils.IsValidResourceName(name) == false)
+            {
+                errorMessage = string.Format($"The name '{name}' does not match '{NameUtils.ValidResourceNameCharacters}' regular expression!");
                 return false;
             }
             if (Path.Combine(dataDirectory, name).Length > WindowsMaxPath)

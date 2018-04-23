@@ -18,6 +18,7 @@ import getIndexesProgressCommand = require("commands/database/index/getIndexesPr
 import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
+import shell = require("viewmodels/shell");
 
 type indexGroup = {
     entityName: string;
@@ -138,10 +139,10 @@ class indexes extends viewModelBase {
             const selectedCount = this.selectedIndexesName().length;
             const indexesCount = this.getAllIndexes().length;
             if (indexesCount && selectedCount === indexesCount)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
     }
 
@@ -265,6 +266,12 @@ class indexes extends viewModelBase {
     }
     
     private getIndexesProgress() {
+        
+        if (shell.showConnectionLost()) {
+            // looks like we don't we connection to server, skip index progress update 
+            return;
+        }
+        
         return new getIndexesProgressCommand(this.activeDatabase())
             .execute()
             .done(indexesProgressList => {

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Server.Dashboard;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Posix.macOS;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -278,10 +278,10 @@ namespace Raven.Server.Utils
 
         private static unsafe MacInfo GetMacInfo()
         {
-            var machPort = Syscall.mach_host_self();
+            var machPort = macSyscall.mach_host_self();
             var count = HostCpuLoadInfoSize;
             var hostCpuLoadInfo = new host_cpu_load_info();
-            if (Syscall.host_statistics64(machPort, (int)FlavorMacOs.HOST_CPU_LOAD_INFO, &hostCpuLoadInfo, &count) != 0)
+            if (macSyscall.host_statistics64(machPort, (int)Flavor.HOST_CPU_LOAD_INFO, &hostCpuLoadInfo, &count) != 0)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failure when trying to get hostCpuLoadInfo from MacOS, error code was: " + Marshal.GetLastWin32Error());
@@ -299,7 +299,7 @@ namespace Raven.Server.Utils
             using (var currentProcess = Process.GetCurrentProcess())
                 processId = currentProcess.Id;
             
-            var result = Syscall.proc_pidinfo(processId, (int)ProcessInfo.PROC_PIDTASKALLINFO, 0, &info, size);
+            var result = macSyscall.proc_pidinfo(processId, (int)ProcessInfo.PROC_PIDTASKALLINFO, 0, &info, size);
             ulong dateTimeNanoTicks = 0;
             ulong userTime = 0;
             ulong systemTime = 0;

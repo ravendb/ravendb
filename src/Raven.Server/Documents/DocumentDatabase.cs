@@ -22,6 +22,7 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -75,36 +76,14 @@ namespace Raven.Server.Documents
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
 
-        internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
-        {
-            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
-                Name,
-                $"Non Durable File System - {Name ?? "Unknown Database"}",
-                e.Message,
-                AlertType.NonDurableFileSystem,
-                NotificationSeverity.Warning,
-                Name,
-                details: new MessageDetails { Message = e.Details }));
-        }
-
-        internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
-        {
-            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
-                Name,
-                $"Database Recovery Error - {Name ?? "Unknown Database"}",
-                e.Message,
-                AlertType.RecoveryError,
-                NotificationSeverity.Error,
-                Name));
-        }
-
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
-            StartTime = SystemTime.UtcNow;
+            StartTime = Time.GetUtcNow();
+            LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
 
@@ -145,9 +124,9 @@ namespace Raven.Server.Documents
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
-                CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+                CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, e) =>
                 {
-                    serverStore.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
+                    serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId);
                 });
             }
             catch (Exception)
@@ -160,6 +139,8 @@ namespace Raven.Server.Documents
         public ServerStore ServerStore => _serverStore;
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
+
+        public DateTime LastAccessTime;
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -282,7 +263,14 @@ namespace Raven.Server.Documents
 
                 TaskExecutor.Execute((state) =>
                 {
-                    NotifyFeaturesAboutStateChange(record, index);
+                    try
+                    {
+                        NotifyFeaturesAboutStateChange(record, index);
+                    }
+                    catch
+                    {
+                        // We ignore the exception since it was caught in the function itself
+                    }
                 }, null);
             }
             catch (Exception)
@@ -976,6 +964,64 @@ namespace Raven.Server.Documents
             {
                 return ServerStore.Cluster.ReadDatabase(context, Name);
             }
+        }
+
+        internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
+        {
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
+                Name,
+                $"Non Durable File System - {Name ?? "Unknown Database"}",
+                e.Message,
+                AlertType.NonDurableFileSystem,
+                NotificationSeverity.Warning,
+                Name,
+                details: new MessageDetails { Message = e.Details }));
+        }
+
+        internal void HandleOnDatabaseRecoveryError(object sender, RecoveryErrorEventArgs e)
+        {
+            HandleOnRecoveryError(StorageEnvironmentWithType.StorageEnvironmentType.Documents, Name, sender, e);
+        }
+
+        internal void HandleOnConfigurationRecoveryError(object sender, RecoveryErrorEventArgs e)
+        {
+            HandleOnRecoveryError(StorageEnvironmentWithType.StorageEnvironmentType.Configuration, Name, sender, e);
+        }
+
+        internal void HandleOnIndexRecoveryError(string indexName, object sender, RecoveryErrorEventArgs e)
+        {
+            HandleOnRecoveryError(StorageEnvironmentWithType.StorageEnvironmentType.Index, indexName, sender, e);
+        }
+
+        private void HandleOnRecoveryError(StorageEnvironmentWithType.StorageEnvironmentType type, string resourceName, object environment, RecoveryErrorEventArgs e)
+        {
+            NotificationCenter.NotificationCenter nc;
+            string title;
+
+            switch (type)
+            {
+                case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
+                case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                    nc = _serverStore?.NotificationCenter;
+                    title = $"Database Recovery Error - {resourceName ?? "Unknown Database"}";
+
+                    if (type == StorageEnvironmentWithType.StorageEnvironmentType.Configuration)
+                        title += " (configuration storage)";
+                    break;
+                case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                    nc = NotificationCenter;
+                    title = $"Index Recovery Error - {resourceName ?? "Unknown Index"}";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+            }
+
+            nc?.Add(AlertRaised.Create(Name, 
+                title, 
+                $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}", 
+                AlertType.RecoveryError,
+                NotificationSeverity.Error,
+                key: resourceName));
         }
     }
 

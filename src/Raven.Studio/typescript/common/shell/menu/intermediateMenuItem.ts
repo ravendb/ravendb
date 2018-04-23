@@ -10,6 +10,7 @@ class intermediateMenuItem implements menuItem {
     hash: string;
     dynamicHash: dynamicHashType;
     path: KnockoutObservable<string>;
+    nav: KnockoutObservable<boolean> = ko.observable(true);
 
     depth: KnockoutComputed<number> = ko.pureComputed(() => {
         let next = this.parent(),
@@ -22,11 +23,19 @@ class intermediateMenuItem implements menuItem {
         return result;
     });
 
-    constructor(title: string, children: menuItem[], css?: string, hashes?: { dynamicHash: () => string, hash?: string }) {
+    constructor(title: string, children: menuItem[], css?: string, hashes?: { dynamicHash: () => string, hash?: string }, nav?: boolean | KnockoutObservable<boolean>) {
         this.title = title;
         this.children = children;
         this.css = css;
-
+        
+        if (nav !== undefined) {
+            if (ko.isObservable(nav)) {
+                this.nav = nav;
+            } else {
+                this.nav(nav);
+            }    
+        }
+       
         if (hashes && hashes.dynamicHash) {
             this.dynamicHash = hashes.dynamicHash;
         }

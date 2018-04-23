@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
 
         public int NumberOfQueuedOperations => _operations.Count;
 
-        private string TransactionMergerThreadName => _parent.Name + " transaction merging thread";
+        private string TransactionMergerThreadName => $"'{_parent.Name}' Transaction Merging Thread";
 
         public void Start()
         {
@@ -468,8 +468,9 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently",
                                     e);
                             }
-                            using (previous)
+                            
                             using (context.Transaction)
+                            using (previous)
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
@@ -579,7 +580,7 @@ namespace Raven.Server.Documents
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
-
+            context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
             var sp = Stopwatch.StartNew();
             do
             {

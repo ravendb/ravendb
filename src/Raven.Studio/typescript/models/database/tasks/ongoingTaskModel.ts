@@ -71,7 +71,7 @@ abstract class ongoingTaskModel {
         });
     }
 
-    protected update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
         this.taskName(ongoingTaskModel.generateTaskNameIfNeeded(dto));
         this.taskId = dto.TaskId;
         this.taskType(dto.TaskType);

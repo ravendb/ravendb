@@ -37,27 +37,27 @@ namespace Raven.Server.Documents.Handlers.Admin
                     first = false;
 
                     var result = storageEnvironment.Environment.SetTransactionMode(mode, duration);
+
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Type"] = storageEnvironment.Type,
+                        ["Mode"] = mode.ToString(),
+                        ["Path"] = storageEnvironment.Environment.Options.BasePath.FullPath,
+                    };
+
                     switch (result)
                     {
                         case TransactionsModeResult.ModeAlreadySet:
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Type"] = mode.ToString(),
-                                ["Path"] = storageEnvironment.Environment.Options.BasePath,
-                                ["Result"] = "Mode Already Set"
-                            });
+                            djv["Result"] = "Mode Already Set";
                             break;
                         case TransactionsModeResult.SetModeSuccessfully:
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Type"] = mode.ToString(),
-                                ["Path"] = storageEnvironment.Environment.Options.BasePath,
-                                ["Result"] = "Mode Set Successfully"
-                            });
+                            djv["Result"] = "Mode Set Successfully";
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Result is unexpected value: " + result);
                     }
+
+                    context.Write(writer, djv);
                 }
                 writer.WriteEndArray();
                 writer.WriteEndObject();

@@ -23,7 +23,8 @@ class getRevisionsBinEntryCommand extends commandBase {
             } as pagedResult<document>;
         };
         const url = endpoints.databases.revisions.revisionsBin + this.urlEncodeArgs(args);
-        return this.query(url, null, this.database, resultsSelector);
+        return this.query(url, null, this.database, resultsSelector)
+            .fail((response: JQueryXHR) => this.reportError("Failed to get revision bin entries", response.responseText, response.statusText));
     }
 
 }

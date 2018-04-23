@@ -143,8 +143,17 @@ class serverSetup {
             case "Continue":
                 return this.continueSetup().serverUrl();
             case "Unsecured":
-                const portPart = this.unsecureSetup().port() || '8080';
-                return "http://" + this.unsecureSetup().ips()[0].ip() + ':' + portPart;
+                const setupPort = this.unsecureSetup().port() || '8080';
+                const setupAddress = this.unsecureSetup().ip().ip();
+                let host, 
+                    port = setupPort;
+                if (setupAddress === "0.0.0.0") {
+                    host = document.location.hostname;
+                } else {
+                    host = setupAddress;
+                }
+
+                return `http://${host}:${port}`;
                 
             case "LetsEncrypt":
                 return "https://a." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
@@ -190,11 +199,12 @@ class serverSetup {
     }
 
     createIpAutocompleter(usedIps: KnockoutObservableArray<ipEntry>, ip: KnockoutObservable<string>) {
+        const ips = usedIps || ko.observableArray<ipEntry>();
         return ko.pureComputed(()=> {
             const key = ip();
             
             const options = this.localIps();            
-            const usedOptions = usedIps().filter(k => k.ip() !== key).map(x => x.ip());
+            const usedOptions = ips().filter(k => k.ip() !== key).map(x => x.ip());
             
             // here we don't take ip variable into account, so user can easily change 
             // from 127.0.0.1 to 192.168.0.1 etc.            

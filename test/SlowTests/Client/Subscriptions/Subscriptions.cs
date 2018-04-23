@@ -1,24 +1,43 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.Subscriptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow;
 using Xunit;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class SubscriptionsSlow : SubscriptionTestBase
+    public class Subscriptions : SubscriptionTestBase
     {
         [Fact]
-        public async Task SubscriptionSimpleTakeOverStrategy()
+        public async Task CreateSubscription()
         {
-            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionCreationParams = new SubscriptionCreationOptions
+                {
+                    Query = "from People"
+                };
+                var subsName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
+                var subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+                var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subsName);
+
+                Assert.Equal(1, subscriptionsConfig.Count);
+                Assert.Equal(subscriptionCreationParams.Query, subscriptionsConfig[0].Query);
+                Assert.Null(subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint);
+                Assert.Equal(subsName, subscriptionsConfig[0].SubscriptionName);
+                Assert.Equal(subscripitonState.SubscriptionId, subscriptionsConfig[0].SubscriptionId);
+            }
+        }
+
+        [Fact]
+        public async Task BasicSusbscriptionTest()
+        {
             using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
@@ -26,71 +45,268 @@ namespace SlowTests.Client.Subscriptions
                 var lastChangeVector = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions
+                var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
                     Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                {
+                    var list = new BlockingCollection<Thing>();
+                    GC.KeepAlive(subscription.Run(u =>
+                    {
+                        foreach (var item in u.Items)
+                        {
+                            list.Add(item.Result);
+                        }
+                    }));
+                    Thing thing;
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(list.TryTake(out thing, 1000));
+                    }
+                    Assert.False(list.TryTake(out thing, 50));
+                }
+            }
+        }
 
-                Task firstSubscription;
-                using (var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+        [Fact]
+        public async Task SubscriptionStrategyConnectIfFree()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await CreateDocuments(store, 1);
+
+                var lastChangeVector = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector ?? null;
+                await CreateDocuments(store, 5);
+
+                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                {
+                    Query = "from Things",
+                    ChangeVector = lastChangeVector
+                };
+                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                using (
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(20)
+                    }))
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
-                    long counter = 0;
-                    var batchProcessedByFirstSubscription = new AsyncManualResetEvent();
 
-                    acceptedSubscription.AfterAcknowledgment += b =>
+                    var firstSubscriptionTask = acceptedSubscription.Run(u =>
                     {
-                        if (Interlocked.Read(ref counter) == 5)
-                            batchProcessedByFirstSubscription.Set();
-                        return Task.CompletedTask;
-                    };
+                        foreach (var item in u.Items)
+                        {
+                            acceptedSubscriptionList.Add(item.Result);
+                        }
+                    });
+                    GC.KeepAlive(firstSubscriptionTask);
 
-                    firstSubscription = acceptedSubscription.Run(x =>
+
+                    Thing thing;
+
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(acceptedSubscriptionList.TryTake(out thing, 1000));
+                    }
+
+                    Assert.False(acceptedSubscriptionList.TryTake(out thing, 50));
+                    // open second subscription
+                    using (var rejectedSubscription =
+                        store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                        {
+                            Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(2000)
+                        }))
+                    {
+                        // sometime not throwing (on linux) when written like this:
+                        // await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSubscription.StartAsync());
+                        // so we put this in a try block
+                        try
+                        {
+                            await rejectedSubscription.Run(_ => { });
+                            Assert.False(true, "Exepcted a throw here");
+                        }
+                        catch (SubscriptionInUseException)
+                        {
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionWaitStrategy()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await CreateDocuments(store, 1);
+
+                var lastChangeVector = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
+
+                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                {
+                    Query = "from Things",
+                    ChangeVector = lastChangeVector
+                };
+
+                await CreateDocuments(store, 5);
+                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                using (
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                {
+
+                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
+                    var waitingSubscriptionList = new BlockingCollection<Thing>();
+
+                    var ackSentAmre = new AsyncManualResetEvent();
+                    acceptedSubscription.AfterAcknowledgment += b => { ackSentAmre.Set(); return Task.CompletedTask; };
+
+
+                    GC.KeepAlive(acceptedSubscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            acceptedSusbscriptionList.Add(item.Result);
+                        }
+                        Thread.Sleep(20);
+                    }));
+
+                    // wait until we know that connection was established
+
+                    Thing thing;
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 50000));
+                    }
+
+                    Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
+
+                    // open second subscription
+                    using (
+                        var waitingSubscription =
+                            store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                            {
+                                Strategy = SubscriptionOpeningStrategy.WaitForFree,
+                                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
+                            }))
+                    {
+
+                        GC.KeepAlive(waitingSubscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                waitingSubscriptionList.Add(item.Result);
+                            }
+                        }));
+
+                        Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
+
+                        acceptedSubscription.Dispose();
+
+                        await CreateDocuments(store, 5);
+
+                        // wait until we know that connection was established
+                        for (var i = 0; i < 5; i++)
+                        {
+                            Assert.True(waitingSubscriptionList.TryTake(out thing, 3000));
+                        }
+
+                        Assert.False(waitingSubscriptionList.TryTake(out thing, 50));
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionSimpleTakeOverStrategy()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await CreateDocuments(store, 1);
+
+                var lastChangeVector = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector ?? null;
+                await CreateDocuments(store, 5);
+
+                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                {
+                    Query = "from Things",
+                    ChangeVector = lastChangeVector
+                };
+
+                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+
+                using (
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                {
+                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
+                    var takingOverSubscriptionList = new BlockingCollection<Thing>();
+                    long counter = 0;
+
+                    var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
+
+                    acceptedSubscription.AfterAcknowledgment +=
+                        b =>
+                        {
+                            if (Interlocked.Read(ref counter) == 5)
+                                batchProccessedByFirstSubscription.Set();
+                            return Task.CompletedTask;
+                        };
+
+                    var firstRun = acceptedSubscription.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
                             Interlocked.Increment(ref counter);
-                            acceptedSubscriptionList.Add(item.Result);
+                            acceptedSusbscriptionList.Add(item.Result);
                         }
                     });
 
+
+                    Thing thing;
+
                     // wait until we know that connection was established
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.True(acceptedSubscriptionList.TryTake(out _, timeout), "no doc");
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000), "no doc");
                     }
-                    Assert.True(await batchProcessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
-                    Assert.False(acceptedSubscriptionList.TryTake(out _));
-                }
 
-                // open second subscription
-                using (var takingOverSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
-                {
-                    Strategy = SubscriptionOpeningStrategy.TakeOver
-                }))
-                {
-                    var takingOverSubscriptionList = new BlockingCollection<Thing>();
+                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
 
-                    GC.KeepAlive(takingOverSubscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
+                    Assert.False(acceptedSusbscriptionList.TryTake(out thing));
+
+                    // open second subscription
+                    using (var takingOverSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(
+                        new SubscriptionWorkerOptions(subsId)
                         {
-                            takingOverSubscriptionList.Add(item.Result);
-                        }
-                    }));
 
-                    // Wait for the first subscription to finish before creating the documents.
-                    await firstSubscription;
-                    await CreateDocuments(store, 5);
-
-                    // wait until we know that connection was established
-                    for (var i = 0; i < 5; i++)
+                            Strategy = SubscriptionOpeningStrategy.TakeOver
+                        }))
                     {
-                        Assert.True(takingOverSubscriptionList.TryTake(out _, timeout), "no doc takeover");
+                        GC.KeepAlive(takingOverSubscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                takingOverSubscriptionList.Add(item.Result);
+                            }
+                        }));
+
+                        Assert.ThrowsAsync<SubscriptionInUseException>(() => firstRun).Wait();
+
+
+                        await CreateDocuments(store, 5);
+
+                        // wait until we know that connection was established
+                        for (var i = 0; i < 5; i++)
+                        {
+                            Assert.True(takingOverSubscriptionList.TryTake(out thing, 5000), "no doc takeover");
+                        }
+                        Assert.False(takingOverSubscriptionList.TryTake(out thing));
                     }
-                    Assert.False(takingOverSubscriptionList.TryTake(out _));
                 }
             }
         }

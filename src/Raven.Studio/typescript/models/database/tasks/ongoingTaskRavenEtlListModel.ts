@@ -1,10 +1,10 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import ongoingTask = require("models/database/tasks/ongoingTaskModel");
+import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 
-class ongoingTaskRavenEtlListModel extends ongoingTask {
+class ongoingTaskRavenEtlListModel extends ongoingTaskListModel {
     editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
@@ -14,7 +14,7 @@ class ongoingTaskRavenEtlListModel extends ongoingTask {
 
     connectionStringsUrl: string;
     
-    showRavenEtlDetails = ko.observable(false);
+    showDetails = ko.observable(false);
 
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) {
         super();
@@ -46,7 +46,7 @@ class ongoingTaskRavenEtlListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showRavenEtlDetails.toggle();
+        this.showDetails.toggle();
     }
 
 }

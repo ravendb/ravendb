@@ -243,7 +243,7 @@ namespace Raven.Server.Commercial
             }
 
             // if it is about to expire, we need to refresh
-            if ((cert.NotAfter - DateTime.UtcNow).TotalDays < 14)
+            if ((cert.NotAfter - DateTime.UtcNow).TotalDays <= 30)
                 return false;
 
             var rsa = new RSACryptoServiceProvider(4096);
@@ -315,7 +315,14 @@ namespace Raven.Server.Commercial
 
             private void RememberNonce(HttpResponseMessage response)
             {
-                _nonce = response.Headers.GetValues("Replay-Nonce").First();
+                try
+                {
+                    _nonce = response.Headers.GetValues("Replay-Nonce").First();
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Cannot remember nonce", e);
+                }
             }
 
             public async Task<RegistrationResponse> RegisterAsync(NewRegistrationRequest request, CancellationToken token = default (CancellationToken))
@@ -434,25 +441,42 @@ namespace Raven.Server.Commercial
 
             private async Task<TResult> SendAsync<TResult>(HttpMethod method, Uri uri, object message, CancellationToken token) where TResult : class
             {
-                var nonceHeader = new AcmeHeader
+                var hasNonce = _nonce != null;
+                HttpResponseMessage response;
+
+                do
                 {
-                    Nonce = _nonce
-                };
+                    var nonceHeader = new AcmeHeader
+                    {
+                        Nonce = _nonce
+                    };
 
-                var request = new HttpRequestMessage(method, uri);
+                    var request = new HttpRequestMessage(method, uri);
 
-                if (message != null)
-                {
-                    var encodedMessage = _jws.Encode(message, nonceHeader);
-                    var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
+                    if (message != null)
+                    {
+                        var encodedMessage = _jws.Encode(message, nonceHeader);
+                        var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
 
-                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                }
+                        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                    }
 
-                var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                    response = await _client.SendAsync(request, token).ConfigureAwait(false);
 
-                RememberNonce(response);
+                    if (response.Headers.TryGetValues("Replay-Nonce", out var vals))
+                        _nonce = vals.FirstOrDefault();
+                    else
+                        _nonce = null;
 
+                    if (response.IsSuccessStatusCode || hasNonce || _nonce == null)
+                    {
+                        break; // either successful or no point in retry
+                    }
+
+                    hasNonce = true; // we only allow it once
+
+                } while (true);
+                
                 if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
                 {
                     var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);

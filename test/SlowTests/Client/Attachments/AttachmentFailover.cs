@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Client.Attachments;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -12,6 +11,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -157,7 +157,16 @@ namespace SlowTests.Client.Attachments
                     await task;
                     var attachment = command.Result;
                     Assert.Equal("File", attachment.Name);
-                    Assert.Equal(size, stream.Position);
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(size, stream.Position);
+                    else
+                    {
+                        // on Posix the position is set to initial one automatically
+                        // https://github.com/dotnet/corefx/issues/23782
+                        Assert.Equal(0, stream.Position);
+                    }
+
                     Assert.Equal(size, attachment.Size);
                     Assert.Equal("application/pdf", attachment.ContentType);
                     Assert.Equal(hash, attachment.Hash);

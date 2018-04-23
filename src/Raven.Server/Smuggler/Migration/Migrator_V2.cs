@@ -56,10 +56,15 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateDocuments(string lastEtag)
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs?etag={lastEtag}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs?etag={lastEtag}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                return responseMessage;
+            });
+            
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -75,7 +80,9 @@ namespace Raven.Server.Smuggler.Migration
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
+#pragma warning disable 618
                     ReadLegacyEtag = true
+#pragma warning restore 618
                 };
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
@@ -153,9 +160,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<BlittableJsonReaderArray> GetAttachmentsList(string lastEtag, TransactionOperationContext context)
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/databases/{DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                return responseMessage;
+            });
+            
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -177,9 +189,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<Stream> GetAttachmentStream(string attachmentKey)
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/static/{Uri.EscapeDataString(attachmentKey)}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/databases/{DatabaseName}/static/{Uri.EscapeDataString(attachmentKey)}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                return responseMessage;
+            });
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the attachment was deleted
@@ -199,10 +216,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateIndexes()
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/indexes";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await RunWithAuthRetry(async () =>
+            {
+                var url = $"{ServerUrl}/databases/{DatabaseName}/indexes";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                return responseMessage;
+            });
+            
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();

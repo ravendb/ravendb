@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Posix.macOS;
+using Voron.Platform.Posix;
 
 namespace Sparrow.Platform
 {
@@ -14,13 +16,22 @@ namespace Sparrow.Platform
 
         public static readonly bool RunningOnMacOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
+        public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
         public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
 
-        public static int GetCurrentThreadId()
+        public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
+
+        public static ulong GetCurrentThreadId()
         {
-            return RunningOnPosix ?
-                    Syscall.gettid() :
-                    (int)Win32ThreadsMethods.GetCurrentThreadId();
+            if (RunningOnPosix == false)
+                return Win32ThreadsMethods.GetCurrentThreadId();
+
+            if (RunningOnLinux)
+                return (ulong)Syscall.syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
+
+            // OSX
+            return macSyscall.pthread_self();
         }
 
         private static bool IsWindows8OrNewer()

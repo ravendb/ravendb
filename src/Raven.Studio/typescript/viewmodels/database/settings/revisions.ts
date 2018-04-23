@@ -41,10 +41,10 @@ class revisions extends viewModelBase {
             const selectedCount = this.selectedItems().length;
             const totalCount = this.perCollectionConfigurations().length + (this.defaultConfiguration() ? 1 : 0);
             if (totalCount && selectedCount === totalCount)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
     }
 

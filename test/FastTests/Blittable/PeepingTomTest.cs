@@ -46,8 +46,7 @@ namespace FastTests.Blittable
 
         public void PeepingTomStreamTest(int originalSize, int chunkSizeToRead, int offset, JsonOperationContext context)
         {
-            var buffer = new byte[originalSize + offset];
-
+           
             var bytes = new byte[originalSize];
             for (var i = 0; i < bytes.Length; i++)
             {
@@ -67,6 +66,7 @@ namespace FastTests.Blittable
                     int read;
                     do
                     {
+                        var buffer = new byte[originalSize + offset];
                         read = peeping.Read(buffer, offset, chunkSizeToRead);
                         totalRead += read;
                         Assert.True(read <= chunkSizeToRead);
@@ -75,7 +75,6 @@ namespace FastTests.Blittable
                 } while (totalRead < originalSize);
 
                 Assert.Equal(originalSize, totalRead);
-
                 var peepWindow = peeping.PeepInReadStream();
                 var length = peepWindow.Length;
 
@@ -84,6 +83,12 @@ namespace FastTests.Blittable
 
                 var expectedLength = originalSize < PeepingTomStream.BufferWindowSize ? originalSize : PeepingTomStream.BufferWindowSize;
 
+                if (expectedLength != length)
+                {
+                    var expected = System.Text.Encoding.UTF8.GetString(bytes, bytes.Length - expectedLength, expectedLength);
+                    var actual = System.Text.Encoding.UTF8.GetString(peepWindow);
+                    Assert.Equal(expected, actual);
+                }
                 Assert.Equal(expectedLength, length);
 
                 for (var i = 0; i < peepWindow.Length; i++)

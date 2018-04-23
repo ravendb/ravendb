@@ -29,6 +29,7 @@ namespace Raven.Server.NotificationCenter
             Options = new NotificationCenterOptions();
             Paging = new Paging(this, _notificationsStorage, database);
             RequestLatency = new RequestLatency(this, _notificationsStorage, database);
+            EtlNotifications = new EtlNotifications(this, _notificationsStorage, _database);
         }
 
         public bool IsInitialized { get; set; }
@@ -46,6 +47,7 @@ namespace Raven.Server.NotificationCenter
 
         public readonly Paging Paging;
         public readonly RequestLatency RequestLatency;
+        public readonly EtlNotifications EtlNotifications;
 
         public readonly NotificationCenterOptions Options;
 

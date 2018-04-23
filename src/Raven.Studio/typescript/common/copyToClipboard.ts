@@ -13,7 +13,9 @@ class copyToClipboard {
             const success = document.execCommand("copy");
 
             if (success) {
-                messagePublisher.reportSuccess(successMessage);
+                if (successMessage) {
+                    messagePublisher.reportSuccess(successMessage);
+                }
             } else {
                 messagePublisher.reportWarning("Unable to copy to clipboard");
             }

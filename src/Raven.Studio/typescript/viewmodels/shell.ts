@@ -7,6 +7,7 @@ import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
+import accessManager = require("common/shell/accessManager");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import favNodeBadge = require("common/shell/favNodeBadge");
 import searchBox = require("common/shell/searchBox");
@@ -18,6 +19,7 @@ import allRoutes = require("common/shell/routes");
 import popoverUtils = require("common/popoverUtils");
 import registration = require("viewmodels/shell/registration");
 import collection = require("models/database/documents/collection");
+import constants = require("common/constants/constants");
 
 import appUrl = require("common/appUrl");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
@@ -29,7 +31,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
@@ -54,6 +55,7 @@ class shell extends viewModelBase {
     collectionsTracker = collectionsTracker.default;
     footer = footer.default;
     clusterManager = clusterTopologyManager.default;
+    accessManager = accessManager.default;
     continueTest = continueTest.default;
     static buildInfo = buildInfo;
 
@@ -74,15 +76,17 @@ class shell extends viewModelBase {
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
     favNodeBadge = new favNodeBadge();
+    
+    static instance: shell;
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
-    trackingTask = $.Deferred();
+    trackingTask = $.Deferred<boolean>();
 
     studioLoadingFakeRequest: requestExecution;
 
     private onBootstrapFinishedTask = $.Deferred<void>();
     
-    showConnectionLost = ko.pureComputed(() => {
+    static showConnectionLost = ko.pureComputed(() => {
         const serverWideWebSocket = changesContext.default.serverNotifications();
         
         if (!serverWideWebSocket) {
@@ -109,7 +113,7 @@ class shell extends viewModelBase {
             viewModelBase.clientVersion(v.Version));
 
         buildInfo.serverBuildVersion.subscribe(buildVersionDto => {
-            this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
+            this.initAnalytics([ buildVersionDto ]);        
         });
 
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
@@ -137,7 +141,10 @@ class shell extends viewModelBase {
         });
 
         $.when<any>(licenseTask, topologyTask, clientCertifiateTask)
-            .done(() => {
+            .done(([license]: [Raven.Server.Commercial.LicenseStatus], 
+                   [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],
+                   [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition]) => {
+            
                 changesContext.default
                     .connectServerWideNotificationCenter();
 
@@ -153,10 +160,27 @@ class shell extends viewModelBase {
                 this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
 
                 this.connectToRavenServer();
+                
+                // "http"
+                if (location.protocol === "http:") {
+                    this.accessManager.securityClearance("ClusterAdmin");
+                } 
+                else {
+                    // "https"
+                    if (certificate) {
+                        this.accessManager.securityClearance(certificate.SecurityClearance);
+                    }
+                    else {
+                        this.accessManager.securityClearance("ValidUser");
+                    }
+                }
             })
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 
         this.setupRouting();
+        
+        // we await here only for certificate task, as downloading license can take longer
+        return clientCertifiateTask;
     }
 
     private setupRouting() {
@@ -211,7 +235,9 @@ class shell extends viewModelBase {
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
-        this.favNodeBadge.initialize();
+        this.favNodeBadge.initialize(); 
+        
+        notificationCenter.instance.initialize();
     }
 
     compositionComplete() {
@@ -221,7 +247,7 @@ class shell extends viewModelBase {
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
-
+        
         this.initializeShellComponents();
 
         this.onBootstrapFinishedTask
@@ -276,31 +302,8 @@ class shell extends viewModelBase {
         return false;
     }
 
-    loadServerConfig(): JQueryPromise<void> {
-        const deferred = $.Deferred<void>().resolve();
-
-        //TODO: it is temporary fix:
-        
-        accessHelper.isGlobalAdmin(true);
-        accessHelper.canReadWriteSettings(true);
-        accessHelper.canReadSettings(true);
-        
-        return deferred;
-    }
-
     connectToRavenServer() {
-        const serverConfigsLoadTask: JQueryPromise<void> = this.loadServerConfig();
-        const managerTask = this.databasesManager.init();
-        return $.when<any>(serverConfigsLoadTask, managerTask);
-    }
-
-    private handleRavenConnectionFailure(result: any) {
-        sys.log("Unable to connect to Raven.", result);
-        const tryAgain = "Try again";
-        this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain])
-            .done(() => {
-                this.connectToRavenServer();
-            });
+        return this.databasesManager.init();
     }
 
     fetchServerBuildVersion() {
@@ -314,7 +317,7 @@ class shell extends viewModelBase {
                 buildInfo.serverBuildVersion(serverBuildResult);
 
                 const currentBuildVersion = serverBuildResult.BuildVersion;
-                if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+                if (currentBuildVersion !== constants.DEV_BUILD_NUMBER) {
                     buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
             });
@@ -332,22 +335,29 @@ class shell extends viewModelBase {
         this.navigate(this.appUrls.adminSettingsCluster());
     }
 
-    private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+    private initAnalytics(buildVersionResult: [serverBuildVersionDto]) {
         if (eventsCollector.gaDefined()) {
-            if (config == null || !("SendUsageStats" in config)) {
-                // ask user about GA
-                this.displayUsageStatsInfo(true);
-
-                this.trackingTask.done((accepted: boolean) => {
-                    this.displayUsageStatsInfo(false);
-
-                    if (accepted) {
-                        this.configureAnalytics(true, buildVersionResult);
-                    }
-                });
-            } else {
-                this.configureAnalytics(config.SendUsageStats, buildVersionResult);
-            }
+            
+            studioSettings.default.globalSettings()
+                .done(settings => {
+                    const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
+                    if (_.isUndefined(shouldTraceUsageMetrics)) {
+                    // ask user about GA
+                    this.displayUsageStatsInfo(true);
+    
+                    this.trackingTask.done((accepted: boolean) => {
+                        this.displayUsageStatsInfo(false);
+    
+                        if (accepted) {
+                            this.configureAnalytics(true, buildVersionResult);
+                        }
+                        
+                        settings.sendUsageStats.setValue(accepted);
+                    });
+                } else {
+                    this.configureAnalytics(shouldTraceUsageMetrics, buildVersionResult);
+                }
+            });
         } else {
             // user has uBlock etc?
             this.configureAnalytics(false, buildVersionResult);
@@ -364,8 +374,8 @@ class shell extends viewModelBase {
 
     private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
         const currentBuildVersion = buildVersionResult.BuildVersion;
-        const shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
-        if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+        const shouldTrack = track && currentBuildVersion !== constants.DEV_BUILD_NUMBER;
+        if (currentBuildVersion !== constants.DEV_BUILD_NUMBER) {
             buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         }
 

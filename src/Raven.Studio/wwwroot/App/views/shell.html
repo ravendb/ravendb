@@ -192,7 +192,7 @@
 
 <script type="text/html" id="intermediateMenuItem">
     <li class="arrow-right">
-        <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }">
+        <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }, visible: item.nav">
             <i data-bind="css: item.css"></i>
             <span data-bind="text: item.title"></span>
         </a>
@@ -328,7 +328,7 @@
         </div>
     </div>
 </footer>
-<div class="connection-lost" data-bind="css: { show: $root.showConnectionLost }">
+<div class="connection-lost" data-bind="css: { show: $root.constructor.showConnectionLost }">
     <div class="absolute-center">
         <h3>Connection lost</h3>
         <img src="Content/img/connection-lost.svg" width="260" />

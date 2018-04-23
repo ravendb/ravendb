@@ -1,7 +1,7 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import accessHelper = require("viewmodels/shell/accessHelper");
+import accessManager = require("common/shell/accessManager");
 import deleteDatabaseConfirm = require("viewmodels/resources/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableDatabaseToggleConfirm = require("viewmodels/resources/disableDatabaseToggleConfirm");
@@ -14,7 +14,6 @@ import changesContext = require("common/changesContext");
 import compactDatabaseCommand = require("commands/resources/compactDatabaseCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
-
 import databasesInfo = require("models/resources/info/databasesInfo");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
@@ -49,8 +48,9 @@ class databases extends viewModelBase {
     
     statsSubscription: changeSubscription;
 
-    isGlobalAdmin = accessHelper.isGlobalAdmin;
-    
+    accessManager = accessManager.default.databasesView;
+    isAboveUserAccess = accessManager.default.operatorAndAbove;
+   
     constructor() {
         super();
 
@@ -71,10 +71,10 @@ class databases extends viewModelBase {
             const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
             const selectedCount = this.selectedDatabases().length;
             if (databases.length && selectedCount === databases.length)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
     }
 

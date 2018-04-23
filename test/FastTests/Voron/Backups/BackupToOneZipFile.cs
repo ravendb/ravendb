@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Voron.Impl.Backup;
+using Voron.Util.Settings;
 
 namespace FastTests.Voron.Backups
 {
@@ -18,8 +19,7 @@ namespace FastTests.Voron.Backups
         [Fact(Skip = "Should add database record to backup and restore")]
         public async Task FullBackupToOneZipFile()
         {
-            var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempFileName);
+            var tempFileName = NewDataPath(forceCreateDir: true);
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
@@ -68,8 +68,10 @@ namespace FastTests.Voron.Backups
                 database.DocumentsStorage.Environment.Options.ManualFlushing = true;
                 database.DocumentsStorage.Environment.FlushLogToDataFile();
 
-                database.FullBackupTo(Path.Combine(tempFileName, "backup-test.backup"));
-                BackupMethods.Full.Restore(Path.Combine(tempFileName, "backup-test.backup"), Path.Combine(tempFileName, "backup-test.data"));
+                var voronTempFileName = new VoronPathSetting(tempFileName);
+
+                database.FullBackupTo(voronTempFileName.Combine("backup-test.backup").FullPath);
+                BackupMethods.Full.Restore(voronTempFileName.Combine("backup-test.backup"), voronTempFileName.Combine("backup-test.data"));
             }
             using (CreatePersistentDocumentDatabase(Path.Combine(tempFileName, "backup-test.data"), out var database))
             {

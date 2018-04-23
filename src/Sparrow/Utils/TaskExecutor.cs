@@ -73,12 +73,10 @@ namespace Sparrow.Utils
             }
         }
 
-        private static void TaskCompletionCallback(object state) => ((TaskCompletionSource<object>)state).TrySetResult(null);
-
         public static void CompleteAndReplace(ref TaskCompletionSource<object> task)
         {
             var task2 = Interlocked.Exchange(ref task, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
-            Execute(TaskCompletionCallback, task2);
+            task2.TrySetResult(null);
         }
 
         public static void CompleteReplaceAndExecute(ref TaskCompletionSource<object> task, Action act)
@@ -94,7 +92,7 @@ namespace Sparrow.Utils
 
         public static void Complete(TaskCompletionSource<object> task)
         {
-            Execute(TaskCompletionCallback, task);
+            task.TrySetResult(null);
         }
 
         private class RunOnce

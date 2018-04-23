@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Subscriptions
             _options = options;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionWorker<T>>(dbName);
             if (string.IsNullOrEmpty(options.SubscriptionName))
-                throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionName",nameof(options));
+                throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionName", nameof(options));
             _store = documentStore;
             _dbName = dbName ?? documentStore.Database;
 
@@ -118,14 +118,16 @@ namespace Raven.Client.Documents.Subscriptions
 
         public Task Run(Action<SubscriptionBatch<T>> processDocuments, CancellationToken ct = default(CancellationToken))
         {
-            if (processDocuments == null) throw new ArgumentNullException(nameof(processDocuments));
+            if (processDocuments == null)
+                throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (null, processDocuments);
             return Run(ct);
         }
 
         public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments, CancellationToken ct = default(CancellationToken))
         {
-            if (processDocuments == null) throw new ArgumentNullException(nameof(processDocuments));
+            if (processDocuments == null)
+                throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (processDocuments, null);
             return Run(ct);
         }
@@ -137,9 +139,9 @@ namespace Raven.Client.Documents.Subscriptions
 
             if (ct != default(CancellationToken))
             {
-                _processingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);    
+                _processingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             }
-            
+
             return _subscriptionTask = RunSubscriptionAsync();
 
         }
@@ -183,7 +185,7 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
                 var serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
@@ -222,7 +224,7 @@ namespace Raven.Client.Documents.Subscriptions
                             await _stream.FlushAsync().ConfigureAwait(false);
                             throw new InvalidOperationException($"Can't connect to database {databaseName} because: {reply.Message}");
                     }
-                        
+
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 
@@ -363,7 +365,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         }
 
                                         if (_options.IgnoreSubscriberErrors == false)
-                                            throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'",ex);
+                                            throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
                                     }
 
                                 }
@@ -378,7 +380,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 catch (ObjectDisposedException)
                                 {
                                     //if this happens, this means we are disposing, so don't care..
-                                    //(this peace of code happens asynchronously to external using(tcpStream) statement)
+                                    //(this piece of code happens asynchronously to external using(tcpStream) statement)
                                 }
                             });
                         }
@@ -387,7 +389,10 @@ namespace Raven.Client.Documents.Subscriptions
             }
             catch (OperationCanceledException)
             {
-                // this is thrown when shutting down, it
+                if (_disposed == false)
+                    throw;
+
+                // otherwise this is thrown when shutting down, it
                 // isn't an error, so we don't need to treat
                 // it as such
             }
@@ -501,7 +506,11 @@ namespace Raven.Client.Documents.Subscriptions
                     try
                     {
                         if (_processingCts.Token.IsCancellationRequested)
+                        {
+                            if (_disposed == false)
+                                throw;
                             return;
+                        }
 
                         if (_logger.IsInfoEnabled)
                         {
@@ -544,10 +553,10 @@ namespace Raven.Client.Documents.Subscriptions
             }
 
             if ((DateTime.Now - LastConnectionFailure) > _options.MaxErroneousPeriod)
-            {                
+            {
                 throw new SubscriptionInvalidStateException(
                     $"Subscription connection was in invalid state for more than {_options.MaxErroneousPeriod} and therefore will be terminated");
-                
+
             }
 
 
@@ -559,7 +568,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 case SubscriptionDoesNotBelongToNodeException se:
                     AssertLastConnectionFailure();
-                    
+
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
 
                     if (se.AppropriateNode == null)
@@ -569,7 +578,7 @@ namespace Raven.Client.Documents.Subscriptions
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
-                    
+
                     return true;
                 case SubscriptionChangeVectorUpdateConcurrencyException ce:
                     return true;

@@ -27,6 +27,9 @@ namespace Voron
         public const string RecyclableJournalFileNamePrefix = "recyclable-journal";
 
         private ExceptionDispatchInfo _catastrophicFailure;
+
+        [ThreadStatic]
+        private static bool _skipCatastrophicFailureAssertion;
         private readonly CatastrophicFailureNotification _catastrophicFailureNotification;
 
         public VoronPathSetting TempPath { get; }
@@ -124,7 +127,23 @@ namespace Voron
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
 
-        public long MaxScratchBufferSize { get; set; }
+        public long MaxScratchBufferSize
+        {
+            get => _maxScratchBufferSize;
+            set
+            {
+                if (value < 0)
+                    throw new InvalidOperationException($"Cannot set {nameof(MaxScratchBufferSize)} to negative value: {value}");
+
+                if (_forceUsing32BitsPager && _maxScratchBufferSize > 0)
+                {
+                    _maxScratchBufferSize = Math.Min(value, _maxScratchBufferSize);
+                    return;
+                }
+
+                _maxScratchBufferSize = value;
+            }
+        }
 
         public bool OwnsPagers { get; set; }
 
@@ -186,9 +205,9 @@ namespace Voron
 
             IoMetrics = new IoMetrics(256, 256, ioChangesNotifications);
 
-            _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath.FullPath);
+            _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
 
-            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((e) =>
+            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, e) =>
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Catastrophic failure in {this}", e);
@@ -204,12 +223,27 @@ namespace Voron
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
         {
             _catastrophicFailure = exception;
-            _catastrophicFailureNotification.RaiseNotificationOnce(exception.SourceException);
+            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, exception.SourceException);
         }
+
+        public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
 
         internal void AssertNoCatastrophicFailure()
         {
-            _catastrophicFailure?.Throw(); // force re-throw of error
+            if (_catastrophicFailure == null)
+                return;
+
+            if (_skipCatastrophicFailureAssertion)
+                return;
+
+            _catastrophicFailure.Throw(); // force re-throw of error
+        }
+
+        public IDisposable SkipCatastrophicFailureAssertion()
+        {
+            _skipCatastrophicFailureAssertion = true;
+
+            return new DisposableAction(() => { _skipCatastrophicFailureAssertion = false; });
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -227,7 +261,7 @@ namespace Voron
         {
             var pathSetting = new VoronPathSetting(path);
             var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
-            var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : null;
+            var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : pathSetting.Combine("Journals");
 
             return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification);
         }
@@ -289,8 +323,11 @@ namespace Voron
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
                 : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification)
             {
+                Debug.Assert(basePath != null);
+                Debug.Assert(journalPath != null);
+
                 _basePath = basePath;
-                _journalPath = journalPath ?? basePath;
+                _journalPath = journalPath;
 
                 if (Directory.Exists(_basePath.FullPath) == false)
                     Directory.CreateDirectory(_basePath.FullPath);
@@ -367,15 +404,11 @@ namespace Voron
                 return _basePath.FullPath;
             }
 
-            public override AbstractPager DataPager
-            {
-                get { return _dataPager.Value; }
-            }
+            public override AbstractPager DataPager => _dataPager.Value;
 
-            public override VoronPathSetting BasePath
-            {
-                get { return _basePath; }
-            }
+            public override VoronPathSetting BasePath => _basePath;
+
+            public VoronPathSetting JournalPath => _journalPath;
 
             public override AbstractPager OpenPager(VoronPathSetting filename)
             {
@@ -623,6 +656,8 @@ namespace Voron
                     // isn't paged to disk
                     pager.LockMemory = true;
                     pager.DoNotConsiderMemoryLockFailureAsCatastrophicError = DoNotConsiderMemoryLockFailureAsCatastrophicError;
+
+                    pager.SetPagerState(pager.PagerState); // with LockMemory = true set
                 }
                 return pager;
             }
@@ -1044,6 +1079,8 @@ namespace Voron
         private int _numOfConcurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlashInSec;
         public long CompressTxAboveSizeInBytes;
+        private Guid _environmentId;
+        private long _maxScratchBufferSize;
 
         public virtual void SetPosixOptions()
         {
@@ -1107,6 +1144,11 @@ namespace Voron
                     // nothing we can do about it
                 }
             }
+        }
+
+        public void SetEnvironmentId(Guid environmentId)
+        {
+            _environmentId = environmentId;
         }
     }
 }

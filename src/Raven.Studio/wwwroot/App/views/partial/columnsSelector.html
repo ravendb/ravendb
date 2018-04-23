@@ -28,6 +28,10 @@
         </ul>
     </div>
     <div class="flex-footer">
+        <div class="error-message bg-danger padding padding-sm margin margin-bottom margin-bottom-sm" data-bind="visible: !hasAtLeastOneColumn()">
+            Please select at least one column
+        </div>
+        
         <div class="column-add-new active" data-bind="visible: customColumnForm.formVisible, validationOptions: { insertMessages: false }">
             <div class="error-message bg-danger padding padding-sm" data-bind="visible: customColumnForm.parseError">
                 Binding parse error:<br />
@@ -58,11 +62,11 @@
         <div class="clearfix">
             <div class="pull-left">
                 <!-- TODO <button class="btn btn-sm">Set as default</button>-->
-                <button class="btn btn-primary btn-sm" data-bind="click: showAddCustomColumnForm"><i class="icon-plus"></i> <span>Add custom column</span></button>
+                <button class="btn btn-primary btn-sm" data-bind="click: showAddCustomColumnForm"><i class="icon-plus"></i> <span>Add a custom column</span></button>
             </div>
             <div class="pull-right">
                 <button class="btn btn-sm close-panel">Close</button>
-                <button class="btn btn-success btn-sm close-panel" data-bind="click: applyColumns"><i class="icon-save"></i> <span>Apply</span></button>
+                <button class="btn btn-success btn-sm close-panel" data-bind="click: applyColumns, enable: hasAtLeastOneColumn"><i class="icon-save"></i> <span>Apply</span></button>
             </div>
         </div>
     </div>

@@ -1,16 +1,16 @@
-﻿using Sparrow;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
-using Sparrow.Logging;
-using Sparrow.LowMemory;
+using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Impl;
 using Voron.Global;
+using Voron.Impl;
+using Xunit;
 
 namespace FastTests.Voron
 {
@@ -20,17 +20,9 @@ namespace FastTests.Voron
         public StorageEnvironment Env => _storageEnvironment.Value;
 
         protected StorageEnvironmentOptions Options;
-        protected readonly string DataDir = GenerateDataDir();
+        protected readonly string DataDir = RavenTestHelper.NewDataPath(nameof(StorageTest), 0);
 
-        private ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-        protected ByteStringContext Allocator => _allocator;
-
-        public static string GenerateDataDir()
-        {
-            var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempFileName);
-            return tempFileName;
-        }
+        protected ByteStringContext Allocator { get; } = new ByteStringContext(SharedMultipleUseFlag.None);
 
         protected StorageTest(StorageEnvironmentOptions options)
         {
@@ -40,7 +32,7 @@ namespace FastTests.Voron
 
         protected StorageTest()
         {
-            DeleteDirectory(DataDir);
+            IOExtensions.DeleteDirectory(DataDir);
             Options = StorageEnvironmentOptions.CreateMemoryOnly();
 
             Configure(Options);
@@ -52,25 +44,24 @@ namespace FastTests.Voron
             StopDatabase();
 
             StartDatabase();
-            GC.KeepAlive(_storageEnvironment.Value); // force initiliazation
         }
 
         protected void RequireFileBasedPager()
         {
-            if(_storageEnvironment.IsValueCreated)
+            if (_storageEnvironment.IsValueCreated)
                 throw new InvalidOperationException("Too late");
             if (Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                 return;
-            DeleteDirectory(DataDir);
+
+            IOExtensions.DeleteDirectory(DataDir);
             Options = StorageEnvironmentOptions.ForPath(DataDir);
             Configure(Options);
         }
 
         protected void StartDatabase()
         {
-            // have to create a new instance
-            _storageEnvironment = new Lazy<StorageEnvironment>(() => 
-            new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
+            _storageEnvironment = new Lazy<StorageEnvironment>(() => new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
+            GC.KeepAlive(_storageEnvironment.Value); // force creation
         }
 
         protected void StopDatabase()
@@ -81,42 +72,6 @@ namespace FastTests.Voron
             _storageEnvironment.Value.Dispose();
 
             Options.OwnsPagers = ownsPagers;
-        }
-
-        public static void DeleteDirectory(string dir)
-        {
-            if (Directory.Exists(dir) == false)
-                return;
-
-            for (int i = 0; i < 10; i++)
-            {
-                try
-                {
-                    Directory.Delete(dir, true);
-                    return;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    return;
-                }
-                catch (Exception)
-                {
-                    Thread.Sleep(13);
-                }
-            }
-
-            try
-            {
-                Directory.Delete(dir, true);
-            }
-            catch (DirectoryNotFoundException)
-            {
-                
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Could not delete " + dir, e);
-            }
         }
 
         protected virtual void Configure(StorageEnvironmentOptions options)
@@ -131,15 +86,29 @@ namespace FastTests.Voron
 
         public virtual void Dispose()
         {
-            if (_storageEnvironment.IsValueCreated)
-                _storageEnvironment.Value.Dispose();
-            Options.Dispose();
-            _allocator.Dispose();
-            DeleteDirectory(DataDir);
+            var aggregator = new ExceptionAggregator("Could not dispose Storage test.");
 
-            _storageEnvironment = null;
-            Options = null;
-            _allocator = null;
+            aggregator.Execute(() =>
+            {
+                if (_storageEnvironment.IsValueCreated)
+                    _storageEnvironment.Value.Dispose();
+
+                _storageEnvironment = null;
+            });
+
+            aggregator.Execute(() =>
+            {
+                Options?.Dispose();
+                Options = null;
+            });
+
+            aggregator.Execute(() =>
+            {
+                IOExtensions.DeleteDirectory(DataDir);
+            });
+
+            aggregator.ThrowIfNeeded();
+
             GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();
         }
@@ -161,29 +130,28 @@ namespace FastTests.Voron
             return results;
         }
 
-        protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, string key)
+        protected Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, string key)
         {
-            Slice s;
-            Slice.From(txh.Allocator, key, out s);
-            return ReadKey(txh, tree, s);
+            using (Slice.From(txh.Allocator, key, out var s))
+                return ReadKey(txh, tree, s);
         }
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)
         {
-            TreeNodeHeader* node;
-            tree.FindPageFor(key, out node);
+            tree.FindPageFor(key, out var node);
 
             if (node == null)
                 return null;
 
-            Slice item1;
-            TreeNodeHeader.ToSlicePtr(txh.Allocator, node, out item1);
+            TreeNodeHeader.ToSlicePtr(txh.Allocator, node, out var item1);
 
-            if (!SliceComparer.Equals(item1,key))
+            if (SliceComparer.CompareInline(item1, key) != 0)
                 return null;
-            Slice item2;
-            Slice.External(txh.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort) node->DataSize, out item2);
+
+            Slice.External(txh.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort)node->DataSize, ByteStringType.Immutable, out var item2);
             return Tuple.Create(item1, item2);
         }
+
+
     }
 }

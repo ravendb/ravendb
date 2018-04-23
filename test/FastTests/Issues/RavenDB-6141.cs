@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using FastTests.Utils;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -9,15 +8,23 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6141 : IDisposable
+    public class RavenDB_6141 : RavenTestBase
     {
         private readonly string _rootPathString = LinuxTestUtils.RunningOnPosix ? @"/" : @"C:\";
 
+        private readonly string _emptySettingsDir;
         private readonly string _emptySettingFile;
 
         public RavenDB_6141()
         {
-            _emptySettingFile = Path.Combine(Path.GetTempPath(), "settings.json");
+            _emptySettingsDir = NewDataPath(prefix: nameof(RavenDB_6141));
+            _emptySettingFile = Path.Combine(_emptySettingsDir, "settings.json");
+
+            if (Directory.Exists(_emptySettingsDir))
+                IOExtensions.DeleteDirectory(_emptySettingsDir);
+
+            Directory.CreateDirectory(_emptySettingsDir);
+
             using (var f = File.CreateText(_emptySettingFile))
                 f.Write("{}");
         }
@@ -40,7 +47,7 @@ namespace FastTests.Issues
 
             // actual configuration is created in the following manner
 
-            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server), "foo",
+            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server, _emptySettingFile), "foo",
                 ResourceType.Database);
 
             config.Initialize();
@@ -135,10 +142,12 @@ namespace FastTests.Issues
             Assert.False(new PathSetting("Items/").FullPath.EndsWith(@"/"));
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            if (_emptySettingFile != null)
-                IOExtensions.DeleteFile(_emptySettingFile);
+            if (Directory.Exists(_emptySettingsDir))
+                IOExtensions.DeleteDirectory(_emptySettingsDir);
+
+            base.Dispose();
         }
     }
 }

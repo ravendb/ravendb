@@ -11,9 +11,11 @@ param(
     [switch]$JustNuget,
     [switch]$Debug,
     [switch]$DryRunVersionBump = $false,
+    [switch]$DryRunSign = $false,
     [switch]$Help)
 
 $ErrorActionPreference = "Stop"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 . '.\scripts\checkLastExitCode.ps1'
 . '.\scripts\checkPrerequisites.ps1'
@@ -30,6 +32,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\target.ps1'
 . '.\scripts\help.ps1'
 . '.\scripts\sign.ps1'
+. '.\scripts\docker.ps1'
 
 if ($Help) {
     Help
@@ -98,7 +101,9 @@ if ($targets.Count -eq 0) {
 
 New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
-CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
+CleanSrcDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
+
+LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR
 
 $versionObj = SetVersionInfo
 $version = $versionObj.Version
@@ -137,13 +142,13 @@ if ($JustStudio) {
     exit 0
 }
 
-Foreach ($spec in $targets) {
-    $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
+Foreach ($target in $targets) {
+    $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $spec $Debug
-    BuildTool rvn $RVN_SRC_DIR $specOutDir $spec $Debug
-    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $spec $Debug
+    BuildServer $SERVER_SRC_DIR $specOutDir $target $Debug
+    BuildTool rvn $RVN_SRC_DIR $specOutDir $target $Debug
+    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $Debug
     
     $specOutDirs = @{
         "Main" = $specOutDir;
@@ -155,23 +160,27 @@ Foreach ($spec in $targets) {
         "Drtools" = $([io.path]::combine($specOutDir, "drtools"));
     }
 
-    $buildOptions = @{
-        "DontBuildStudio" = !!$DontBuildStudio;
+    $packOpts = @{
+        "Target" = $target;
+        "SkipCopyStudioPackage" = !!$DontBuildStudio;
+        "DryRunSign" = $DryRunSign;
+        "VersionInfo" = $versionObj;
+        "OutDirs" = $specOutDirs;
     }
     
     if ($buildNumber -ne $DEV_BUILD_NUMBER -or $buildType -eq 'nightly') {
-        if ($spec.IsUnix -eq $False) {
+        if ($target.IsUnix -eq $False) {
             $serverPath = [io.path]::combine($specOutDirs.Server, "Raven.Server.exe");
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
             $drtoolsPath = [io.path]::combine($specOutDirs.Drtools, "Voron.Recovery.exe");
             
-            SignFile $PROJECT_DIR $serverPath
-            SignFile $PROJECT_DIR $rvnPath
-            SignFile $PROJECT_DIR $drtoolsPath
+            SignFile $PROJECT_DIR $serverPath $DryRunSign
+            SignFile $PROJECT_DIR $rvnPath $DryRunSign
+            SignFile $PROJECT_DIR $drtoolsPath $DryRunSign
         }
     }
 
-    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version $buildOptions
+    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $packOpts
 }
 
 write-host "Done creating packages."
@@ -179,3 +188,4 @@ write-host "Done creating packages."
 if ($buildType -eq 'stable') {
     BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
 }
+

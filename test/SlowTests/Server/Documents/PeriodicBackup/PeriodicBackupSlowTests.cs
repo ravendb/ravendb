@@ -299,11 +299,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
+                Assert.True(SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                }, TimeSpan.FromSeconds(15)));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -313,11 +313,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                SpinWait.SpinUntil(() =>
+                Assert.True(SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromSeconds(15));
+                }, TimeSpan.FromSeconds(15)));
             }
 
             using (var store = GetDocumentStore(new Options
@@ -393,7 +393,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupToMovePath = $"{backupPath}\\IncrementalBackupTemp";
                 Directory.CreateDirectory(backupToMovePath);
-                var incrementalBackupFile = Directory.GetFiles(backupDirectory).Last();
+                var incrementalBackupFile = Directory.GetFiles(backupDirectory).OrderBackups().Last();
                 var fileName = Path.GetFileName(incrementalBackupFile);
                 File.Move(incrementalBackupFile, $"{backupToMovePath}\\{fileName}");
 
@@ -465,21 +465,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
-                const string databaseName = "restored_database";
-                var restoreConfiguration = new RestoreBackupConfiguration
+                string databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
-                };
-                var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                using (var session = store.OpenAsyncSession(databaseName))
+                }))
                 {
-                    var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
-                    Assert.True(users.Any(x => x.Value.Name == "oren"));
-                    Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                    }
                 }
             }
         }
@@ -544,25 +543,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
-                const string restoredDatabaseName = "restored_database_snapshot";
-                var restoreConfiguration = new RestoreBackupConfiguration
+                string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
-                };
-                var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                }))
                 {
-                    var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
-                    Assert.True(users.Any(x => x.Value.Name == "oren"));
-                    Assert.True(users.Any(x => x.Value.Name == "ayende"));
-                }
+                    using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.NotNull(users["users/1"]);
+                        Assert.NotNull(users["users/2"]);
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                    }
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(2, stats.CountOfIndexes);
+                    var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfIndexes);
+                }
             }
         }
 
@@ -586,7 +585,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("Cannot restore data to an existing database", e.InnerException.Message);
 
-                restoreConfiguration.DatabaseName = "test";
+                restoreConfiguration.DatabaseName = "test-" + Guid.NewGuid();
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("Backup location can't be null or empty", e.InnerException.Message);

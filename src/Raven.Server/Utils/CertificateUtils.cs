@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -19,12 +20,15 @@ namespace Raven.Server.Utils
 {
     internal class CertificateUtils
     {
-        public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
+        private const int BitsPerByte = 8; 
+
+        public static byte[] CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName);
-            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 1, out _);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes);
+            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
-            return selfSignedCertificateBasedOnPrivateKey;
+            return certBytes;
         }
 
         public static void RegisterCertificateInOperatingSystem(X509Certificate2 cert)
@@ -99,17 +103,19 @@ namespace Raven.Server.Utils
         {
             var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
             
-            return CreateSelfSignedCertificateBasedOnPrivateKey(
+            CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue,
                 readCertificate.SubjectDN,
                 (certificateHolder.PrivateKey.Key, readCertificate.GetPublicKey()),
                 true,
                 false,
                 -1,
-                out _);
+                out var certBytes);
+
+            return new X509Certificate2(certBytes);
         }
 
-        public static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
+        public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
             X509Name issuer, 
             (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) key,
             bool isClientCertificate,
@@ -144,7 +150,7 @@ namespace Raven.Server.Utils
             }
 
             // Serial Number
-            var serialNumber = new BigInteger(20, random);
+            var serialNumber = new BigInteger(20 * BitsPerByte, random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
@@ -155,7 +161,9 @@ namespace Raven.Server.Utils
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
-            DateTime notAfter = notBefore.AddYears(yearsUntilExpiration);
+
+            // For testing purposes, with developer license. Making the default expiration 3 months.
+            DateTime notAfter = yearsUntilExpiration == 0 ? DateTime.UtcNow.Date.AddMonths(3) : notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
 
@@ -173,13 +181,6 @@ namespace Raven.Server.Utils
             var stream = new MemoryStream();
             store.Save(stream, new char[0], random);
             certBytes = stream.ToArray();
-            var convertedCertificate =
-                new X509Certificate2(
-                    certBytes, (string)null,
-                    X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
-            stream.Position = 0;
-
-            return convertedCertificate;
         }
 
         public static void CreateCertificateAuthorityCertificate(string commonNameValue, 
@@ -192,7 +193,7 @@ namespace Raven.Server.Utils
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
 
             // Serial Number
-            BigInteger serialNumber = new BigInteger(20, random);
+            BigInteger serialNumber = new BigInteger(20 * BitsPerByte, random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name

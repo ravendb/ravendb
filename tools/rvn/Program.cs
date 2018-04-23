@@ -1,7 +1,4 @@
-﻿using System;
-using System.Text;
-
-namespace rvn
+﻿namespace rvn
 {
     internal static class Program
     {

@@ -49,6 +49,8 @@ namespace Raven.Server.Documents.Indexes
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
 
+        internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -135,7 +137,7 @@ namespace Raven.Server.Documents.Indexes
             CreateIndexInternal(index);
         }
 
-        private static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
+        internal static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
         {
             var mapFields = definition
                 .MapFields
@@ -539,6 +541,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (isStatic && name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
+
+            if (isStatic && NameUtils.IsValidIndexName(name) == false)
+                throw new ArgumentException($"Index name '{name}' not permitted. Index name must math '{NameUtils.ValidIndexNameCharacters}' regular expression", nameof(name));
         }
 
         public Index ResetIndex(string name)
@@ -1123,10 +1128,24 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
 
-            // stop the indexing to allow renaming the index
-            ExecuteIndexAction(() => newIndex.Stop());
-            newIndex.Rename(oldIndexName);
-            ExecuteIndexAction(newIndex.Start);
+            var needToStop = PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
+
+            if (needToStop)
+            {
+                // stop the indexing to allow renaming the index 
+                // the write tx required to rename it might be hold by indexing thread
+                ExecuteIndexAction(() => newIndex.Stop());
+            }
+
+            try
+            {
+                newIndex.Rename(oldIndexName);
+            }
+            finally
+            {
+                if (needToStop)
+                    ExecuteIndexAction(newIndex.Start);
+            }
 
             newIndex.ResetIsSideBySideAfterReplacement();
 
@@ -1158,17 +1177,16 @@ namespace Raven.Server.Documents.Indexes
                             var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
                             var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
 
-                            newIndex.ShutdownEnvironment();
-
-                            IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
-
-                            newIndex.RestartEnvironment();
-
-                            if (newIndex.Configuration.TempPath != null)
+                            using (newIndex.RestartEnvironment())
                             {
-                                IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                                    newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                    newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                                if (newIndex.Configuration.TempPath != null)
+                                {
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                }
                             }
                         }
                         break;

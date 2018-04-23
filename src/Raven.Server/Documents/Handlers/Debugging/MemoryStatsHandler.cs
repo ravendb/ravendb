@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Asn1;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow;
@@ -13,6 +13,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
+using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
 
@@ -35,13 +37,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
         
-        [RavenAction("/admin/debug/proc/status", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/proc/status", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true, IsPosixSpecificEndpoint = true)]
         public async Task PosixMemStatus()
         {
             await WriteFile("/proc/self/status");
         }
         
-        [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true, IsPosixSpecificEndpoint = true)]
         public async Task PosixMemInfo()
         {
             await WriteFile("/proc/meminfo");
@@ -102,7 +104,77 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return djv;
         }
 
+        [RavenAction("/admin/debug/memory/smaps", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task MemorySmaps()
+        {
+            if (PlatformDetails.RunningOnLinux == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var rc = Win32MemoryQueryMethods.GetMaps();
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Totals"] = new DynamicJsonValue
+                        {
+                            ["WorkingSet"] = rc.WorkingSet,
+                            ["SharedClean"] = "N/A",
+                            ["PrivateClean"] = "N/A",
+                            ["TotalClean"] = rc.ProcessClean,
+                            ["RssHumanly"] = Sizes.Humane(rc.WorkingSet),
+                            ["SharedCleanHumanly"] = "N/A",
+                            ["PrivateCleanHumanly"] = "N/A",
+                            ["TotalCleanHumanly"] = Sizes.Humane(rc.ProcessClean)
+                        },
+                        ["Details"] = rc.Json
+                    };
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, djv);
+                    }
+                    return Task.CompletedTask;
+                }
+            }
 
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var buffers = new[]
+                {
+                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize),
+                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize)
+                };
+                try
+                {
+                    var result = new SmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Totals"] = new DynamicJsonValue
+                        {
+                            ["WorkingSet"] = result.Rss,
+                            ["SharedClean"] = result.SharedClean,
+                            ["PrivateClean"] = result.PrivateClean,
+                            ["TotalClean"] = result.SharedClean + result.PrivateClean,
+                            ["RssHumanly"] = Sizes.Humane(result.Rss),
+                            ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
+                            ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),
+                            ["TotalCleanHumanly"] = Sizes.Humane(result.SharedClean + result.PrivateClean)
+                        },
+                        ["Details"] = result.SmapsResults.ReturnResults()
+                    };
+
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, djv);
+                    }
+
+                    return Task.CompletedTask;
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffers[0]);
+                    ArrayPool<byte>.Shared.Return(buffers[1]);
+                }
+            }
+        }
 
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
@@ -123,8 +195,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var workingSet =
-                    PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
+                var workingSet = PlatformDetails.RunningOnLinux == false
                         ? currentProcess.WorkingSet64
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
                 var memInfo = MemoryInformation.GetMemoryInfo();

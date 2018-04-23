@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Text;
 using Voron.Platform.Posix;
 
 namespace Sparrow.Platform.Posix
@@ -27,15 +29,13 @@ namespace Sparrow.Platform.Posix
         public static extern IntPtr Set(byte* dest, int c, long count);
 
         [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
-        private static extern long syscall0(long number);
+        public static extern long syscall0(long number);
 
-        public static int gettid()
-        {
-            if (PlatformDetails.RunningOnMacOsx)
-                return 0;
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sched_getaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 
-            return (int)syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
-        }
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int setpriority(int which, int who, int prio);
@@ -57,21 +57,6 @@ namespace Sparrow.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int sprintf(char* str, char* format);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int sysctl(int[] name, uint nameLen, void* oldP, int* oldLenP, void* newP, UIntPtr newLen);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int mach_host_self();
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int host_page_size(int machHost, uint* pageSize);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int host_statistics64(int machHost, int flavor, void* hostInfoT, int* hostInfoCount);
-
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int proc_pidinfo(int pid, int flavor, ulong arg, void* buffer, int bufferSize);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir(
@@ -181,6 +166,11 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int fsync(int fd);
 
+        [DllImport(LIBC_6, SetLastError = true)]
+        private static extern int readlink(string path, byte* buf, UIntPtr bufsiz);
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int access(string pathFullPath, int mode);
 
         // read(2)
         //    ssize_t read(int fd, void *buf, size_t count);
@@ -309,7 +299,6 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-
         public static void FsyncDirectoryFor(string file)
         {
             if (CheckSyncDirectoryAllowed(file) && SyncDirectory(file) == -1)
@@ -350,16 +339,88 @@ namespace Sparrow.Platform.Posix
             return syncAllowed;
         }
 
-        public static int SyncDirectory(string file)
+        private static int ReadLinkOrThrow(string path, byte *pBuff, int buffSize)
         {
-            var dir = Path.GetDirectoryName(file);
+            var numOfBytes = readlink(path, pBuff, (UIntPtr)buffSize);
+            var err = Marshal.GetLastWin32Error();
+            if (numOfBytes == -1)
+            {
+                if (err == (int)Errno.EINVAL) // EINVAL when applied on non symlink according to readlink's man page 
+                    return 0;
+                ThrowLastError(err, "failed to readlink symlink directory " + path);
+            }
+
+            return numOfBytes;
+        }
+
+        public static int SyncDirectory(string file, bool isRealPath = false)
+        {
+            var dir = isRealPath == false ? Path.GetDirectoryName(file) : file;
             var fd = open(dir, 0, 0);
             if (fd == -1)
-                return -1;
+            {
+                var err = Marshal.GetLastWin32Error();
+                ThrowLastError(err, "failed to open directory " + dir + " in order to sync for file " + file);
+            }
             var fsyncRc = FSync(fd);
             if (fsyncRc == -1)
-                return -1;
-            return close(fd);
+            {
+                var err = Marshal.GetLastWin32Error();
+                ThrowLastError(err, "failed to FSync directory " + dir + " with fd=" + fd + " in order to sync for file " + file);
+            }
+
+            if (close(fd) == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                ThrowLastError(err, "failed to close directory " + dir + " with fd=" + fd + " in order to sync for file " + file);
+            }
+
+            if (isRealPath)
+                return 0;
+
+            // now sync the real path if the above is a symlink
+            var buffSize = 64;
+            var realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
+            try
+            {
+                // determine buffSize passed to readlink should be using lstat (but this is not available right now)
+                // so we try with rented array of 64 bytes and if readlink needs more we will try again with 8K and fail otherwise
+                // (TODO: change it to lstat / FileInfo(path).Target in the future when https://github.com/dotnet/corefx/issues/26310 is fixed)
+                int numOfBytes;
+                fixed (byte* pBuff = realpathToDir)
+                {
+                    numOfBytes = ReadLinkOrThrow(dir, pBuff, buffSize);
+                    if (numOfBytes == 0)
+                        return 0; // non symlink dir
+ 
+                    if (numOfBytes >= buffSize) // 64 bytes are not enough for path legnth. lets try with 8192
+                    {
+                        buffSize = 8192; // usually PATH_MAX is 4096
+                        ArrayPool<byte>.Shared.Return(realpathToDir);
+                        realpathToDir = ArrayPool<byte>.Shared.Rent(buffSize);
+                        
+                        fixed (byte* pBuff8K = realpathToDir)
+                        {
+                            numOfBytes = ReadLinkOrThrow(dir, pBuff8K, buffSize);
+                            if (numOfBytes == 0)
+                                return 0; // non symlink dir
+                            
+                            if (numOfBytes >= buffSize)
+                            {
+                                throw new InvalidOperationException("readlink to " + dir +
+                                                                    " failed due to the need of more then 8192 bytes for path legnth. Failed to sync directory");
+                            }
+                        }
+                    }
+                }
+
+                var realpathString = Encoding.UTF8.GetString(realpathToDir,0, numOfBytes);
+                return SyncDirectory(realpathString, isRealPath: true);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(realpathToDir);
+            }
         }
 
         public static string GetRootMountString(DriveInfo[] drivesInfo, string filePath)
@@ -391,50 +452,6 @@ namespace Sparrow.Platform.Posix
         F_FULLFSYNC = 0x00000033
     }
 
-    public enum TopLevelIdentifiersMacOs
-    {
-        CTL_UNSPEC = 0,     /* unused */
-        CTL_KERN = 1,       /* "high kernel": proc, limits */
-        CTL_VM = 2,	        /* virtual memory */
-        CTL_VFS = 3,        /* file system, mount type is next */
-        CTL_NET = 4,        /* network, see socket.h */
-        CTL_DEBUG = 5,      /* debugging parameters */
-        CTL_HW = 6,         /* generic cpu/io */
-        CTL_MACHDEP = 7,    /* machine dependent */
-        CTL_USER = 8,       /* user-level */
-        CTL_MAXID = 9       /* number of valid top-level ids */
-    }
-
-    public enum CtkHwIdentifiersMacOs
-    {
-        HW_MACHINE = 1,         /* string: machine class */
-        HW_MODEL = 2,           /* string: specific machine model */
-        HW_NCPU = 3,            /* int: number of cpus */
-        HW_BYTEORDER = 4,       /* int: machine byte order */
-        HW_PHYSMEM = 5,         /* int: total memory */
-        HW_USERMEM = 6,	        /* int: non-kernel memory */
-        HW_PAGESIZE = 7,        /* int: software page size */
-        HW_DISKNAMES = 8,       /* strings: disk drive names */
-        HW_DISKSTATS = 9,       /* struct: diskstats[] */
-        HW_EPOCH = 10,          /* int: 0 for Legacy, else NewWorld */
-        HW_FLOATINGPT = 11,     /* int: has HW floating point? */
-        HW_MACHINE_ARCH = 12,   /* string: machine architecture */
-        HW_VECTORUNIT = 13,     /* int: has HW vector unit? */
-        HW_BUS_FREQ = 14,       /* int: Bus Frequency */
-        HW_CPU_FREQ = 15,       /* int: CPU Frequency */
-        HW_CACHELINE = 16,      /* int: Cache Line Size in Bytes */
-        HW_L1ICACHESIZE = 17,   /* int: L1 I Cache Size in Bytes */
-        HW_L1DCACHESIZE = 18,   /* int: L1 D Cache Size in Bytes */
-        HW_L2SETTINGS = 19,     /* int: L2 Cache Settings */
-        HW_L2CACHESIZE = 20,    /* int: L2 Cache Size in Bytes */
-        HW_L3SETTINGS = 21,     /* int: L3 Cache Settings */
-        HW_L3CACHESIZE = 22,    /* int: L3 Cache Size in Bytes */
-        HW_TB_FREQ = 23,        /* int: Bus Frequency */
-        HW_MEMSIZE = 24,        /* uint64_t: physical ram size */
-        HW_AVAILCPU = 25,       /* int: number of available CPUs */
-        HW_MAXID = 26           /* number of valid hw ids */
-    }
-
     public unsafe struct Statvfs
     {
         public ulong f_bsize;    /* file system block size */
@@ -449,6 +466,14 @@ namespace Sparrow.Platform.Posix
         public ulong f_flag;     /* mount flags */
         public ulong f_namemax;  /* maximum filename length */
         public fixed int f_spare[6];
-        
+    }
+
+    [Flags]
+    public enum AccessMode
+    {
+        F_OK = 0,
+        X_OK = 1,
+        W_OK = 2,
+        R_OK = 4
     }
 }

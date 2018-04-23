@@ -17,6 +17,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task IfIndexEncountersCorruptionItShouldBeMarkedAsErrored()
         {
+            UseNewLocalServer();
+
             using (var store = GetDocumentStore())
             {
                 new Users_ByName().Execute(store);
@@ -38,6 +40,9 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("Users/ByName");
                 index._indexStorage.SimulateCorruption = true;
+
+                // force erroring the index immediately
+                database.ServerStore.DatabasesLandlord.CatastrophicFailureHandler.MaxDatabaseUnloads = 0;
 
                 using (var session = store.OpenSession())
                 {

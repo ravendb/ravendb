@@ -27,6 +27,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -60,6 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public ICollection<PeriodicBackup> PeriodicBackups => _periodicBackups.Values;
 
         public static string DateTimeFormat => "yyyy-MM-dd-HH-mm";
+        private const string InProgressExtension = ".in-progress";
 
         public PeriodicBackupRunner(DocumentDatabase database, ServerStore serverStore)
         {
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     message += $", backup name: {configuration.Name}";
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name, 
+                    _database.Name,
                     "Couldn't schedule next backup, this shouldn't happen",
                     message,
                     AlertType.PeriodicBackup,
@@ -156,7 +158,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 IsFull = isFullBackup
             };
         }
-        
+
         private bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
             DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
@@ -221,22 +223,26 @@ namespace Raven.Server.Documents.PeriodicBackup
                         previousBackupStatus.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
                         previousBackupStatus.BackupType != configuration.BackupType || // backup type has changed
                         previousBackupStatus.LastEtag == null || // last document etag wasn't updated
-                        backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(previousBackupStatus.LocalBackup.BackupDirectory, configuration.BackupType) == false)
-                        // the local folder has a missing full backup
+                        backupToLocalFolder && DirectoryContainsBackupFiles(previousBackupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
+                        // the local folder already includes a full backup or snapshot
                     {
                         isFullBackup = true;
 
-                        folderName = $"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}";
-
-                        backupDirectory = backupToLocalFolder ? new PathSetting(configuration.LocalSettings.FolderPath).Combine(folderName) : _tempBackupPath;
+                        var counter = 0;
+                        do
+                        {
+                            var prefix = counter == 0 ? string.Empty : $"-{counter++:D2}";
+                            folderName = $"{now}{prefix}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}";
+                            backupDirectory = backupToLocalFolder ? new PathSetting(configuration.LocalSettings.FolderPath).Combine(folderName) : _tempBackupPath;
+                        } while (DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile));
 
                         if (Directory.Exists(backupDirectory.FullPath) == false)
                             Directory.CreateDirectory(backupDirectory.FullPath);
                     }
                     else
                     {
-                        backupDirectory = backupToLocalFolder ? new PathSetting(previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
                         folderName = previousBackupStatus.FolderName;
+                        backupDirectory = backupToLocalFolder ? new PathSetting(previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
                     }
 
                     runningBackupStatus.LocalBackup.BackupDirectory = backupToLocalFolder ? backupDirectory.FullPath : null;
@@ -323,7 +329,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Operations(message, e);
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name, 
+                    _database.Name,
                     "Periodic Backup",
                     message,
                     AlertType.PeriodicBackup,
@@ -360,36 +366,33 @@ namespace Raven.Server.Documents.PeriodicBackup
             BackupType backupType,
             out string backupFilePath)
         {
-            string fileName;
-
-            if (isFullBackup)
-            {
-                // create file name for full backup/snapshot
-                fileName = GetFileNameFor(() => GetFullBackupExtension(backupType),
-                    now, backupFolder, out backupFilePath);
-            }
-            else
-            {
-                // create file name for incremental backup
-                fileName = GetFileNameFor(() => Constants.Documents.PeriodicBackup.IncrementalBackupExtension,
-                    now, backupFolder, out backupFilePath);
-            }
+            var backupExtension = GetBackupExtension(backupType, isFullBackup);
+            var fileName = isFullBackup ? 
+                GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath, throwWhenFileExists: true) : 
+                GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath);
 
             return fileName;
         }
 
-        private static string GetFileNameFor(Func<string> getBackupExtension,
-            string now, string backupFolder, out string backupFilePath)
+        private static string GetFileNameFor(
+            string backupExtension,
+            string now,
+            string backupFolder,
+            out string backupFilePath,
+            bool throwWhenFileExists = false)
         {
-            var fileName = $"{now}{getBackupExtension()}";
+            var fileName = $"{now}{backupExtension}";
             backupFilePath = Path.Combine(backupFolder, fileName);
 
             if (File.Exists(backupFilePath))
             {
+                if (throwWhenFileExists)
+                    throw new InvalidOperationException($"File '{backupFilePath}' already exists!");
+
                 var counter = 1;
                 while (true)
                 {
-                    fileName = $"{now}-{counter}${getBackupExtension()}";
+                    fileName = $"{now}-{counter:D2}{backupExtension}";
                     backupFilePath = Path.Combine(backupFolder, fileName);
 
                     if (File.Exists(backupFilePath) == false)
@@ -411,6 +414,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 try
                 {
+                    // will rename the file after the backup is finished
+                    var tempBackupFilePath = backupFilePath + InProgressExtension;
+
                     if (configuration.BackupType == BackupType.Backup ||
                         configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
@@ -422,7 +428,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (isFullBackup == false)
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
-                        var result = CreateBackup(options, backupFilePath, startDocumentEtag, context);
+                        var result = CreateBackup(options, tempBackupFilePath, startDocumentEtag, context);
                         lastEtag = isFullBackup ?
                             DocumentsStorage.ReadLastEtag(tx.InnerTransaction) :
                             result.GetLastEtag();
@@ -431,8 +437,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         // snapshot backup
                         lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        _database.FullBackupTo(backupFilePath);
+                        _database.FullBackupTo(tempBackupFilePath);
                     }
+
+                    IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
                 }
                 catch (Exception e)
                 {
@@ -443,8 +451,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             return lastEtag;
         }
 
-        private static string GetFullBackupExtension(BackupType type)
+        private static string GetBackupExtension(BackupType type, bool isFullBackup)
         {
+            if (isFullBackup == false)
+                return Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
+
             switch (type)
             {
                 case BackupType.Backup:
@@ -474,11 +485,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     options: options);
 
                 result = smuggler.Execute();
+                file.Flush(flushToDisk: true);
             }
             return result;
         }
 
-        private static bool DirectoryContainsFullBackupOrSnapshot(string fullPath, BackupType backupType)
+        private static bool DirectoryContainsBackupFiles(string fullPath, Func<string, bool> isBackupFile)
         {
             if (Directory.Exists(fullPath) == false)
                 return false;
@@ -487,12 +499,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (files.Length == 0)
                 return false;
 
-            var backupExtension = GetFullBackupExtension(backupType);
-            return files.Any(file =>
-            {
-                var extension = Path.GetExtension(file);
-                return backupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-            });
+            return files.Any(isBackupFile);
+        }
+
+        private static bool IsFullBackupOrSnapshot(string filePath)
+        {
+            var extension = Path.GetExtension(filePath);
+            return Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                   Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAnyBackupFile(string filePath)
+        {
+            if (RestoreUtils.IsBackupOrSnapshot(filePath))
+                return true;
+
+            var extension = Path.GetExtension(filePath);
+            return InProgressExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task WriteStatus(PeriodicBackupStatus status)
@@ -853,7 +876,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         await RunPeriodicBackup(periodicBackup, isFullBackup);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         _logger.Operations("Error during create backup task", e);
                     }

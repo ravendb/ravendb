@@ -65,7 +65,7 @@ namespace Sparrow.Json
     public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
     {
-        private readonly JsonOperationContext _context;
+        internal readonly JsonOperationContext _context;
         private string _string;
 
         private byte* _buffer;
@@ -96,7 +96,6 @@ namespace Sparrow.Json
 
         public int[] EscapePositions;
         public AllocatedMemoryData AllocatedMemoryData;
-        public int? LastFoundAt;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
@@ -248,7 +247,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator byte[](LazyStringValue self)
+        public static implicit operator byte[] (LazyStringValue self)
         {
             var valueAsString = (string)self;
             return Convert.FromBase64String(valueAsString);
@@ -896,9 +895,26 @@ namespace Sparrow.Json
             if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < maxCharCount)
                 _lazyStringTempBuffer = new char[Bits.NextPowerOf2(maxCharCount)];
 
+            var buffer = _buffer;
+
+            // in case we received a string, with no _buffer
+            if (buffer == null)
+            {
+                fixed (char* stringBuffer = _string)
+                {
+                    buffer = (byte*)stringBuffer;
+                    return GetReversedStringFromBuffer(buffer);
+                }
+            }
+
+            return GetReversedStringFromBuffer(buffer);
+        }
+
+        private string GetReversedStringFromBuffer(byte* buffer)
+        {
             fixed (char* pChars = _lazyStringTempBuffer)
             {
-                var chars = Encodings.Utf8.GetChars(_buffer, Length, pChars, _lazyStringTempBuffer.Length);
+                var chars = Encodings.Utf8.GetChars(buffer, Length, pChars, _lazyStringTempBuffer.Length);
                 Array.Reverse(_lazyStringTempBuffer, 0, chars);
                 return new string(_lazyStringTempBuffer, 0, chars);
             }
@@ -912,6 +928,7 @@ namespace Sparrow.Json
             _buffer = buffer;
             _string = str;
             _length = -1;
+            EscapePositions = null;
             IsDisposed = false;
             AllocatedMemoryData = null;
         }
@@ -925,5 +942,7 @@ namespace Sparrow.Json
             // control code characters
             return b < 32 || (b >= 127 && b <= 159);
         }
+
+
     }
 }

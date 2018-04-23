@@ -27,25 +27,25 @@ namespace Raven.Client.Documents.Session
             return command.Result != null;
         }
 
-        public async Task<AttachmentResult> GetAsync(string documentId, string name)
+        public Task<AttachmentResult> GetAsync(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
+            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo);
         }
 
-        public async Task<AttachmentResult> GetAsync(object entity, string name)
+        public Task<AttachmentResult> GetAsync(object entity, string name)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
+            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo);
         }
 
-        public async Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector)
+        public Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
+            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo);
         }
     }
 }

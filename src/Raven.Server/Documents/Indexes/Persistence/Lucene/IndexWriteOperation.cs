@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.IndexFields);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition);
             }
             catch (Exception e)
             {
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         foreach (var item in _suggestionsWriters)
                         {
                             var writer = item.Value;
-                            writer.AddDocument(_converter.Document, _state);
+                            writer.AddDocument(_converter.Document, _analyzer, _state);
                         }
                     }
                 }

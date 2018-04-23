@@ -7,7 +7,7 @@ abstract class ongoingTaskEditModel extends ongoingTaskModel {
     preferredMentor = ko.observable<string>();
     nodeTag: string = null;
 
-    protected update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
         super.update(dto);
 
         this.taskName(dto.TaskName);

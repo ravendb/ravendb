@@ -82,7 +82,9 @@ namespace Raven.Client.Documents.Operations.Replication
             if (other is ExternalReplication externalReplication)
             {
                 return string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
-                       TaskId == externalReplication.TaskId;
+                       TaskId == externalReplication.TaskId &&
+                       string.Equals(externalReplication.Name, Name, StringComparison.OrdinalIgnoreCase) &&
+                       string.Equals(externalReplication.Database, Database, StringComparison.OrdinalIgnoreCase);
             }
             return false;
         }

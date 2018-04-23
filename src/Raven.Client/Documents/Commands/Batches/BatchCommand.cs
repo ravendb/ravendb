@@ -124,10 +124,7 @@ namespace Raven.Client.Documents.Commands.Batches
             if (_options.WaitForIndexes)
             {
                 sb.Append("&waitForIndexesTimeout=").Append(_options.WaitForIndexesTimeout);
-                if (_options.ThrowOnTimeoutInWaitForIndexes)
-                {
-                    sb.Append("&waitForIndexThrow=true");
-                }
+                sb.Append("&waitForIndexThrow=").Append(_options.ThrowOnTimeoutInWaitForIndexes.ToString());
                 if (_options.WaitForSpecificIndexes != null)
                 {
                     foreach (var specificIndex in _options.WaitForSpecificIndexes)

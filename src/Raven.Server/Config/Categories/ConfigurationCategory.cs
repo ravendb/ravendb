@@ -109,6 +109,8 @@ namespace Raven.Server.Config.Categories
                     if (value == null)
                         continue;
 
+                    value = value.Trim();
+
                     try
                     {
                         var minValue = property.GetCustomAttribute<MinValueAttribute>();
@@ -131,7 +133,8 @@ namespace Raven.Server.Config.Categories
                             }
                             else if (property.PropertyType == typeof(string[]))
                             {
-                                var values = value.Split(';');
+                                var values = SplitValue(value);
+
                                 property.SetValue(this, values);
                             }
                             else if (timeUnit != null)
@@ -155,7 +158,7 @@ namespace Raven.Server.Config.Categories
                                 }
                                 else if (property.PropertyType == typeof(PathSetting[]))
                                 {
-                                    var paths = value.Split(';');
+                                    var paths = SplitValue(value);
 
                                     property.SetValue(this,
                                         settingValue.CurrentValue != null
@@ -231,7 +234,7 @@ namespace Raven.Server.Config.Categories
                     }
                     else if (property.PropertyType == typeof(string[]) && defaultValue is string defaultValueAsString)
                     {
-                        var values = defaultValueAsString.Split(';');
+                        var values = SplitValue(defaultValueAsString);
                         property.SetValue(this, values);
                     }
                     else
@@ -268,6 +271,14 @@ namespace Raven.Server.Config.Categories
             }
 
             return value;
+        }
+
+        private static string[] SplitValue(string value)
+        {
+            var values = value.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < values.Length; i++)
+                values[i] = values[i].Trim();
+            return values;
         }
     }
 }

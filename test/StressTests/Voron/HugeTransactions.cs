@@ -6,6 +6,8 @@
 
 using System;
 using System.IO;
+using FastTests;
+using FastTests.Voron;
 using SlowTests.Voron;
 using Sparrow.Compression;
 using Voron;
@@ -28,9 +30,9 @@ namespace StressTests.Voron
         [TheoryAndSkipWhen32BitsEnvironment]
         [InlineData(2)]
         [InlineData(6, Skip = "Too large to run on scratch machines. For manual run only")]
-        public void CanWriteBigTransactions(long transactionSizeInGb)
+        public void CanWriteBigTransactions(int transactionSizeInGb)
         {
-            var tmpFile = Path.Combine(Path.GetTempPath(), "TestBigTx" + transactionSizeInGb);
+            var tmpFile = RavenTestHelper.NewDataPath(nameof(CanWriteBigTransactions), transactionSizeInGb, forceCreateDir: true);
             try
             {
                 Directory.Delete(tmpFile, true);
@@ -104,16 +106,16 @@ namespace StressTests.Voron
         {
             fixed (byte* singleByte = new byte[1])
             {
-                for (int i = 0; i < transactionSizeInGb*2; i++)
+                for (int i = 0; i < transactionSizeInGb * 2; i++)
                 {
                     var key = "bigTreeKey" + i;
                     var reader = tree.Read(key).Reader;
 
                     VerifyData(singleByte, reader, 0, 11);
-                    VerifyData(singleByte, reader, (int) HalfGb - 1, 22);
-                    VerifyData(singleByte, reader, ((int) HalfGb/3)*2, 33);
-                    VerifyData(singleByte, reader, (int) HalfGb/2, 44);
-                    VerifyData(singleByte, reader, (int) HalfGb/3, 55);
+                    VerifyData(singleByte, reader, (int)HalfGb - 1, 22);
+                    VerifyData(singleByte, reader, ((int)HalfGb / 3) * 2, 33);
+                    VerifyData(singleByte, reader, (int)HalfGb / 2, 44);
+                    VerifyData(singleByte, reader, (int)HalfGb / 3, 55);
                 }
             }
         }
@@ -141,9 +143,10 @@ namespace StressTests.Voron
                 long Gb = 1024 * 1024 * 1024;
                 long inputSize = 3L * Gb;
                 byte* outputBuffer, inputBuffer, checkedBuffer;
-                var outputPager = CreateScratchFile($"output-{devider}", env, inputSize, out outputBuffer);
-                var inputPager = CreateScratchFile($"input-{devider}", env, inputSize, out inputBuffer);
-                var checkedPager = CreateScratchFile($"checked-{devider}", env, inputSize, out checkedBuffer);
+                var guid = Guid.NewGuid();
+                var outputPager = CreateScratchFile($"output-{devider}-{guid}", env, inputSize, out outputBuffer);
+                var inputPager = CreateScratchFile($"input-{devider}-{guid}", env, inputSize, out inputBuffer);
+                var checkedPager = CreateScratchFile($"checked-{devider}-{guid}", env, inputSize, out checkedBuffer);
 
                 var random = new Random(123);
 
@@ -197,7 +200,7 @@ namespace StressTests.Voron
 
         private static unsafe AbstractPager CreateScratchFile(string scratchName, StorageEnvironment env, long inputSize, out byte* buffer)
         {
-            var filename = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigCompression-{scratchName}";
+            var filename = Path.Combine(RavenTestHelper.NewDataPath(nameof(HugeTransactions), 0, forceCreateDir: true), $"TestBigCompression-{scratchName}");
             long bufferSize = LZ4.MaximumOutputLength(inputSize);
             int bufferSizeInPages = checked((int)(bufferSize / Constants.Storage.PageSize));
             var pager = env.Options.CreateScratchPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize);

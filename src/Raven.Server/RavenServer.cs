@@ -9,48 +9,51 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.DependencyInjection;
-using Raven.Client.Exceptions.Database;
-using Raven.Client.Json.Converters;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Json;
-using Raven.Server.Rachis;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
+using Raven.Server.Json;
 using Raven.Server.Monitoring.Snmp;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server
 {
@@ -66,6 +69,8 @@ namespace Raven.Server
         public readonly RavenConfiguration Configuration;
 
         public Timer ServerMaintenanceTimer;
+
+        public SystemTime Time = new SystemTime();
 
         public readonly ServerStore ServerStore;
 
@@ -233,7 +238,7 @@ namespace Raven.Server
         }
 
         private Task _currentRefreshTask = Task.CompletedTask;
-
+        
         public void RefreshClusterCertificate(object state)
         {
             // If the setup mode is anything but SetupMode.LetsEncrypt, we'll
@@ -246,12 +251,13 @@ namespace Raven.Server
             // distribute it via the cluster. We'll update the cert only when all nodes
             // confirm they got it (or if there are less than 3 days to spare).
 
-
             var currentCertificate = Certificate;
-            if (currentCertificate == null)
+            if (currentCertificate.Certificate == null)
             {
                 return; // shouldn't happen, but just in case
             }
+
+            var forceRenew = state as bool? ?? false;
 
             var currentRefreshTask = _currentRefreshTask;
             if (currentRefreshTask.IsCompleted == false)
@@ -260,34 +266,41 @@ namespace Raven.Server
                 return;
             }
 
-            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate); });
+            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate, forceRenew: forceRenew); });
             if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
                 return;
             refreshCertificate.Start();
         }
 
-        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate)
+        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate, bool forceRenew = false)
         {
             try
             {
-                CertificateHolder newCertificate = null;
+                CertificateHolder newCertificate;
+                var msg = "Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!";
                 try
                 {
                     newCertificate = LoadCertificate();
+                    if (newCertificate == null)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(msg);
+
+                        ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            "Server certificate",
+                            msg,
+                            AlertType.Certificates_ReplaceError,
+                            NotificationSeverity.Error,
+                            "Cluster.Certificate.Replace.Error"));
+                        return;
+                    }
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Tried to load certificate as part of refresh check, but got an error!", e);
+                    throw new InvalidOperationException("Tried to load certificate as part of refresh check, but got an error!", e);
                 }
-
-                if (newCertificate == null)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Tried to load certificate as part of refresh check, but got a null back, but got a valid certificate on startup!");
-                    return;
-                }
-
+                
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
@@ -307,49 +320,72 @@ namespace Raven.Server
                 using (context.OpenReadTransaction())
                 {
                     var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
-                    if (certUpdate != null
-                        && certUpdate.TryGet("Thumbprint", out string thumbprint)
-                        && thumbprint != currentCertificate.Certificate.Thumbprint)
+                    if (certUpdate != null)
                     {
                         // we are already in the process of updating the certificate, so we need
-                        // to nudge all the nodes in the cluster in case we have a node that didn't
-                        // confirm to us but the time to replace has already passed.
+                        // to nudge all the nodes in the cluster to check the replacement state.
+                        // If a node confirmed but failed with the actual replacement (e.g. file permissions)
+                        // this will make sure it will try again in the next round (1 hour).
                         await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
                         return;
                     }
                 }
 
                 // same certificate, but now we need to see if we are need to auto update it
-                var remainingDays = (currentCertificate.Certificate.NotAfter - DateTime.Now).TotalDays;
-                if (remainingDays > 30)
+                var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+                if (remainingDays > 30 && forceRenew == false)
                     return; // nothing to do, the certs are the same and we have enough time
 
                 // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
                 // but if we have less than 20 days, we'll try anyway
-                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
+                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
                     return;
+                
+                if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
+                {
+                    msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
+                    ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                        null,
+                        "Server certificate",
+                        msg,
+                        AlertType.Certificates_DeveloperLetsEncryptRenewal,
+                        NotificationSeverity.Warning));
 
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(msg);
+                    return;
+                }
+
+                byte[] newCertBytes;
                 try
                 {
-                    newCertificate = await RefreshLetsEncryptCertificate(currentCertificate);
+                    newCertBytes = await RenewLetsEncryptCertificate(currentCertificate);
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Failed to update certificate from Lets Encrypt", e);
-                    return;
+                    throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
                 }
 
-                await StartCertificateReplicationAsync(newCertificate.Certificate, "Updated Let's Encrypt Certificate", false);
+                await StartCertificateReplicationAsync(Convert.ToBase64String(newCertBytes), "Updated Let's Encrypt Certificate", false);
             }
             catch (Exception e)
             {
+                var msg = "Failed to replace the server certificate.";
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failure when trying to refresh certificate", e);
+                    Logger.Operations(msg, e);
+
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    "Server certificate",
+                    msg,
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Error,
+                    "Cluster.Certificate.Replace.Error",
+                    new ExceptionDetails(e)));
             }
         }
 
-        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string name, bool replaceImmediately)
+        public async Task StartCertificateReplicationAsync(string base64Cert, string name, bool replaceImmediately)
         {
             // the process of updating a new certificate is the same as deleting database
             // we first send the certificate to all the nodes, then we get aknowledgments
@@ -358,21 +394,58 @@ namespace Raven.Server
             // However, if we have less than 3 days for renewing the cert or if 
             // replaceImmediately is true, we'll replace immediately.
 
-            // we first register it as a valid cluster node certificate in the cluster
-            await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
-
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Node {ServerStore.NodeTag}: Received new certificate, starting certificate replication.");
-
-            var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
-            await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
+            try
             {
-                Certificate = base64Cert,
-                ReplaceImmediately = replaceImmediately
-            });
+                byte[] certBytes;
+                try
+                {
+                    certBytes = Convert.FromBase64String(base64Cert);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to parse the {nameof(base64Cert)} property, expected a Base64 value", e);
+                }
+
+                X509Certificate2 newCertificate;
+                try
+                {
+                    newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to load the new certificate.", e);
+                }
+
+                // we first register it as a valid cluster node certificate in the cluster
+                await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Got new certificate from Lets Encrypt! Starting certificate replication.");
+
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
+                {
+                    Certificate = base64Cert, // includes the private key
+                    ReplaceImmediately = replaceImmediately
+                });
+            }
+            catch (Exception e)
+            {
+                var msg = "Failed to start certificate replication.";
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg, e);
+
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    "Server certificate",
+                    msg,
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Error,
+                    "Cluster.Certificate.Replace.Error",
+                    new ExceptionDetails(e)));
+            }
         }
 
-        private async Task<CertificateHolder> RefreshLetsEncryptCertificate(CertificateHolder existing)
+        private async Task<byte[]> RenewLetsEncryptCertificate(CertificateHolder existing)
         {
             var license = ServerStore.LoadLicense();
 
@@ -399,7 +472,7 @@ namespace Raven.Server
             string usedRootDomain = null;
             foreach (var rd in userDomainsResult.RootDomains)
             {
-                if (Configuration.Core.PublicServerUrl.ToString().IndexOf(rd, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (Configuration.Core.PublicServerUrl.HasValue && Configuration.Core.PublicServerUrl.Value.UriValue.IndexOf(rd, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     usedRootDomain = rd;
                     break;
@@ -407,9 +480,14 @@ namespace Raven.Server
             }
 
             if (usedRootDomain == null)
-                throw new InvalidOperationException($"Your license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
-                                                    $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl}." +
-                                                    "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
+            {
+                if (Configuration.Core.PublicServerUrl.HasValue)
+                    throw new InvalidOperationException($"Your license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
+                                                        $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl.Value.UriValue}." +
+                                                        "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
+                
+                throw new InvalidOperationException("PublicServerUrl is empty. Cannot automatically renew the Lets Encrypt certificate. Please contact support.");
+            }
 
             if (userDomainsResult.Emails.Contains(Configuration.Security.CertificateLetsEncryptEmail, StringComparer.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException($"Your license is associated with the following emails: {string.Join(",", userDomainsResult.Emails)} " +
@@ -446,9 +524,12 @@ namespace Raven.Server
             }
 
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
+            var certBytes = Convert.FromBase64String(setupInfo.Certificate);
 
-            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, Convert.FromBase64String(setupInfo.Certificate),
-                setupInfo.Password);
+            SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, certBytes,
+                setupInfo.Password, ServerStore);
+
+            return certBytes;
         }
 
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
@@ -488,9 +569,9 @@ namespace Raven.Server
             try
             {
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
-                    return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
+                    return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword, ServerStore);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments);
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
 
                 return null;
             }
@@ -513,6 +594,7 @@ namespace Raven.Server
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
+            public int WrittenToAuditLog;
 
             public bool CanAccess(string db, bool requireAdmin)
             {
@@ -553,6 +635,8 @@ namespace Raven.Server
             public string WrongProtocolMessage;
 
             private AuthenticationStatus _status;
+
+            public AuthenticationStatus StatusForAudit => _status;
 
             public AuthenticationStatus Status
             {
@@ -709,6 +793,7 @@ namespace Raven.Server
         {
             try
             {
+                _tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 bool successfullyBoundToAtLeastOne = false;
                 var errors = new List<Exception>();
                 foreach (var ipAddress in GetListenIpAddresses(host))
@@ -832,10 +917,15 @@ namespace Raven.Server
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
-                    tcpClient.ReceiveTimeout = tcpClient.SendTimeout = (int)Configuration.Cluster.TcpConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+                    var sendTimeout = (int)Configuration.Cluster.TcpConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+
+                    DebuggerAttachedTimeout.SendTimeout(ref sendTimeout);
+                    tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    stream = await AuthenticateAsServerIfSslNeeded(stream);
+                    X509Certificate2 cert;
+
+                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
                     using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                     using (ctx.GetManagedBuffer(out var buffer))
@@ -880,10 +970,13 @@ namespace Raven.Server
                                         //In the case where we have missmatched version but the other side doesn't know how to handle it.
                                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
                                         {
+                                            if (_tcpAuditLog != null)
+                                                _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
+
                                             if (Logger.IsInfoEnabled)
                                             {
                                                 Logger.Info(
-                                                    $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason:{header.Info}");
+                                                    $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason: {header.Info}");
                                             }
 
                                             return;
@@ -910,16 +1003,24 @@ namespace Raven.Server
 
                                 if (matchingVersion == false)
                                 {
+                                    if (_tcpAuditLog != null)
+                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because coudln't agree on a matching operation version for {header.Operation} on {header.DatabaseName}.");
+
                                     //Couldn't agree on tcp operation version, will drop the connection now.
                                     return;
                                 }
 
                                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
                                 //At this stage the error is not relevant.
-                                RespondToTcpConnection(stream, context, null, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, version);
+                                RespondToTcpConnection(stream, context, null,
+                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, 
+                                    version);
 
                                 if (authSuccessful == false)
                                 {
+                                    if (_tcpAuditLog != null)
+                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
+
                                     if (Logger.IsInfoEnabled)
                                     {
                                         Logger.Info(
@@ -930,6 +1031,9 @@ namespace Raven.Server
                                     return; // cannot proceed
                                 }
                             }
+
+                            if (_tcpAuditLog != null)
+                                _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
 
                             if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
@@ -957,7 +1061,6 @@ namespace Raven.Server
                 }
             });
         }
-
         private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -1028,12 +1131,14 @@ namespace Raven.Server
         private SnmpWatcher _snmpWatcher;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
+        private Logger _tcpAuditLog;
+
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
         internal void SetCertificate(X509Certificate2 certificate, byte[] rawBytes, string password)
         {
             var certificateHolder = Certificate;
-            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password);
+            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore);
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
                 _httpsConnectionAdapter.SetCertificate(certificate);
@@ -1159,7 +1264,7 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
+        private async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Certificate.Certificate != null)
             {
@@ -1172,12 +1277,13 @@ namespace Raven.Server
                     // SSL, because that generate a nicer error for the user to read then just aborted
                     // connection because SSL negotation failed.
                         true);
-                stream = sslStream;
 
                 await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, SslProtocols.Tls12, false);
+
+                return (sslStream, HttpsConnectionAdapter.ConvertToX509Certificate2(sslStream.RemoteCertificate));
             }
 
-            return stream;
+            return (stream, null);
         }
 
 

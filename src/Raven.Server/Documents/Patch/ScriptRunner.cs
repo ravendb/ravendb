@@ -3,11 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
@@ -15,6 +17,7 @@ using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -60,9 +63,6 @@ namespace Raven.Server.Documents.Patch
                 var engine = new Engine(options =>
                 {
                     options.MaxStatements(1).LimitRecursion(1);
-                    options.LocalTimeZone(TimeZoneInfo.Utc);
-
-
                 });
                 engine.Execute(script);
             }
@@ -80,7 +80,8 @@ namespace Raven.Server.Documents.Patch
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
-            private DocumentsOperationContext _context;
+            private DocumentsOperationContext _docsCtx;
+            private JsonOperationContext _jsonCtx;
             public PatchDebugActions DebugActions;
             public bool DebugMode;
             public List<string> DebugOutput;
@@ -131,8 +132,12 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("regex", new ClrFunctionInstance(ScriptEngine, Regex));
 
                 ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, ExplodeArgs));
+                ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, Raven_Min));
+                ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+
+                ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
@@ -147,6 +152,78 @@ namespace Raven.Server.Documents.Patch
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
                 }
+            }
+
+            private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
+            {
+                void Swap()
+                {
+                    var tmp = args[1];
+                    args[1] = args[0];
+                    args[0] = tmp;
+                }
+
+                // this is basically the same as Math.min / Math.max, but 
+                // can also be applied to strings, numbers and nulls
+
+                if (args.Length != 2)
+                    throw new ArgumentException(caller + "must be called with exactly two arguments");
+
+                switch (args[0].Type)
+                {
+                    case Jint.Runtime.Types.None:
+                    case Jint.Runtime.Types.Undefined:
+                    case Jint.Runtime.Types.Null:
+                        // null sorts lowers, so that is fine (either the other one is null or
+                        // already higher than us).
+                        break;
+                    case Jint.Runtime.Types.Boolean:
+                    case Jint.Runtime.Types.Number:
+                        var a = Jint.Runtime.TypeConverter.ToNumber(args[0]);
+                        var b = Jint.Runtime.TypeConverter.ToNumber(args[1]);
+                        if (a > b)
+                            Swap();
+                        break;
+                    case Jint.Runtime.Types.String:
+                        switch (args[1].Type)
+                        {
+                            case Jint.Runtime.Types.None:
+                            case Jint.Runtime.Types.Undefined:
+                            case Jint.Runtime.Types.Null:
+                                Swap();// a value is bigger than no value
+                                break;
+                            case Jint.Runtime.Types.Boolean:
+                            case Jint.Runtime.Types.Number:
+                                // if the string value is a number that is smaller than 
+                                // the numeric value, because Math.min(true, "-2") works :-(
+                                if (double.TryParse(args[0].AsString(), out double d) == false ||
+                                    d > Jint.Runtime.TypeConverter.ToNumber(args[1]))
+                                {
+                                    Swap();
+                                }
+                                break;
+                            case Jint.Runtime.Types.String:
+                                if (string.Compare(args[0].AsString(), args[1].AsString()) > 0)
+                                    Swap();
+                                break;
+                        }
+                        break;
+                    case Jint.Runtime.Types.Object:
+                        throw new ArgumentException(caller + " cannot be called on an object");
+                }
+
+            }
+
+            private JsValue Raven_Max(JsValue self, JsValue[] args)
+            {
+                GenericSortTwoElementArray(args);
+                return args[1];
+            }
+
+            private JsValue Raven_Min(JsValue self, JsValue[] args)
+            {
+                GenericSortTwoElementArray(args);
+                return args[0];
             }
 
             private JsValue IncludeDoc(JsValue self, JsValue[] args)
@@ -246,7 +323,7 @@ namespace Raven.Server.Documents.Patch
                 if (obj.IsObject())
                 {
                     var result = new ScriptRunnerResult(this, obj);
-                    using (var jsonObj = result.TranslateToObject(_context))
+                    using (var jsonObj = result.TranslateToObject(_jsonCtx))
                     {
                         return jsonObj.ToString();
                     }
@@ -264,9 +341,9 @@ namespace Raven.Server.Documents.Patch
 
             public JsValue ExplodeArgs(JsValue self, JsValue[] args)
             {
-                if(args.Length != 2)
+                if (args.Length != 2)
                     throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
-                if(args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
+                if (args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
                 {
                     _refResolver.ExplodeArgsOn(args[0], boi);
                     return self;
@@ -305,9 +382,9 @@ namespace Raven.Server.Documents.Patch
                 BlittableJsonReaderObject reader = null;
                 try
                 {
-                    reader = JsBlittableBridge.Translate(_context, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
+                    var put = _database.DocumentsStorage.Put(_docsCtx, id, _docsCtx.GetLazyString(changeVector), reader);
 
                     if (DebugMode)
                     {
@@ -351,7 +428,7 @@ namespace Raven.Server.Documents.Patch
                 AssertNotReadOnly();
                 if (DebugMode)
                     DebugActions.DeleteDocument.Add(id);
-                var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
+                var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
                 return new JsValue(result != null);
             }
 
@@ -363,7 +440,7 @@ namespace Raven.Server.Documents.Patch
 
             private void AssertValidDatabaseContext()
             {
-                if (_context == null)
+                if (_docsCtx == null)
                     throw new InvalidOperationException("Unable to put documents when this instance is not attached to a database operation");
             }
 
@@ -448,9 +525,9 @@ namespace Raven.Server.Documents.Patch
                     [Constants.Documents.Metadata.LastModified] = boi.LastModified,
                 };
 
-                metadata = _context.ReadObject(metadata, boi.DocumentId);
+                metadata = _jsonCtx.ReadObject(metadata, boi.DocumentId);
 
-                return TranslateToJs(ScriptEngine, _context, metadata);
+                return TranslateToJs(ScriptEngine, _jsonCtx, metadata);
             }
 
             private JsValue CompareExchange(JsValue self, JsValue[] args)
@@ -484,7 +561,7 @@ namespace Raven.Server.Documents.Patch
                         if (kvp.Value.Value.IsString() == false)
                             throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
                         var result = LoadDocumentInternal(kvp.Value.Value.AsString());
-                        ScriptEngine.Array.PrototypeObject.Push(results, new[]{ result });
+                        ScriptEngine.Array.PrototypeObject.Push(results, new[] { result });
                     }
                     return results;
                 }
@@ -504,7 +581,7 @@ namespace Raven.Server.Documents.Patch
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
-            
+
             private JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
@@ -548,6 +625,75 @@ namespace Raven.Server.Documents.Patch
                 return new JsValue(regex.IsMatch(args[0].AsString()));
             }
 
+            private static JsValue ScalarToRawString(JsValue self2, JsValue[] args)
+            {
+                if (args.Length != 2)
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
+
+
+                JsValue firstParam = args[0];
+                if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
+                {
+                    JsValue secondParam = args[1];
+                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
+                    {
+
+                        var functionAst = lambda.GetFunctionAst();
+                        var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
+
+                        if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
+                        {
+                            if (existingValue.Changed)
+                            {
+                                return existingValue.Value;
+                            }
+                        }
+
+                        var propertyIndex = selfInstance.Blittable.GetPropertyIndex(propName);
+
+                        if (propertyIndex == -1)
+                        {
+                            return new JsValue(new ObjectInstance(selfInstance.Engine)
+                            {
+                                Extensible = true
+                            });
+                        }
+
+                        BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        selfInstance.Blittable.GetPropertyByIndex(propertyIndex, ref propDetails);
+                        var value = propDetails.Value;
+
+                        switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
+                        {
+                            case BlittableJsonToken.Null:
+                                return JsValue.Null;
+                            case BlittableJsonToken.Boolean:
+                                return new JsValue((bool)propDetails.Value);
+                            case BlittableJsonToken.Integer:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            case BlittableJsonToken.LazyNumber:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            case BlittableJsonToken.String:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            case BlittableJsonToken.CompressedString:
+                                return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                            default:
+                                throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
+                }
+
+
+            }
+
             private JsValue CmpXchangeInternal(string key)
             {
                 if (string.IsNullOrEmpty(key))
@@ -563,7 +709,7 @@ namespace Raven.Server.Documents.Patch
                 if (value == null)
                     return null;
 
-                var jsValue = TranslateToJs(ScriptEngine, _context, value);
+                var jsValue = TranslateToJs(ScriptEngine, _jsonCtx, value);
                 return jsValue.AsObject().Get("Object");
             }
 
@@ -573,8 +719,8 @@ namespace Raven.Server.Documents.Patch
                     return JsValue.Undefined;
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
-                var document = _database.DocumentsStorage.Get(_context, id);
-                return TranslateToJs(ScriptEngine, _context, document);
+                var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                return TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
             public void DisposeClonedDocuments()
@@ -585,44 +731,52 @@ namespace Raven.Server.Documents.Patch
             }
 
             private JsValue[] _args = Array.Empty<JsValue>();
-            private JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
+            private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
-            public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args)
             {
-                _context = ctx;
+                _docsCtx = docCtx;
+                _jsonCtx = jsonCtx ?? ThrowArgumentNull();
                 Reset();
                 if (_args.Length != args.Length)
                     _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
-                    _args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
-                JsValue result;
+                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
                 try
                 {
                     var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
-                    result = call.Call(Undefined.Instance, _args);
+                    var result = call.Call(Undefined.Instance, _args);
+                    return new ScriptRunnerResult(this, result);
                 }
                 catch (JavaScriptException e)
                 {
-                    throw CreateFullError(ctx, e);
+                    throw CreateFullError(e);
                 }
                 finally
                 {
                     _refResolver.ExplodeArgsOn(null, null);
+                    _docsCtx = null;
+                    _jsonCtx = null;
                 }
-                return new ScriptRunnerResult(this, result);
             }
 
-            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
+
+            private static JsonOperationContext ThrowArgumentNull()
+            {
+                throw new ArgumentNullException("jsonCtx");
+            }
+
+            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(JavaScriptException e)
             {
                 string msg;
                 if (e.Error.IsString())
                     msg = e.Error.AsString();
                 else if (e.Error.IsObject())
-                    msg = JsBlittableBridge.Translate(ctx, ScriptEngine, e.Error.AsObject()).ToString();
+                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Error.AsObject()).ToString();
                 else
                     msg = e.Error.ToString();
 
-                msg = "At " + e.Column + ":" + e.LineNumber + Environment.NewLine + msg;
+                msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
                 var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
                 return javaScriptException;
             }
@@ -638,6 +792,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 Includes?.Clear();
                 PutOrDeleteCalled = false;
+                ScriptEngine.ResetCallStack();
                 ScriptEngine.ResetStatementsCount();
                 ScriptEngine.ResetTimeoutTicks();
             }
@@ -664,6 +819,7 @@ namespace Raven.Server.Documents.Patch
                     _disposables.Add(cloned);
                     return cloned;
                 }
+
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
@@ -678,22 +834,40 @@ namespace Raven.Server.Documents.Patch
                     return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);
                 }
                 if (o is DocumentConflict dc)
+                {
                     return new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);
+                }
+
                 if (o is BlittableJsonReaderObject json)
+                {
                     return new BlittableObjectInstance(engine, null, json, null, null);
+                }
+
                 if (o == null)
                     return Undefined.Instance;
                 if (o is long lng)
                     return new JsValue(lng);
+                if (o is BlittableJsonReaderArray bjra)
+                {
+                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
+                    var args = new JsValue[1];
+                    for (var i = 0; i < bjra.Length; i++)
+                    {
+                        var value = TranslateToJs(engine, context, bjra[i]);
+                        args[0] = value as JsValue ?? JsValue.FromObject(engine, value);
+                        engine.Array.PrototypeObject.Push(jsArray, args);
+                    }
+                    return jsArray;
+                }
                 if (o is List<object> list)
                 {
-                    var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
                     var args = new JsValue[1];
                     for (var i = 0; i < list.Count; i++)
                     {
-                        var value = TranslateToJs(ScriptEngine, context, list[i]);
-                        args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
-                        ScriptEngine.Array.PrototypeObject.Push(jsArray, args);
+                        var value = TranslateToJs(engine, context, list[i]);
+                        args[0] = value as JsValue ?? JsValue.FromObject(engine, value);
+                        engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;
                 }
@@ -715,7 +889,7 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(s);
                 if (o is LazyStringValue ls)
                     return new JsValue(ls.ToString());
-                if(o is LazyCompressedStringValue lcs)
+                if (o is LazyCompressedStringValue lcs)
                     return new JsValue(lcs.ToString());
                 if (o is LazyNumberValue lnv)
                     return new JsValue(lnv.ToString());

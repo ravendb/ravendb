@@ -201,7 +201,7 @@ class conflicts extends viewModelBase {
     }
 
     deleteDocument() {
-        eventsCollector.default.reportEvent("document", "delete");
+        eventsCollector.default.reportEvent("conflicts", "delete");
         const viewModel = new deleteDocuments([this.documentId()], this.activeDatabase());
         app.showBootstrapDialog(viewModel);
         viewModel.deletionTask.done(() => this.onResolved());
@@ -209,6 +209,8 @@ class conflicts extends viewModelBase {
 
     saveDocument() {
         if (this.isValid(this.validationGroup)) {
+            
+            eventsCollector.default.reportEvent("conflicts", "save-resolution");
 
             // don't catch here, as we assume input is valid (checked that few lines above)
             const updatedDto = JSON.parse(this.suggestedResolution());

@@ -686,6 +686,9 @@ namespace Sparrow
 
         public void Reset()
         {
+            if (_disposed)
+                ThrowObjectDisposed();
+
             if (_wholeSegments.Count == 2)
                 return; // nothing to do
 
@@ -760,8 +763,9 @@ namespace Sparrow
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
-                    AllocateExternalSegment(_allocationBlockSize);
+                    var tmp = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                    AllocateExternalSegment(tmp);
+                    _allocationBlockSize = tmp;
                 }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
@@ -781,6 +785,9 @@ namespace Sparrow
 
         private ByteString AllocateInternal(int length, ByteStringType type)
         {
+            if (_disposed)
+                ThrowObjectDisposed();
+
             Debug.Assert((type & ByteStringType.External) == 0, "This allocation routine is only for use with internal storage byte strings.");
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
 
@@ -967,6 +974,9 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseExternal(ref ByteString value)
         {
+            if (_disposed)
+                ThrowObjectDisposed();
+
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
 
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
@@ -1008,6 +1018,9 @@ namespace Sparrow
 
         public void Release(ref ByteString value)
         {
+            if (_disposed)
+                ThrowObjectDisposed();
+
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
@@ -1079,6 +1092,10 @@ namespace Sparrow
             throw new InvalidOperationException("Allocate gave us a segment that was already disposed.");
         }
 
+        private static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException("ByteStringContext");
+        }
 
         private void AllocateExternalSegment(int size)
         {
@@ -1099,6 +1116,9 @@ namespace Sparrow
         public ByteString Skip(ByteString value, int bytesToSkip, ByteStringType type = ByteStringType.Mutable)
         {
             Debug.Assert(value._pointer != null, "ByteString cant be null.");
+
+            if (_disposed)
+                ThrowObjectDisposed();
 
             if (bytesToSkip < 0)
                 throw new ArgumentException($"'{nameof(bytesToSkip)}' cannot be smaller than 0.");

@@ -23,6 +23,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -163,7 +164,7 @@ namespace Raven.Server.Web.System
                                 Response = result,
                                 Error = errorJToken ?? error
                             });
-                            
+
                             streamWriter.Flush();
                         }
 
@@ -204,7 +205,9 @@ namespace Raven.Server.Web.System
                         fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
                     }
 
-                    var licenseStatus = ServerStore.LicenseManager.GetLicenseStatus(licenseInfo.License);
+                    var licenseStatus = await SetupManager
+                        .GetUpdatedLicenseStatus(ServerStore, licenseInfo.License)
+                        .ConfigureAwait(false);
                     fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
                     fullResult.LicenseType = licenseStatus.Type;
 
@@ -213,6 +216,10 @@ namespace Raven.Server.Web.System
                         var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
                         context.Write(writer, blittable);
                     }
+                }
+                catch (LicenseExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {
@@ -367,11 +374,21 @@ namespace Raven.Server.Web.System
                         ? new X509Certificate2(Convert.FromBase64String(certDef.Certificate))
                         : new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
 
-                    cn = certificate.GetNameInfo(X509NameType.DnsName, false);
+                    cn = certificate.GetNameInfo(X509NameType.SimpleName, false);
                 }
                 catch (Exception e)
                 {
                     throw new BadRequestException($"Failed to extract the CN property from the certificate {certificate?.FriendlyName}. Maybe the password is wrong?", e);
+                }
+
+                if (cn == null)
+                {
+                    throw new BadRequestException($"Failed to extract the CN property from the certificate. CN is null");
+                }
+
+                if (cn.LastIndexOf('*') > 0)
+                {
+                    throw new NotSupportedException("The wildcard CN name contains a '*' which is not at the first character of the string. It is not supported in the Setup Wizard, you can do a manual setup instead.");
                 }
 
                 try
@@ -435,26 +452,33 @@ namespace Raven.Server.Web.System
 
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
-                var settingsJson = File.ReadAllText(ServerStore.Configuration.ConfigPath);
+                BlittableJsonReaderObject settingsJson;
+                using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
+                {
+                    settingsJson = context.ReadForMemory(fs, "settings-json");
+                }
 
-                dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
-
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured);
-                jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork);
+                settingsJson.Modifications = new DynamicJsonValue(settingsJson)
+                {
+                    [RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true,
+                    [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
+                    [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
+                };
 
                 if (setupInfo.Port == 0)
                     setupInfo.Port = 8080;
 
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
                 if (setupInfo.TcpPort == 0)
                     setupInfo.TcpPort = 38888;
 
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
-                var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, json);
+                var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
+                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
             }
 
             return NoContent();
@@ -490,7 +514,7 @@ namespace Raven.Server.Web.System
                     ? new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate))
                     : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
 
-                var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
+                var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
 
                 var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -588,11 +612,11 @@ namespace Raven.Server.Web.System
                                 continue;
 
                             var tag = entry.FullName[0].ToString();
-                            using (var sr = new StreamReader(entry.Open()))
-                            {
-                                dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
-                                urlByTag[tag] = jsonObj[nameof(ConfigurationNodeInfo.PublicServerUrl)];
-                            }
+
+                            using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json"))
+                                if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
+                                    urlByTag[tag] = publicServerUrl;
+                            
                         }
                     }
 

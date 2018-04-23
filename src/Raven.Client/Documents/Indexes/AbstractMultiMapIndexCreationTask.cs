@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Indexes
             if (Conventions == null)
                 Conventions = new DocumentConventions();
 
-            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
+            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>(IndexName)
             {
                 Indexes = Indexes,
                 Analyzers = Analyzers,

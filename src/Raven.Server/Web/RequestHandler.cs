@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -47,6 +48,12 @@ namespace Raven.Server.Web
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _context.RouteMatch; }
+        }
+
+        public X509Certificate2 GetCurrentCertificate()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            return feature?.Certificate;
         }
 
         public virtual void Init(RequestHandlerContext context)
@@ -376,9 +383,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature);
                     return false;
-
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                     return true;
                 default:

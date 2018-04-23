@@ -26,7 +26,13 @@ namespace Raven.Client.Documents.Commands.Batches
         AttachmentPUT,
         AttachmentDELETE,
 
+        // NOTE: When you add anything here, such as additional 
+        // operation relating to a document but not operating on it 
+        // directly, be sure to also update DeferInternal
+        // to recognize that these are allows, like with AttachmentPUT and
+        // AttachmentDELETE
+
         ClientAnyCommand,
-        ClientNotAttachmentPUT
+        ClientNotAttachment
     }
 }

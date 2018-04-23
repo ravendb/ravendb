@@ -11,7 +11,7 @@ namespace RachisTests
 {
     public class CommandsTests : RachisConsensusTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
             const int commandCount = 10;
@@ -37,7 +37,7 @@ namespace RachisTests
             Assert.True(await Task.WhenAny(waitForNotificationsOnTasks, Task.Delay(LongWaitTime)) == waitForNotificationsOnTasks, "Some commands didn't complete");
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task Command_not_committed_after_timeout_CompletionTaskSource_is_notified()
         {
             const int commandCount = 3;
@@ -66,7 +66,7 @@ namespace RachisTests
                 try
                 {
                     var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
-                    Assert.True(await task.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
+                    Assert.True(await task.WaitAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
                     await task;
                     Assert.True(false, "We should have gotten an error");
                 }

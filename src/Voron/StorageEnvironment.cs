@@ -343,11 +343,11 @@ namespace Voron
                     schemaVersionVal != Options.SchemaVersion)
                 {
                     if (schemaVersionVal > Options.SchemaVersion)
-                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
+                        ThrowSchemaUpgradeRequired(schemaVersionVal, $"Your data has a schema version '{schemaVersionVal}' that is newer than currently supported by database '{Options.SchemaVersion}'");
 
                     UpgraderDelegate upgrader = Options.SchemaUpgrader;
                     if (upgrader == null)
-                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
+                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema upgrader provided.");
 
                     UpgradeSchema(schemaVersionVal, upgrader);
                 }
@@ -402,6 +402,8 @@ namespace Voron
                 var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databseGuidId, 0, 16);
                 Debug.Assert(result == 22);
             }
+
+            _options.SetEnvironmentId(databseGuidId);
         }
 
         public string Base64Id { get; } = new string(' ', 22);

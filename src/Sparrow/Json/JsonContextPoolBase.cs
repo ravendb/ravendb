@@ -79,10 +79,13 @@ namespace Sparrow.Json
             {
                 if (_contextPool.IsValueCreated == false)
                     return;
-                current = _contextPool.Value.Head;
-                _contextPool.Value.Head = null;
+
+                current = _contextPool.Value?.Head;
+
                 if (current == null)
                     return;
+
+                _contextPool.Value.Head = null;
             }
             catch (ObjectDisposedException)
             {

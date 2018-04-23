@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -41,11 +42,15 @@ namespace Raven.Client.Json
             if (type == typeof(Guid))
                 return ((Guid)value).ToString("D");
 
-            if (type == typeof(Enum))
+            if (type.GetTypeInfo().IsSubclassOf(typeof(Enum)))
                 return value.ToString();
 
-            var dictionary = value as IDictionary;
-            if (dictionary != null)
+            if (value is byte[] bytes)
+            {
+                return Convert.ToBase64String(bytes);
+            }
+
+            if (value is IDictionary dictionary)
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
@@ -54,11 +59,9 @@ namespace Raven.Client.Json
                 return @object;
             }
 
-            var enumerable = value as IEnumerable;
-            if (enumerable != null)
+            if (value is IEnumerable enumerable)
             {
-                var objectEnumerable = value as IEnumerable<object>;
-                var items = objectEnumerable != null
+                var items = value is IEnumerable<object> objectEnumerable
                     ? objectEnumerable.Select(x => ToBlittableSupportedType(x, conventions, context))
                     : enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, conventions, context));
 

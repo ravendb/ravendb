@@ -39,7 +39,7 @@ namespace SlowTests.Authentication
         public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
-            var serverCertificateHolder = new SecretProtection(new SecurityConfiguration()).LoadCertificateFromPath(serverCertPath, null);
+            var serverCertificateHolder = new SecretProtection(new SecurityConfiguration()).LoadCertificateFromPath(serverCertPath, null, Server.ServerStore);
 
             var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder);
 
@@ -177,7 +177,7 @@ namespace SlowTests.Authentication
                 ModifyDatabaseName = s => dbName
             }))
             {
-                var doc = new DatabaseRecord("WhateverDB");
+                var doc = new DatabaseRecord($"WhateverDB-{Guid.NewGuid()}");
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
             }
         }
@@ -200,7 +200,7 @@ namespace SlowTests.Authentication
                 ModifyDatabaseName = s => dbName
             }))
             {
-                var doc = new DatabaseRecord("WhateverDB");
+                var doc = new DatabaseRecord($"WhateverDB-{Guid.NewGuid()}");
                 Assert.Throws<AuthorizationException>(() =>
                 {
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation

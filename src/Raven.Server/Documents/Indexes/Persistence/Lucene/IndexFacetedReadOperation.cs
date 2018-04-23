@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IState _state;
 
         public IndexFacetedReadOperation(Index index,
-            Dictionary<string, IndexField> fields,
+            IndexDefinitionBase indexDefinition,
             LuceneVoronDirectory directory,
             IndexSearcherHolder searcherHolder,
             QueryBuilderFactories queryBuilderFactories,
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), indexDefinition, forQuerying: true);
             }
             catch (Exception e)
             {

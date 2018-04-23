@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Web;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -45,6 +46,16 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
                 var command = CommandBase.CreateFrom(commandJson);
+
+                switch (command)
+                {
+                    case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
+                        batchCmpExchange.ContextToWriteResult = context;
+                        break;
+                    case CompareExchangeCommandBase cmpExchange:
+                        cmpExchange.ContextToWriteResult = context;
+                        break;
+                }
 
                 var isClusterAdmin = IsClusterAdmin();
                 command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
@@ -89,7 +100,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator)]
         public Task SuspendObserver()
         {
             SetupCORSHeaders();
@@ -286,12 +297,13 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             SetupCORSHeaders();
 
-            var nodeUrl = GetStringQueryString("url").TrimEnd('/');
+            var nodeUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             var watcher = GetBoolValueQueryString("watcher", false);
             var assignedCores = GetIntValueQueryString("assignedCores", false);
             if (assignedCores <= 0)
                 throw new ArgumentException("Assigned cores must be greater than 0!");
 
+            nodeUrl = UrlHelper.TryGetLeftPart(nodeUrl);
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
 
             if (HttpContext.Request.IsHttps != remoteIsHttps)
@@ -524,7 +536,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator)]
         public Task TimeoutNow()
         {
             SetupCORSHeaders();
@@ -535,7 +547,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator)]
         public Task EnforceReelection()
         {
             SetupCORSHeaders();
@@ -551,7 +563,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.Operator)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -586,7 +598,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.Operator)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)

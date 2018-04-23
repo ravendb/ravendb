@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
@@ -367,7 +368,7 @@ namespace Raven.Server.Documents.Indexes
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
             if (SimulateCorruption)
-                throw new SimulatedVoronUnrecoverableErrorException("Simulated corruption.");
+                SimulateCorruptionError();
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name}'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
@@ -375,6 +376,19 @@ namespace Raven.Server.Documents.Indexes
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
                 statsTree.Add(collection, etagSlice);
+        }
+
+        private void SimulateCorruptionError()
+        {
+            try
+            {
+                throw new SimulatedVoronUnrecoverableErrorException("Simulated corruption.");
+            }
+            catch (Exception e)
+            {
+                _environment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
         }
 
         public class SimulatedVoronUnrecoverableErrorException : VoronUnrecoverableErrorException

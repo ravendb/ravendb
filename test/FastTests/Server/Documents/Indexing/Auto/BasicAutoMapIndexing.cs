@@ -1068,8 +1068,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
-                IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
-                IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
+                IOExtensions.DeleteDirectory(Path.Combine(indexStoragePath, "Journals"));
 
                 await ModifyDatabaseSettings(dbName, record =>
                 {
@@ -1112,8 +1111,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
                 Assert.True(Directory.Exists(indexStoragePath));
-                IOExtensions.DeleteDirectory(indexStoragePath);
-                Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
+                
+                IOExtensions.DeleteDirectory(Path.Combine(indexStoragePath, "Journals"));
 
                 await ModifyDatabaseSettings(dbName, record =>
                 {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.Dashboard
 {
@@ -18,7 +20,6 @@ namespace Raven.Server.Dashboard
         private readonly TimeSpan _notificationsThrottle;
 
         private DateTime _lastSentNotification = DateTime.MinValue;
-        private static bool IsLinux = PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false;
 
         public MachineResourcesNotificationSender(string resourceName,
             ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
@@ -37,6 +38,7 @@ namespace Raven.Server.Dashboard
                 await WaitOrThrowOperationCanceled(_notificationsThrottle - timeSpan);
             }
 
+            byte[][] buffers = null;
             try
             {
                 if (CancellationToken.IsCancellationRequested)
@@ -45,7 +47,15 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var machineResources = GetMachineResources();
+                SmapsReader smapsReader = null;
+                if (PlatformDetails.RunningOnLinux)
+                {
+                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    buffers = new []{buffer1, buffer2};
+                    smapsReader = new SmapsReader(new[] {buffer1, buffer2});
+                }
+                var machineResources = GetMachineResources(smapsReader);
                 foreach (var watcher in _watchers)
                 {
                     // serialize to avoid race conditions
@@ -56,33 +66,39 @@ namespace Raven.Server.Dashboard
             finally
             {
                 _lastSentNotification = DateTime.UtcNow;
+                if (buffers != null)
+                {
+                    ArrayPool<byte>.Shared.Return(buffers[0]);
+                    ArrayPool<byte>.Shared.Return(buffers[1]);
+                }
             }
         }
 
         
 
-        public static MachineResources GetMachineResources()
+        public static MachineResources GetMachineResources(SmapsReader smapsReader)
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var workingSet = IsLinux == false
-                        ? currentProcess.WorkingSet64 
-                        : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
-
-                var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-                var systemCommitLimit = memoryInfoResult.TotalCommittableMemory.GetValue(SizeUnit.Bytes);
-                var committedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes);
-                var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
+                var memInfo = MemoryInformation.GetMemoryInfo();
+                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, smapsReader, out var sharedCleanInBytes);
+                var workingSet = PlatformDetails.RunningOnLinux
+                    ? MemoryInformation.GetRssMemoryUsage(currentProcess.Id) - sharedCleanInBytes
+                    : currentProcess.WorkingSet64;
 
                 var cpuInfo = CpuUsage.Calculate();
 
                 var machineResources = new MachineResources
                 {
-                    TotalMemory = installedMemory,
-                    SystemCommitLimit = systemCommitLimit,
-                    CommitedMemory =  committedMemory,
+                    TotalMemory = memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                    AvailableMemory = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
+                    SystemCommitLimit = memInfo.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
+                    CommitedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                     ProcessMemoryUsage = workingSet,
-                    IsProcessMemoryRss = IsLinux,
+                    IsWindows = PlatformDetails.RunningOnPosix == false,
+                    IsLowMemory = isLowMemory,
+                    LowMemoryThreshold = LowMemoryNotification.Instance.LowMemoryThreshold.GetValue(SizeUnit.Bytes),
+                    CommitChargeThreshold = LowMemoryNotification.Instance.GetCommitChargeThreshold(memInfo).GetValue(SizeUnit.Bytes),
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
                     ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
                 };

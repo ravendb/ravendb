@@ -89,6 +89,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
+                token.ThrowIfCancellationRequested();
+
                 using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
                 using (store.Value)
                 using (_aggregationBatch)
@@ -180,9 +182,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is OperationCanceledException == false)
             {
-                _index.ThrowIfCorruptionException(e);
+                _index.ErrorIndexIfCriticalException(e);
 
                 LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
@@ -202,7 +204,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var page = new TreePage(null, Constants.Storage.PageSize);
 
-            HashSet<long> compressedEmptyPages = null;
+            HashSet<long> compressedEmptyLeafs = null;
 
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {
@@ -247,10 +249,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             // it doesn't have any entries after decompression because 
                             // each compressed entry has the delete tombstone
 
-                            if (compressedEmptyPages == null)
-                                compressedEmptyPages = new HashSet<long>();
+                            if (compressedEmptyLeafs == null)
+                                compressedEmptyLeafs = new HashSet<long>();
 
-                            compressedEmptyPages.Add(leafPage.PageNumber);
+                            compressedEmptyLeafs.Add(leafPage.PageNumber);
                             continue;
                         }
 
@@ -277,7 +279,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             }
                             else
                             {
-                                StoreAggregationResult(leafPage.PageNumber, leafPage.NumberOfEntries, table, result);
+                                StoreAggregationResult(leafPage, table, result);
                                 parentPagesToAggregate.Add(parentPage);
                             }
 
@@ -286,9 +288,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception e) when (e is OperationCanceledException == false)
                     {
-                        _index.ThrowIfCorruptionException(e);
+                        _index.ErrorIndexIfCriticalException(e);
 
                         LogReductionError(e, reduceKeyHash, stats, updateStats: parentPage == -1, page: leafPage);
                     }
@@ -327,7 +329,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         var parentPage = tree.GetParentPageOf(page);
 
-                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, token))
+                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, compressedEmptyLeafs, token))
                         {
                             if (parentPage == -1)
                             {
@@ -342,7 +344,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 parentPagesToAggregate.Add(parentPage);
 
-                                StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result);
+                                StoreAggregationResult(page, table, result);
                             }
 
                             _metrics.MapReduceIndexes.ReducedPerSec.Mark(page.NumberOfEntries);
@@ -350,9 +352,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception e) when (e is OperationCanceledException == false)
                     {
-                        _index.ThrowIfCorruptionException(e);
+                        _index.ErrorIndexIfCriticalException(e);
 
                         LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: page);
                     }
@@ -369,7 +371,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            if (compressedEmptyPages != null && compressedEmptyPages.Count > 0)
+            if (compressedEmptyLeafs != null && compressedEmptyLeafs.Count > 0)
             {
                 // we had some compressed pages that are empty after decompression
                 // let's remove them and reduce the tree once again
@@ -377,7 +379,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 modifiedStore.ModifiedPages.Clear();
                 modifiedStore.FreedPages.Clear();
 
-                foreach (var pageNumber in compressedEmptyPages)
+                foreach (var pageNumber in compressedEmptyLeafs)
                 {
                     page.Base = lowLevelTransaction.GetPage(pageNumber).Pointer;
 
@@ -394,7 +396,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, TransactionOperationContext indexContext, CancellationToken token)
+        private AggregationResult AggregateLeafPage(TreePage page,
+            LowLevelTransaction lowLevelTransaction,
+            TransactionOperationContext indexContext,
+            CancellationToken token)
         {
             using (_treeReductionStats.LeafAggregation.Start())
             {
@@ -410,7 +415,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, HashSet<long> remainingBranchesToAggregate, CancellationToken token)
+        private AggregationResult AggregateBranchPage(TreePage page,
+            Table table,
+            TransactionOperationContext indexContext,
+            HashSet<long> remainingBranchesToAggregate,
+            HashSet<long> compressedEmptyLeafs,
+            CancellationToken token)
         {
             using (_treeReductionStats.BranchAggregation.Start())
             {
@@ -422,28 +432,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (table.ReadByKey(childPageNumberSlice, out TableValueReader tvr) == false)
                         {
-                            if (remainingBranchesToAggregate.Contains(pageNumber))
+                            if (TryAggregateChildPageOrThrow(pageNumber, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
                             {
-                                // we have a modified branch page but its children were not modified (branch page splitting) so we didn't aggregated it yet, let's do it now
-                                try
-                                {
-                                    page.Base = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).Pointer;
-
-                                    using (var result = AggregateBranchPage(page, table, indexContext, remainingBranchesToAggregate, token))
-                                    {
-                                        StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result);
-                                    }
-                                }
-                                finally
-                                {
-                                    remainingBranchesToAggregate.Remove(pageNumber);
-                                }
-
                                 table.ReadByKey(childPageNumberSlice, out tvr);
                             }
                             else
                             {
-                                throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + pageNumber);
+                                continue;
                             }
                         }
 
@@ -476,17 +471,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return result;
         }
 
-        private void StoreAggregationResult(long modifiedPage, int aggregatedEntries, Table table, AggregationResult result)
+        private void StoreAggregationResult(TreePage page, Table table, AggregationResult result)
         {
             using (_treeReductionStats.StoringReduceResult.Start())
             {
-                var pageNumber = Bits.SwapBytes(modifiedPage);
+                var pageNumber = Bits.SwapBytes(page.PageNumber);
                 var numberOfOutputs = result.Count;
 
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(pageNumber);
-                    tvb.Add(aggregatedEntries);
+                    tvb.Add(page.NumberOfEntries);
                     tvb.Add(numberOfOutputs);
 
                     foreach (var output in result.GetOutputsToStore())
@@ -497,6 +492,47 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     table.Set(tvb);
                 }
             }
+        }
+
+        private bool TryAggregateChildPageOrThrow(long pageNumber, Table table, TransactionOperationContext indexContext,
+            HashSet<long> remainingBranchesToAggregate,
+            HashSet<long> compressedEmptyLeafs,
+            CancellationToken token)
+        {
+            if (remainingBranchesToAggregate.Contains(pageNumber))
+            {
+                // RavenDB-5363: we have a modified branch page but its children were not modified (branch page splitting) so we didn't
+                // aggregated it yet, let's do it now
+
+                try
+                {
+                    var page = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
+                    var unaggregatedBranch = new TreePage(page.Pointer, Constants.Storage.PageSize);
+
+                    using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
+                    {
+                        StoreAggregationResult(unaggregatedBranch, table, result);
+                    }
+                }
+                finally
+                {
+                    remainingBranchesToAggregate.Remove(pageNumber);
+                }
+
+                return true;
+            }
+
+            if (compressedEmptyLeafs != null && compressedEmptyLeafs.Contains(pageNumber))
+            {
+                // it's empty after decompression, we can safely skip it here
+
+                return false;
+            }
+
+            var relatedPage = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
+            var relatedTreePage = new TreePage(relatedPage.Pointer, Constants.Storage.PageSize);
+
+            throw new InvalidOperationException($"Couldn't find pre-computed results for existing page: {relatedTreePage}");
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -18,10 +19,17 @@ namespace FastTests
 {
     public static class RavenTestHelper
     {
+        public static readonly bool IsRunningOnCI;
+
         public static readonly ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = ProcessorInfo.ProcessorCount * 2
         };
+
+        static RavenTestHelper()
+        {
+            bool.TryParse("RAVEN_IS_RUNNING_ON_CI", out IsRunningOnCI);
+        }
 
         private static int _pathCount;
 
@@ -86,6 +94,14 @@ namespace FastTests
             var errors = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
 
             Assert.Empty(errors.SelectMany(x => x.Errors));
+        }
+
+        public static void AssertEqualRespectingNewLines(string expected, string actual)
+        {
+            var regex = new Regex("\r*\n");
+            var converted = regex.Replace(expected, Environment.NewLine);
+
+            Assert.Equal(converted, actual);
         }
     }
 }

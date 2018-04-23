@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Client.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Platform;
 using Xunit;
 
 namespace SlowTests.Client.Attachments
@@ -75,7 +75,15 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("", result.ContentType);
                     Assert.Equal(hash, result.Hash);
                     Assert.Equal(size, result.Size);
-                    Assert.Equal(size, bigStream.Position);
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(size, bigStream.Position);
+                    else
+                    {
+                        // on Posix the position is set to initial one automatically
+                        // https://github.com/dotnet/corefx/issues/23782
+                        Assert.Equal(0, bigStream.Position);
+                    }
                 }
 
                 using (var session = store.OpenSession())

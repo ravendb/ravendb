@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Dashboard;
 using Raven.Server.Routing;
 using Sparrow.Logging;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -16,13 +19,23 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
+                using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool,
+                    ServerStore.ServerShutdown))
                 {
                     var isValidFor = GetDatabaseAccessValidationFunc();
-
+                    byte[][] buffers = null;
                     try
                     {
-                        var machineResources = MachineResourcesNotificationSender.GetMachineResources();
+                        SmapsReader smapsReader = null;
+                        if (PlatformDetails.RunningOnLinux)
+                        {
+                            var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                            var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                            buffers = new[] {buffer1, buffer2};
+                            smapsReader = new SmapsReader(new[] {buffer1, buffer2});
+                        }
+
+                        var machineResources = MachineResourcesNotificationSender.GetMachineResources(smapsReader);
                         await writer.WriteToWebSocket(machineResources.ToJson());
 
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
@@ -38,6 +51,14 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         if (Logger.IsInfoEnabled)
                             Logger.Info("Failed to send the initial server dashboard data", e);
+                    }
+                    finally
+                    {
+                        if (buffers != null)
+                        {
+                            ArrayPool<byte>.Shared.Return(buffers[0]);
+                            ArrayPool<byte>.Shared.Return(buffers[1]);
+                        }
                     }
 
                     await writer.WriteNotifications(isValidFor);

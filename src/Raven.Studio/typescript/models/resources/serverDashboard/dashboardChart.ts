@@ -112,7 +112,7 @@ class dashboardChart {
     }
     
     onResize() {
-         const container = d3.select(this.containerSelector);
+        const container = d3.select(this.containerSelector);
         
         const $container = $(this.containerSelector);
         
@@ -161,6 +161,7 @@ class dashboardChart {
     
     showTooltip() {
         this.tooltip
+            .style('display', undefined)
             .transition()
             .duration(250)
             .style("opacity", 1);
@@ -231,7 +232,8 @@ class dashboardChart {
     hideTooltip() {
         this.tooltip.transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each('end', () => this.tooltip.style('display', 'none'));
 
         this.lastXPosition = null;
     }
@@ -259,9 +261,27 @@ class dashboardChart {
             });
         });
         
+        this.maybeTrimData();
+       
         this.draw();
         
         this.updateTooltip(true);
+    }
+    
+    private maybeTrimData() {
+        let hasAnyTrim = false;
+        for (let i = 0; i < this.data.length; i++) {
+            const entry = this.data[i];
+            
+            if (entry.values.length > 2000) {
+                entry.values = entry.values.splice(1500);
+                hasAnyTrim = true;
+            }
+        }
+        
+        if (hasAnyTrim) {
+            this.minDate = _.min(this.data.map(x => x.values[0].x));
+        }
     }
     
     private createLineFunctions(): Map<string, d3.svg.Line<chartItemData>> {

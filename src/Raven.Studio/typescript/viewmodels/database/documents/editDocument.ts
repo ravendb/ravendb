@@ -22,11 +22,11 @@ import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
-import timeHelpers = require("common/timeHelpers");
 import getDocumentAtRevisionCommand = require("commands/database/documents/getDocumentAtRevisionCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
 
 import eventsCollector = require("common/eventsCollector");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class editDocument extends viewModelBase {
 
@@ -79,6 +79,7 @@ class editDocument extends viewModelBase {
     documentSize: KnockoutComputed<string>;
     editedDocId: KnockoutComputed<string>;
     displayLastModifiedDate: KnockoutComputed<boolean>;
+    collectionTracker = collectionsTracker.default;
     
     constructor() {
         super();
@@ -192,7 +193,7 @@ class editDocument extends viewModelBase {
         this.addNotification(this.changeNotification);
     }
 
-    private initValidation() {      
+    private initValidation() {
         const rg1 = /^[^\\]*$/; // forbidden character - backslash
         this.userSpecifiedId.extend({
             validation: [
@@ -309,7 +310,7 @@ class editDocument extends viewModelBase {
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta && meta.id) {
                 this.userSpecifiedId(meta.id);
-                this.entityName(document.getCollectionFromId(meta.id));
+                this.entityName(document.getCollectionFromId(meta.id, this.collectionTracker.getCollectionNames()));
             }
         });
         this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
@@ -323,9 +324,8 @@ class editDocument extends viewModelBase {
         });
 
         this.lastModifiedAsAgo = ko.pureComputed(() => {
-            const now = timeHelpers.utcNowWithMinutePrecision();
             const metadata = this.metadata();
-            return metadata ? moment.utc(metadata.lastModified()).from(now) : "";
+            return metadata ? metadata.lastModifiedInterval() : "";
         });
 
         this.latestRevisionUrl = ko.pureComputed(() => {
@@ -406,24 +406,11 @@ class editDocument extends viewModelBase {
     }
 
     private defaultNameForNewDocument(collectionForNewDocument: string) {
-
+        // We get here upon clicking 'Clone' or 'New doc in current collection'
+        // Just append / to collection name if exists
+        
         if (!collectionForNewDocument ||  collectionForNewDocument === "@empty") {
             return "";
-        }
-
-        // Requested logic:
-        // If only first letter is upper than lower it
-        // If any other letter is upper - leave as is
-
-        const firstLetter = collectionForNewDocument.charAt(0);
-        if (firstLetter === firstLetter.toLocaleUpperCase()) {
-            for (let i = 1; i < collectionForNewDocument.length; i++) {
-                const letter = collectionForNewDocument.charAt(i);
-                if (letter === letter.toLocaleUpperCase()) {
-                    return collectionForNewDocument + "/";
-                }
-            }
-            return collectionForNewDocument.toLocaleLowerCase() + "/";
         }
 
         return collectionForNewDocument + "/";
@@ -469,6 +456,8 @@ class editDocument extends viewModelBase {
         this.isCreatingNewDocument(true);
 
         this.syncChangeNotification();
+        
+        eventsCollector.default.reportEvent("document", "clone");
 
         // 2. Remove the '@change-vector' & '@flags' from metadata view for the clone 
         const docDto = this.document().toDto(true);
@@ -492,7 +481,7 @@ class editDocument extends viewModelBase {
         this.userSpecifiedId(docId);
     }
 
-    saveDocument() {       
+    saveDocument() {
         if (this.isValid(this.globalValidationGroup)) {
             eventsCollector.default.reportEvent("document", "save");
             this.saveInternal(this.userSpecifiedId());
@@ -602,17 +591,12 @@ class editDocument extends viewModelBase {
 
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
-        
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         // Define a collection to be sent to server only if there is a relevant value 
-        const collectionIsDefined = target['@collection'] || document.getCollectionFromId(id);
-        if (collectionIsDefined) {
-            target['@collection'] = collectionIsDefined;
-        }
-        
         target['@id'] = id;
+        target['@collection'] = target['@collection'] || document.getCollectionFromId(id, this.collectionTracker.getCollectionNames());
     }
 
     stringify(obj: any) {
@@ -699,7 +683,6 @@ class editDocument extends viewModelBase {
             })
             .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
             .always(() => this.isBusy(false));
-
     }
 
     refreshDocument() {

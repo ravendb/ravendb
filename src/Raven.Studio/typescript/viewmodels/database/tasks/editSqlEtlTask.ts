@@ -33,7 +33,6 @@ class editSqlEtlTask extends viewModelBase {
 
     possibleMentors = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
-    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
@@ -296,8 +295,13 @@ class editSqlEtlTask extends viewModelBase {
         
         // 6. All is well, Save Sql Etl task
         savingNewStringAction.done(()=> {
+            const scriptsToReset = this.editedSqlEtl()
+                .transformationScripts()
+                .filter(x => x.resetScript())
+                .map(x => x.name());
+            
             const dto = this.editedSqlEtl().toDto();
-            saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto)
+            saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto, scriptsToReset)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -350,13 +354,13 @@ class editSqlEtlTask extends viewModelBase {
         }
 
         if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false);
+            const newTransformationItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false, false);
             newTransformationItem.name(this.findNameForNewTransformation());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedSqlEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedSqlEtl().transformationScripts().find(x => x.name() === transformation.name());
-            const newItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false);
+            const newItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false, transformation.resetScript());
             
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
                 newItem.dirtyFlag().forceDirty();
@@ -392,7 +396,7 @@ class editSqlEtlTask extends viewModelBase {
 
     editTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
         this.transformationScriptSelectedForEdit(model);
-        this.editedTransformationScriptSandbox(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false));
+        this.editedTransformationScriptSandbox(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false, model.resetScript()));
     }
 
     createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {

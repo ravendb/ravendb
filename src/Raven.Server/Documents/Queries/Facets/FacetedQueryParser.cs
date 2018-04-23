@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 using Sparrow.Json;
 using Constants = Raven.Client.Constants;
 
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     var rangeFacet = new RangeFacet();
 
                     foreach (var range in facetField.Ranges)
-                        rangeFacet.Ranges.Add(range.GetText());
+                        rangeFacet.Ranges.Add(range.GetText(query.Query));
 
                     facet = rangeFacet;
                 }
@@ -194,8 +195,8 @@ namespace Raven.Server.Documents.Queries.Facets
         {
             if (expression is BetweenExpression bee)
             {
-                var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value);
-                var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value);
+                var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value, query.Query.QueryParameters);
+                var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value, query.Query.QueryParameters);
 
                 var fieldName = ((FieldExpression)bee.Source).FieldValue;
 
@@ -204,15 +205,17 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 type = hValue.Type;
 
-                return new ParsedRange
+                var range = new ParsedRange
                 {
                     Field = fieldName,
                     HighInclusive = true,
                     HighValue = hValue.Value,
                     LowInclusive = true,
                     LowValue = lValue.Value,
-                    RangeText = expression.GetText()
+                    RangeText = expression.GetText(query.Query)
                 };
+
+                return range;
             }
 
             if (expression is BinaryExpression be)
@@ -226,14 +229,14 @@ namespace Raven.Server.Documents.Queries.Facets
                         var fieldName = ExtractFieldName(be, query);
 
                         var r = (ValueExpression)be.Right;
-                        var fieldValue = ConvertFieldValue(r.Token, r.Value);
+                        var fieldValue = ConvertFieldValue(r.Token, r.Value, query.Query.QueryParameters);
 
                         type = fieldValue.Type;
 
                         var range = new ParsedRange
                         {
                             Field = fieldName,
-                            RangeText = expression.GetText()
+                            RangeText = expression.GetText(query.Query)
                         };
 
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
@@ -274,7 +277,7 @@ namespace Raven.Server.Documents.Queries.Facets
                             left.LowInclusive = right.LowInclusive;
                         }
 
-                        left.RangeText = expression.GetText();
+                        left.RangeText = $"{left.RangeText} and {right.RangeText}";
                         return left;
                     default:
                         ThrowUnsupportedRangeOperator(query, be.Operator);
@@ -299,7 +302,7 @@ namespace Raven.Server.Documents.Queries.Facets
             return null;
         }
 
-        private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type)
+        private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
         {
             switch (type)
             {
@@ -313,6 +316,20 @@ namespace Raven.Server.Documents.Queries.Facets
                     return (value, RangeType.None);
                 case ValueTokenType.Null:
                     return (null, RangeType.None);
+                case ValueTokenType.Parameter:
+                    queryParameters.TryGet(value, out object o);
+                    var rangeType = RangeType.None;
+                    if (o is long l) 
+                    {
+                        o = NumericUtils.DoubleToPrefixCoded(l);
+                        rangeType = RangeType.Double;
+                    }
+                    else if (o is LazyNumberValue lnv)
+                    {
+                        o = NumericUtils.DoubleToPrefixCoded((double)lnv);
+                        rangeType = RangeType.Double;
+                    }
+                    return (o?.ToString(), rangeType);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -417,7 +434,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
         private static void ThrowUnsupportedRangeExpression(FacetQuery query, QueryExpression expression)
         {
-            throw new InvalidQueryException($"Unsupported range expression of a facet query: {expression.GetType().Name}. Text: {expression.GetText()}.", query.Query.Metadata.QueryText, query.Query.QueryParameters);
+            throw new InvalidQueryException($"Unsupported range expression of a facet query: {expression.GetType().Name}. Text: {expression.GetText(query.Query)}.", query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
     }
 }

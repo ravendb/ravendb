@@ -13,12 +13,14 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -174,8 +176,10 @@ namespace FastTests
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
                         store.Urls = result.NodesAddedTo.SelectMany(UseFiddler).ToArray();
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                        var task = WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
-                        task.ConfigureAwait(false).GetAwaiter().GetResult();
+                        AsyncHelpers.RunSync(async () =>
+                        {
+                            await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout); 
+                        });
                     }
 
                     store.BeforeDispose += (sender, args) =>
@@ -238,7 +242,7 @@ namespace FastTests
                                     continue;
                                 }
 
-                                server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex).ConfigureAwait(false).GetAwaiter().GetResult();
+                                AsyncHelpers.RunSync(async () => await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex));
                             }
                         }
                     };
@@ -461,14 +465,14 @@ namespace FastTests
             } while (debug == false || Debugger.IsAttached);
         }
 
-        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
+        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079, string database = null)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
 
             var urls = documentStore.Urls;
 
-            var databaseNameEncoded = Uri.EscapeDataString(documentStore.Database);
+            var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
             var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
             OpenBrowser(documentsPage);// start the server
@@ -476,7 +480,22 @@ namespace FastTests
             do
             {
                 Thread.Sleep(500);
-            } while (documentStore.Commands().Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+            } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+        }
+
+        protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
+        {
+            var database = GetDatabase(store.Database).Result;
+
+            var mre = new ManualResetEventSlim();
+
+            database.IndexStore.IndexBatchCompleted += x =>
+            {
+                if (predicate(x))
+                    mre.Set();
+            };
+
+            return mre;
         }
 
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
@@ -492,7 +511,7 @@ namespace FastTests
             SecurityClearance clearance,
             RavenServer server = null)
         {
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out _);
+            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out var clietnCertBytes);
             var serverCertificate = new X509Certificate2(serverCertPath);
             using (var store = GetDocumentStore(new Options
             {
@@ -509,7 +528,7 @@ namespace FastTests
                     requestExecutor.Execute(command, context);
                 }
             }
-            return clientCertificate;
+            return new X509Certificate2(clietnCertBytes);
         }
 
         protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
@@ -544,6 +563,33 @@ namespace FastTests
                 }
             }
             return clientCertificate;
+        }
+
+        protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
+        {
+            var restoreOperation = new RestoreBackupOperation(config);
+
+            var operation = store.Maintenance.Server.Send(restoreOperation);
+            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+
+            return EnsureDatabaseDeletion(config.DatabaseName, store);
+        }
+
+        protected IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
+        {
+            return new DisposableAction(() =>
+            {
+                try
+                {
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseToDelete, hardDelete: true));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Failed to delete '{databaseToDelete}' database. Exception: " + e);
+
+                    // do not throw to not hide an exception that could be thrown in a test
+                }
+            });
         }
 
         protected string SetupServerAuthentication(

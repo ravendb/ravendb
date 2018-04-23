@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.IndexFields, forQuerying: true);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition, forQuerying: true);
             }
             catch (Exception e)
             {
@@ -75,12 +75,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var pageSize = GetPageSize(_searcher, query.PageSize);
+            var pageSize = query.PageSize;
+            var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
+            if (isDistinctCount)
+                pageSize = int.MaxValue;
+
+            pageSize = GetPageSize(_searcher, pageSize);
+
             var docsToGet = pageSize;
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, getSpatialField);
+            var sort = GetSort(query, getSpatialField, documentsContext);
             var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -116,7 +122,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
 
                         returnedResults++;
-                        yield return result;
+
+                        if (isDistinctCount == false)
+                            yield return result;
 
                         if (returnedResults == pageSize)
                             yield break;
@@ -132,6 +140,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     docsToGet += GetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                 }
+
+                if (isDistinctCount)
+                    totalResults.Value = returnedResults;
             }
         }
 
@@ -170,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
-            var sort = GetSort(query, getSpatialField);
+            var sort = GetSort(query, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -301,8 +312,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField)
+        private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
         {
+            if (query.PageSize == 0) // no need to sort when counting only
+                return null;
+
             var orderByFields = query.Metadata.OrderBy;
 
             if (orderByFields == null)
@@ -324,7 +338,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
-                    if(field.Ascending)
+                    if (field.Ascending)
                         sort.Add(SortField.FIELD_SCORE);
                     else
                         sort.Add(new SortField((string)null, 0, true));
@@ -373,7 +387,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 switch (field.OrderingType)
                 {
                     case OrderByFieldType.AlphaNumeric:
-                        var anSort = new AlphaNumericComparatorSource();
+                        var anSort = new AlphaNumericComparatorSource(documentsContext);
                         sort.Add(new SortField(fieldName, anSort, field.Ascending == false));
                         continue;
                     case OrderByFieldType.Long:
@@ -444,7 +458,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
                     closeServerTransaction = serverContext.OpenReadTransaction();
                 }
-                
+
                 using (closeServerTransaction)
                     moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(serverContext, context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
@@ -552,7 +566,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, getSpatialField);
+            var sort = GetSort(query, getSpatialField, documentsContext);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
             var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);

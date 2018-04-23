@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     {
                                         int? managedThreadId = null;
                                         string threadName = null;
-                                        if (threadAllocations.TryGetValue(thread.Id, out var threadAllocation))
+                                        if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadAllocation))
                                         {
                                             managedThreadId = threadAllocation.Id;
                                             threadName = threadAllocation.Name ?? "Thread Pool Thread";
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                                 [nameof(ThreadInfo.Id)] = thread.Id,
                                                 [nameof(ThreadInfo.ManagedThreadId)] = managedThreadId,
                                                 [nameof(ThreadInfo.Name)] = threadName ?? unmanagedThreadName,
-                                                [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
+                                                [nameof(ThreadInfo.StartingTime)] = thread.StartTime.ToUniversalTime(),
                                                 [nameof(ThreadInfo.Duration)] = thread.TotalProcessorTime.TotalMilliseconds,
                                                 [nameof(ThreadInfo.State)] = thread.ThreadState,
                                                 [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,

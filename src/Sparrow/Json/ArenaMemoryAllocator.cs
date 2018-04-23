@@ -14,7 +14,7 @@ namespace Sparrow.Json
 {
     public unsafe class ArenaMemoryAllocator : IDisposable
     {
-        private const int MaxArenaSize = 1024 * 1024 * 1024;
+        public const int MaxArenaSize = 1024 * 1024 * 1024;
 
         private byte* _ptrStart;
         private byte* _ptrCurrent;
@@ -159,8 +159,8 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (requestedSize >= MaxArenaSize)
-                throw new ArgumentOutOfRangeException(nameof(requestedSize));
+            if (requestedSize <0 || requestedSize >= MaxArenaSize)
+                throw new ArgumentOutOfRangeException(nameof(requestedSize), requestedSize, "Allocation size is not valid: " + requestedSize);
 
             long newSize = GetPreferredSize(requestedSize);
 

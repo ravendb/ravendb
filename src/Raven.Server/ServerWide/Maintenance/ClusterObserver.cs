@@ -5,9 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -275,7 +278,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (TryMoveToRehab(dbName, topology, current, member))
                     return $"Node {member} is currently not responding (with status: {status}) and moved to rehab";
 
-                // node distribution is off and the node is down
+                // database distribution is off and the node is down
                 if (topology.DynamicNodesDistribution == false && (
                     topology.PromotablesStatus.TryGetValue(member, out var currentStatus) == false
                     || currentStatus != DatabasePromotionStatus.NotResponding))
@@ -298,7 +301,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (recoverable.Count > 0)
                 {
                     var node = FindMostUpToDateNode(recoverable, dbName, current);
-                    topology.Rehabs.Remove(node);
+                    topology.Rehabs.Remove(node);   
                     topology.Members.Add(node);
 
                     RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
@@ -320,7 +323,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Bad)
                 {
-                    // node distribution is off and the node is down
+                    // database distribution is off and the node is down
                     if (topology.DynamicNodesDistribution == false)
                     {
                         if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
@@ -497,21 +500,21 @@ namespace Raven.Server.ServerWide.Maintenance
                 switch (nodeStats.Status)
                 {
                     case ClusterNodeStatusReport.ReportStatus.Timeout:
-                        reason = $"Node in rehabilitation due to timeout reached trying to get stats from node";
+                        reason = $"Node in rehabilitation due to timeout reached trying to get stats from node.{Environment.NewLine}";
                         break;
 
                     default:
-                        reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'";
+                        reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'.{Environment.NewLine}";
                         break;
                 }
             }
             else if (nodeStats.Report.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
             {
-                reason = $"In rehabilitation because the DatabaseStatus for this node is {nameof(Faulted)}";
+                reason = $"In rehabilitation because the DatabaseStatus for this node is {nameof(Faulted)}.{Environment.NewLine}";
             }
             else
             {
-                reason = "In rehabilitation because the node is reachable but had no report about the database";
+                reason = $"In rehabilitation because the node is reachable but had no report about the database.{Environment.NewLine}";
             }
 
             if (nodeStats?.Error != null)
@@ -606,7 +609,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
+            var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats,
+                mentorCurrDbStats.LastIndexStats);
             if (indexesCatchedUp)
             {
                 if (_logger.IsOperationsEnabled)
@@ -676,7 +680,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     FromNodes = nodesToDelete.ToArray(),
                     HardDelete = _hardDeleteOnReplacement,
                     UpdateReplicationFactor = false,
-                    MentorChangeVector = mentorChangeVector
                 };
 
                 if (deletions == null)
@@ -689,7 +692,6 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             var alreadInDeletionProgress = new List<string>();
             alreadInDeletionProgress.AddRange(record.DeletionInProgress?.Keys);
-            alreadInDeletionProgress.AddRange(record.DeletionInProgressChangeVector?.Keys);
             return alreadInDeletionProgress;
         }
 
@@ -814,7 +816,8 @@ namespace Raven.Server.ServerWide.Maintenance
         private static bool CheckIndexProgress(
             long lastPrevEtag,
             Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> previous,
-            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> current)
+            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> current,
+            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> mentor)
         {
             /*
             Here we are being a bit tricky. A database node is consider ready for promotion when
@@ -833,15 +836,39 @@ namespace Raven.Server.ServerWide.Maintenance
              */
 
 
-            foreach (var currentIndexStatus in current)
+            foreach (var mentorIndex in mentor)
             {
-                if (currentIndexStatus.Value.IsStale == false)
+                // we go over all of the mentor indexes to validated that the promotable has them.
+                // Since we don't save in the state machine the definition of side-by-side indexes, we will skip them, because
+                // the promotable don't have them. 
+
+                if (mentorIndex.Value.IsSideBySide)
                     continue;
 
-                if (previous.TryGetValue(currentIndexStatus.Key, out var _) == false)
+                if (mentor.TryGetValue(Constants.Documents.Indexing.SideBySideIndexNamePrefix + mentorIndex.Key, out var mentorIndexStats) == false)
+                {
+                    mentorIndexStats = mentorIndex.Value;
+                }
+
+                if (previous.TryGetValue(mentorIndex.Key, out var _) == false)
                     return false;
 
-                if (lastPrevEtag > currentIndexStatus.Value.LastIndexedEtag)
+                if (current.TryGetValue(mentorIndex.Key, out var currentIndexStats) == false)
+                    return false;
+
+                if (currentIndexStats.IsStale == false)
+                    continue;
+
+                if (mentorIndexStats.LastIndexedEtag == (long)Index.IndexProgressStatus.Faulty)
+                {
+                    continue; // skip the check for faulty indexes
+                }
+
+                if (mentorIndexStats.State == IndexState.Error && currentIndexStats.State == IndexState.Error)
+                    continue;
+                
+                var lastIndexEtag = currentIndexStats.LastIndexedEtag;
+                if (lastPrevEtag > lastIndexEtag)
                     return false;
 
             }
@@ -862,7 +889,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             if (_engine.LeaderTag != _server.NodeTag)
             {
-                throw new NotLeadingException("This node is no longer the leader, so we abort the delection command");
+                throw new NotLeadingException("This node is no longer the leader, so we abort the deletion command");
             }
             return _engine.PutAsync(cmd);
         }

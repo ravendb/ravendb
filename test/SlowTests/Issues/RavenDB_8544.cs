@@ -37,6 +37,8 @@ namespace SlowTests.Issues
                     foreach (var env in database.GetAllStoragesEnvironment())
                         env.Environment.ResetLastWorkTime();
 
+                    database.LastAccessTime = DateTime.MinValue;
+
                     await database.DocumentTombstoneCleaner.ExecuteCleanup();
 
                     Server.ServerStore.IdleOperations(null);

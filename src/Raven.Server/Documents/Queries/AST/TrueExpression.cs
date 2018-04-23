@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Queries.AST
             return "true";
         }
 
-        public override string GetText()
+        public override string GetText(IndexQueryServerSide parent)
         {
             return ToString();
         }

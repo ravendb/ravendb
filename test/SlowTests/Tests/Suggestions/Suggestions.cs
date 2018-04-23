@@ -43,6 +43,7 @@ namespace SlowTests.Tests.Suggestions
             {
                 s.Store(new User { Name = "Ayende" });
                 s.Store(new User { Name = "Oren" });
+                s.Store(new User {Name = "John Steinbeck" });
                 s.SaveChanges();
             }
 
@@ -140,6 +141,28 @@ namespace SlowTests.Tests.Suggestions
 
                     Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
                     Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void UsingLinq_Multiple_words()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Setup(store);
+                using (var s = store.OpenSession())
+                {
+                    var suggestionQueryResult = s.Query<User>("test")
+                        .SuggestUsing(x => x.ByField(y => y.Name, "John Steinback").WithOptions(new SuggestionOptions
+                        {
+                            Accuracy = 0.5f,
+                            Distance = StringDistanceTypes.Levenshtein
+                        }))
+                        .Execute();
+
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("john steinbeck", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }

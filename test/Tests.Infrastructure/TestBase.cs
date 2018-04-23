@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -39,7 +38,7 @@ namespace FastTests
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
-        private MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
+        private readonly MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -128,11 +127,10 @@ namespace FastTests
                 if (_selfSignedCertFileName != null)
                     return _selfSignedCertFileName;
 
-                var selfCertificate = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
+                var certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
                 RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
                 var tempFileName = Path.GetTempFileName();
-                byte[] certData = selfCertificate.Export(X509ContentType.Pfx);
-                File.WriteAllBytes(tempFileName, certData);
+                File.WriteAllBytes(tempFileName, certBytes);
                 _selfSignedCertFileName = tempFileName;
                 return tempFileName;
             }
@@ -229,19 +227,19 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer()
+        public void UseNewLocalServer(string customConfigPath = null)
         {
             _localServer?.Dispose();
-            _localServer = GetNewServer(_customServerSettings);
+            _localServer = GetNewServer(_customServerSettings, customConfigPath: customConfigPath);
         }
 
         private readonly object _getNewServerSync = new object();
 
-        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null)
+        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
         {
             lock (_getNewServerSync)
             {
-                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server);
+                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server, customConfigPath);
 
                 if (customSettings != null)
                 {
@@ -265,6 +263,7 @@ namespace FastTests
                 configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100, TimeUnit.Milliseconds);
                 configuration.Replication.RetryReplicateAfter = new TimeSetting(3, TimeUnit.Seconds);
                 configuration.Cluster.AddReplicaTimeout = new TimeSetting(10, TimeUnit.Seconds);
+                configuration.Licensing.EulaAccepted = true;
 
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);

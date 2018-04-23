@@ -44,7 +44,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-query',
             alias: true,
             dynamicHash: appUrls.query('')
-        }),       
+        }),
         
         new leafMenuItem({
             title: "Conflicts",
@@ -62,6 +62,23 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/documents/editDocument",
             nav: false,
             itemRouteToHighlight: "databases/documents"
+        }),
+        
+        new leafMenuItem({
+            route: "databases/cmpXchg/edit",
+            title: "Edit Compare Exchange Value",
+            moduleId: "viewmodels/database/cmpXchg/editCmpXchg",
+            nav: false,
+            itemRouteToHighlight: "databases/cmpXchg"
+        }),
+        
+        new leafMenuItem({
+            title: "Compare Exchange",
+            nav: true,
+            route: "databases/cmpXchg",
+            moduleId: "viewmodels/database/cmpXchg/cmpXchg",
+            css: 'icon-cmp-xchg',
+            dynamicHash: appUrls.cmpXchg
         })
     ];
 

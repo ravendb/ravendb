@@ -56,9 +56,9 @@ namespace Raven.Server.Web.System
                         numberOfResults++;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
-                            ["Key"] = item.Key,
-                            ["Value"] = item.Value,
-                            ["Index"] = item.Index
+                            [nameof(CompareExchangeListItem.Key)] = item.Key,
+                            [nameof(CompareExchangeListItem.Value)] = item.Value,
+                            [nameof(CompareExchangeListItem.Index)] = item.Index
                         });
                     });
 
@@ -67,6 +67,13 @@ namespace Raven.Server.Web.System
 
             AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith), 
                 HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+        }
+        
+        public class CompareExchangeListItem
+        {
+            public string Key { get; set; }
+            public object Value { get; set; }
+            public long Index { get; set; }
         }
         
         private void GetCompareExchangeValuesByKey(TransactionOperationContext context, StringValues keys)
@@ -126,7 +133,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index);
+                var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
@@ -158,7 +165,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var command = new RemoveCompareExchangeCommand(key, index);
+                var command = new RemoveCompareExchangeCommand(key, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);

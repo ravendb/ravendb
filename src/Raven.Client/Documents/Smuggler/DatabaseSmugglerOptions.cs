@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Documents.Smuggler
+﻿using System;
+
+namespace Raven.Client.Documents.Smuggler
 {
     public class DatabaseSmugglerOptions : IDatabaseSmugglerOptions
     {
@@ -27,6 +29,7 @@
 
         public int MaxStepsForTransformScript { get; set; }
 
+        [Obsolete("Not used. Will be removed in next major version of the product.")]
         public bool ReadLegacyEtag { get; set; }
     }
 
@@ -37,6 +40,8 @@
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
+
+        [Obsolete("Not used. Will be removed in next major version of the product.")]
         bool ReadLegacyEtag { get; set; }
     }
 }

@@ -11,4 +11,5 @@ if [ ! -z "$RAVEN_ARGS" ]; then
 fi
 
 eval $COMMAND
+exit $?
 

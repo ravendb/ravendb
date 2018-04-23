@@ -26,8 +26,10 @@ import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/de
 import generateClientCertificateDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails");
 import compactDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/compactDatabaseDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
+import slowSqlDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowSqlDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
+import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
 import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
@@ -56,6 +58,7 @@ class notificationCenter {
     };
 
     showNotifications = ko.observable<boolean>(false);
+    includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
     globalNotifications = ko.observableArray<abstractNotification>();
     databaseNotifications = ko.observableArray<abstractNotification>();
@@ -112,11 +115,13 @@ class notificationCenter {
 
             // performance hints:
             indexingDetails,
+            slowSqlDetails,
             pagingDetails,
             requestLatencyDetails,
             
             // alerts:
             newVersionAvailableDetails,
+            etlTransformOrLoadErrorDetails,
 
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );
@@ -165,16 +170,25 @@ class notificationCenter {
         this.noNewNotifications = ko.pureComputed(() => {
             return this.totalItemsCount() === 0;
         });
+    }
 
+    initialize() {
+        $("#notification-center").on('transitionend', e => {
+            if (!this.showNotifications()) {
+                this.includeInDom(false);
+            }
+        });
+        
         this.showNotifications.subscribe((show: boolean) => {
             if (show) {
+                this.includeInDom(true);
                 window.addEventListener("click", this.hideHandler, true);
             } else {
                 window.removeEventListener("click", this.hideHandler, true);
             }
         });
     }
-
+    
     setupGlobalNotifications(serverWideClient: serverNotificationCenterClient) {
         this.globalOperationsWatch.configureFor(null);
         serverWideClient.watchAllAlerts(e => this.onAlertReceived(e, this.globalNotifications, null));

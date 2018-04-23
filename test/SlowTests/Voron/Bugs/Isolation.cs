@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using Raven.Server.Utils;
 using Voron;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void MultiTreeIteratorShouldBeIsolated1()
         {
-            DeleteDirectory(DataDir);
+            IOExtensions.DeleteDirectory(DataDir);
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
 
@@ -48,8 +49,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void MultiTreeIteratorShouldBeIsolated2()
         {
-
-            DeleteDirectory(DataDir);
+            IOExtensions.DeleteDirectory(DataDir);
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
 

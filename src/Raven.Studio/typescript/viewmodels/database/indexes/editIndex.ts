@@ -23,6 +23,7 @@ import popoverUtils = require("common/popoverUtils");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
+import index = require("models/database/index/index");
 
 class editIndex extends viewModelBase {
 
@@ -113,8 +114,9 @@ class editIndex extends viewModelBase {
         })
     }
 
-    canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
-        const indexToEditName = unescapedIndexToEditName ? decodeURIComponent(unescapedIndexToEditName) : undefined;
+    canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
+        const indexToEditName = indexToEdit || undefined;
+        
         super.canActivate(indexToEditName);
 
         const db = this.activeDatabase();
@@ -257,8 +259,7 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private editExistingIndex(unescapedIndexName: string) {
-        const indexName = decodeURIComponent(unescapedIndexName);
+    private editExistingIndex(indexName: string) {
         this.originalIndexName = indexName;
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
@@ -343,10 +344,12 @@ class editIndex extends viewModelBase {
     }
 
     addConfigurationOption() {
+        eventsCollector.default.reportEvent("index", "add-configuration-option");
         this.editedIndex().addConfigurationOption();
     }
 
     removeConfigurationOption(item: configurationItem) {
+        eventsCollector.default.reportEvent("index", "remove-configuration-option");
         this.editedIndex().removeConfigurationOption(item);
     }
 
@@ -453,7 +456,7 @@ class editIndex extends viewModelBase {
                                             "Any changes to the index will be ignored.");
             return;
         }*/
-
+        
         const indexDto = editedIndex.toDto();
 
         this.saveIndex(indexDto)
@@ -462,6 +465,13 @@ class editIndex extends viewModelBase {
 
     private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
         eventsCollector.default.reportEvent("index", "save");
+
+        const originalIndexName = indexDto.Name;
+
+        if (indexDto.Name.startsWith(index.SideBySideIndexPrefix)) {
+            // trim side by side prefix
+            indexDto.Name = indexDto.Name.substr(index.SideBySideIndexPrefix.length);
+        }
 
         return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
             .execute()
@@ -472,7 +482,7 @@ class editIndex extends viewModelBase {
 
                 if (!this.isEditingExistingIndex()) {
                     this.isEditingExistingIndex(true);
-                    this.editExistingIndex(indexDto.Name);
+                    this.editExistingIndex(originalIndexName);
                 }
                 /* TODO merge suggestion
                 if (isSavingMergedIndex) {
@@ -481,7 +491,7 @@ class editIndex extends viewModelBase {
                     this.mergeSuggestion(null);
                 }*/
 
-                this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
+                this.updateUrl(originalIndexName, false /* TODO isSavingMergedIndex */);
             });
     }
 
@@ -565,6 +575,7 @@ class editIndex extends viewModelBase {
     }
 
     fileSelected() {
+        eventsCollector.default.reportEvent("index", "additional-source");
         const fileInput = <HTMLInputElement>document.querySelector("#additionalSourceFilePicker");
         const self = this;
         if (fileInput.files.length === 0) {

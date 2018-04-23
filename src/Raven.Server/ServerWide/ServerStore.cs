@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -48,6 +49,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Sparrow;
@@ -56,6 +58,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
@@ -101,6 +104,9 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
+            // we want our servers to be robust get early errors about such issues
+            MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
+
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             _server = server;
@@ -166,6 +172,84 @@ namespace Raven.Server.ServerWide
             return ClusterMaintenanceSupervisor?.GetStats();
         }
 
+        public async Task UpdateTopologyChangeNotification()
+        {
+            while (ServerShutdown.IsCancellationRequested == false)
+            {
+                await _engine.WaitForState(RachisState.Follower, ServerShutdown);
+                if (ServerShutdown.IsCancellationRequested)
+                    return;
+
+                try
+                {
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
+                    {
+                        var leaveTask = _engine.WaitForLeaveState(RachisState.Follower, cts.Token);
+                        if (await Task.WhenAny(NotificationCenter.WaitForNew(), leaveTask).WithCancellation(ServerShutdown) == leaveTask)
+                        {
+                            continue;
+                        }
+
+                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForAllRemoved, leaveTask)
+                            .ContinueWith(state =>
+                            {
+                                try
+                                {
+                                    cts.Cancel();
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
+                            }, ServerShutdown);
+
+                        while (cancelTask.IsCompleted == false)
+                        {
+                            var topology = GetClusterTopology();
+                            var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
+                            if (leaderUrl == null)
+                                break; // will continue from the top of the loop
+                            using (var ws = new ClientWebSocket())
+                            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                            {
+                                var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
+
+                                if (Server.Certificate?.Certificate != null)
+                                {
+                                    ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
+                                }
+                                await ws.ConnectAsync(leaderWsUrl, cts.Token);
+                                while (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent)
+                                {
+                                    using (var notification = await context.ReadFromWebSocket(ws, "ws from Leader", cts.Token))
+                                    {
+                                        if (notification == null)
+                                            break;
+                                        var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
+                                        if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
+                                        {
+                                            topologyNotification.NodeTag = _engine.Tag;
+                                            NotificationCenter.Add(topologyNotification);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error during receiving topology updates from the leader", e);
+                    }
+                }
+            }
+        }
+
         internal ClusterObserver Observer { get; set; }
 
         public async Task ClusterMaintenanceSetupTask()
@@ -176,8 +260,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (_engine.LeaderTag != NodeTag)
                     {
-                        await _engine.WaitForState(RachisState.Leader)
-                            .WithCancellation(_shutdownNotification.Token);
+                        await _engine.WaitForState(RachisState.Leader, ServerShutdown)
+                            .WithCancellation(ServerShutdown);
                         continue;
                     }
                     var term = _engine.CurrentTerm;
@@ -213,10 +297,10 @@ namespace Raven.Server.ServerWide
                                 await LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                             }
 
-                            var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader);
+                            var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader, ServerShutdown);
 
                             if (await Task.WhenAny(topologyChangedTask, leaderChanged)
-                                    .WithCancellation(_shutdownNotification.Token) == leaderChanged)
+                                    .WithCancellation(ServerShutdown) == leaderChanged)
                                 break;
                         }
                     }
@@ -302,7 +386,7 @@ namespace Raven.Server.ServerWide
                     {
                         throw new CryptographicException($"Unable to unprotect the secret key file {secretKey}. " +
                                                          "Was the server store encrypted using a different OS user? In that case, " +
-                                                         "you must provide an unprotected key (rvn server put-key). " +
+                                                         "you must provide an unprotected key (rvn offline-operation put-key). " +
                                                          "Admin assistance required.", e);
                     }
                 }
@@ -379,13 +463,15 @@ namespace Raven.Server.ServerWide
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null);
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
+            if (Configuration.Storage.MaxScratchBufferSize.HasValue)
+                options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
 
                 try
                 {
-                    _env = new StorageEnvironment(options);
+                    _env = LayoutUpdater.OpenEnvironment(options);
                 }
                 catch (Exception e)
                 {
@@ -429,6 +515,57 @@ namespace Raven.Server.ServerWide
 
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Check(this);
+
+            ConfigureAuditLog();
+        }
+
+        private void ConfigureAuditLog()
+        {
+            if (Configuration.Security.AuditLogPath == null)
+                return;
+
+            if (Configuration.Security.AuthenticationEnabled == false)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("The audit log configuration 'Security.AuditLog.FolderPath' was specified, but the server is not running in a secured mode. Audit log disabled!");
+                return;
+            }
+
+            // we have to do this manually because LoggingSource will ignore errors
+            AssertCanWriteToAuditLogDirectory();
+
+            LoggingSource.AuditLog.SetupLogMode(
+                LogMode.Information,
+                Configuration.Security.AuditLogPath.FullPath,
+                Configuration.Security.AuditLogRetention.AsTimeSpan);
+
+            var auditLog = LoggingSource.AuditLog.GetLogger("ServerStartup", "Audit");
+            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.Certificate?.Subject} ({_server.Certificate?.Certificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
+        }
+
+        private void AssertCanWriteToAuditLogDirectory()
+        {
+            if (Directory.Exists(Configuration.Security.AuditLogPath.FullPath) == false)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Configuration.Security.AuditLogPath.FullPath);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Cannot create audit log directory: {Configuration.Security.AuditLogPath.FullPath}, treating this as a fatal error", e);
+                }
+            }
+            try
+            {
+                var testFile = Configuration.Security.AuditLogPath.Combine("write.test").FullPath;
+                File.WriteAllText(testFile, "test we can write");
+                File.Delete(testFile);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Cannot create new file in audit log directory: {Configuration.Security.AuditLogPath.FullPath}, treating this as a fatal error", e);
+            }
         }
 
         public void TriggerDatabases()
@@ -454,6 +591,7 @@ namespace Raven.Server.ServerWide
             }
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
+            Task.Run(UpdateTopologyChangeNotification, ServerShutdown);
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -572,81 +710,142 @@ namespace Raven.Server.ServerWide
                     try
                     {
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
                         {
-                            var cert = Cluster.GetItem(context, "server/cert");
-                            if (cert == null)
-                                return; // was already processed?
-                            if (cert.TryGet("Confirmations", out int confirmations) == false)
-                                throw new InvalidOperationException("Expected to get confirmations count");
+                            BlittableJsonReaderObject cert;
+                            int nodesInCluster;
+                            int confirmations;
+                            bool replaceImmediately;
 
-                            if (cert.TryGet("ReplaceImmediately", out bool replaceImmediately) == false)
-                                throw new InvalidOperationException("Expected to get `ReplaceImmediately` property");
-
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Node {NodeTag}: when replacing server certificate, confirmation count: {confirmations}.");
-
-                            if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
+                            using (context.OpenReadTransaction())
                             {
-                                if (Server.Certificate?.Certificate != null &&
-                                    (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
+                                cert = Cluster.GetItem(context, "server/cert");
+                                if (cert == null)
+                                    return; // was already processed?
+                                if (cert.TryGet("Confirmations", out confirmations) == false)
+                                    throw new InvalidOperationException("Expected to get confirmations count");
+
+                                if (cert.TryGet("ReplaceImmediately", out replaceImmediately) == false)
+                                    throw new InvalidOperationException("Expected to get `ReplaceImmediately` property");
+
+                                nodesInCluster = GetClusterTopology(context).AllNodes.Count;
+                            }
+
+                            if (nodesInCluster > confirmations && replaceImmediately == false)
+                            {
+                                if (Server.Certificate?.Certificate?.NotAfter != null &&
+                                    (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
                                 {
+                                    var msg = $"Not all nodes have confirmed the certificate replacement. Confirmation count: {confirmations}. " +
+                                              $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
+                                              "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
+                                              "If you wish to force replacing the certificate just for the nodes that are up, please set 'ReplaceImmediately' to true.";
+
                                     if (Logger.IsOperationsEnabled)
-                                        Logger.Operations($"Node {NodeTag}: Not all nodes have confirmed the certificate replacement. " +
-                                                          $"We still have {(Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays} until expiration. " +
-                                                          "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
-                                                          "If you wish to force replacing the certificate just for the nodes that are up, please set 'ReplaceImmediately' to true.");
+                                        Logger.Operations(msg);
+
+                                    NotificationCenter.Add(AlertRaised.Create(
+                                        null,
+                                        "Server Certificate",
+                                        msg,
+                                        AlertType.Certificates_ReplacePending,
+                                        NotificationSeverity.Warning,
+                                        "Cluster.Certificate.Replace.Pending"));
                                     return; // we still have time for all the nodes to update themselves 
                                 }
                             }
 
                             if (cert.TryGet("Certificate", out string certBase64) == false ||
                                 cert.TryGet("Thumbprint", out string certThumbprint) == false)
-                                throw new InvalidOperationException("Invalid server cert value, expected to get Certificate and Thumbprint properties");
+                                throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate and Thumbprint properties");
 
                             if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
-                                return;// already replaced it, nothing to do
+                            {
+                                if (nodesInCluster > confirmations)
+                                    // I already replaced it, but not all nodes confirmed
+                                    // we'll keep it around for now and retry in one hour
+                                    return;
+
+                                // I replaced it as did everyone else, we can safely delete the "server/cert" doc now
+                                using (var tx = context.OpenWriteTransaction())
+                                {
+                                    Cluster.DeleteItem(context, "server/cert");
+                                    tx.Commit();
+                                }
+                                return;
+                            }
 
                             // and now we have to replace the cert...
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
                             {
+                                var msg = "Cluster wanted to install updated server certificate, but no path has been configured in settings.json";
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations(msg);
+
                                 NotificationCenter.Add(AlertRaised.Create(
                                     null,
-                                    "Unable to refresh server certificate",
-                                    "Cluster wanted to install updated server certificate, but no path has been configured",
-                                    AlertType.ClusterTopologyWarning,
+                                    "Server certificate",
+                                    msg,
+                                    AlertType.Certificates_ReplaceError,
                                     NotificationSeverity.Error,
-                                    "Cluster.Certificate.Install.Error"));
+                                    "Cluster.Certificate.Replace.Error"));
                                 return;
                             }
 
                             var bytesToSave = Convert.FromBase64String(certBase64);
                             var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
 
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Node {NodeTag}: Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
-
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
                             {
                                 bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
                             }
 
-                            using (var certStream = File.Create(Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath)))
+                            var certPath = Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath);
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Writing the new certificate to {certPath}");
+
+                            try
                             {
-                                certStream.Write(bytesToSave, 0, bytesToSave.Length);
-                                certStream.Flush(true);
+                                using (var certStream = File.Create(certPath))
+                                {
+                                    certStream.Write(bytesToSave, 0, bytesToSave.Length);
+                                    certStream.Flush(true);
+                                }
                             }
+                            catch (Exception e)
+                            {
+                                throw new IOException($"Cannot write certificate to {certPath} , RavenDB needs write permissions for this file.", e);
+                            }
+
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
 
                             Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
 
+                            NotificationCenter.Add(AlertRaised.Create(
+                                null,
+                                "Server certificate",
+                                $"The server certificate was successfully replaced on node {NodeTag}.",
+                                AlertType.Certificates_ReplaceSuccess,
+                                NotificationSeverity.Success,
+                                "Cluster.Certificate.Replace.Success"));
+
                             if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Node {NodeTag}: Server certificate replaced successfully.");
+                                Logger.Operations($"The server certificate was successfully replaced on node {NodeTag}.");
                         }
                     }
                     catch (Exception e)
                     {
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Node {NodeTag}: Failed to process {t.Type}.", e);
+                            Logger.Operations($"Failed to process {t.Type}.", e);
+
+                        NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            "Server certificate",
+                            $"Failed to process {t.Type}.",
+                            AlertType.Certificates_ReplaceError,
+                            NotificationSeverity.Error,
+                            "Cluster.Certificate.Replace.Error",
+                            new ExceptionDetails(e)));
                     }
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
@@ -659,21 +858,29 @@ namespace Raven.Server.ServerWide
                             if (cert == null)
                                 return; // was already processed?
                             if (cert.TryGet("Thumbprint", out string certThumbprint) == false)
-                                throw new InvalidOperationException("Invalid server cert value, expected to get Thumbprint property");
+                                throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Thumbprint property");
 
                             if (cert.TryGet("Certificate", out string base64Cert) == false)
-                                throw new InvalidOperationException("Invalid server cert value, expected to get Certificate property");
+                                throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate property");
 
                             var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert));
 
-                            var now = DateTime.UtcNow;
+                            var now = Server.Time.GetUtcNow();
                             if (certificate.NotBefore.ToUniversalTime() > now)
                             {
+                                var msg = "Unable to confirm certificate replacement because the NotBefore property is set " +
+                                          $"to {certificate.NotBefore.ToUniversalTime():O} and now it is {now:O}. Will try again later";
+
                                 if (Logger.IsOperationsEnabled)
-                                {
-                                    Logger.Operations($"Node {NodeTag}: Unable to confirm certificate update because the NotBefore property is set " +
-                                                      $"to {certificate.NotBefore.ToUniversalTime():O} and now it is {now:O}. Will try again later");
-                                }
+                                    Logger.Operations(msg);
+
+                                NotificationCenter.Add(AlertRaised.Create(
+                                    null,
+                                    "Server certificate",
+                                    msg,
+                                    AlertType.Certificates_ReplaceError,
+                                    NotificationSeverity.Error,
+                                    "Cluster.Certificate.Replace.Error"));
                                 return;
                             }
 
@@ -684,7 +891,16 @@ namespace Raven.Server.ServerWide
                     catch (Exception e)
                     {
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Node {NodeTag}: Failed to process {t.Type}.", e);
+                            Logger.Operations($"Failed to process {t.Type}.", e);
+
+                        NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            "Server certificate",
+                            $"Failed to process {t.Type}.",
+                            AlertType.Certificates_ReplaceError,
+                            NotificationSeverity.Error,
+                            "Cluster.Certificate.Replace.Error",
+                            new ExceptionDetails(e)));
                     }
                     break;
                 case nameof(PutClientConfigurationCommand):
@@ -1201,7 +1417,11 @@ namespace Raven.Server.ServerWide
                             continue;
                         }
 
+
                         if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
+                            continue;
+
+                        if (idleDbInstance.Changes.Connections.Values.Any(x => x.IsDisposed == false && x.IsChangesConnectionOriginatedFromStudio == false))
                             continue;
 
                         DatabasesLandlord.UnloadDirectly(db);
@@ -1310,7 +1530,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             // Also need to register my own certificate in the cluster, for other nodes to trust me
-            RegisterServerCertificateInCluster(Server.Certificate.Certificate, name).Wait(ServerShutdown);
+            AsyncHelpers.RunSync(() => RegisterServerCertificateInCluster(Server.Certificate.Certificate, name));
         }
 
         public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
@@ -1633,9 +1853,9 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForTopology(state);
         }
 
-        public Task WaitForState(RachisState rachisState)
+        public Task WaitForState(RachisState rachisState, CancellationToken cts)
         {
-            return _engine.WaitForState(rachisState);
+            return _engine.WaitForState(rachisState, cts);
         }
 
         public void ClusterAcceptNewConnection(Stream client, Action disconnect, EndPoint remoteEndpoint)

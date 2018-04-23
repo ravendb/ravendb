@@ -5,6 +5,7 @@ import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 class requestLatencyDetails extends abstractPerformanceHintDetails {
@@ -32,15 +33,20 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Action, "Action", "20%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Date, "Date", "20%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Duration, "Duration (ms)", "15%"),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%"),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, true), "Duration", "15%"),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Query, "Query", "45%") 
             ];
         });
 
-        this.columnPreview.install(".requestLatencyDetails", ".request-latency-details-tooltip", (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install(".requestLatencyDetails", ".js-request-latency-details-tooltip", 
+            (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, 
+             column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, 
+             onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(details);
-            if (value) {
+            if (column.header === "Date") {
+                onValue(moment.utc(details.Date), details.Date);
+            } else if (_.isUndefined(value)) {
                 onValue(value);
             }
         });

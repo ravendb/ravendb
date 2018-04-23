@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Queries
 
                         idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
 
-                        return (idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
+                        return (idsRetriever.Ids?.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
                     }
                 }
                 finally
@@ -223,15 +223,15 @@ namespace Raven.Server.Documents.Queries
                         documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize, _collection);
                     }
                 }
-                else if (_ids != null && _ids.Count > 0)
+                else if (_ids != null)
                 {
-                    if (_isAllDocsCollection)
-                    {
-                        documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults);
-                    }
+                    if (_ids.Count == 0)
+                        documents = Enumerable.Empty<Document>();
                     else
                     {
-                        documents = _documents.GetDocuments(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
+                        documents = _isAllDocsCollection
+                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults)
+                            : _documents.GetDocuments(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
                     }
                 }
                 else if (_isAllDocsCollection)
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Queries
                 private readonly ByteStringContext _allocator;
                 public string StartsWith;
 
-                public readonly List<Slice> Ids = new List<Slice>();
+                public HashSet<Slice> Ids { get; private set; }
 
                 public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
                 {
@@ -374,9 +374,9 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
 
-                                    Debug.Assert(id.Type == ValueTokenType.String);
+                                    Debug.Assert(id.Type == ValueTokenType.String || id.Type == ValueTokenType.Null);
 
-                                    AddId(id.Value.ToString());
+                                    AddId(id.Value?.ToString());
                                 }
                                 if (value is MethodExpression right)
                                 {
@@ -400,6 +400,9 @@ namespace Raven.Server.Documents.Queries
 
                 public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
                 {
+                    if (Ids == null)
+                        Ids = new HashSet<Slice>(SliceComparer.Instance); // this handles a case where IN is used with empty list
+
                     if (fieldName is MethodExpression me && string.Equals("id", me.Name, StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var item in values)
@@ -447,8 +450,17 @@ namespace Raven.Server.Documents.Queries
 
                 private void AddId(string id)
                 {
-                    Slice.From(_allocator, id, out Slice key);
-                    _allocator.ToLowerCase(ref key.Content);
+                    Slice key;
+                    if (string.IsNullOrEmpty(id) == false)
+                    {
+                        Slice.From(_allocator, id, out key);
+                        _allocator.ToLowerCase(ref key.Content);
+                    }
+                    else
+                        key = Slices.Empty;
+
+                    if (Ids == null)
+                        Ids = new HashSet<Slice>(SliceComparer.Instance);
 
                     Ids.Add(key);
                 }

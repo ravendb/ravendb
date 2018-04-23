@@ -10,15 +10,13 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class ServerOperationExecutor : IDisposable
     {
-        private readonly DocumentStoreBase _store;
         private readonly ClusterRequestExecutor _requestExecutor;
 
         public ServerOperationExecutor(DocumentStoreBase store)
         {
-            _store = store;
             _requestExecutor = store.Conventions.DisableTopologyUpdates
-                ? ClusterRequestExecutor.CreateForSingleNode(store.Urls[0], store.Certificate)
-                : ClusterRequestExecutor.Create(store.Urls, store.Certificate);
+                ? ClusterRequestExecutor.CreateForSingleNode(store.Urls[0], store.Certificate, store.Conventions)
+                : ClusterRequestExecutor.Create(store.Urls, store.Certificate, store.Conventions);
 
             store.AfterDispose += (sender, args) => _requestExecutor.Dispose();
         }

@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform.Posix.macOS;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -33,7 +35,9 @@ namespace Sparrow.Json
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
-        private List<GCHandle> _pinnedObjects;
+        private List<GCHandle> _pinnedObjects;        
+        private List<string> _normalNumbersStringBuffers = new List<string>(5);
+        private string _hugeNumbersBuffer;
 
         private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(OrdinalStringStructComparer.Instance);
 
@@ -279,7 +283,7 @@ namespace Sparrow.Json
             {
                 return AllocateInstance(_smallBufferSegments);
             }
-        }
+        }       
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
@@ -943,6 +947,19 @@ namespace Sparrow.Json
             _arenaAllocator.ResetArena();
             _numberOfAllocatedStringsValues = 0;
             _generation = _generation + 1;
+
+            if (_pooledArrays != null )
+            {
+                foreach (var pooledTypesKVP in _pooledArrays)
+                {
+                    foreach (var pooledArraysOfCurrentType in pooledTypesKVP.Value.Array)
+                    {
+                        pooledTypesKVP.Value.Releaser(pooledArraysOfCurrentType);
+                    }
+                }
+
+                _pooledArrays = null;
+            }
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -1058,7 +1075,135 @@ namespace Sparrow.Json
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
+            }            
+        }
+
+        public void ThrowArgumentOutOfRangeException(string message)
+        {
+            throw new ArgumentOutOfRangeException(message);
+        }        
+
+        public unsafe double ParseDouble(byte* ptr, int length)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return double.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseDouble(byte* ptr, int length, out double val)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+                        
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return double.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture,out val);            
+        }
+
+        public unsafe decimal ParseDecimal(byte* ptr, int length)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return decimal.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseDecimal(byte* ptr, int length, out decimal val)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return decimal.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        public unsafe float ParseFloat(byte* ptr, int length)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return float.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseFloat(byte* ptr, int length, out float val)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return float.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        public unsafe long ParseLong(byte* ptr, int length)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return long.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseLong(byte* ptr, int length, out long val)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return long.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        public unsafe ulong ParseULong(byte* ptr, int length)
+        {            
+            var stringBuffer= InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return ulong.Parse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseULong(byte* ptr, int length, out ulong val)
+        {
+            var stringBuffer = InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return ulong.TryParse(stringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }       
+
+        private unsafe string InitializeStringBufferForNumberParsing(byte* ptr, int length)
+        {
+            var lengthsNextPowerOf2 = Sparrow.Binary.Bits.NextPowerOf2(length);
+
+            var actualPowerOf2 = (int)Math.Pow(lengthsNextPowerOf2, 0.5);
+            string stringBuffer;
+            if (actualPowerOf2 <= _normalNumbersStringBuffers.Count)
+            {
+                stringBuffer = _normalNumbersStringBuffers[actualPowerOf2 - 1];
+
+                if (stringBuffer == null)
+                {
+                    stringBuffer = _normalNumbersStringBuffers[actualPowerOf2 - 1] = new string(' ', lengthsNextPowerOf2);
+                }
             }
+            else
+            {
+                stringBuffer = _hugeNumbersBuffer;
+                if (_hugeNumbersBuffer == null || length > _hugeNumbersBuffer.Length)
+                    stringBuffer = _hugeNumbersBuffer = new string(' ', length);
+            }
+            // we should support any length of LazyNumber, therefore, we do not validate it's length
+            
+            
+            // here we assume a clear char <- -> byte conversion, we only support
+            // utf8, and those cleanly transfer
+            fixed (char* pChars = stringBuffer)
+            {
+                int i = 0;
+
+                for (; i < length; i++)
+                {
+                    pChars[i] = (char)ptr[i];
+                }
+                for (; i < stringBuffer.Length; i++)
+                {
+                    pChars[i] = ' ';
+                }
+            }
+
+            return stringBuffer;
         }
 
         public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
@@ -1118,10 +1263,10 @@ namespace Sparrow.Json
         {
 #if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
             throw new InvalidOperationException(
-                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Allocated by:" + allocation.AllocatedBy);
+                $"UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Allocated by: {allocation.AllocatedBy}. Thread name: {Thread.CurrentThread.Name}");
 #else
             throw new InvalidOperationException(
-                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused!");
+                $"UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Thread name: {Thread.CurrentThread.Name}");
 #endif
         }
 
@@ -1155,6 +1300,28 @@ namespace Sparrow.Json
             {
                 _parent._arenaAllocator.AvoidOverAllocation = false;
             }
+        }
+
+        private Dictionary<Type, (Action<Array> Releaser, List<Array> Array)> _pooledArrays = null;
+
+        public T[] AllocatePooledArray<T>(int size)
+        {
+            if (_pooledArrays == null)
+                _pooledArrays = new Dictionary<Type, (Action<Array> Releaser, List<Array> Array)>();
+            
+            
+
+            if (_pooledArrays.TryGetValue(typeof(T), out var allocationsArray) == false)
+            {
+                void Releaser(Array x) => ArrayPool<T>.Shared.Return((T[])x, true);
+
+                allocationsArray = (Releaser, new List<Array>());
+                _pooledArrays[typeof(T)] = allocationsArray;
+            }
+
+            var allocatedArray = ArrayPool<T>.Shared.Rent(size);
+            allocationsArray.Array.Add(allocatedArray);
+            return allocatedArray;
         }
     }
 }

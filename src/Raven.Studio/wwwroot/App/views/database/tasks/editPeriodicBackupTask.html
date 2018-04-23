@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div class="row flex-row margin-bottom" data-bind="validationElement: backupType">
-                <label class="control-label col-sm-4 col-lg-2">Backup type <i id="backup-info" class="icon-info text-info"></i></label>
+                <label class="control-label col-sm-4 col-lg-2">Backup type <i class="required"></i> <i id="backup-info" class="icon-info text-info"></i></label>
                 <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
@@ -140,7 +140,7 @@
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: folderPath">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
                             <input data-bind="textInput: folderPath" type="text" class="form-control" placeholder="Full directory backup path" />
                         </div>
@@ -161,7 +161,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: bucketName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Bucket name <i id="bucket-info" class="icon-info text-info"></i>
+                            Bucket name <i class="required"></i> <i id="bucket-info" class="icon-info text-info"></i>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
                             <input data-bind="textInput: bucketName" type="text" class="form-control" />
@@ -174,7 +174,7 @@
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: awsRegionName">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
@@ -192,13 +192,13 @@
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: awsAccessKey">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
                             <input data-bind="textInput: awsAccessKey" class="form-control" />
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: awsSecretKey">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
                         </div>
@@ -227,7 +227,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: storageContainer">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Storage container <i id="storage-container-info" class="icon-info text-info"></i>
+                            Storage container <i class="required"></i> <i id="storage-container-info" class="icon-info text-info"></i>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: storageContainer" type="text" class="form-control" />
@@ -240,13 +240,13 @@
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: accountName">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account name</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account name <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: accountName" class="form-control" />
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: accountKey">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" >
                             <input data-bind="textInput: accountKey" type="password" class="form-control" />
                         </div>
@@ -275,14 +275,14 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: vaultName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Vault name <i id="vault-info" class="icon-info text-info"></i>
+                            Vault name <i class="required"></i> <i id="vault-info" class="icon-info text-info"></i>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: vaultName" type="text" class="form-control" />
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: awsRegionName">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
@@ -300,13 +300,13 @@
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: awsAccessKey">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsAccessKey" class="form-control" />
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom"  data-bind="validationElement: awsSecretKey">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
                         </div>
@@ -335,7 +335,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: url">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Host <i id="ftp-host-info" class="icon-info text-info"></i>
+                            Host <i class="required"></i> <i id="ftp-host-info" class="icon-info text-info"></i>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: url" type="text" class="form-control" />
@@ -348,13 +348,13 @@
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: userName">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">User name</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">User name <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: userName" type="text" class="form-control" />
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: password">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Password</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Password <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: password" type="password" class="form-control" />
                         </div>

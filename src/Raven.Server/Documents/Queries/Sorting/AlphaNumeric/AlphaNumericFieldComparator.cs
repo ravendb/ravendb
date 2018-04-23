@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -15,9 +14,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
         private int[] _order;
         private string[] _lookup;
 
-        public AlphaNumericFieldComparator(int numHits, string field)
+        public AlphaNumericFieldComparator(string field, string[] valuesArray)
         {
-            _values = new string[numHits];
+            _values = valuesArray;
             _field = field;
         }
 
@@ -64,100 +63,152 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         public override IComparable this[int slot] => _values[slot];
 
+        // based on: https://www.dotnetperls.com/alphanumeric-sorting
         internal sealed class AlphanumComparer : IComparer<string>
         {
             public static readonly AlphanumComparer Instance = new AlphanumComparer();
 
             private AlphanumComparer()
             {
+
             }
 
-            public int Compare(string s1, string s2)
+            public struct AlphanumericStringComparisonState
             {
-                if (s1 == null)
+                public int CurPositionInString;
+                public char CurCharacter;
+                public readonly string OriginalString;
+                public readonly int StringLength;
+                public bool CurSequenceIsNumber;
+                public int NumberLength;
+                public int CurSequenceStartPosition;
+
+                public AlphanumericStringComparisonState(string originalString)
                 {
-                    return 0;
+                    OriginalString = originalString;
+                    StringLength = originalString.Length;
+                    CurSequenceStartPosition = 0;
+                    NumberLength = 0;
+                    CurSequenceIsNumber = false;
+                    CurCharacter = (char)0;
+                    CurPositionInString = 0;
                 }
-                if (s2 == null)
+
+                public void ScanNextAlphabeticOrNumericSequence()
                 {
-                    return 0;
-                }
+                    CurSequenceStartPosition = CurPositionInString;
+                    CurCharacter = OriginalString[CurPositionInString];
+                    CurSequenceIsNumber = char.IsDigit(CurCharacter);
+                    NumberLength = 0;
 
-                var len1 = s1.Length;
-                var len2 = s2.Length;
-                var marker1 = 0;
-                var marker2 = 0;
-
-                // Walk through two the strings with two markers.
-                while (marker1 < len1 && marker2 < len2)
-                {
-                    var ch1 = s1[marker1];
-                    var ch2 = s2[marker2];
-
-                    // Some buffers we can build up characters in for each chunk.
-                    var space1 = new char[len1];
-                    var loc1 = 0;
-                    var space2 = new char[len2];
-                    var loc2 = 0;
+                    var curCharacterIsDigit = CurSequenceIsNumber;
+                    var insideZeroPrefix = CurCharacter == '0';
 
                     // Walk through all following characters that are digits or
                     // characters in BOTH strings starting at the appropriate marker.
                     // Collect char arrays.
                     do
                     {
-                        space1[loc1++] = ch1;
-                        marker1++;
-
-                        if (marker1 < len1)
+                        if (CurSequenceIsNumber)
                         {
-                            ch1 = s1[marker1];
+                            if (CurCharacter != '0')
+                            {
+                                insideZeroPrefix = false;
+                            }
+
+                            if (insideZeroPrefix == false)
+                            {
+                                NumberLength++;
+                            }
+                        }
+
+                        CurPositionInString++;
+
+                        if (CurPositionInString < StringLength)
+                        {
+                            CurCharacter = OriginalString[CurPositionInString];
+                            curCharacterIsDigit = char.IsDigit(CurCharacter);
                         }
                         else
                         {
                             break;
                         }
-                    } while (char.IsDigit(ch1) == char.IsDigit(space1[0]));
+                    } while (curCharacterIsDigit == CurSequenceIsNumber);
 
-                    do
+                }
+
+                public int CompareWithAnotherState(AlphanumericStringComparisonState other)
+                {
+                    var string1State = this;
+                    var string2State = other;
+
+                    // if both seqeunces are numbers, compare between them
+                    if (string1State.CurSequenceIsNumber && string2State.CurSequenceIsNumber)
                     {
-                        space2[loc2++] = ch2;
-                        marker2++;
-
-                        if (marker2 < len2)
+                        // if effective numbers are not of the same length, it means that we can tell which is greatedr (in an order of magnitude, actually)
+                        if (string1State.NumberLength != string2State.NumberLength)
                         {
-                            ch2 = s2[marker2];
+                            return string1State.NumberLength.CompareTo(string2State.NumberLength);
                         }
-                        else
-                        {
-                            break;
-                        }
-                    } while (char.IsDigit(ch2) == char.IsDigit(space2[0]));
 
-                    // If we have collected numbers, compare them numerically.
-                    // Otherwise, if we have strings, compare them alphabetically.
-                    var str1 = new string(space1);
-                    var str2 = new string(space2);
-
-                    int result;
-
-                    if (char.IsDigit(space1[0]) && char.IsDigit(space2[0]))
-                    {
-                        var thisNumericChunk = int.Parse(str1);
-                        var thatNumericChunk = int.Parse(str2);
-                        result = thisNumericChunk.CompareTo(thatNumericChunk);
+                        // else, it means they should be compared by string, again, we compare only the effective numbers
+                        return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
+                            string1State.OriginalString, string1State.CurPositionInString - string1State.NumberLength, string1State.NumberLength,
+                            string2State.OriginalString, string2State.CurPositionInString - string2State.NumberLength, string1State.NumberLength);
                     }
-                    else
+
+                    // if one of the sequences is a number and the other is not, the number is always smaller
+                    if (string1State.CurSequenceIsNumber != string2State.CurSequenceIsNumber)
                     {
-                        result = string.Compare(str1, str2);
+                        if (string1State.CurSequenceIsNumber)
+                            return -1;
+                        return 1;
                     }
+
+                    return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
+                    string1State.OriginalString, string1State.CurSequenceStartPosition, string1State.CurPositionInString - string1State.CurSequenceStartPosition,
+                    string2State.OriginalString, string2State.CurSequenceStartPosition, string2State.CurPositionInString - string2State.CurSequenceStartPosition);
+                }
+            }
+
+            public unsafe int Compare(string string1, string string2)
+            {
+                if (string1 == null)
+                {
+                    return 0;
+                }
+
+                if (string2 == null)
+                {
+                    return 0;
+                }
+
+                var string1State = new AlphanumericStringComparisonState(string1);
+                var string2State = new AlphanumericStringComparisonState(string2);
+
+                // Walk through two the strings with two markers.
+                while (string1State.CurPositionInString < string1State.StringLength &&
+                        string2State.CurPositionInString < string2State.StringLength)
+                {
+                    string1State.ScanNextAlphabeticOrNumericSequence();
+                    string2State.ScanNextAlphabeticOrNumericSequence();
+
+                    var result = string1State.CompareWithAnotherState(string2State);
 
                     if (result != 0)
                     {
                         return result;
                     }
                 }
-                return len1 - len2;
+
+                if (string1State.CurPositionInString < string1State.StringLength)
+                    return 1;
+                if (string2State.CurPositionInString < string2State.StringLength)
+                    return -1;
+
+                return 0;
             }
+
         }
     }
 }

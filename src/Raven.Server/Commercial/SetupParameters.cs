@@ -2,6 +2,7 @@
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cli;
+using Sparrow.Platform;
 
 namespace Raven.Server.Commercial
 {
@@ -19,7 +20,7 @@ namespace Raven.Server.Commercial
             DetermineFixedPortNumber(serverStore, result);
             DetermineFixedTcpPortNumber(serverStore, result);
 
-            result.IsDocker = Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER") == "true";
+            result.IsDocker = PlatformDetails.RunningOnDocker;
             result.DockerHostname = result.IsDocker ? new Uri(serverStore.GetNodeHttpServerUrl()).Host : null;
 
             return result;

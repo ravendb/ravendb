@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
@@ -26,8 +28,6 @@ namespace Raven.Client.Documents.Queries.Facets
             set => _displayFieldName = value;
         }
 
-        internal abstract Facet AsFacet();
-
-        internal abstract RangeFacet AsRangeFacet();
+        internal abstract FacetToken ToFacetToken(Func<object, string> addQueryParameter);
     }
 }

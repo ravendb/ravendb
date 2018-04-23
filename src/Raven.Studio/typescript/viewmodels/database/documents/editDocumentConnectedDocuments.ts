@@ -305,10 +305,9 @@ class connectedDocuments {
     private downloadAttachmentAtRevision(doc: document, file: { id: string; name: string }) {
         const $form = $("#downloadAttachmentAtRevisionForm");
         const $changeVector = $("[name=ChangeVectorAndType]", $form);
-        const changeVector = (doc.__metadata as any)['@change-vector'];
 
         const payload = {
-            ChangeVector: changeVector,
+            ChangeVector: doc.__metadata.changeVector(),
             Type: "Revision"
         };
 
@@ -399,14 +398,6 @@ class connectedDocuments {
         if (connectedDocuments.currentTab() === "revisions") {
             this.gridController().reset();
         }
-    }
-
-    private documentToConnectedDoc(doc: document): connectedDocumentItem {
-        return {
-            id: doc.getId(),
-            href: appUrl.forEditDoc(doc.getId(), this.db()),
-            deletedRevision: doc.__metadata.hasFlag("DeleteRevision")
-        };
     }
 
     private docIdToConnectedDoc(docId: string): connectedDocumentItem {

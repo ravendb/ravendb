@@ -83,7 +83,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             this.preferredMentor(dto.Configuration.MentorNode);
             
-            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false)));
+            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false, false)));
             this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));            
         }        
     }

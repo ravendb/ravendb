@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix;
 
@@ -379,23 +380,27 @@ namespace Sparrow.LowMemory
             return query_disk_extents.Extents[0].DiskNumber;
         }
 
+        private static readonly Regex _regExRemoveNumbers = new System.Text.RegularExpressions.Regex(@"\d+$");
+        
         public static string PosixIsSwappingOnHddInsteadOfSsd()
         {
+            try
             {
-                var path = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile();
-                if (path == null) // on error return as if no swap problem
+                var swaps = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile();
+                if (swaps.Length == 0) // on error return as if no swap problem
                     return null;
 
                 string foundRotationalDiskDrive = null;
-                foreach (string partition in path)
+                for (int i = 0; i < swaps.Length; i++)
                 {
+                    if (swaps[i].IsDeviceSwapFile)
+                        continue; // we do not check swap file, only partitions
+
                     // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
-                    var reg = new System.Text.RegularExpressions.Regex(@"\d+$"); // we do not check swap file, only partitions
-                    var disk = reg.Replace(partition, "").Replace("/dev/", "");
+                    var disk = _regExRemoveNumbers.Replace(swaps[i].DeviceName, "").Replace("/dev/", "");
                     var filename = $"/sys/block/{disk}/queue/rotational";
                     var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
-                    
-                    
+
                     if (isHdd == -1)
                         return null;
                     if (isHdd == 1)
@@ -426,6 +431,11 @@ namespace Sparrow.LowMemory
                 }
 
                 return hddSwapsInsteadOfSsd;
+            }
+            catch (Exception ex)
+            {
+                Log.Info("Error while trying to determine if hdd swaps instead of ssd on linux, ignoring this check and assuming no hddswap", ex);
+                return null;
             }
         }
     }

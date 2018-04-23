@@ -5,7 +5,7 @@ import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 class leafMenuItem implements menuItem {
     title: string;
     tooltip: string;
-    nav: boolean;
+    nav: boolean | KnockoutObservable<boolean>;
     route: string | Array<string>;
     moduleId: string;
     hash: string;
@@ -27,7 +27,7 @@ class leafMenuItem implements menuItem {
         title: string,
         route: string | Array<string>,
         moduleId: string,
-        nav: boolean,
+        nav: boolean | KnockoutObservable<boolean>,
         tooltip?: string,
         hash?: string,
         dynamicHash?: dynamicHashType,

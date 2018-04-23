@@ -40,8 +40,7 @@ namespace SlowTests.SlowTests.Issues
 
                 new EmailIndex().Execute(documentStore);
 
-                var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : sp.Elapsed;
-                WaitForIndexing(documentStore, timeout: timeout);
+                WaitForIndexing(documentStore, timeout: TimeSpan.FromMinutes(5));
 
                 using (var session = documentStore.OpenSession())
                 {

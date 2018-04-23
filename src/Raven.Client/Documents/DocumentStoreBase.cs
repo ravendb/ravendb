@@ -10,13 +10,13 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
 {
-
     /// <summary>
     /// Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
     /// </summary>
@@ -111,13 +111,14 @@ namespace Raven.Client.Documents
             get => _urls;
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
                 for (var i = 0; i < value.Length; i++)
                 {
-                    if(value[i] == null)
+                    if (value[i] == null)
                         throw new ArgumentNullException(nameof(value), "Urls cannot contain null");
 
-                    if(Uri.TryCreate(value[i], UriKind.Absolute, out var _) == false)
+                    if (Uri.TryCreate(value[i], UriKind.Absolute, out var _) == false)
                         throw new ArgumentException(value[i] + " is no a valid url");
                     value[i] = value[i].TrimEnd('/');
                 }
@@ -127,6 +128,9 @@ namespace Raven.Client.Documents
 
         protected bool Initialized;
         private X509Certificate2 _certificate;
+
+        private string _database;
+
 
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
@@ -144,27 +148,25 @@ namespace Raven.Client.Documents
                 throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
         }
 
-        protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-        {
-            var onSessionCreatedInternal = SessionCreatedInternal;
-            onSessionCreatedInternal?.Invoke(session);
-        }
-
-        ///<summary>
-        /// Internal notification for integration tools, mainly
-        ///</summary>
-        public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
-        public event Action<string> TopologyUpdatedInternal;
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
+        public event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
 
         /// <summary>
-        /// Gets or sets the default database name.
+        /// The default database name
         /// </summary>
-        /// <value>The default database name.</value>
-        public string Database { get; set; }
+        public string Database
+        {
+            get => _database;
+            set
+            {
+                if (Initialized)
+                    throw new InvalidOperationException("You cannot change the default database name after the document store has been initialized");
+                _database = value;
+            }
+        }
 
         /// <summary>
         /// The client certificate to use for authentication
@@ -174,13 +176,15 @@ namespace Raven.Client.Documents
             get => _certificate;
             set
             {
-                if(Initialized)
-                    throw new InvalidOperationException("You cannot change the certificate after the document store was initialized");
+                if (Initialized)
+                    throw new InvalidOperationException("You cannot change the certificate after the document store has been initialized");
                 _certificate = value;
             }
         }
 
         public abstract RequestExecutor GetRequestExecutor(string databaseName = null);
+
+        public abstract DatabaseSmuggler Smuggler { get; }
 
         public abstract IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
 
@@ -200,12 +204,12 @@ namespace Raven.Client.Documents
             session.OnBeforeQuery += OnBeforeQuery;
         }
 
+        protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+        {
+            OnSessionCreated?.Invoke(this, new SessionCreatedEventArgs(session));
+        }
+
         public abstract MaintenanceOperationExecutor Maintenance { get; }
         public abstract OperationExecutor Operations { get; }
-
-        protected void OnTopologyUpdatedInternal(string databaseName)
-        {
-            TopologyUpdatedInternal?.Invoke(databaseName);
-        }
     }
 }

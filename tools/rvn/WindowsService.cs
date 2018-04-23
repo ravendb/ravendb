@@ -13,24 +13,24 @@ namespace rvn
 {
     public static class WindowsService
     {
-        public static void Register(string serviceName, string ravenServerDir, List<string> args)
+        public static void Register(string serviceName, string username, string password, string ravenServerDir, List<string> args)
         {
-            new WindowsServiceController(serviceName).Install(ravenServerDir, args);
+            new WindowsServiceController(serviceName, username, password).Install(ravenServerDir, args);
         }
 
         public static void Unregister(string serviceName)
         {
-            new WindowsServiceController(serviceName).Uninstall();
+            new WindowsServiceController(serviceName, username: null, password: null).Uninstall();
         }
 
         public static void Start(string serviceName)
         {
-            new WindowsServiceController(serviceName).Start();
+            new WindowsServiceController(serviceName, username: null, password: null).Start();
         }
 
         public static void Stop(string serviceName)
         {
-            new WindowsServiceController(serviceName).Stop();
+            new WindowsServiceController(serviceName, username: null, password: null).Stop();
         }
 
         internal class WindowsServiceController
@@ -44,13 +44,16 @@ namespace rvn
             private const uint ErrorAccessIsDenied = 0x00000005;
 
             private readonly string _serviceName;
-
+            private readonly string _username;
+            private readonly string _password;
 
             private string ServiceFullName => $@"""{_serviceName} ({WindowServiceDescription})""";
 
-            public WindowsServiceController(string serviceName)
+            public WindowsServiceController(string serviceName, string username, string password)
             {
                 _serviceName = serviceName;
+                _username = username;
+                _password = password;
             }
 
             public void Install(string ravenServerDir, List<string> args)
@@ -70,11 +73,15 @@ namespace rvn
 
                 try
                 {
+                    var credentials = Win32ServiceCredentials.LocalService;
+                    if (string.IsNullOrWhiteSpace(_username) == false)
+                        credentials = new Win32ServiceCredentials(_username, _password);
+
                     new Win32ServiceManager().CreateService(new ServiceDefinition(NormalizeServiceName(serviceName), serviceCommand)
                     {
                         DisplayName = serviceName,
                         Description = serviceDesc,
-                        Credentials = Win32ServiceCredentials.LocalService,
+                        Credentials = credentials,
                         AutoStart = true,
                         DelayedAutoStart = false,
                         ErrorSeverity = ErrorSeverity.Normal
@@ -248,7 +255,7 @@ namespace rvn
                     if (argsForService.Any(x => x.StartsWith("--service-name")) == false)
                     {
                         argsForService.Add("--service-name");
-                        argsForService.Add(_serviceName);
+                        argsForService.Add($"\"{_serviceName}\"");
                     }
 
                     serviceCommandResult = $"{serviceCommandResult} {string.Join(" ", argsForService)}";

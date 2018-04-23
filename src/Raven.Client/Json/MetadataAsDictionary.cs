@@ -11,8 +11,18 @@ namespace Raven.Client.Json
 {
     public class MetadataAsDictionary : IMetadataDictionary
     {
+        private readonly IMetadataDictionary _parent;
+        private readonly string _parentKey;
+
         private IDictionary<string, object> _metadata;
         private readonly BlittableJsonReaderObject _source;
+
+        internal MetadataAsDictionary(BlittableJsonReaderObject metadata, IMetadataDictionary parent, string parentKey)
+            : this(metadata)
+        {
+            _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            _parentKey = parentKey ?? throw new ArgumentNullException(nameof(parentKey));
+        }
 
         public MetadataAsDictionary(BlittableJsonReaderObject metadata)
         {
@@ -37,11 +47,14 @@ namespace Raven.Client.Json
             {
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                 _source.GetPropertyByIndex(index, ref propDetails);
-                _metadata[propDetails.Name] = ConvertValue(propDetails.Value);
+                _metadata[propDetails.Name] = ConvertValue(propDetails.Name, propDetails.Value);
             }
+
+            if (_parent != null) // mark parent as dirty
+                _parent[_parentKey] = this;
         }
 
-        private static object ConvertValue(object value)
+        private object ConvertValue(string key, object value)
         {
             if (value == null)
                 return null;
@@ -61,7 +74,7 @@ namespace Raven.Client.Json
 
             var obj = value as BlittableJsonReaderObject;
             if (obj != null)
-                return new MetadataAsDictionary(obj);
+                return new MetadataAsDictionary(obj, this, key);
 
             var array = value as BlittableJsonReaderArray;
             if (array != null)
@@ -69,7 +82,7 @@ namespace Raven.Client.Json
                 var result = new object[array.Length];
                 for (int i = 0; i < array.Length; i++)
                 {
-                    result[i] = ConvertValue(array[i]);
+                    result[i] = ConvertValue(key, array[i]);
                 }
                 return result;
             }
@@ -84,7 +97,7 @@ namespace Raven.Client.Json
                 if (_metadata != null)
                     return _metadata[key];
                 if (_source.TryGetMember(key, out var value))
-                    return ConvertValue(value);
+                    return ConvertValue(key, value);
 
                 throw new KeyNotFoundException(key + " is not in the metadata");
             }
@@ -117,7 +130,7 @@ namespace Raven.Client.Json
                 {
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                     _source.GetPropertyByIndex(prop, ref propDetails);
-                    values.Add(ConvertValue(propDetails));
+                    values.Add(ConvertValue(propDetails.Name, propDetails));
                 }
                 return values;
             }
@@ -203,7 +216,7 @@ namespace Raven.Client.Json
 
             if (_source.TryGetMember(key, out var val))
             {
-                value = ConvertValue(val);
+                value = ConvertValue(key, val);
                 return true;
             }
             value = default(object);

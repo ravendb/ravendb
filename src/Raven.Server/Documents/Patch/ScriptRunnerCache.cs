@@ -41,8 +41,6 @@ namespace Raven.Server.Documents.Patch
 
         public abstract class Key
         {
-            public string ScriptKey;
-
             public abstract void GenerateScript(ScriptRunner runner);
 
             public abstract override bool Equals(object obj);

@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class getClientCertifiateCommand extends commandBase {
+class getClientCertificateCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition> {
         const url = endpoints.global.adminCertificates.certificatesWhoami;
@@ -11,4 +11,4 @@ class getClientCertifiateCommand extends commandBase {
     }
 }
 
-export = getClientCertifiateCommand;
+export = getClientCertificateCommand;

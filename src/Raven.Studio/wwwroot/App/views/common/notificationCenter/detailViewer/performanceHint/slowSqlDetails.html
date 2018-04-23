@@ -1,0 +1,61 @@
+<div class="modal-dialog modal-lg slowSqlDetails" id="js-slow-sql-details" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title, attr:{ class: 'modal-title ' + hint.headerClass() }"></h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <h3 class="text-center" data-bind="text: hint.message"></h3>
+
+            <div class="margin-bottom" style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+            
+            <div data-bind="with: currentDetails">
+                <div class="flex-horizontal">
+                    <h3>Details:</h3>
+                </div>
+                
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Duration
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <span data-bind="text: Duration + ' ms'"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Date
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <span data-bind="text: Date"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="details-item">
+                        <pre style="max-height: 250px;" data-bind="text: Statement"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/performanceHint/footerPartial.html'">
+        </div>
+    </div>
+</div>
+<div class="tooltip json-preview js-slow-sql-details-tooltip" style="opacity: 0">
+</div>

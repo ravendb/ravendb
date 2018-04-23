@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly string _field;
         private readonly LuceneVoronDirectory _directory;
-        private LowerCaseWhitespaceAnalyzer _analyzer = new LowerCaseWhitespaceAnalyzer();
         private readonly SnapshotDeletionPolicy _indexDeletionPolicy;
         private readonly IndexWriter.MaxFieldLength _maxFieldLength;
         private readonly HashSet<string> _alreadySeen = new HashSet<string>();
@@ -40,7 +39,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexDeletionPolicy = snapshotter;
             _maxFieldLength = maxFieldLength;
             _field = field;
-
             _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(database.Name);
 
             RecreateIndexWriter(state);
@@ -115,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return doc;
         }
 
-        public void AddDocument(global::Lucene.Net.Documents.Document doc, IState state)
+        public void AddDocument(global::Lucene.Net.Documents.Document doc, Analyzer analyzer, IState state)
         {
             var fieldables = doc.GetFieldables(_field);
             if (fieldables == null)
@@ -154,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                 }
 
-                var tokenStream = _analyzer.ReusableTokenStream(_field, reader);
+                var tokenStream = analyzer.ReusableTokenStream(_field, reader);
                 while (tokenStream.IncrementToken())
                 {
                     var word = tokenStream.GetAttribute<ITermAttribute>().Term;
@@ -229,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void CreateIndexWriter(IState state)
         {
-            _indexWriter = new IndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state)
+            _indexWriter = new IndexWriter(_directory, new LowerCaseWhitespaceAnalyzer(), _indexDeletionPolicy, _maxFieldLength, state)
             {
                 UseCompoundFile = false
             };
@@ -247,7 +245,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _indexSearcher = new IndexSearcher(_directory, true, state);
 
-            _analyzer = new LowerCaseWhitespaceAnalyzer();
         }
 
         private void DisposeIndexWriter(bool waitForMerges = true)

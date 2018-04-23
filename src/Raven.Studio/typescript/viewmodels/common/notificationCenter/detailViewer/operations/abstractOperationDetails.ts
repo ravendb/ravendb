@@ -1,7 +1,7 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import operation = require("common/notifications/models/operation");
 import notificationCenter = require("common/notifications/notificationCenter");
-import viewHelpers = require("common/helpers/view/viewHelpers");
+import generalUtils = require("common/generalUtils");
 
 abstract class abstractOperationDetails extends dialogViewModelBase {
 
@@ -57,6 +57,47 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
             });
     }
 
+    protected calculateProcessingSpeed(processed: number): number {
+        if (!this.op.endTime()) {
+            this.op.endTime(moment.utc());
+        }
+        
+        const duration = this.op.durationInSeconds();
+        if (duration <= 0) {
+            return 0;
+        }
+
+        const result = processed / duration;
+        if (result <= 0) {
+            return 0;
+        }
+
+        if (result < 1) {
+            return result;
+        }
+
+        return Math.floor(result);
+    }
+
+    protected getEstimatedTimeLeftFormatted(processed: number, total: number): string {
+        const processingSpeed = this.calculateProcessingSpeed(processed);
+        if (processingSpeed === 0) {
+            return "N/A";
+        }
+
+        const leftToProcess = total - processed;
+        const leftInSeconds = leftToProcess / processingSpeed;
+        if (leftInSeconds === 0) {
+            return "N/A";
+        }
+
+        const formattedDuration = generalUtils.formatDuration(moment.duration(leftInSeconds * 1000), true, 2, true);
+        if (!formattedDuration) {
+            return "N/A";
+        }
+
+        return `${formattedDuration}`;
+    }
 }
 
 export = abstractOperationDetails;

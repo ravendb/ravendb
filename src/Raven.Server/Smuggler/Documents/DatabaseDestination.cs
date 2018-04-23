@@ -172,7 +172,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public Stream GetTempStream()
             {
-                if(_command.AttachmentStreamsTempFile == null)
+                if (_command.AttachmentStreamsTempFile == null)
                     _command.AttachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("smuggler");
 
                 return _command.AttachmentStreamsTempFile.StartNewStream();
@@ -279,16 +279,18 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands()
             {
-                //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand
+                AsyncHelpers.RunSync(async () =>
                 {
-                    Commands = _compareExchangeCommands
-                }));
+                    using (_database.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    {
+                        return await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context));
+                    }
+                });
 
                 _compareExchangeCommands.Clear();
             }
         }
-        
+
         private class DatabaseKeyValueActions : IKeyValueActions<long>
         {
             private readonly DocumentDatabase _database;
@@ -328,7 +330,7 @@ namespace Raven.Server.Smuggler.Documents
                 _identities.Clear();
             }
         }
-        
+
         private class DatabaseRecordActions : IDatabaseRecordActions
         {
             private readonly DocumentDatabase _database;
@@ -398,7 +400,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var task in tasks)
                 {
-                    AsyncHelpers.RunSync(() => task);    
+                    AsyncHelpers.RunSync(() => task);
                 }
 
                 tasks.Clear();
@@ -480,7 +482,7 @@ namespace Raven.Server.Smuggler.Documents
                     var conflict = documentType.Conflict;
                     if (conflict != null)
                     {
-                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, conflict.LastModified.Ticks, conflict.Doc, conflict.ChangeVector, 
+                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, conflict.LastModified.Ticks, conflict.Doc, conflict.ChangeVector,
                             conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
                         continue;
@@ -495,7 +497,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     var document = documentType.Document;
-                    
+
                     var id = document.Id;
 
                     if (IsRevision)
@@ -528,14 +530,14 @@ namespace Raven.Server.Smuggler.Documents
                         var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                         var newId = id.Substring(0, endIndex);
 
-                        _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags, 
+                        _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags,
                             document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                         continue;
                     }
 
                     PutAttachments(context, document);
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
-                    
+
                 }
 
                 foreach (var idToUpdate in idsOfDocumentsToUpdateAfterAttachmentDeletion)
@@ -552,24 +554,26 @@ namespace Raven.Server.Smuggler.Documents
                 if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
                     return;
 
-                if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
+                if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
 
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
-                    if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false || 
-                        attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false || 
+                    if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
+                        attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
+                    var cv = Slices.Empty;
                     var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
+
                     var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                     using (DocumentIdWorker.GetSliceFromId(_context, document.Id, out Slice lowerDocumentId))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
-                    using(Slice.From(_context.Allocator, document.ChangeVector, out var cv))
+                    using (type == AttachmentType.Revision ? Slice.From(_context.Allocator, document.ChangeVector, out cv) : (IDisposable)null)
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                         base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
@@ -601,7 +605,7 @@ namespace Raven.Server.Smuggler.Documents
                     return;
 
                 _isDisposed = true;
-                
+
                 foreach (var doc in Documents)
                 {
                     if (doc.Document != null)

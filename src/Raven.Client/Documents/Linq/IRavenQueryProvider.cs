@@ -79,11 +79,6 @@ namespace Raven.Client.Documents.Linq
         Lazy<Task<int>> CountLazilyAsync<T>(Expression expression, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        /// Move the registered after query actions
-        /// </summary>
-        void MoveAfterQueryExecuted<T>(IAsyncDocumentQuery<T> documentQuery);
-
-        /// <summary>
         /// Set the fields to fetch
         /// </summary>
         HashSet<FieldToFetch> FieldsToFetch { get; }

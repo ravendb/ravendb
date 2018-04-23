@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
         public AttachmentResult Get(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return DocumentStore.Operations.Send(operation, SessionInfo);
+            return Session.Operations.Send(operation, SessionInfo);
         }
 
         public AttachmentResult Get(object entity, string name)
@@ -38,13 +38,13 @@ namespace Raven.Client.Documents.Session
                 ThrowEntityNotInSession(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return DocumentStore.Operations.Send(operation, SessionInfo);
+            return Session.Operations.Send(operation, SessionInfo);
         }
 
         public AttachmentResult GetRevision(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return DocumentStore.Operations.Send(operation, SessionInfo);
+            return Session.Operations.Send(operation, SessionInfo);
         }
     }
 }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.ServerWide.Context;
-using Voron;
+﻿using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -23,9 +18,11 @@ namespace Raven.Server.Storage.Schema.Updates.Index
             {
                 var oldErrorsTable = GetOldErrorsTable(step, errorTimestampsSlice, out var oldTableSchema);
                 var oldErrorTimestampsTree = oldErrorsTable?.GetTree(oldTableSchema.Indexes[errorTimestampsSlice]);
-
-                if (oldErrorTimestampsTree == null) 
-                    return false;
+                if (oldErrorTimestampsTree == null)
+                {
+                    // old tree doesn't exist
+                    return true;
+                }
 
                 var newErrorTimestampsTree = GetNewErrorTimestampsTreeFromErrorsTable(step, errorTimestampsSlice);
                 using (var oldErrorsTreeIterator = oldErrorTimestampsTree.Iterate(false))

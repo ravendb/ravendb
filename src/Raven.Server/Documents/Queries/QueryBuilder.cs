@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
@@ -662,7 +663,7 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 var spatialExpression = (MethodExpression)expression.Arguments[0];
-                fieldName = spatialExpression.GetText();
+                fieldName = spatialExpression.GetText(null);
             }
 
             var shapeExpression = (MethodExpression)expression.Arguments[1];
@@ -733,11 +734,7 @@ namespace Raven.Server.Documents.Queries
             var wktValue = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsString(fieldName, wktValue.Type);
 
-            SpatialUnits? spatialUnits = null;
-            if (expression.Arguments.Count == 2)
-                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
-
-            return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
+            return spatialField.ReadShape(GetValueAsString(wktValue.Value));
         }
 
         private static Shape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
@@ -798,7 +795,8 @@ namespace Raven.Server.Documents.Queries
                 if (array != null)
                 {
                     ValueTokenType? expectedValueType = null;
-                    foreach (var item in UnwrapArray(array, metadata.QueryText, parameters))
+                    var unwrapedArray = UnwrapArray(array, metadata.QueryText, parameters);
+                    foreach (var item in unwrapedArray)
                     {
                         if (expectedValueType == null)
                             expectedValueType = item.Type;
@@ -853,7 +851,7 @@ namespace Raven.Server.Documents.Queries
             // this is known to be 0-9 with possibly _
             bool isNegative = token[0] == '-';
 
-            for (var index = isNegative  ? 1 : 0; index < token.Length; index++)
+            for (var index = isNegative ? 1 : 0; index < token.Length; index++)
             {
                 var ch = token[index];
                 if (ch == '_')

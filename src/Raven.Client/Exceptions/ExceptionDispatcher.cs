@@ -37,9 +37,9 @@ namespace Raven.Client.Exceptions
 
                 return new ConcurrencyException(message);
             }
-            
+
             // We throw the same error for different status codes: GatewayTimeout,RequestTimeout,BadGateway,ServiceUnavailable.
-            error += $"{Environment.NewLine}Response.StatusCode - {code}"; 
+            error += $"{Environment.NewLine}Response.StatusCode - {code}";
 
             var type = GetType(typeAsString);
             if (type == null)
@@ -167,8 +167,18 @@ namespace Raven.Client.Exceptions
             }
             catch (Exception e)
             {
-                stream.Position = 0;
-                throw new InvalidOperationException($"Cannot parse the {response.StatusCode} response. Content: {new StreamReader(stream).ReadToEnd()}", e);
+                string content = null;
+                if (stream.CanSeek)
+                {
+                    stream.Position = 0;
+                    using (var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
+                        content = reader.ReadToEnd();
+                }
+
+                if (content != null)
+                    content = $"Content: {content}";
+
+                throw new InvalidOperationException($"Cannot parse the '{response.StatusCode}' response. {content}", e);
             }
 
             return json;

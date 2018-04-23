@@ -10,9 +10,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
-        SqlEtl_SlowSql,
         
-        Etl_WriteErrorRatio,
+        Etl_InvalidScript,
         
         PeriodicBackup,
         Replication,
@@ -24,6 +23,11 @@ namespace Raven.Server.NotificationCenter.Notifications
         LicenseManager_LicenseUpdateMessage,
         LicenseManager_HighlyAvailableTasks,
         LicenseManager_LicenseLimit,
+
+        Certificates_DeveloperLetsEncryptRenewal,
+        Certificates_ReplaceSuccess,
+        Certificates_ReplaceError,
+        Certificates_ReplacePending,
 
         IndexStore_IndexCouldNotBeOpened,
         WarnIndexOutputsPerDocument,

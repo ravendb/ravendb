@@ -27,6 +27,22 @@
                                 <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Processing Speed:
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: $root.processingSpeed"></span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Estimated Time Left:
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: $root.estimatedTimeLeft"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="progress">

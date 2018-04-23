@@ -4,11 +4,12 @@ import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import buildInfo = require("models/resources/buildInfo");
-import messagePublisher = require("common/messagePublisher");
 import generalUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
 
 class about extends viewModelBase {
 
+    accessManager = accessManager.default.aboutView;
     licenseCssClass = license.licenseCssClass;
     supportCssClass = license.supportCssClass;
     
@@ -65,11 +66,22 @@ class about extends viewModelBase {
 
     shortDescription = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
-        if (!licenseStatus || !license.licenseShortDescription()) {
+        const shortDescription = license.licenseShortDescription();
+        if (!licenseStatus || !shortDescription) {
             return null;
         }
 
-        return license.licenseShortDescription();
+        return shortDescription;
+    });
+
+    licenseId = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        const licenseId = license.licenseId();
+        if (!licenseStatus || !licenseId) {
+            return null;
+        }
+
+        return licenseId;
     });
 
     registered = ko.pureComputed(() => {

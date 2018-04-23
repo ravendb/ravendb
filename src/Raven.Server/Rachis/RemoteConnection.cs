@@ -496,9 +496,10 @@ namespace Raven.Server.Rachis
                     json.TryGet("Message", out string message);
                     throw new TopologyMismatchException(message);
                 }
+                
             }
             throw new InvalidDataException(
-                $"Expected to get type of \'{expectedType}\' message, but got unknown message: {json}");
+                $"Expected to get type of \'{expectedType}\' message, but got \'{type}\' message.", new Exception(json.ToString()));
         }
     }
 }

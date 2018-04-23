@@ -455,6 +455,8 @@ namespace Raven.Server.Documents.Queries.Results
                         {
                             buffer.Add(item);
                         }
+
+                        fieldToFetch.QueryField.SourceIsArray = true;
                     }
                     else
                     {
@@ -542,7 +544,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
-            using (var result = run.Run(_context as DocumentsOperationContext, methodName, args))
+            using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes);
 

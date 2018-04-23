@@ -11,13 +11,15 @@ class nodeInfo {
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
     mode: KnockoutObservable<Raven.Server.Commercial.SetupMode | "Continue">;
+    isLoopbackOnly: KnockoutComputed<boolean>;
     
     externalIpAddress = ko.observable<string>();     
     effectiveIpAddresses: KnockoutComputed<string>;
-    externalHttpPort = ko.observable<string>();
+    externalHttpsPort = ko.observable<string>();
     externalTcpPort = ko.observable<string>();
     
     ipsContainHostName: KnockoutComputed<boolean>;
+    ipContainBindAll: KnockoutComputed<boolean>; // i.e. 0.0.0.0
   
     advancedSettingsCheckBox = ko.observable<boolean>(false);    
     showAdvancedSettings: KnockoutComputed<boolean>;
@@ -40,6 +42,11 @@ class nodeInfo {
             return this.nodeTag() === 'A';
         });
         
+        this.isLoopbackOnly = ko.pureComputed(() => {
+            const ips = this.ips();
+            return ips.length === 1 && ips[0].isLocalNetwork();
+        });
+        
         this.ips.push(new ipEntry());
         
         this.ipsContainHostName = ko.pureComputed(() => {            
@@ -56,6 +63,24 @@ class nodeInfo {
 
         this.ipsContainHostName.subscribe(val => {
             if (val && this.mode() !== 'Secured') {
+                this.advancedSettingsCheckBox(true);
+            }
+        });
+        
+        this.ipContainBindAll = ko.pureComputed(() => {
+            let hasBindAll = false;
+            
+            this.ips().forEach(ipItem => {
+                if (ipItem.ip() === "0.0.0.0") {
+                    hasBindAll = true;
+                }
+            });
+            
+            return hasBindAll;
+        });
+        
+        this.ipContainBindAll.subscribe(val => {
+            if (val && this.mode() === "LetsEncrypt") {
                 this.advancedSettingsCheckBox(true);
             }
         });
@@ -91,7 +116,7 @@ class nodeInfo {
             number: true
         });
         
-        this.externalHttpPort.extend({
+        this.externalHttpsPort.extend({
             number: true
         });
         
@@ -135,7 +160,7 @@ class nodeInfo {
             hostname: this.hostname,
             externalIpAddress: this.externalIpAddress,
             externalTcpPort: this.externalTcpPort,
-            externalHttpPort: this.externalHttpPort
+            externalHttpsPort: this.externalHttpsPort
         });
 
         this.validationGroupForSecured = ko.validatedObservable({
@@ -145,7 +170,7 @@ class nodeInfo {
             ips: this.ips,
             hostname: this.hostname,
             externalTcpPort: this.externalTcpPort,
-            externalHttpPort: this.externalHttpPort
+            externalHttpsPort: this.externalHttpsPort
         });
     }
 
@@ -176,7 +201,7 @@ class nodeInfo {
             PublicServerUrl: this.getServerUrl(),
             ExternalIpAddress: (this.advancedSettingsCheckBox() && this.externalIpAddress()) ? this.externalIpAddress() : null, 
             TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : null,
-            ExternalPort: (this.advancedSettingsCheckBox() && this.externalHttpPort()) ? parseInt(this.externalHttpPort(), 10) : null,
+            ExternalPort: (this.advancedSettingsCheckBox() && this.externalHttpsPort()) ? parseInt(this.externalHttpsPort(), 10) : null,
             ExternalTcpPort: (this.advancedSettingsCheckBox() && this.externalTcpPort()) ? parseInt(this.externalTcpPort(), 10) : null
         } as Raven.Server.Commercial.SetupInfo.NodeInfo;
     }

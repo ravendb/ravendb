@@ -463,9 +463,9 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(TransactionOperationContext context);
 
-        public async Task WaitForState(RachisState rachisState)
+        public async Task WaitForState(RachisState rachisState, CancellationToken cts)
         {
-            while (true)
+            while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
@@ -477,9 +477,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForLeaveState(RachisState rachisState)
+        public async Task WaitForLeaveState(RachisState rachisState, CancellationToken cts)
         {
-            while (true)
+            while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
@@ -635,8 +635,6 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    
-                    
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
                         if (Log.IsInfoEnabled)
@@ -644,24 +642,7 @@ namespace Raven.Server.Rachis
                             Log.Info($"Initiate disposing the term _prior_ to {expectedTerm} with {toDispose.Count} things to dispose.");
                         }
 
-                        Parallel.ForEach(toDispose, d =>
-                        {
-                            try
-                            {
-                                d.Dispose();
-                            }
-                            catch (ObjectDisposedException)
-                            {
-                                // nothing to do
-                            }
-                            catch (Exception e)
-                            {
-                                if (Log.IsInfoEnabled)
-                                {
-                                    Log.Info("Failed to dispose during new rachis state transition", e);
-                                }
-                            }
-                        });
+                        ParallelDispose(toDispose);
                     });
                     
                     var elapsed = sp.Elapsed;
@@ -674,6 +655,31 @@ namespace Raven.Server.Rachis
                     }
                 }
             };
+        }
+
+        private void ParallelDispose(List<IDisposable> toDispose)
+        {
+            if(toDispose == null || toDispose.Count == 0)
+                return;
+
+            Parallel.ForEach(toDispose, d =>
+            {
+                try
+                {
+                    d.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // nothing to do
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Failed to dispose during new rachis state transition", e);
+                    }
+                }
+            });
         }
 
         public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
@@ -700,6 +706,22 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public void RemoveAndDispose(IDisposable parentState, IDisposable disposable)
+        {
+            if(disposable == null)
+                return;
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenWriteTransaction()) // using write tx just for the lock here
+            using (disposable)
+            {
+                if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
+                    throw new ConcurrencyException(
+                        "Could not remove the disposable because by the time we did it the parent state has changed");
+                _disposables.Remove(disposable);
+            }
+        }
+
         public void SwitchToLeaderState(long electionTerm, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
             if (Log.IsInfoEnabled)
@@ -711,20 +733,13 @@ namespace Raven.Server.Rachis
             leader.Start(connections);
         }
 
-        public async Task<(long Index, object Result)> PutAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var putTask = leader.PutAsync(context, cmd);
-                if (await putTask.WaitWithTimeout(OperationTimeout) == false)
-                    throw new TimeoutException($"Waited for {OperationTimeout} but the command was not applied in this time.");
-
-                return await putTask;
-            }
+            return leader.PutAsync(cmd, OperationTimeout);
         }
 
         public void SwitchToCandidateStateOnTimeout()
@@ -739,7 +754,7 @@ namespace Raven.Server.Rachis
             {
                 Timeout.DisableTimeout();
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                using (var ctx = context.OpenWriteTransaction())
                 {
                     var clusterTopology = GetTopology(context);
                     if (clusterTopology.TopologyId == null ||
@@ -758,6 +773,7 @@ namespace Raven.Server.Rachis
                             Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
                         }
                         SwitchToSingleLeader(context);
+                        ctx.Commit();
                         return;
                     }
                 }
@@ -779,7 +795,7 @@ namespace Raven.Server.Rachis
             {
                 if (Log.IsInfoEnabled)
                 {
-                    Log.Info($"An error occured during switching to candidate state in term {currentTerm}.", e);
+                    Log.Info($"An error occurred during switching to candidate state in term {currentTerm}.", e);
                 }
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
@@ -1629,7 +1645,6 @@ namespace Raven.Server.Rachis
                 switch (CurrentState)
                 {
                     case RachisState.Passive:
-                        return null;
                     case RachisState.Candidate:
                         return null;
                     case RachisState.Follower:

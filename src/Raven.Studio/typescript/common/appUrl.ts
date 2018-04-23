@@ -33,6 +33,7 @@ class appUrl {
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
+        cmpXchg: ko.pureComputed(() => appUrl.forCmpXchg(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
@@ -144,17 +145,23 @@ class appUrl {
         return "#dashboard";
     }
 
+    static forEditCmpXchg(key: string, db: database | databaseInfo) {
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const keyUrlPart = key ? "&key=" + encodeURI(key) : "";
+        return "#databases/cmpXchg/edit?" + databaseUrlPart + keyUrlPart;
+    }
+    
     static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
         const collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const docIdUrlPart = id ? "&id=" + encodeURI(id) : "";
+        const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
         return "#databases/edit?" + collectionPart + databaseUrlPart + docIdUrlPart;
     }
 
     static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);        
-        const docIdUrlPart = "&id=" + encodeURI(id);
+        const docIdUrlPart = "&id=" + encodeURIComponent(id);
         return "#databases/edit?" + databaseUrlPart + revisionPart + docIdUrlPart;
     }
 
@@ -167,6 +174,12 @@ class appUrl {
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
+    static forNewCmpXchg(db: database | databaseInfo) {
+        const baseUrlPart = "#databases/cmpXchg/edit?";
+        let databasePart = appUrl.getEncodedDbPart(db);
+        return baseUrlPart + databasePart;
+    }
+    
     static forNewDoc(db: database | databaseInfo, collection: string = null): string {
         const baseUrlPart = "#databases/edit?";
         let databasePart = appUrl.getEncodedDbPart(db);
@@ -265,6 +278,11 @@ class appUrl {
         return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);;
     }
 
+    static forCmpXchg(db: database | databaseInfo): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/cmpXchg?" + databasePart;
+    }
+    
     static forConflicts(db: database | databaseInfo, documentId?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = documentId ? "&id=" + encodeURIComponent(documentId) : "";
@@ -440,7 +458,7 @@ class appUrl {
     */
     static forCurrentPage(db: database) {
         const routerInstruction = router.activeInstruction();
-        if (routerInstruction) {
+        if (routerInstruction && routerInstruction.queryParams) {
 
             let currentDatabaseName: string = null;
             const dbInUrl = routerInstruction.queryParams[database.type];

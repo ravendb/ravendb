@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using FastTests.Voron;
 using Xunit;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
+using Voron.Util.Settings;
 
 namespace SlowTests.Voron
 {
@@ -12,7 +14,7 @@ namespace SlowTests.Voron
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 1000*Constants.Storage.PageSize;
+            options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.ManualFlushing = true;
         }
 
@@ -52,14 +54,16 @@ namespace SlowTests.Voron
             }
 
             Env.FlushLogToDataFile();
-                // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
+            // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
             var sw = new StringWriter();
 
             try
             {
-                BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"), infoNotify: msg => sw.WriteLine(msg));
+                var voronDataDir = new VoronPathSetting(DataDir);
 
-                BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
+                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), infoNotify: msg => sw.WriteLine(msg));
+
+                BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
                 sw.WriteLine();
                 sw.WriteLine("Restoring...");
                 sw.WriteLine();

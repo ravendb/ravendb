@@ -19,7 +19,6 @@ namespace Sparrow.Logging
 {
     public sealed class LoggingSource
     {
-        private const string LoggingThreadName = "Logging Thread";
         [ThreadStatic] private static string _currentThreadId;
 
         static LoggingSource()
@@ -35,7 +34,8 @@ namespace Sparrow.Logging
             new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
         private string _path;
-        private readonly TimeSpan _retentionTime;
+        private readonly string _name;
+        private TimeSpan _retentionTime;
         private string _dateString;
         private MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
         private int _logNumber;
@@ -45,8 +45,10 @@ namespace Sparrow.Logging
         private Stream _additionalOutput;
 
         private Stream _pipeSink;
+        private static readonly int TimeToWaitForLoggingToEndInMilliseconds = 5_000;
 
-        public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
+        public static readonly LoggingSource Instance = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.FromDays(3), "Logging");
+        public static readonly LoggingSource AuditLog = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.MaxValue, "Audit Log");
 
         private static byte[] _headerRow =
             Encodings.Utf8.GetBytes($"Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException{Environment.NewLine}");
@@ -113,30 +115,27 @@ namespace Sparrow.Logging
             }
         }
 
-        private LoggingSource(string path, LogMode logMode = LogMode.Information,
-            TimeSpan retentionTime = default(TimeSpan))
+        public LoggingSource(LogMode logMode, string path, TimeSpan retentionTime, string name)
         {
             _path = path;
-            if (retentionTime == default(TimeSpan))
-                retentionTime = TimeSpan.FromDays(3);
-
-            _retentionTime = retentionTime;
+            _name = name;
             _localState = new ThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
 
-            SetupLogMode(logMode, path);
+            SetupLogMode(logMode, path, retentionTime);
         }
 
-        public void SetupLogMode(LogMode logMode, string path)
+        public void SetupLogMode(LogMode logMode, string path, TimeSpan retentionTime = default)
         {
             lock (this)
             {
-                if (LogMode == logMode && path == _path)
+                if (LogMode == logMode && path == _path && retentionTime == _retentionTime)
                     return;
                 LogMode = logMode;
+                _path = path;
+                _retentionTime = retentionTime == default ? TimeSpan.FromDays(3) : retentionTime;
+
                 IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
                 IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
-
-                _path = path;
 
                 Directory.CreateDirectory(_path);
                 var copyLoggingThread = _loggingThread;
@@ -177,13 +176,20 @@ namespace Sparrow.Logging
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
-                Name = LoggingThreadName
+                Name = _name + " Thread"
             };
             _loggingThread.Start();
         }
 
+        public void EndLogging()
+        {
+            _keepLogging.Lower();
+            _hasEntries.Set();
+            _loggingThread.Join(TimeToWaitForLoggingToEndInMilliseconds);
 
-        private Stream GetNewStream(long maxFileSize)
+        }
+
+        private FileStream GetNewStream(long maxFileSize)
         {
             if (DateTime.Today != _today)
             {
@@ -365,7 +371,9 @@ namespace Sparrow.Logging
                                 {
                                     if (_keepLogging == false)
                                         return;
-
+                                    // we don't want to have fsync here, we just
+                                    // want to send it to the OS
+                                    currentFile.Flush(flushToDisk: false);
                                     _hasEntries.Wait();
                                     if (_keepLogging == false)
                                         return;

@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
+using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Logging;
@@ -310,7 +311,7 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args)
+        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
             var process = new Process
             {
@@ -391,7 +392,7 @@ namespace Raven.Server.ServerWide
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = new X509Certificate2(rawData, (string)null,X509KeyStorageFlags.Exportable);
-                ValidateExpiration(executable, loadedCertificate);
+                ValidateExpiration(executable, loadedCertificate, serverStore);
                 ValidatePrivateKey(executable, null, rawData, out  privateKey);
                 ValidateKeyUsages(executable, loadedCertificate);
 
@@ -492,9 +493,9 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password)
+        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
         {
-            ValidateExpiration(source, loadedCertificate);
+            ValidateExpiration(source, loadedCertificate, serverStore);
 
             ValidatePrivateKey(source, password, rawBytes, out var privateKey);
 
@@ -541,7 +542,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password)
+        public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
         {
             try
             {
@@ -551,7 +552,7 @@ namespace Raven.Server.ServerWide
                 // we need to load it as exportable because we might need to send it over the cluster
                 var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable);
 
-                ValidateExpiration(path, loadedCertificate);
+                ValidateExpiration(path, loadedCertificate, serverStore);
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
@@ -602,10 +603,28 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate)
+        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
-                throw new EncryptionException($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! " + loadedCertificate);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thubprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
+                
+
+            if (serverStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer)
+            {
+                // Do not allow long range certificates in developer mode.
+                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))
+                {
+                    const string msg = "The server certificate expiration date is more than 4 months from now. " +
+                                       "This is not allowed when using the developer license. " +
+                                       "The developer license is not allowed for production use. " +
+                                       "Either switch the license or use a short term certificate.";
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(msg);
+                    throw new InvalidOperationException(msg);
+                }
+            }
         }
 
         private static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
@@ -621,7 +640,12 @@ namespace Raven.Server.ServerWide
             }
 
             if (pk == null)
-                throw new EncryptionException("Unable to find the private key in the provided certificate from " + source);
+            {
+                var msg = "Unable to find the private key in the provided certificate from " + source;
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+                throw new EncryptionException(msg);
+            }
         }
 
         public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
@@ -649,8 +673,13 @@ namespace Raven.Server.ServerWide
             }
 
             if (supported == false)
-                throw new EncryptionException("Server certificate " + loadedCertificate.FriendlyName + "from " + source +
-                                              " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+            {
+                var msg = "Server certificate " + loadedCertificate.FriendlyName + "from " + source +
+                          " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+                throw new EncryptionException(msg);
+            }
         }
     }
 }

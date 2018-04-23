@@ -80,10 +80,17 @@
                                 <div class="flex-grow" data-bind="validationElement: authenticationMethod">
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(authenticationMethod, 'none'), css: { active: authenticationMethod() === 'none' }">None</button>
+                                                data-bind="click: _.partial(authenticationMethod, 'none'), css: { active: authenticationMethod() === 'none' }">
+                                            None
+                                        </button>
                                         <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(authenticationMethod, 'windows'), css: { active: authenticationMethod() === 'windows' }">Windows Credentials</button>
-
+                                                data-bind="click: _.partial(authenticationMethod, 'apiKey'), css: { active: authenticationMethod() === 'apiKey' }">
+                                            API Key
+                                        </button>
+                                        <button type="button" class="btn btn-default"
+                                                data-bind="click: _.partial(authenticationMethod, 'windows'), css: { active: authenticationMethod() === 'windows' }">
+                                            Windows Credentials
+                                        </button>
                                     </div>
                                     <span data-bind="visible: $root.spinners.getResourceNames">
                                         <i class="global-spinner spinner-sm"></i>
@@ -94,19 +101,35 @@
                                 <div class="form-group" data-bind="validationElement: userName">
                                     <label class="control-label">User name</label>
                                     <div class="flex-grow">
-                                        <input data-bind="textInput: userName" type="text" class="form-control" placeholder="User name"/>
+                                        <input data-bind="textInput: userName" type="text" class="form-control" placeholder="User name" />
                                     </div>
                                 </div>
                                 <div class="form-group" data-bind="validationElement: password">
                                     <label class="control-label">Password</label>
                                     <div class="flex-grow">
-                                        <input data-bind="textInput: password" type="password" class="form-control" placeholder="Password"/>
+                                        <input data-bind="textInput: password" type="password" class="form-control" placeholder="Password" />
                                     </div>
                                 </div>
                                 <div class="form-group" data-bind="validationElement: domain">
                                     <label class="control-label">Domain</label>
                                     <div class="flex-grow">
-                                        <input data-bind="textInput: domain" type="text" class="form-control" placeholder="Domain"/>
+                                        <input data-bind="textInput: domain" type="text" class="form-control" placeholder="Domain" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div data-bind="visible: showApiKeyCredentialInputs">
+                                <div class="form-group" data-bind="validationElement: apiKey">
+                                    <label class="control-label">API Key</label>
+                                    <div class="flex-grow">
+                                        <input data-bind="textInput: apiKey" type="password" class="form-control" placeholder="API Key" />
+                                    </div>
+                                </div>
+
+                                <div class="form-group" data-bind="visible: isUnsecuredBasicAuthentication">
+                                    <label class="control-label"></label>
+                                    <div class="toggle">
+                                        <input class="styled" type="checkbox" id="basic-authentication" data-bind="checked: enableBasicAuthenticationOverUnsecuredHttp">
+                                        <label for="basic-authentication">Enable Basic Authentication Over Unsecured Http</label>
                                     </div>
                                 </div>
                             </div>

@@ -4,12 +4,19 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
     public class RangeFacet : FacetBase
     {
+        private readonly FacetBase _parent;
+
+        internal RangeFacet(FacetBase parent) : this()
+        {
+            _parent = parent;
+        }
         public RangeFacet()
         {
             Ranges = new List<string>();
@@ -20,14 +27,11 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<string> Ranges { get; set; }
 
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return null;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return this;
+            if (_parent != null)
+                return _parent.ToFacetToken(addQueryParameter);
+            return FacetToken.Create(this, addQueryParameter);
         }
     }
 
@@ -43,21 +47,16 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<Expression<Func<T, bool>>> Ranges { get; set; }
 
-        internal override Facet AsFacet()
+        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
-            return null;
-        }
-
-        internal override RangeFacet AsRangeFacet()
-        {
-            return this;
+            return FacetToken.Create(this, addQueryParameter);
         }
 
         public static implicit operator RangeFacet(RangeFacet<T> other)
         {
             var ranges = other.Ranges.Select(Parse).ToList();
 
-            return new RangeFacet
+            return new RangeFacet(other)
             {
                 Ranges = ranges,
                 Options = other.Options,
@@ -68,10 +67,15 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public static string Parse(Expression<Func<T, bool>> expr)
         {
-            return Parse(null, (LambdaExpression)expr);
+            return Parse(null, expr, null);
         }
-        
+
         public static string Parse(string prefix, LambdaExpression expr)
+        {
+            return Parse(prefix, expr, null);
+        }
+
+        public static string Parse(string prefix, LambdaExpression expr, Func<object, string> addQueryParameter)
         {
             if (expr.Body is MethodCallExpression mce)
             {
@@ -80,30 +84,35 @@ namespace Raven.Client.Documents.Queries.Facets
                     if (mce.Arguments[0] is MemberExpression src &&
                         mce.Arguments[1] is LambdaExpression le)
                     {
-                        return Parse(GetFieldName(prefix, src) , le);
+                        return Parse(GetFieldName(prefix, src), le);
                     }
                 }
                 throw new InvalidOperationException("Don't know how to translate expression to facets: " + expr);
             }
-            
-            var operation = (BinaryExpression)expr.Body;
 
-            if (operation.Left is MemberExpression me)
+            var operation = (BinaryExpression)expr.Body;
+            var leftExpression = SkipConvertExpressions(operation.Left);
+
+            if (leftExpression is MemberExpression me)
             {
                 var fieldName = GetFieldName(prefix, me);
                 var subExpressionValue = ParseSubExpression(operation);
-                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);
+                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue, addQueryParameter);
                 return expression;
             }
 
-            var left = operation.Left as BinaryExpression;
-            var right = operation.Right as BinaryExpression;
-            if (left == null || right == null || operation.NodeType != ExpressionType.AndAlso)
+            var rightExpression = SkipConvertExpressions(operation.Right);
+
+            if (!(leftExpression is BinaryExpression left) || 
+                !(rightExpression is BinaryExpression right) || 
+                operation.NodeType != ExpressionType.AndAlso)
                 throw new InvalidOperationException($"Range can be only specified using: '&&'. Cannot use: '{operation.NodeType}'");
 
-            var leftMember = left.Left as MemberExpression;
-            var rightMember = right.Left as MemberExpression;
-            if (leftMember == null || rightMember == null)
+            leftExpression = SkipConvertExpressions(left.Left);
+            rightExpression = SkipConvertExpressions(right.Left);
+
+            if (!(leftExpression is MemberExpression leftMember) || 
+                !(rightExpression is MemberExpression rightMember))
             {
                 throw new InvalidOperationException("Expressions on both sides of '&&' must point to range field. E.g. x => x.Age > 18 && x.Age < 99");
             }
@@ -122,7 +131,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm1)
             {
-                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right), addQueryParameter);
             }
 
             // option #2: expression has form x < 10 && x > 5 --> reverse expression to end up with form #1
@@ -131,7 +140,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm2)
             {
-                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
+                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left), addQueryParameter);
             }
 
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
@@ -149,7 +158,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (prefix != null)
                 return prefix + "_" + left.Member.Name;
-            
+
             return left.Member.Name;
         }
 
@@ -173,15 +182,7 @@ namespace Raven.Client.Documents.Queries.Facets
             //i.e. new DateTime(10, 4, 2001) || dateTimeVar.AddDays(2) || val +100
             if (operation.Right is NewExpression || operation.Right is MethodCallExpression || operation.Right is BinaryExpression)
             {
-                try
-                {
-                    var invoke = Expression.Lambda(operation.Right).Compile();
-                    return invoke.DynamicInvoke();
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Could not understand expression " + operation.Right, e);
-                }
+                return TryInvokeLambda(operation.Right);
             }
 
             throw new InvalidOperationException(string.Format("Unable to parse expression: {0} {1} {2}",
@@ -221,11 +222,28 @@ namespace Raven.Client.Documents.Queries.Facets
 
         }
 
+        private static Expression SkipConvertExpressions(Expression expression)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.ConvertChecked:
+                case ExpressionType.Convert:
+                    return SkipConvertExpressions(((UnaryExpression)expression).Operand);
+                default:
+                    return expression;
+            }
+        }
+
         private static object ParseUnaryExpression(UnaryExpression expression)
         {
             if (expression.NodeType == ExpressionType.Convert)
             {
                 var operand = expression.Operand;
+
+                if (operand is BinaryExpression)
+                {
+                    return TryInvokeLambda(operand);
+                }
 
                 switch (operand.NodeType)
                 {
@@ -238,22 +256,28 @@ namespace Raven.Client.Documents.Queries.Facets
                     case ExpressionType.Convert:
                         return ParseUnaryExpression((UnaryExpression)operand);
                     case ExpressionType.New:
-                        try
-                        {
-                            var invoke = Expression.Lambda(operand).Compile();
-                            return invoke.DynamicInvoke();
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Could not understand expression " + operand, e);
-                        }
+                    case ExpressionType.Call:
+                        return TryInvokeLambda(operand);
                 }
             }
 
             throw new NotSupportedException("Not supported unary expression type " + expression.NodeType);
         }
 
-        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
+        private static object TryInvokeLambda(Expression expression)
+        {
+            try
+            {
+                var invoke = Expression.Lambda(expression).Compile();
+                return invoke.DynamicInvoke();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not understand expression " + expression, e);
+            }
+        }
+
+        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue, Func<object, string> addQueryParameter)
         {
             if (lValue is IComparable lValueAsComparable && rValue is IComparable rValueAsComparable)
             {
@@ -266,43 +290,58 @@ namespace Raven.Client.Documents.Queries.Facets
             if (lValue != null && rValue != null)
             {
                 if (leftOp == ExpressionType.GreaterThanOrEqual && rightOp == ExpressionType.LessThanOrEqual)
-                    return $"{fieldName} between {GetStringValue(lValue)} and {GetStringValue(rValue)}";
+                    return $"{fieldName} between {GetStringValue(lValue, addQueryParameter)} and {GetStringValue(rValue, addQueryParameter)}";
 
-                return $"{GetStringRepresentation(fieldName, leftOp, lValue)} and {GetStringRepresentation(fieldName, rightOp, rValue)}";
+                return $"{GetStringRepresentation(fieldName, leftOp, lValue, addQueryParameter)} and {GetStringRepresentation(fieldName, rightOp, rValue, addQueryParameter)}";
             }
 
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
 
-        private static string GetStringValue(object value)
+        private static string GetStringValue(object value, Func<object, string> addQueryParameter)
         {
-            switch (value.GetType().FullName)
+            if (addQueryParameter == null)
             {
-                //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
-                case "System.DateTime":
-                    return $"'{((DateTime)value).GetDefaultRavenFormat()}'";
-                case "System.DateTimeOffset":
-                    return $"'{((DateTimeOffset)value).UtcDateTime.GetDefaultRavenFormat()}'";
-                case "System.Int32":
-                    return NumberUtil.NumberToString((int)value);
-                case "System.Int64":
-                    return NumberUtil.NumberToString((long)value);
-                case "System.Single":
-                    return NumberUtil.NumberToString((float)value);
-                case "System.Double":
-                    return NumberUtil.NumberToString((double)value);
-                case "System.Decimal":
-                    return NumberUtil.NumberToString((double)(decimal)value);
-                case "System.String":
-                    return $"'{value}'";
+                return DefaultGetStringValue(value);
+            }
+            return "$" + addQueryParameter(value);
+        }
+
+        private static string DefaultGetStringValue(object o)
+        {
+            switch (o)
+            {
+                case null:
+                    return "null";
+                case DateTime dt:
+                    return "'" + dt.GetDefaultRavenFormat() + "'";
+                case DateTimeOffset dto:
+                    return "'" + dto.UtcDateTime.GetDefaultRavenFormat() + "'";
+                case string s:
+                    return "'" + EscapeString(s) + "'";
+                case int i:
+                    return NumberUtil.NumberToString(i);
+                case long l:
+                    return NumberUtil.NumberToString(l);
+                case float f:
+                    return NumberUtil.NumberToString(f);
+                case double d:
+                    return NumberUtil.NumberToString(d);
+                case decimal m:
+                    return NumberUtil.NumberToString((double)m);
                 default:
-                    throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
+                    throw new InvalidOperationException("Unable to parse the given type " + o.GetType().Name + ", into a facet range!!! ");
             }
         }
 
-        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value)
+        private static object EscapeString(string s)
         {
-            var valueAsStr = GetStringValue(value);
+            return s.Replace("'", "''");
+        }
+
+        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value, Func<object, string> addQueryParameter)
+        {
+            var valueAsStr = GetStringValue(value, addQueryParameter);
             if (op == ExpressionType.LessThan)
                 return $"{fieldName} < {valueAsStr}";
             if (op == ExpressionType.GreaterThan)

@@ -18,6 +18,7 @@ import subscriptionConnectionDetailsCommand = require("commands/database/tasks/g
 import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import eventsCollector = require("common/eventsCollector");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
@@ -112,6 +113,8 @@ class editSubscriptionTask extends viewModelBase {
         if (!this.validate()) { 
              return;
         }
+        
+        eventsCollector.default.reportEvent("subscription-task", "save");
 
         // 2. Create/add the new replication task
         const dto = this.editedSubscription().toDto();
@@ -157,6 +160,8 @@ class editSubscriptionTask extends viewModelBase {
             return;
         }
 
+        eventsCollector.default.reportEvent("subscription-task", "test");
+        
         this.columnsSelector.reset();
 
         const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
@@ -187,13 +192,14 @@ class editSubscriptionTask extends viewModelBase {
 
             grid.headerVisible(true);
 
-            this.columnPreview.install("virtual-grid", ".tooltip", (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+            this.columnPreview.install("virtual-grid", ".js-subscription-task-tooltip", 
+                (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
                 if (column instanceof textColumn) {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {
                         const json = JSON.stringify(value, null, 4);
                         const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                        onValue(html);
+                        onValue(html, json);
                     }
                 }
             });

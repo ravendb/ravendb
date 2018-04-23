@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
@@ -52,12 +50,12 @@ namespace SlowTests.Issues
                         deletePrevious: false,
                         partialPath: dataDir);
 
-                    WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30));
+                    Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30)));
                 }
             }
         }
 
-        private static void WaitForDatabaseToBeDeleted(RavenServer server, string databaseName, TimeSpan timeout)
+        private static async Task<bool> WaitForDatabaseToBeDeleted(RavenServer server, string databaseName, TimeSpan timeout)
         {
             using (var store = new DocumentStore
             {
@@ -71,26 +69,29 @@ namespace SlowTests.Issues
             {
                 store.Initialize();
 
+                var pollingInterval = timeout.TotalSeconds < 1 ? timeout : TimeSpan.FromSeconds(1);
                 var sw = Stopwatch.StartNew();
-                while (sw.Elapsed < timeout)
+                while (true)
                 {
-                    try
+                    var delayTask = Task.Delay(pollingInterval);
+                    var dbTask = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    var doneTask = await Task.WhenAny(dbTask, delayTask);
+                    if (doneTask == delayTask)
                     {
-                        store.Maintenance.Send(new GetStatisticsOperation());
-                    }
-                    catch (DatabaseDoesNotExistException)
-                    {
-                        return;
-                    }
-                    catch (DatabaseDisabledException)
-                    {
-                        // continue
+                        if (sw.Elapsed > timeout)
+                        {
+                            return false;
+                        }
+
+                        continue;
                     }
 
-                    Thread.Sleep(100);
+                    var dbRecord = await dbTask;
+                    if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
+                    {
+                        return true;
+                    }
                 }
-
-                throw new InvalidOperationException($"Database '{databaseName}' was not deleted after snapshot installation.");
             }
         }
     }

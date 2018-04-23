@@ -42,7 +42,10 @@ namespace Raven.Server.Documents
             _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentLoads);
             _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
+            CatastrophicFailureHandler = new CatastrophicFailureHandler(this, _serverStore);
         }
+
+        public CatastrophicFailureHandler CatastrophicFailureHandler { get; }
 
         public void ClusterOnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
         {
@@ -149,44 +152,11 @@ namespace Raven.Server.Documents
             var directDelete = record.DeletionInProgress != null &&
                                record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
                                deletionInProgress != DeletionInProgressStatus.No;
-            
-            string mentorsChangeVector = "";
-            var conditionalDelete = record.DeletionInProgressChangeVector != null &&
-                                    record.DeletionInProgressChangeVector.TryGetValue(_serverStore.NodeTag, out mentorsChangeVector);
 
-            if (conditionalDelete)
-            {
-                // A delete command was issued while we were in rehabilitation. We need to check if we recieved any new documents while we were in that state.
-                // If so, we can't simply delete the database.
-                if (DatabasesCache.TryGetValue(dbName, out var dbTask))
-                {
-                    var db = dbTask.Result;
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        var dbChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                        var status = ChangeVectorUtils.GetConflictStatus(mentorsChangeVector, dbChangeVector);
-                        if (mentorsChangeVector.Equals(dbChangeVector) == false && status != ConflictStatus.Update)
-                        {
-                            // raise alert
-                            _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                                dbName,
-                                $"Database '{dbName}' cannot be deleted in order to maintain the replication factor",
-                                "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
-                                "but it may contain documents that are not existing in the rest of the database-group.\n" +
-                                $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
-                                AlertType.DeletionError,
-                                NotificationSeverity.Error
-                            ));
-                            return true;
-                        }
-                    } 
-                }
-                DeleteDatabase(dbName, deletionInProgress, record);
-                return true;
-            }
-
-            if (directDelete)
+            if (directDelete && 
+                record.Topology.Count == record.Topology.ReplicationFactor) 
+                // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
+                // the all the documents were replicated from this node, therefor the deletion will be called from the replication code.
             {
                 DeleteDatabase(dbName, deletionInProgress, record);
                 return true;
@@ -194,7 +164,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
+        public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
         {
             IDisposable removeLockAndReturn = null;
             try
@@ -402,6 +372,9 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
+                        if (database.IsCompletedSuccessfully)
+                            database.Result.LastAccessTime = database.Result.Time.GetUtcNow();
+
                         return database;
                     }
                 }
@@ -617,13 +590,13 @@ namespace Raven.Server.Documents
             if (ignoreNotRelevant == false && databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
                 databaseIsBeenDeleted == false)
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
-            return CreateConfiguration(databaseName, databaseRecord);
+            return CreateConfiguration(databaseRecord);
         }
 
-        protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)
+        protected RavenConfiguration CreateConfiguration(DatabaseRecord record)
         {
             Debug.Assert(_serverStore.Disposed == false);
-            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
+            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, record.DatabaseName, ResourceType.Database);
 
             foreach (var setting in record.Settings)
                 config.SetSetting(setting.Key, setting.Value);
@@ -641,7 +614,7 @@ namespace Raven.Server.Documents
             var envs = resource.GetAllStoragesEnvironment();
 
             long dbSize = 0;
-            var maxLastWork = DateTime.MinValue;
+            var maxLastWork = resource.LastAccessTime;
 
             foreach (var env in envs)
             {
@@ -652,38 +625,6 @@ namespace Raven.Server.Documents
             }
 
             return maxLastWork.AddMilliseconds(dbSize / 1024L);
-        }
-
-        public void UnloadResourceOnCatastrophicFailure(string databaseName, Exception e)
-        {
-            Task.Run(async () =>
-            {
-                var title = $"Critical error in '{databaseName}'";
-                const string message = "Database is about to be unloaded due to an encountered error";
-
-                try
-                {
-                    _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                        databaseName,
-                        title,
-                        message,
-                        AlertType.CatastrophicDatabaseFailure,
-                        NotificationSeverity.Error,
-                        key: databaseName,
-                        details: new ExceptionDetails(e)));
-                }
-                catch (Exception)
-                {
-                    // exception in raising an alert can't prevent us from unloading a database
-                }
-
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"{title}. {message}", e);
-
-                await Task.Delay(2000); // let it propagate the exception to the client first
-
-                (await UnloadAndLockDatabase(databaseName, "CatastrophicFailure"))?.Dispose();
-            });
         }
 
         public async Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)

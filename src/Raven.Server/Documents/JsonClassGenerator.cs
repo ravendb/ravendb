@@ -323,17 +323,14 @@ namespace Raven.Server.Documents
                 if (prop.Name.ToString().Equals("@metadata", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                switch (prop.Token)
+                switch (prop.Token & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.EmbeddedBlittable:
                     case BlittableJsonToken.StartObject:
-                    case BlittableJsonToken.StartObject | BlittableJsonToken.OffsetSizeByte | BlittableJsonToken.PropertyIdSizeByte:
                         var type = GenerateClassTypesFromObject(prop.Name, (BlittableJsonReaderObject)prop.Value);
                         fields[prop.Name] = new FieldType(type.Name, type.IsArray);
                         break;
                     case BlittableJsonToken.StartArray:
-                    case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
-                    case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeShort:
                         var array = (BlittableJsonReaderArray)prop.Value;
                         fields[prop.Name] = GetArrayField(array, prop.Name);
                         break;

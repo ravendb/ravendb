@@ -24,6 +24,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
@@ -116,6 +117,7 @@ namespace Raven.Server.Utils.Cli
             TrustClientCert,
             GenerateClientCert,
             ReplaceClusterCert,
+            TriggerCertificateRefresh,
             LowMem,
             Help,
             Logo,
@@ -746,10 +748,17 @@ namespace Raven.Server.Utils.Cli
             }
 
             cli._server.ServerStore.EnsureNotPassive();
-            
+
+            // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
+            // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
+            if (string.IsNullOrWhiteSpace(password) == false)
+                throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
+
             X509Certificate2 cert;
+            byte[] certBytes;
             try
             {
+                certBytes = File.ReadAllBytes(path);
                 cert = new X509Certificate2(path, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             }
             catch (Exception e)
@@ -765,7 +774,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(cert, name, replaceImmediately);
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(Convert.ToBase64String(certBytes), name, replaceImmediately);
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
@@ -777,6 +786,30 @@ namespace Raven.Server.Utils.Cli
             }
 
             WriteText("Successfully replaced the server certificate.", TextColor, cli);
+
+            return true;
+        }
+
+        private static bool CommandTriggerCertificateRefresh(List<string> args, RavenCli cli)
+        {
+            if (args.Count < 0 || args.Count > 1)
+            {
+                WriteError("Usage: triggerCertificateRefresh [-replaceImmediately]", cli);
+                return false;
+            }
+
+            var replaceImmediately = args[0] != null && args[0].Equals("-replaceImmediately");
+            
+            try
+            {
+                cli._server.RefreshClusterCertificate(replaceImmediately);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to trigger a certificate refresh cycle.", e);
+            }
+
+            WriteText("Triggered a certificate refresh cycle.", TextColor, cli);
 
             return true;
         }
@@ -886,9 +919,9 @@ namespace Raven.Server.Utils.Cli
 
             var memoryStats = MemoryStatsWithMemoryMappedInfo();
             var msg = new StringBuilder();
-            msg.Append($"Working Set:{memoryStats.WorkingSet}");
-            msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
-            msg.Append($" Managed Memory:{memoryStats.ManagedMemory}");
+            msg.Append($"Working Set: {memoryStats.WorkingSet}");
+            msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
             WriteText("Sending Low Memory simulation signal... ", TextColor, cli, newLine: false);
@@ -897,9 +930,9 @@ namespace Raven.Server.Utils.Cli
 
             WriteText("After sending low mem simulation event, memory stats: ", TextColor, cli, newLine: false);
             msg.Clear();
-            msg.Append($"Working Set:{memoryStats.WorkingSet}");
-            msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
-            msg.Append($" Managed Memory:{memoryStats.ManagedMemory}");
+            msg.Append($"Working Set: {memoryStats.WorkingSet}");
+            msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
             return true;
@@ -1003,13 +1036,14 @@ namespace Raven.Server.Utils.Cli
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
                 new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
                 new[] {"trustClientCert <name> <path-to-pfx> [password]", "Register a client certificate to be trusted on this server with 'ClusterAdmin' security clearance."},
+                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
+                new[] {"triggerCertificateRefresh [-replaceImmediately]", "Trigger a certificate refresh check (normally happens once an hour)."}
             };
 
             string[][] commandExperimentalDescription =
             {
                 new[] {"createDb <database> <dir>", "Create database named 'database' in DataDir 'dir'"},
                 new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"},
-                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
             };
 
             var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
@@ -1022,7 +1056,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 63 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', 73 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             WriteText("", TextColor, cli);
 
@@ -1051,6 +1085,8 @@ namespace Raven.Server.Utils.Cli
             [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustServerCert },
             [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustClientCert },
             [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandGenerateClientCert },
+            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert},
+            [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTriggerCertificateRefresh},
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
@@ -1066,7 +1102,6 @@ namespace Raven.Server.Utils.Cli
             [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
             [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true },
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true }, // test cli
-            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert, Experimental = true }
         };
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)

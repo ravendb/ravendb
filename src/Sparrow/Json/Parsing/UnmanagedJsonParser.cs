@@ -21,8 +21,7 @@ namespace Sparrow.Json.Parsing
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
         private readonly string _debugTag;
-        private UnmanagedWriteBuffer _unmanagedWriteBuffer;
-        private string _doubleStringBuffer;
+        private UnmanagedWriteBuffer _unmanagedWriteBuffer;        
         private int _currentStrStart;
         private readonly JsonOperationContext _ctx;
         private readonly JsonParserState _state;
@@ -883,37 +882,39 @@ ReturnFalse:
 
         public void ValidateFloat()
         {
-            if (_unmanagedWriteBuffer.SizeInBytes > 100)
-                ThrowException("Too many characters in double: " + _unmanagedWriteBuffer.SizeInBytes);
-
-            if (_doubleStringBuffer == null || _unmanagedWriteBuffer.SizeInBytes > _doubleStringBuffer.Length)
-                _doubleStringBuffer = new string(' ', _unmanagedWriteBuffer.SizeInBytes);
-
-            var tmpBuff = stackalloc byte[_unmanagedWriteBuffer.SizeInBytes];
-            // here we assume a clear char <- -> byte conversion, we only support
-            // utf8, and those cleanly transfer
-            fixed (char* pChars = _doubleStringBuffer)
-            {
-                int i = 0;
-                _unmanagedWriteBuffer.CopyTo(tmpBuff);
-                for (; i < _unmanagedWriteBuffer.SizeInBytes; i++)
-                {
-                    pChars[i] = (char)tmpBuff[i];
-                }
-                for (; i < _doubleStringBuffer.Length; i++)
-                {
-                    pChars[i] = ' ';
-                }
-            }
             try
             {
-                // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-                double.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+                int numLength = _unmanagedWriteBuffer.SizeInBytes;
+
+                if (numLength <= 100)
+                {
+                    byte* tmpBuff = stackalloc byte[numLength];
+                    _unmanagedWriteBuffer.CopyTo(tmpBuff);
+                    _ctx.ParseDouble(tmpBuff, numLength);
+                }
+                else
+                {
+                    var memoryForNumber = _ctx.GetMemory(numLength);
+
+                    try
+                    {
+                        _unmanagedWriteBuffer.CopyTo(memoryForNumber.Address);                        
+                        _ctx.ParseDouble(memoryForNumber.Address, numLength);
+                    }
+                    finally
+                    {
+                        _ctx.ReturnMemory(memoryForNumber);
+                    }
+
+                }
+                
             }
+#pragma warning disable RDB0004 // Exception handler is empty or just logging
             catch (Exception e)
             {
-                ThrowException("Could not parse double", e);
+                ThrowException("Could not parse double", e);                
             }
+#pragma warning restore RDB0004 // Exception handler is empty or just logging
         }
 
 

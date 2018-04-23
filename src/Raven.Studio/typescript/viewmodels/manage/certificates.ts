@@ -1,18 +1,24 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import certificateModel = require("models/auth/certificateModel");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
+import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
+import getServerCertificateSetupModeCommand = require("commands/auth/getServerCertificateSetupModeCommand");
+import forceRenewServerCertificateCommand = require("commands/auth/forceRenewServerCertificateCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import notificationCenter = require("common/notifications/notificationCenter");
+import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
 import endpoints = require("endpoints");
 import copyToClipboard = require("common/copyToClipboard");
 import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
+import changesContext = require("common/changesContext");
+import accessManager = require("common/shell/accessManager");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -28,13 +34,18 @@ class certificates extends viewModelBase {
     
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
-    hasAllDatabasesAccess: KnockoutComputed<boolean>;
     canExportClusterCertificates: KnockoutComputed<boolean>;
+    canReplaceClusterCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
+    serverCertificateThumbprint = ko.observable<string>();
+    serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
+    
+    domainsForServerCertificate = ko.observableArray<string>([]);
     
     usingHttps = location.protocol === "https:";
     
     resolveDatabasesAccess = certificateModel.resolveDatabasesAccess;
+    accessManager = accessManager.default.certificatesView;
 
     importedFileName = ko.observable<string>();
     
@@ -55,23 +66,42 @@ class certificates extends viewModelBase {
 
         this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", 
             "deletePermission", "addNewPermission", "fileSelected", "copyThumbprint",
-            "useDatabase", "deleteCertificate");
+            "useDatabase", "deleteCertificate", "renewServerCertificate", "showRenewCertificateButton");
         this.initObservables();
         this.initValidation();
     }
     
     activate() {
-        return this.loadCertificates();
+        this.loadCertificates();
+        
+        return new getServerCertificateSetupModeCommand()
+            .execute()
+            .done((setupMode: Raven.Server.Commercial.SetupMode) => {
+                this.serverCertificateSetupMode(setupMode); 
+             });
     }
     
     compositionComplete() {
         super.compositionComplete();
+        
+        this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
 
+        $(".js-export-certificates").tooltip({
+            container: "body",
+            placement: "right"
+        });
+        
         this.model.subscribe(model  => {
             if (model) {
                 this.initPopover();
             }
         });
+    }
+    
+    private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
+        if (alert.AlertType === "Certificates_ReplaceError" || alert.AlertType === "Certificates_ReplaceSuccess") {
+            this.loadCertificates();
+        }
     }
     
     private initPopover() {
@@ -94,13 +124,29 @@ class certificates extends viewModelBase {
         this.canExportClusterCertificates = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
-        })
+        });
+        
+        this.canReplaceClusterCertificate = ko.pureComputed(() => {
+            const certs = this.certificates();
+            return _.some(certs, x => x.SecurityClearance === "ClusterNode");
+        });
     }
     
     private initValidation() {
         this.newPermissionDatabaseName.extend({
             required: true
         });
+    }    
+    
+    showRenewCertificateButton(thumbprints: string[]) {
+        return ko.pureComputed(() => {
+            return _.includes(thumbprints, this.serverCertificateThumbprint()) && this.serverCertificateSetupMode() === 'LetsEncrypt';
+        });
+    }
+    
+    renewServerCertificate() {
+        return new forceRenewServerCertificateCommand()
+            .execute();
     }
     
     enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
@@ -112,6 +158,7 @@ class certificates extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + certificate.Thumbprint + "", ["No", "Yes, delete"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("certificates", "delete");
                     new deleteCertificateCommand(certificate.Thumbprint)
                         .execute()
                         .always(() => this.loadCertificates());
@@ -120,17 +167,29 @@ class certificates extends viewModelBase {
     }
 
     exportClusterCertificates() {
+        eventsCollector.default.reportEvent("certificates", "export-certs");
         const targetFrame = $("form#certificates_export_form");
         targetFrame.attr("action", this.exportCertificateUrl);
         targetFrame.submit();
     }
     
     enterGenerateCertificateMode() {
+        eventsCollector.default.reportEvent("certificates", "generate");
         this.model(certificateModel.generate());
     }
     
     enterUploadCertificateMode() {
+        eventsCollector.default.reportEvent("certificates", "upload");
         this.model(certificateModel.upload());
+    }
+    
+    replaceClusterCertificate() {
+        eventsCollector.default.reportEvent("certificates", "replace");
+        this.model(certificateModel.replace());
+        
+        new getClusterDomainsCommand()
+            .execute()
+            .done(domains => this.domainsForServerCertificate(domains));
     }
 
     fileSelected(fileInput: HTMLInputElement) {
@@ -157,75 +216,103 @@ class certificates extends viewModelBase {
 
     save() {
         this.newPermissionValidationGroup.errors.showAllMessages(false);
+
+        const model = this.model();
         
-        if (!this.isValid(this.model().validationGroup)) {
+        if (!this.isValid(model.validationGroup)) {
             return;
         }
-        
-        this.spinners.processing(true);
-        
-        const model = this.model();
-        switch (model.mode()) {
-            case "generate":
-                this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
-                
-                new getNextOperationId(null)
-                    .execute()
-                    .done(operationId => {
-                        
-                        const targetFrame = $("form#certificate_download_form");
-                        targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
-                        targetFrame.submit();
 
-                        notificationCenter.instance.monitorOperation(null, operationId)
-                            .done(() => {
-                                messagePublisher.reportSuccess("Client certificate was generated.");
+        const maybeWarnTask = $.Deferred<void>();
+        
+        if (this.model().mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
+            this.confirmationMessage("Did you forget about assigning database privileges?",
+            "Leaving the database privileges section empty is going to prevent users from accessing the database.",
+            ["I want to assign privileges", "Save anyway"],
+                true)
+            .done(result => {
+                if (result.can) {
+                    maybeWarnTask.resolve();
+                }
+            });
+        } else {
+            maybeWarnTask.resolve();
+        }
+
+        maybeWarnTask
+            .done(() => {
+                this.spinners.processing(true);
+
+                switch (model.mode()) {
+                    case "generate":
+                        this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
+
+                        new getNextOperationId(null)
+                            .execute()
+                            .done(operationId => {
+
+                                const targetFrame = $("form#certificate_download_form");
+                                targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
+                                targetFrame.submit();
+
+                                notificationCenter.instance.monitorOperation(null, operationId)
+                                    .done(() => {
+                                        messagePublisher.reportSuccess("Client certificate was generated.");
+                                    })
+                                    .fail(() => {
+                                        notificationCenter.instance.openDetailsForOperationById(null, operationId);
+                                    })
+                                    .always(() => {
+                                        this.spinners.processing(false);
+                                        this.onCloseEdit();
+                                        this.loadCertificates();
+                                    })
                             })
                             .fail(() => {
-                                notificationCenter.instance.openDetailsForOperationById(null,  operationId);
-                            })
-                            .always(() => {
                                 this.spinners.processing(false);
                                 this.onCloseEdit();
+                            });
+                        break;
+                    case "upload":
+                        new uploadCertificateCommand(model)
+                            .execute()
+                            .always(() => {
+                                this.spinners.processing(false);
                                 this.loadCertificates();
-                            })
-                    })
-                    .fail(() => {
-                        this.spinners.processing(false);
-                        this.onCloseEdit();
-                    });
-                break;
-            case "upload":
-                new uploadCertificateCommand(model)
-                    .execute()
-                    .always(() => {
-                        this.spinners.processing(false);
-                        this.loadCertificates();
-                        this.onCloseEdit();
-                    });
-                break;
-                
-            case "editExisting":
-                new updateCertificatePermissionsCommand(model)
-                    .execute()
-                    .always(() => {
-                        this.spinners.processing(false);
-                        this.loadCertificates();
-                        this.onCloseEdit();
-                    });
-                break;
-        }
+                                this.onCloseEdit();
+                            });
+                        break;
+
+                    case "editExisting":
+                        new updateCertificatePermissionsCommand(model)
+                            .execute()
+                            .always(() => {
+                                this.spinners.processing(false);
+                                this.loadCertificates();
+                                this.onCloseEdit();
+                            });
+                        break;
+                    case "replace":
+                        new replaceClusterCertificateCommand(model)
+                            .execute()
+                            .always(() => {
+                                this.spinners.processing(false);
+                                this.loadCertificates();
+                                this.onCloseEdit();
+                            });
+                }
+            });
     }
     
     private loadCertificates() {
         return new getCertificatesCommand(true)
             .execute()
-            .done(certificates => {
+            .done(certificatesInfo => {
                 const mergedCertificates = [] as Array<unifiedCertificateDefinition>;
                 
                 const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
                 
-                certificates.forEach(cert => {
+                certificatesInfo.Certificates.forEach(cert => {
                     if (cert.CollectionPrimaryKey) {
                         secondaryCertificates.push(cert);
                     } else {
@@ -233,6 +320,8 @@ class certificates extends viewModelBase {
                         mergedCertificates.push(cert as unifiedCertificateDefinition);
                     }
                 });
+                
+                this.serverCertificateThumbprint(certificatesInfo.LoadedServerCert);
                 
                 secondaryCertificates.forEach(cert => {
                     const thumbprint = cert.CollectionPrimaryKey.split("/")[1];
@@ -317,6 +406,29 @@ class certificates extends viewModelBase {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
     
+    canDelete(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+        return ko.pureComputed(() => {
+            if (!this.accessManager.canDeleteClusterAdminCertificate() && securityClearance === "ClusterAdmin") {
+                return false;
+            }
+            
+            if (!this.accessManager.canDeleteClusterNodeCertificate() && securityClearance === "ClusterNode") {
+                return false;
+            }
+            
+            return true; 
+        });
+    }
+
+    canGenerateCertificateForSecurityClearanceType(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+        return ko.pureComputed(() => {
+            if (!this.accessManager.canGenerateClientCertificateForAdmin() && securityClearance === "ClusterAdmin") {
+                return false;
+            }
+
+            return true;
+        });
+    }
 }
 
 export = certificates;

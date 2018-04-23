@@ -22,6 +22,8 @@ class extensions {
         if (!url) {
             return null;
         }
+        
+        url = _.trim(url);
 
         const urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
         if (!urlRegex.test(url)) {
@@ -354,10 +356,15 @@ class extensions {
                 $(element).on('click', e => {
                     const $target = $(e.target);
 
-                    const clickedOnClose = !!$target.closest(".close-panel").length;
+                    const closestClosePanel = $target.closest(".close-panel");
+                    const clickedOnClose = !!closestClosePanel.length;
                     if (clickedOnClose) {
-                        const $dropdownParent = $target.closest(".dropdown-menu").parent();
-                        $dropdownParent.removeClass('open');
+                        if (!closestClosePanel.is(":disabled")) {
+                            const $dropdownParent = $target.closest(".dropdown-menu").parent();
+                            $dropdownParent.removeClass('open');
+                        } else {
+                            e.stopPropagation();
+                        }
                     } else {
                         const $button = $target.closest(".dropdown-toggle");
                         const $dropdown = $button.next(".dropdown-menu");
@@ -383,21 +390,21 @@ class extensions {
             update(element, valueAccessor, allBindings, viewModel, bindingContext) {
                 const checkboxValue: checkbox = ko.unwrap(valueAccessor());
                 switch (checkboxValue) {
-                case checkbox.Checked:
-                    element.checked = true;
-                    element.readOnly = false;
-                    element.indeterminate = false;
-                    break;
-                case checkbox.SomeChecked:
-                    element.readOnly = true;
-                    element.indeterminate = true;
-                    element.checked = false;
-                    break;
-                case checkbox.UnChecked:
-                    element.checked = false;
-                    element.readOnly = false;
-                    element.indeterminate = false;
-                    break;
+                    case "checked":
+                        element.checked = true;
+                        element.readOnly = false;
+                        element.indeterminate = false;
+                        break;
+                    case "some_checked":
+                        element.readOnly = true;
+                        element.indeterminate = true;
+                        element.checked = false;
+                        break;
+                    case "unchecked":
+                        element.checked = false;
+                        element.readOnly = false;
+                        element.indeterminate = false;
+                        break;
                 }
             }
         };

@@ -119,16 +119,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
             (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
-
-            using (this.TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var collectionStats = this.TcpConnection.DocumentDatabase.DocumentsStorage.GetCollection(Collection,false);
-                if (collectionStats == null)
-                {
-                    throw new SubscriptionInvalidStateException($"Collection {Collection} could not be found. Subscription can't be opened on non existant collection");
-                }    
-            }
-            
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
 

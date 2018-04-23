@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Sparrow;
@@ -114,29 +116,20 @@ namespace Raven.Client.Json
         {
             switch (prop.Token & BlittableJsonReaderBase.TypesMask)
             {
+                case BlittableJsonToken.StartObject:
+                    if (prop.Value is BlittableJsonReaderObject obj)
+                        WriteObject(obj);
+                    break;
                 case BlittableJsonToken.StartArray:
                     _manualBlittableJsonDocumentBuilder.StartWriteArray();
                     if (prop.Value is BlittableJsonReaderArray array)
                     {
-                        var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                         foreach (var entry in array)
                         {
-                            if (entry is BlittableJsonReaderObject bjro)
-                            {
-                                _manualBlittableJsonDocumentBuilder.StartWriteObject();
-                                var propsIndexes = bjro.GetPropertiesByInsertionOrder();
-                                foreach (var index in propsIndexes)
-                                {
-                                    bjro.GetPropertyByIndex(index, ref propDetails);
-                                    _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
-                                    WritePropertyValue(propDetails);
-                                }
-                                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-                            }
+                            if (entry is BlittableJsonReaderObject entryObj)
+                                WriteObject(entryObj);
                             else
-                            {
                                 WritePropertyValue(prop.Name, entry);
-                            }
                         }
                     }
                     _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
@@ -173,6 +166,23 @@ namespace Raven.Client.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteObject(BlittableJsonReaderObject obj)
+        {
+            var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+
+            _manualBlittableJsonDocumentBuilder.StartWriteObject();
+            var propsIndexes = obj.GetPropertiesByInsertionOrder();
+            foreach (var index in propsIndexes)
+            {
+                obj.GetPropertyByIndex(index, ref propDetails);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
+                WritePropertyValue(propDetails);
+            }
+
+            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+        }
+
         private void WritePropertyValue(string propName, object value)
         {
             switch (value)
@@ -192,8 +202,7 @@ namespace Raven.Client.Json
                 case double d:
                     _manualBlittableJsonDocumentBuilder.WriteValue(d);
                     break;
-                case decimal decVal:
-                    BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(decVal);
+                case decimal decVal:                    
                     _manualBlittableJsonDocumentBuilder.WriteValue(decVal);
                     break;
                 case float f:
@@ -205,19 +214,43 @@ namespace Raven.Client.Json
                 case LazyNumberValue lazyNumber:
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
                     break;
+                case DateTime dt:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat());
+                    break;
+                case DateTimeOffset dto:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.UtcDateTime.GetDefaultRavenFormat());
+                    break;
+                case IDictionary<string, string> dics:
+                    WriteDictionary(dics);
+                    break;
+                case IDictionary<string, object> dico:
+                    WriteDictionary(dico);
+                    break;
                 case IEnumerable enumerable:
                     _manualBlittableJsonDocumentBuilder.StartWriteArray();
                     foreach (var entry in enumerable)
                     {
                         WritePropertyValue(propName, entry);
-                    }               
+                    }
                     _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
                     break;
+
                 default:
                     throw new NotSupportedException($"The value type {value.GetType().FullName} of key {propName} is not supported in the metadata");
             }
         }
-        
+
+        private void WriteDictionary<T>(IDictionary<string, T> dic)
+        {
+            _manualBlittableJsonDocumentBuilder.StartWriteObject();
+            foreach (var item in dic)
+            {
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(item.Key);
+                WritePropertyValue(item.Key, item.Value);
+            }
+            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+        }
+
         public override void WriteEndObject()
         {
             _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
@@ -294,8 +327,7 @@ namespace Raven.Client.Json
         }
 
         public override void WriteValue(decimal value)
-        {
-            BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(value);
+        {            
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
@@ -373,15 +405,14 @@ namespace Raven.Client.Json
         public override void WriteValue(decimal? value)
         {
             if (value != null)
-            {
-                BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(value.Value);
+            {                
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            }                
+            }
             else
             {
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
-            }               
-            
+            }
+
         }
 
         public override void WriteValue(DateTime? value)

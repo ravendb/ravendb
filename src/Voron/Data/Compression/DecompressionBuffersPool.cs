@@ -130,17 +130,30 @@ namespace Voron.Data.Compression
                 lock (_decompressionPagerLock) // once we fill up the pool we won't be allocating additional pages frequently
                 {
                     if (_lastUsedPage + allocationInPages > _maxNumberOfPagesInScratchBufferPool)
-                    {
-                        _oldPagers = _oldPagers.Append(_compressionPager);
-                        _compressionPager = CreateDecompressionPager(_options.MaxScratchBufferSize);
-                        _lastUsedPage = 0;
-                    }
+                        CreateNewBuffersPager(_options.MaxScratchBufferSize);
 
-                    _compressionPager.EnsureContinuous(_lastUsedPage, allocationInPages);
+                    try
+                    {
+                        _compressionPager.EnsureContinuous(_lastUsedPage, allocationInPages);
+                    }
+                    catch (InsufficientMemoryException)
+                    {
+                        // RavenDB-10830: failed to lock memory of temp buffers in encrypted db, let's create new file with initial size
+
+                        CreateNewBuffersPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize);
+                        throw;
+                    }
 
                     buffer = new DecompressionBuffer(_compressionPager, _lastUsedPage, pageSize, this, index, tx);
 
                     _lastUsedPage += allocationInPages;
+
+                    void CreateNewBuffersPager(long size)
+                    {
+                        _oldPagers = _oldPagers.Append(_compressionPager);
+                        _compressionPager = CreateDecompressionPager(size);
+                        _lastUsedPage = 0;
+                    }
                 }
 
                 tmp = buffer.TempPage;

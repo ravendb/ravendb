@@ -8,8 +8,8 @@ function CopyAckFile ( $targetDir ) {
     Copy-Item "$licensePath" -Destination "$targetDir"
 }
 
-function CopyReadmeFile ( $spec, $targetDir ) {
-    if ($spec.IsUnix -eq $False) {
+function CopyReadmeFile ( $target, $targetDir ) {
+    if ($target.IsUnix -eq $False) {
         $readmeFile = 'readme.windows.txt'
     } else {
         $readmeFile = 'readme.linux.txt'
@@ -20,30 +20,43 @@ function CopyReadmeFile ( $spec, $targetDir ) {
     Copy-Item "$readmePath" -Destination "$targetFile"
 }
 
-function CopyStartScript ( $spec, $targetDir ) {
-    if ($spec.IsUnix -eq $False) {
-        CopyStartCmd $targetDir
+function CopyStartScript ( $projectDir, $targetDir, $packOpts ) {
+    if ($packOpts.Target.IsUnix -eq $False) {
+        CopyStartCmd $projectDir $targetDir $packOpts
     } else {
         CopyStartSh $targetDir
     }
 }
 
-function CopyStartAsServiceScript ( $spec, $targetDir ) {
-    if ($spec.IsUnix -eq $False) {
-        CopyStartAsServiceCmd $targetDir
+function CopyStartAsServiceScript ( $projectDir, $targetDir, $packOpts ) {
+    if ($packOpts.Target.IsUnix -eq $False) {
+        CopyStartAsServiceCmd $projectDir $targetDir $packOpts
     }
 }
 
-function CopyStartCmd ( $targetDir ) {
+function CopyStartCmd ( $projectDir, $targetDir, $packOpts ) {
     $startPs1Path = [io.path]::combine("scripts", "assets", "run.ps1")
     $startPs1TargetPath = [io.path]::combine($targetDir, "run.ps1");
+    write-host "Copy $startPs1Path -> $startPs1TargetPath"
     Copy-Item $startPs1Path $startPs1TargetPath
+
+    if ($packOpts.VersionInfo.BuildType.ToLower() -ne 'custom') {
+        write-host "Signing $startPs1TargetPath"
+        SignFile $projectDir $startPs1TargetPath $packOpts.DryRunSign
+    }
+
 }
 
-function CopyStartAsServiceCmd ( $targetDir ) {
+function CopyStartAsServiceCmd ( $projectDir, $targetDir, $packOpts ) {
     $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "setup-as-service.ps1")
     $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "setup-as-service.ps1");
+    write-host "Copy $startAsServicePs1Path -> $startAsServicePs1TargetPath"
     Copy-Item $startAsServicePs1Path $startAsServicePs1TargetPath
+
+    if ($packOpts.VersionInfo.BuildType.ToLower() -ne 'custom') {
+        write-host "Signing $startAsServicePs1TargetPath"
+        SignFile $projectDir $startAsServicePs1TargetPath $packOpts.DryRunSign
+    }
 }
 
 function CopyStartSh ( $targetDir ) {

@@ -9,6 +9,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions.Cluster;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -19,7 +21,7 @@ namespace RachisTests.DatabaseCluster
 {
     public class EtlFailover : ReplicationTestBase
     {
-        [NightlyBuildFact]
+        [Fact]
         public async Task ReplicateFromSingleSource()
         {
             var srcDb = "ReplicateFromSingleSourceSrc";
@@ -57,7 +59,7 @@ namespace RachisTests.DatabaseCluster
                             Disabled = false
                         }
                     },
-                    LoadRequestTimeoutInSec = 10,
+                    LoadRequestTimeoutInSec = 30,
                     MentorNode = "B"
                 };
                 var connectionString = new RavenConnectionString
@@ -80,9 +82,10 @@ namespace RachisTests.DatabaseCluster
 
                     session.SaveChanges();
                 }
+                
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
                 await srcRaft.ServerStore.RemoveFromClusterAsync("B");
-                await originalTaskNode.ServerStore.WaitForState(RachisState.Passive);
+                await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
 
                 using (var session = src.OpenSession())
                 {
@@ -95,32 +98,33 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
-
-                using (var originalSrc = new DocumentStore
+                Assert.Throws<NodeIsPassiveException>(() =>
                 {
-                    Urls = new[] {originalTaskNode.WebUrl},
-                    Database = srcDb,
-                    Conventions = new DocumentConventions
+                    using (var originalSrc = new DocumentStore
                     {
-                        DisableTopologyUpdates = true
-                    }
-                }.Initialize())
-                {
-                    using (var session = originalSrc.OpenSession())
-                    {
-                        session.Store(new User()
+                        Urls = new[] { originalTaskNode.WebUrl },
+                        Database = srcDb,
+                        Conventions = new DocumentConventions
                         {
-                            Name = "Joe Doe3"
-                        }, "users/3");
+                            DisableTopologyUpdates = true
+                        }
+                    }.Initialize())
+                    {
+                        using (var session = originalSrc.OpenSession())
+                        {
+                            session.Store(new User()
+                            {
+                                Name = "Joe Doe3"
+                            }, "users/3");
 
-                        session.SaveChanges();
+                            session.SaveChanges();
+                        }
                     }
-                    Assert.False(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 30_000));
-                }
+                });
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task EtlDestinationFailoverBetweenNodesWithinSameCluster()
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";

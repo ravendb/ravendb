@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using Sparrow.Compression;
 using Sparrow.Utils;
+using Voron.Data;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -158,6 +159,28 @@ namespace Voron.Impl.Journal
                 {
                     Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
                     totalRead += pageInfoPtr[i].Size;
+
+                    if (options.EncryptionEnabled)
+                    {
+                        var pageHeader = (PageHeader*)pagePtr;
+
+                        if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                        {
+                            // need to mark overlapped buffers as invalid for commit
+
+                            var encryptionBuffers = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState[_dataPager].LoadedBuffers;
+
+                            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+
+                            for (var j = 1; j < numberOfPages; j++)
+                            {
+                                if (encryptionBuffers.TryGetValue(pageNumber + j, out var buffer))
+                                {
+                                    buffer.SkipOnTxCommit = true;
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -340,8 +363,6 @@ namespace Voron.Impl.Journal
             if (hashIsValid == false)
             {
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed",
-                    null);
                 return false;
             }
 
