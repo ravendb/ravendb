@@ -515,7 +515,11 @@ namespace Raven.Server.Documents.Queries
             if (metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-            var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
+            var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer)
+            {
+                AllowLeadingWildcard = true
+            };
+
             return parser.Parse(GetValueAsString(value));
         }
 
