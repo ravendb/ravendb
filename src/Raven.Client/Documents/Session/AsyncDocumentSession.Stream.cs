@@ -46,14 +46,16 @@ namespace Raven.Client.Documents.Session
                 _prev?.Dispose(); // dispose the previous instance
                 while (true)
                 {
+                    var prev = _enumerator.Current;
                     if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
                         return false;
 
                     _prev = _enumerator.Current;
 
                     _query?.InvokeAfterStreamExecuted(_enumerator.Current);
-
+                    
                     Current = CreateStreamResult(_enumerator.Current);
+                    prev?.Dispose();
                     return true;
                 }
             }
