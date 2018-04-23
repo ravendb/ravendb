@@ -24,6 +24,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Platform.Posix;
 
@@ -835,35 +836,20 @@ namespace Raven.Server.Web.Authentication
                     if (string.IsNullOrWhiteSpace(certificate.Name))
                         certificate.Name = "Cluster-Wide Certificate";
 
+                    // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
+                    // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
+                    if (PlatformDetails.RunningOnLinux && string.IsNullOrWhiteSpace(certificate.Password) == false)
+                        throw new NotSupportedException("Replacing the cluster certificate in Linux does not support password protected certificates.");
+
                     if (string.IsNullOrWhiteSpace(certificate.Certificate))
                         throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
 
                     if (IsClusterAdmin() == false)
                         throw new InvalidOperationException("Cannot replace the server certificate. Only a ClusterAdmin can do this.");
 
-                    byte[] certBytes;
-                    try
-                    {
-                        certBytes = Convert.FromBase64String(certificate.Certificate);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new ArgumentException($"Unable to parse the {nameof(certificate.Certificate)} property, expected a Base64 value", e);
-                    }
-
-                    X509Certificate2 newCertificate;
-                    try
-                    {
-                        newCertificate = new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to load the new certificate.", e);
-                    }
-
                     var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
 
-                    var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Name, replaceImmediately);
+                    var replicationTask = Server.StartCertificateReplicationAsync(certificate.Certificate, certificate.Name, replaceImmediately);
 
                     await Task.WhenAny(replicationTask, timeoutTask);
                     if (replicationTask.IsCompleted == false)
