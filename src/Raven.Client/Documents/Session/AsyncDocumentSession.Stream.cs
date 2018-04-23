@@ -23,6 +23,7 @@ namespace Raven.Client.Documents.Session
             private readonly IAsyncDocumentQuery<T> _query;
             private readonly FieldsToFetchToken _fieldsToFetch;
             private readonly CancellationToken _token;
+            private BlittableJsonReaderObject _prev;
 
             public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, FieldsToFetchToken fieldsToFetch, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
             {
@@ -42,10 +43,13 @@ namespace Raven.Client.Documents.Session
 
             public async Task<bool> MoveNextAsync()
             {
+                _prev?.Dispose(); // dispose the previous instance
                 while (true)
                 {
                     if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
                         return false;
+
+                    _prev = _enumerator.Current;
 
                     _query?.InvokeAfterStreamExecuted(_enumerator.Current);
 
