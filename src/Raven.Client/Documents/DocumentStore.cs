@@ -148,7 +148,8 @@ namespace Raven.Client.Documents
             var requestExecutor = options.RequestExecutor ?? GetRequestExecutor(databaseName);
             var session = new DocumentSession(databaseName, this, sessionId, requestExecutor);
             RegisterEvents(session);
-            // AfterSessionCreated(session);
+            AfterSessionCreated(session);
+
             return session;
         }
 
@@ -341,7 +342,8 @@ namespace Raven.Client.Documents
             var requestExecutor = options.RequestExecutor ?? GetRequestExecutor(databaseName);
             var session = new AsyncDocumentSession(databaseName, this, requestExecutor, sessionId);
             RegisterEvents(session);
-            //AfterSessionCreated(session);
+            AfterSessionCreated(session);
+
             return session;
         }
 

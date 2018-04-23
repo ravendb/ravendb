@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using FastTests;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 using Xunit;
@@ -15,6 +16,9 @@ namespace Tests.Infrastructure
 
         static AzureStorageEmulatorFact()
         {
+            if (RavenTestHelper.IsRunningOnCI == false)
+                return;
+
             if (PlatformDetails.RunningOnPosix)
                 return;
 

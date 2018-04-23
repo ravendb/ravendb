@@ -19,10 +19,17 @@ namespace FastTests
 {
     public static class RavenTestHelper
     {
+        public static readonly bool IsRunningOnCI;
+
         public static readonly ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = ProcessorInfo.ProcessorCount * 2
         };
+
+        static RavenTestHelper()
+        {
+            bool.TryParse("RAVEN_IS_RUNNING_ON_CI", out IsRunningOnCI);
+        }
 
         private static int _pathCount;
 
