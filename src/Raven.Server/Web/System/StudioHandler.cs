@@ -33,8 +33,9 @@ namespace Raven.Server.Web.System
         /// <summary>
         /// Control structure for a cached file
         /// </summary>
-        class CachedStaticFile
+        private class CachedStaticFile
         {
+            public string ContentType;
             public string ETag;
             public byte[] Contents;
             public byte[] CompressedContents;
@@ -58,7 +59,7 @@ namespace Raven.Server.Web.System
         /// <summary>
         /// Number of entries pending compression. Done this way to avoid queue fragmentation
         /// </summary>
-        private static int _pendingEntriesToCompress = 0;
+        private static int _pendingEntriesToCompress;
 
         /// <summary>
         /// A flag that is raised only when the cache is unavailable for processing.
@@ -98,7 +99,7 @@ namespace Raven.Server.Web.System
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ShouldSkipCache(FileInfo fileInfo)
+        private static bool ShouldSkipCache(FileInfo file)
         {
             return false;
         }
@@ -187,7 +188,7 @@ namespace Raven.Server.Web.System
                 RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
             return GetStudioFileInternal(serverRelativeFileName);
         }
-        
+
         [RavenAction("/wizard/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupIndexFile()
         {
@@ -199,7 +200,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
                 return Task.CompletedTask;
             }
-            
+
             // if user asks for entry point but we are already configured redirect to studio
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.Initial)
             {
@@ -228,7 +229,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
                 return Task.CompletedTask;
             }
-            
+
             // if user asks for entry point but we are NOT already configured redirect to setup
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
             {
@@ -239,7 +240,7 @@ namespace Raven.Server.Web.System
 
             return GetStudioFileInternal("index.html");
         }
-        
+
         [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioFile()
         {
@@ -249,7 +250,7 @@ namespace Raven.Server.Web.System
                 RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
             return GetStudioFileInternal(serverRelativeFileName);
         }
-        
+
         private async Task GetStudioFileInternal(string serverRelativeFileName)
         {
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Cache";
@@ -281,14 +282,14 @@ namespace Raven.Server.Web.System
             // If nothing worked, just inform that the page was not found.
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Unserved";
             var message =
-                $"The following file was not available: " +
+                "The following file was not available: " +
                 $"{serverRelativeFileName}. Please make sure that the Raven" +
-                $".Studio.zip file exist in the main directory (near the " +
-                $"Raven.Server.exe).";
-            
+                ".Studio.zip file exist in the main directory (near the " +
+                "Raven.Server.exe).";
+
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             HttpContext.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
-            
+
             await HttpContext.Response.WriteAsync(message);
         }
 
@@ -297,7 +298,7 @@ namespace Raven.Server.Web.System
             Debug.Assert(CacheProcessingHappening);
 
             // Avoid fragmenting the queue more than necessary
-            int dispatch = EntriesToCompress.Count;
+            var dispatch = EntriesToCompress.Count;
 
             // Notice that this is not always consistent. However, it is 
             // eventually consistent.
@@ -328,12 +329,12 @@ namespace Raven.Server.Web.System
 
         private async Task<bool> ServeFromCache(string serverRelativeFileName)
         {
-
             if (StaticContentCache.TryGetValue(serverRelativeFileName, out var metadata) == false)
                 return false;
 
             if (metadata.ETag == HttpContext.Request.Headers[Constants.Headers.IfNoneMatch])
             {
+                HttpContext.Response.ContentType = metadata.ContentType;
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return true;
             }
@@ -367,11 +368,9 @@ namespace Raven.Server.Web.System
         /// </summary>
         private async Task<bool> ServeFromFileSystem(string reportedBasePath, string serverRelativeFileName)
         {
-            FileInfo staticFileInfo;
-            if (_wwwRootBasePath != null)
-                staticFileInfo = new FileInfo(Path.Combine(_wwwRootBasePath, serverRelativeFileName));
-            else
-                staticFileInfo = FindRootBasePath(reportedBasePath, serverRelativeFileName);
+            FileInfo staticFileInfo = _wwwRootBasePath != null
+                ? new FileInfo(Path.Combine(_wwwRootBasePath, serverRelativeFileName))
+                : FindRootBasePath(reportedBasePath, serverRelativeFileName);
 
             if (staticFileInfo == null || staticFileInfo.Exists == false)
                 return false;
@@ -399,7 +398,7 @@ namespace Raven.Server.Web.System
             return true;
         }
 
-        private async Task AddToCache(string cacheKey, string eTag, FileInfo fileInfo, Stream inputStream)
+        private static async Task AddToCache(string cacheKey, string eTag, FileInfo fileInfo, Stream inputStream)
         {
             if (ShouldSkipCache(fileInfo))
                 return;
@@ -410,6 +409,7 @@ namespace Raven.Server.Web.System
 
                 StaticContentCache.TryAdd(cacheKey, new CachedStaticFile
                 {
+                    ContentType = GetContentType(fileInfo.Extension),
                     Contents = staticFileContents.ToArray(),
                     ETag = eTag
                 });
@@ -439,7 +439,7 @@ namespace Raven.Server.Web.System
             FileInfo staticFileInfo = null;
             string wwwRootBasePath = null;
             bool fileWasFound = false;
-            
+
             foreach (string lookupPath in FileSystemLookupPaths)
             {
                 wwwRootBasePath = Path.Combine(reportedBasePath, lookupPath);
@@ -451,7 +451,7 @@ namespace Raven.Server.Web.System
                     break;
                 }
             }
-            
+
             // prevent from using last path when resource wasn't found
             if (fileWasFound == false)
             {
@@ -505,8 +505,8 @@ namespace Raven.Server.Web.System
             if (File.Exists(e.FullPath) || Directory.Exists(e.FullPath) == false)
             {
                 // It is a file, or it does not exist any more
-                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath).Replace('\\', '/');
-                StaticContentCache.TryRemove(relativePath, out var value);
+                var relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath).Replace('\\', '/');
+                StaticContentCache.TryRemove(relativePath, out CachedStaticFile _);
             }
             else
             {
@@ -529,8 +529,8 @@ namespace Raven.Server.Web.System
             {
                 // It is a file, or it does not exist any more. Notice we
                 // clear the old version.
-                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath).Replace('\\', '/');
-                StaticContentCache.TryRemove(relativePath, out var value);
+                var relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath).Replace('\\', '/');
+                StaticContentCache.TryRemove(relativePath, out CachedStaticFile _);
             }
             else
             {
@@ -690,7 +690,7 @@ namespace Raven.Server.Web.System
         {
             HttpContext.Response.Headers["Location"] = "/studio/index.html";
             HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
-           
+
             return Task.CompletedTask;
         }
     }
