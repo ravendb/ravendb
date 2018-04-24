@@ -146,53 +146,30 @@ namespace Raven.Server.Documents.Patch
             }
                 
             private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
-            {
-                ArrayInstance jsArray;
+            {                
                 bjra.NoCache = true;
-                if (bjra.Length < ArrayInstance.MaxDenseArrayLength)
+                
+                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
+                for (var i = 0; i < bjra.Length; i++)
                 {
-                    PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
-                    for (var i = 0; i < bjra.Length; i++)
+                    var blit = bjra.GetValueTokenTupleByIndex(i);
+                    BlittableJsonToken itemType = blit.Item2 & BlittableJsonReaderBase.TypesMask;
+                    JsValue item;
+                    if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
                     {
-                        var blit = bjra.GetValueTokenTupleByIndex(i);
-                        BlittableJsonToken itemType = blit.Item2 & BlittableJsonReaderBase.TypesMask;
-                        JsValue item;
-                        if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
-                        {
-                            item = TranslateToJs(null, null, blit.Item2, blit.Item1);
-                        }
-                        else
-                        {
-                            item = TranslateToJs(parent, null, blit.Item2, blit.Item1);
-                        }
-                        items[i] = new PropertyDescriptor(item, true, true, true);
+                        item = TranslateToJs(null, null, blit.Item2, blit.Item1);
                     }
-                    jsArray = new ArrayInstance(e, items);
-                    jsArray.Prototype = e.Array.PrototypeObject;
-                    jsArray.Extensible = true;
-                }
-                else
-                {
-                    Dictionary<uint, PropertyDescriptor> items = new Dictionary<uint, PropertyDescriptor>(bjra.Length);
-                    for (uint i = 0; i < bjra.Length; i++)
+                    else
                     {
-                        var blit = bjra.GetValueTokenTupleByIndex((int)i);
-                        BlittableJsonToken itemType = blit.Item2 & BlittableJsonReaderBase.TypesMask;
-                        JsValue item;
-                        if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
-                        {
-                            item = TranslateToJs(null, null, blit.Item2, blit.Item1);
-                        }
-                        else
-                        {
-                            item = TranslateToJs(parent, null, blit.Item2, blit.Item1);
-                        }
-                        items[i] = new PropertyDescriptor(item, true, true, true);
+                        item = TranslateToJs(parent, null, blit.Item2, blit.Item1);
                     }
-                    jsArray = new ArrayInstance(e, items);
-                    jsArray.Prototype = e.Array.PrototypeObject;
-                    jsArray.Extensible = true;
+                    items[i] = new PropertyDescriptor(item, true,true,true);
                 }
+
+                var jsArray = new ArrayInstance(e, items);
+                jsArray.Prototype = e.Array.PrototypeObject;
+                jsArray.Extensible = true;
+                                
                 return jsArray;
             }
 
@@ -207,12 +184,11 @@ namespace Raven.Server.Documents.Patch
                         return (bool)value?JsBoolean.True:JsBoolean.False;
                     case BlittableJsonToken.Integer:
                         // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
-                        owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);                                                
-
-                        return new JsNumber((long)value);
+                        owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);
+                        return (long)value;
                     case BlittableJsonToken.LazyNumber:
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
-                        return GetJSNumberForLazyNumber(owner.Engine, (LazyNumberValue)value);
+                        return GetJSValueForLazyNumber(owner.Engine, (LazyNumberValue)value);
                     case BlittableJsonToken.String:
                                                 
                         return value.ToString();
@@ -236,14 +212,14 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            public static JsValue GetJSNumberForLazyNumber(Engine engine, LazyNumberValue value)
+            public static JsValue GetJSValueForLazyNumber(Engine engine, LazyNumberValue value)
             {
                 // First, try and see if the number is withing double boundaries.
                 // We use double's tryParse and it actually may round the number, 
                 // But that are Jint's limitations
                 if (value.TryParseDouble(out double doubleVal))
                 {
-                    return new JsNumber(doubleVal);
+                    return doubleVal;
                 }
 
                 // If number is not in double boundaries, we return the LazyNumberValue

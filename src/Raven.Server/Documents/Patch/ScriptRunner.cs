@@ -804,33 +804,18 @@ namespace Raven.Server.Documents.Patch
             }
 
             private ArrayInstance GetArrayInstanceFromBlittableArray(Engine engine, JsonOperationContext context, BlittableJsonReaderArray bjra)
-            {
-                ArrayInstance jsArray;
-                bjra.NoCache = true;
-                if (bjra.Length < ArrayInstance.MaxDenseArrayLength)
+            {                
+                bjra.NoCache = true;               
+                
+                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
+                for (var i = 0; i < bjra.Length; i++)
                 {
-                    PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
-                    for (var i = 0; i < bjra.Length; i++)
-                    {
-                        JsValue item = TranslateToJs(engine, context, bjra[i]);                        
-                        items[i] = new PropertyDescriptor(item, true, true, true);
-                    }
-                    jsArray = new ArrayInstance(engine, items);
-                    jsArray.Prototype = engine.Array.PrototypeObject;
-                    jsArray.Extensible = true;
+                    JsValue item = TranslateToJs(engine, context, bjra[i]);                        
+                    items[i] = new PropertyDescriptor(item, true, true, true);
                 }
-                else
-                {
-                    Dictionary<uint, PropertyDescriptor> items = new Dictionary<uint, PropertyDescriptor>(bjra.Length);
-                    for (uint i = 0; i < bjra.Length; i++)
-                    {
-                        var item = TranslateToJs(engine, context, bjra[(int)i]);
-                        items[i] = new PropertyDescriptor(item, true, true, true);
-                    }
-                    jsArray = new ArrayInstance(engine, items);
-                    jsArray.Prototype = engine.Array.PrototypeObject;
-                    jsArray.Extensible = true;
-                }
+                var jsArray = new ArrayInstance(engine, items);
+                jsArray.Prototype = engine.Array.PrototypeObject;
+                jsArray.Extensible = true;                
                 return jsArray;
             }
 
@@ -883,7 +868,7 @@ namespace Raven.Server.Documents.Patch
                 if (o == null)
                     return Undefined.Instance;
                 if (o is long lng)
-                    return new JsNumber(lng);
+                    return lng;
                 if (o is BlittableJsonReaderArray bjra)
                 {
                     var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
@@ -928,7 +913,7 @@ namespace Raven.Server.Documents.Patch
                     return new JsString(lcs.ToString());
                 if (o is LazyNumberValue lnv)
                 {
-                    return BlittableObjectInstance.BlittableObjectProperty.GetJSNumberForLazyNumber(engine, lnv);
+                    return BlittableObjectInstance.BlittableObjectProperty.GetJSValueForLazyNumber(engine, lnv);
                 }
                 if (o is JsValue js)
                     return js;
