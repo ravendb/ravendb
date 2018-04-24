@@ -28,7 +28,7 @@ namespace FastTests
 
         static RavenTestHelper()
         {
-            bool.TryParse("RAVEN_IS_RUNNING_ON_CI", out IsRunningOnCI);
+            bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_IS_RUNNING_ON_CI"), out IsRunningOnCI);
         }
 
         private static int _pathCount;
