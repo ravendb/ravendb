@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            return NoContent();
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/debug", "GET", AuthorizationStatus.ValidUser)]
