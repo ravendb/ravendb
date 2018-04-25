@@ -902,15 +902,15 @@ namespace Raven.Server.Documents.Patch
                 if (o is bool b)
                     return b ? JsBoolean.True : JsBoolean.False;
                 if (o is int integer)
-                    return new JsNumber(integer);
+                    return integer;
                 if (o is double dbl)
-                    return new JsNumber(dbl);
+                    return dbl;
                 if (o is string s)
-                    return new JsString(s);
+                    return s;
                 if (o is LazyStringValue ls)
-                    return new JsString(ls.ToString());
+                    return ls.ToString();
                 if (o is LazyCompressedStringValue lcs)
-                    return new JsString(lcs.ToString());
+                    return lcs.ToString();
                 if (o is LazyNumberValue lnv)
                 {
                     return BlittableObjectInstance.BlittableObjectProperty.GetJSValueForLazyNumber(engine, lnv);
