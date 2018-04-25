@@ -185,6 +185,7 @@ namespace Raven.Server.Documents
         public ExpirationStorage ExpirationStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
+        public CountersStorage CountersStorage;
         public DocumentPutAction DocumentPut;
         private readonly Action<string> _addToInitLog;
 
@@ -286,6 +287,7 @@ namespace Raven.Server.Documents
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx);
+                    CountersStorage = new CountersStorage(DocumentDatabase, tx);
 
                     DocumentPut = new DocumentPutAction(this, DocumentDatabase);
 
@@ -1696,6 +1698,7 @@ namespace Raven.Server.Documents
         None = 0,
         Documents = 1,
         Revisions = 2,
-        Conflicts = 3
+        Conflicts = 3,
+        Counters = 4
     }
 }
