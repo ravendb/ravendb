@@ -30,6 +30,8 @@
             public const string DocumentRead = "Storage/DocumentRead";
             public const string AttachmentRead = "Storage/AttachmentRead";
             public const string TombstoneRead = "Storage/TombstoneRead";
+            public const string CounterRead = "Storage/CounterRead";
+
 
             public const string Network = "Network/Write";
         }

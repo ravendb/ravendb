@@ -44,11 +44,15 @@ namespace Raven.Server.Documents.Replication
             private readonly OutgoingReplicationStatsScope _attachmentRead;
             private readonly OutgoingReplicationStatsScope _tombstoneRead;
 
-            public MergedReplicationBatchEnumerator(OutgoingReplicationStatsScope documentRead, OutgoingReplicationStatsScope attachmentRead, OutgoingReplicationStatsScope tombstoneRead)
+            private readonly OutgoingReplicationStatsScope _countersRead;
+
+
+            public MergedReplicationBatchEnumerator(OutgoingReplicationStatsScope documentRead, OutgoingReplicationStatsScope attachmentRead, OutgoingReplicationStatsScope tombstoneRead, OutgoingReplicationStatsScope counterRead)
             {
                 _documentRead = documentRead;
                 _attachmentRead = attachmentRead;
                 _tombstoneRead = tombstoneRead;
+                _countersRead = counterRead;
             }
 
             public void AddEnumerator(ReplicationBatchItem.ReplicationItemType type, IEnumerator<ReplicationBatchItem> enumerator)
@@ -74,6 +78,8 @@ namespace Raven.Server.Documents.Replication
                         return _documentRead;
                     case ReplicationBatchItem.ReplicationItemType.Attachment:
                         return _attachmentRead;
+                    case ReplicationBatchItem.ReplicationItemType.Counter:
+                        return _countersRead;
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
@@ -128,7 +134,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private IEnumerable<ReplicationBatchItem> GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(DocumentsOperationContext ctx, long etag, ReplicationStats stats)
+        private IEnumerable<ReplicationBatchItem> GetDocsConflictsTombstonesRevisionsAttachmentsAndCountersAfter(DocumentsOperationContext ctx, long etag, ReplicationStats stats)
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
@@ -136,19 +142,23 @@ namespace Raven.Server.Documents.Replication
             var revisionsStorage = _parent._database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(ReplicationBatchItem.From);
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
+            var counters = _parent._database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1);
+
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
             using (var versionsIt = revisions.GetEnumerator())
             using (var attachmentsIt = attachments.GetEnumerator())
-            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator(stats.DocumentRead, stats.AttachmentRead, stats.TombstoneRead))
+            using (var countersIt = counters.GetEnumerator())
+            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator(stats.DocumentRead, stats.AttachmentRead, stats.TombstoneRead, stats.CounterRead))
             {
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, docsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.DocumentTombstone, tombsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, conflictsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, versionsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Attachment, attachmentsIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Counter, countersIt);
 
                 while (mergedInEnumerator.MoveNext())
                 {
@@ -183,7 +193,7 @@ namespace Raven.Server.Documents.Replication
                     short lastTransactionMarker = -1;
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag, _stats))
+                        foreach (var item in GetDocsConflictsTombstonesRevisionsAttachmentsAndCountersAfter(documentsContext, _lastEtag, _stats))
                         {
                             if (lastTransactionMarker != item.TransactionMarker)
                             {
@@ -485,6 +495,13 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            {
+                WriteCounterToServer(item);
+                stats.RecordCounterOutput();
+                return;
+            }
+
             WriteDocumentToServer(context, item);
             stats.RecordDocumentOutput(item.Data?.Size ?? 0);
         }
@@ -757,6 +774,45 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private unsafe void WriteCounterToServer(ReplicationBatchItem item)
+        {
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                var requiredSize = sizeof(byte) + // type
+                                   sizeof(short) + // transaction marker
+                                   sizeof(int) + // size of key
+                                   item.Id.Size +
+                                   sizeof(int) + // size of name
+                                   item.Name.Size +
+                                   sizeof(long); // value
+
+                if (requiredSize > _tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(item);
+
+                var tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
+
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
+
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                tempBufferPos += item.Id.Size;
+
+                *(int*)(pTemp + tempBufferPos) = item.Name.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Name.Buffer, item.Name.Size);
+                tempBufferPos += item.Name.Size;
+
+                *(long*)(pTemp + tempBufferPos) = item.Value;
+                tempBufferPos += sizeof(long);
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+
+            }
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ThrowTooManyChangeVectorEntries(ReplicationBatchItem item)
@@ -778,6 +834,8 @@ namespace Raven.Server.Documents.Replication
             _stats.DocumentRead = _stats.Storage.For(ReplicationOperation.Outgoing.DocumentRead, start: false);
             _stats.TombstoneRead = _stats.Storage.For(ReplicationOperation.Outgoing.TombstoneRead, start: false);
             _stats.AttachmentRead = _stats.Storage.For(ReplicationOperation.Outgoing.AttachmentRead, start: false);
+            _stats.CounterRead = _stats.Storage.For(ReplicationOperation.Outgoing.CounterRead, start: false);
+
         }
 
         private class ReplicationStats
@@ -787,6 +845,8 @@ namespace Raven.Server.Documents.Replication
             public OutgoingReplicationStatsScope DocumentRead;
             public OutgoingReplicationStatsScope TombstoneRead;
             public OutgoingReplicationStatsScope AttachmentRead;
+            public OutgoingReplicationStatsScope CounterRead;
+
         }
     }
 }
