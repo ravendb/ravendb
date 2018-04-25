@@ -127,7 +127,7 @@ namespace Raven.Server.Documents
                 DocumentPutAction.ThrowRequiresTransaction();
                 Debug.Assert(false);// never hit
             }
-
+            
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterKey(context, documentId, name, context.Environment.DbId, out var counterKey))
             {
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractCounterName(DocumentsOperationContext context, Slice counterKey, Slice documentIdPrefix, out ByteString current, out Guid dbId)
         {
-            var scope = context.Allocator.FromPtr(counterKey.Content.Ptr + documentIdPrefix.Size,
+            var scope = context.Allocator.FromPtr(counterKey.Content.Ptr + documentIdPrefix.Size, // add +1 for record separator ?
                 counterKey.Size - documentIdPrefix.Size - sizeof(Guid) - 1, /* record separator*/
                 ByteStringType.Immutable,
                 out current
@@ -253,10 +253,10 @@ namespace Raven.Server.Documents
                                                        out ByteString buffer);
 
                 docIdLower.CopyTo(buffer.Ptr);
-                buffer.Ptr[docIdLower.Size] = 30; //todo: constant
+                buffer.Ptr[docIdLower.Size] = SpecialChars.RecordSeparator;
                 byte* dest = buffer.Ptr + docIdLower.Size + 1;
                 nameLower.CopyTo(dest);
-                dest[nameLower.Size] = 30;//todo: const
+                dest[nameLower.Size] = SpecialChars.RecordSeparator;
                 Memory.Copy(dest + nameLower.Size + 1, (byte*)&dbId, sizeof(Guid));
 
                 partialKeySlice = new Slice(buffer);
