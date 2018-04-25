@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -533,7 +534,16 @@ namespace FastTests
 
         protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
-            var serverCertificate = new X509Certificate2(serverCertPath);
+            X509Certificate2 serverCertificate;
+            try
+            {
+                serverCertificate = new X509Certificate2(serverCertPath);
+            }
+            catch (CryptographicException e)
+            {
+                 throw new CryptographicException($"Failed to load the test certificate from {serverCertPath}.", e);
+            }
+
             X509Certificate2 clientCertificate;
 
             using (var store = GetDocumentStore(new Options
