@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public IPropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
         protected MapReduceIndex(MapReduceIndexDefinition definition, StaticIndexBase compiled)
-            : base(IndexType.MapReduce, definition)
+            : base(definition.IndexDefinition.Type, definition)
         {
             _compiled = compiled;
 
