@@ -318,15 +318,21 @@ namespace Raven.Server.Documents.Patch
             foreach (var property in properties)
             {
                 var propertyName = property.Key;
+
+                
                 if (ShouldFilterProperty(filterProperties, propertyName))
                     continue;
 
                 var value = property.Value;
                 if (value == null)
                     continue;
+                JsValue safeValue = SafelyGetJsValue(value);
+                if (safeValue.IsUndefined())
+                    continue;
 
                 _writer.WritePropertyName(propertyName);
-                WriteJsonValue(obj, isRoot, propertyName, SafelyGetJsValue(value));
+                
+                WriteJsonValue(obj, isRoot, propertyName, safeValue);
             }
         }
 
