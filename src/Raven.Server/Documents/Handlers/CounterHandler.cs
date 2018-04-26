@@ -57,7 +57,6 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-
         [RavenAction("/databases/*/counters/getValues", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCounterValues()
         {
@@ -106,6 +105,23 @@ namespace Raven.Server.Documents.Handlers
                         ["Names"] = counters
                     });
                 }
+            }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/counters/reset", "Delete", AuthorizationStatus.ValidUser)]
+        public Task Reset()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenWriteTransaction())
+            {
+                Database.DocumentsStorage.CountersStorage.ResetCounter(context, id, name);
+                context.Transaction.Commit();
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;

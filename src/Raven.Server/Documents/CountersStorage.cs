@@ -105,8 +105,26 @@ namespace Raven.Server.Documents
                             return;
                     }
 
-                    // TODO: if delete marker, remove all other items
-                    // TODO: if exists delete marker, remove it
+                    // if delete marker, remove all other items
+                    if (dbId == TombstoneMarker)
+                    {
+                        using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
+                        {
+                            foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
+                            {
+                                table.Delete(result.Value.Reader.Id);
+                            }
+                        }
+                    }
+
+                    // if exists delete marker, remove it
+                    using (GetCounterKey(context, documentId, name, TombstoneMarker, out var deleteMarkerKey))
+                    {
+                        if (table.ReadByKey(deleteMarkerKey, out existing))
+                        {
+                            table.Delete(existing.Id);
+                        }
+                    }
 
                     var etag = _documentsStorage.GenerateNextEtag();
                     tvb.Add(counterKey);
@@ -132,18 +150,25 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterKey(context, documentId, name, context.Environment.DbId, out var counterKey))
             {
+                long prev = 0;
+                if (table.ReadByKey(counterKey, out var existing))
+                {
+                    prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
+                    Debug.Assert(size == sizeof(long));
+                }
+
+                // remove delete marker if exists
+                using (GetCounterKey(context, documentId, name, TombstoneMarker, out var deleteMarkerKey))
+                {
+                    if (table.ReadByKey(deleteMarkerKey, out existing))
+                    {
+                        table.Delete(existing.Id);
+                    }
+                }
+
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice nameSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    long prev = 0;
-                    if (table.ReadByKey(counterKey, out var existing))
-                    {
-                        prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
-                        Debug.Assert(size == sizeof(long));
-                    }
-
-                    // todo: remove delete marker 
-
                     var etag = _documentsStorage.GenerateNextEtag();
                     tvb.Add(counterKey);
                     tvb.Add(nameSlice);
