@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue =
             new ConcurrentSet<ConnectionShutdownInfo>();
 
-        private readonly List<ReplicationNode> _internalDestinations = new List<ReplicationNode>();
+        private readonly ConcurrentBag<ReplicationNode> _internalDestinations = new ConcurrentBag<ReplicationNode>();
         private readonly HashSet<ExternalReplication> _externalDestinations = new HashSet<ExternalReplication>();
 
         private class LastEtagPerDestination
@@ -617,7 +617,10 @@ namespace Raven.Server.Documents.Replication
                 StartOutgoingConnections(added.ToList());
             }
             _internalDestinations.Clear();
-            _internalDestinations.AddRange(newInternalDestinations);
+            foreach (var item in newInternalDestinations)
+            {
+                _internalDestinations.Add(item);
+            }
         }
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd, bool external = false)
