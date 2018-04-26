@@ -116,7 +116,8 @@ namespace Raven.Database.Raft
                 {
                     ClientConfiguration = new ReplicationClientConfiguration
                     {
-                        FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader
+                        FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader,
+                        OnlyModifyFailoverIfNotInClusterAlready = true
                     }
                 };
 

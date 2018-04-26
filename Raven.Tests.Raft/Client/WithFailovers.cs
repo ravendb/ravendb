@@ -103,9 +103,8 @@ namespace Raven.Tests.Raft.Client
         public void ReadFromAllWriteToLeaderWithFailoversAndMajorityDown(int numberOfNodes, FailoverBehavior failoverBehavior)
         {
             using (WithCustomDatabaseSettings(doc => doc.Settings["Raven/Replication/ReplicationRequestTimeout"] = "4000"))
-            {
+            {                
                 var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: s => s.Conventions.FailoverBehavior = failoverBehavior);
-
                 foreach (var documentStore in clusterStores)
                 {
                     // set lower timeout to reduce test time
@@ -128,6 +127,7 @@ namespace Raven.Tests.Raft.Client
                         var repDoc = rawRepDoc.DataAsJson.Deserialize<ReplicationDocument>(clusterStores[0].Conventions);
 
                         repDoc.ClientConfiguration.FailoverBehavior = failoverBehavior;
+                        repDoc.ClientConfiguration.OnlyModifyFailoverIfNotInClusterAlready = false;
 
                         systemDatabaseStore.Put(Constants.Global.ReplicationDestinationsDocumentName, null, RavenJObject.FromObject(repDoc), new RavenJObject());
 

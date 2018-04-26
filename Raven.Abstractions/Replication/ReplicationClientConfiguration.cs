@@ -8,6 +8,7 @@ namespace Raven.Abstractions.Replication
     public class ReplicationClientConfiguration
     {
         public FailoverBehavior? FailoverBehavior { get; set; }
+        public bool OnlyModifyFailoverIfNotInClusterAlready { get; set; }
         public double? RequestTimeSlaThresholdInMilliseconds { get; set; }
     }
 }
