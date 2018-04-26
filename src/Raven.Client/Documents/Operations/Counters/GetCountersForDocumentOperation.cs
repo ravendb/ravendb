@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/getNames?id={_documentId}";
+                url = $"{node.Url}/databases/{node.Database}/counters/getNames?doc={_documentId}";
 
                 return new HttpRequestMessage
                 {
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 if (!(response["Names"] is BlittableJsonReaderArray bjra))
                     return;
 
-                var names = new List<string>();
+                var names = new List<string>(bjra.Length);
                 foreach (var name in bjra)
                 {
                     names.Add(name.ToString());   

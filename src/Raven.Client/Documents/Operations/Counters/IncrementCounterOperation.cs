@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.Counters
         private readonly string _name;
         private readonly long _value;
 
-        public IncrementCounterOperation(string documentId, string name, long value = 0)
+        public IncrementCounterOperation(string documentId, string name, long value = 1)
         {
             _documentId = documentId;
             _name = name;
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/increment?id={_documentId}&name={_name}&val={_value}";
+                url = $"{node.Url}/databases/{node.Database}/counters/increment?doc={_documentId}&name={_name}&val={_value}";
 
                 return new HttpRequestMessage
                 {

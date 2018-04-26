@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/getValues?id={_documentId}&name={_name}";
+                url = $"{node.Url}/databases/{node.Database}/counters/getValues?doc={_documentId}&name={_name}";
 
                 return new HttpRequestMessage
                 {
@@ -51,20 +51,21 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                if (!(response["Values"] is BlittableJsonReaderObject values))
+                if (!(response["Values"] is BlittableJsonReaderArray values))
                     return;
 
-                //var dic = new Dictionary<Guid, long>();
                 Result = new Dictionary<Guid, long>();
 
-                foreach (var key in values.GetPropertyNames())
+                foreach (var v in values)
                 {
-                    Result[new Guid(key)] = (long)values[key];
+                    if (!(v is BlittableJsonReaderObject bjro))
+                        return;
 
-                    //dic[new Guid(key)] = (long)values[key];
+                    var key = bjro["DbId"];
+                    var val = bjro["Value"];
+                    Result[new Guid(key.ToString())] = (long)val;
                 }
 
-                //Result = dic;
             }
 
             public override bool IsReadRequest => true;

@@ -15,41 +15,105 @@ namespace Raven.Server.Documents.Handlers
 {
     public class CounterHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/counters/increment", "PUT", AuthorizationStatus.ValidUser)]
-        public Task Increment()
+        public class IncrementCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var value = GetLongQueryString("val", false) ?? 0;
+            private DocumentDatabase _database;
+            private string _doc, _counter;
+            private long _value;
 
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenWriteTransaction())
+            public long CurrentValue;
+
+            public IncrementCounterCommand(DocumentDatabase database, string doc, string counter, long value)
             {
-                Database.DocumentsStorage.CountersStorage.IncrementCounter(context, id, name, value);
-                context.Transaction.Commit();
+                _database = database;
+                _doc = doc;
+                _counter = counter;
+                _value = value;
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            return Task.CompletedTask;
+            public override int Execute(DocumentsOperationContext context)
+            {
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, _doc, _counter, _value);
+                CurrentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(context, _doc, _counter) ?? 0;
+                return 1;
+            }
+        }
+
+        public class ResetCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private DocumentDatabase _database;
+            private string _doc, _counter;
+
+            public ResetCounterCommand(DocumentDatabase database, string doc, string counter)
+            {
+                _database = database;
+                _doc = doc;
+                _counter = counter;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                _database.DocumentsStorage.CountersStorage.ResetCounter(context, _doc, _counter);
+                return 1;
+            }
+        }
+
+        [RavenAction("/databases/*/counters/increment", "PUT", AuthorizationStatus.ValidUser)]
+        public async Task Increment()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var value = GetLongQueryString("val", true) ?? 1;
+
+
+            var cmd = new IncrementCounterCommand(Database, id, name, value);
+
+            await Database.TxMerger.Enqueue(cmd);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Document");
+                writer.WriteString(id);
+                writer.WriteComma();
+                writer.WritePropertyName("Counter");
+                writer.WriteString(name);
+                writer.WriteComma();
+                writer.WritePropertyName("Value");
+                writer.WriteInteger(cmd.CurrentValue);
+                writer.WriteEndObject();
+            }
         }
 
         [RavenAction("/databases/*/counters/getValue", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCounterValue()
         {
-            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(context, documentId, name);
+                if (value == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["Value"] = value
-                    });
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Document");
+                    writer.WriteString(documentId);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Counter");
+                    writer.WriteString(name);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Value");
+                    writer.WriteInteger(value.Value);
+                    writer.WriteEndObject();
                 }
             }
 
@@ -60,25 +124,41 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters/getValues", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCounterValues()
         {
-            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var dic = Database.DocumentsStorage.CountersStorage.GetCounterValues(context, documentId, name);
-                var jsonMap = new DynamicJsonValue();
-                foreach (var kvp in dic)
-                {
-                    jsonMap[kvp.Key.ToString()] = kvp.Value;
-                }
-
+                
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
+                   writer.WriteStartObject();
+                    writer.WritePropertyName("Document");
+                    writer.WriteString(documentId);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Counter");
+                    writer.WriteString(name);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Values");
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var (db, val) in dic)
                     {
-                        ["Values"] = jsonMap
-                    });
+                        if(first == false)
+                            writer.WriteComma();
+                        first = false;
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("DbId");
+                        writer.WriteString(db.ToString()); // TODO: use the short referece
+                        writer.WriteComma();
+                        writer.WritePropertyName("Value");
+                        writer.WriteInteger(val);
+                        writer.WriteEndObject();
+                    }
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
                 }
             }
 
@@ -89,9 +169,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters/getNames", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCountersForDocument()
         {
-            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var skip = GetIntValueQueryString("skip", false) ?? 0;
-            var take = GetIntValueQueryString("skip", false) ?? 1024;
+            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
+            var skip = GetStart();
+            var take = GetPageSize();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -112,20 +192,15 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/counters/reset", "Delete", AuthorizationStatus.ValidUser)]
-        public Task Reset()
+        public async Task Reset()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenWriteTransaction())
-            {
-                Database.DocumentsStorage.CountersStorage.ResetCounter(context, id, name);
-                context.Transaction.Commit();
-            }
+            var cmd = new ResetCounterCommand(Database, id, name);
+            await Database.TxMerger.Enqueue(cmd);
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            return Task.CompletedTask;
         }
     }
 }

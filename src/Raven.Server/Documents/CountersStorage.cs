@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
 
-            CountersSchema.Create(tx, CountersSlice, 44);
+            CountersSchema.Create(tx, CountersSlice, 32);
         }
 
         public IEnumerable<ReplicationBatchItem> GetCountersFrom(DocumentsOperationContext context, long etag)
@@ -116,13 +116,15 @@ namespace Raven.Server.Documents
                             }
                         }
                     }
-
-                    // if exists delete marker, remove it
-                    using (GetCounterKey(context, documentId, name, TombstoneMarker, out var deleteMarkerKey))
+                    else
                     {
-                        if (table.ReadByKey(deleteMarkerKey, out existing))
+                        // if exists delete marker, remove it
+                        using (GetCounterKey(context, documentId, name, TombstoneMarker, out var deleteMarkerKey))
                         {
-                            table.Delete(existing.Id);
+                            if (table.ReadByKey(deleteMarkerKey, out existing))
+                            {
+                                table.Delete(existing.Id);
+                            }
                         }
                     }
 
@@ -206,7 +208,7 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    yield return current.ToString(new UTF8Encoding());
+                    yield return current.ToString(Encoding.UTF8);
 
                     prev = current;
                     scope = currentScope;
@@ -216,14 +218,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetCounterValue(DocumentsOperationContext context, string docId, string name)
+        public long? GetCounterValue(DocumentsOperationContext context, string docId, string name)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, docId, name, out var key))
             {
-                long value = 0;
+                long? value = null;
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
+                    value = value ?? 0;
                     var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out var size);
                     Debug.Assert(size == sizeof(long));
                     value += *(long*)pCounterDbValue;

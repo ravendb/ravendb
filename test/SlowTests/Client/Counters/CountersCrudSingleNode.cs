@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Tests.Core.Utils.Entities;
@@ -23,7 +24,7 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Operations.Send(new IncrementCounterOperation(DocId, "likes"));
+                store.Operations.Send(new IncrementCounterOperation(DocId, "likes", 0));
                 var val = store.Operations.Send(new GetCounterValueOperation(DocId, "likes"));
                 Assert.Equal(0, val);
 
@@ -64,7 +65,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void GetCounterValues()
+        public void GetCounterValue()
         {
             using (var store = GetDocumentStore())
             {
@@ -74,11 +75,12 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Operations.Send(new IncrementCounterOperation(DocId, "likes", 5));
-                store.Operations.Send(new IncrementCounterOperation(DocId, "likes", 10));
+                var a = store.Operations.SendAsync(new IncrementCounterOperation(DocId, "likes", 5));
+                var b = store.Operations.SendAsync(new IncrementCounterOperation(DocId, "likes", 10));
+                Task.WaitAll(a, b); // run them in parallel and see that they are good
 
-                var dic = store.Operations.Send(new GetCounterValuesOperation(DocId, "likes"));
-                Assert.Equal(15, dic.Values.Single());
+                var val = store.Operations.Send(new GetCounterValueOperation(DocId, "likes"));
+                Assert.Equal(15, val);
             }
         }
 
