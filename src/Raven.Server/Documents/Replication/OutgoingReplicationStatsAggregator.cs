@@ -74,7 +74,9 @@ namespace Raven.Server.Documents.Replication
                     DocumentOutputCount = Stats.DocumentOutputCount,
                     DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
-                    DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount
+                    DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
+                    CounterOutputCount = Stats.CounterOutputCount,
+                    CounterOutputSizeInBytes = Stats.CounterOutputSize.GetValue(SizeUnit.Bytes)
                 },
                 Errors = Stats.Errors
             };
@@ -143,6 +145,11 @@ namespace Raven.Server.Documents.Replication
             _stats.DocumentTombstoneOutputCount++;
         }
 
+        public void RecordCounterOutput()
+        {
+            _stats.CounterOutputCount++;
+        }
+
         public void RecordLastEtag(long etag)
         {
             _stats.LastEtag = etag;
@@ -183,6 +190,9 @@ namespace Raven.Server.Documents.Replication
 
         public int AttachmentOutputCount;
         public Size AttachmentOutputSize;
+
+        public int CounterOutputCount;
+        public Size CounterOutputSize;
 
         public int AttachmentTombstoneOutputCount;
         public int RevisionTombstoneOutputCount;
