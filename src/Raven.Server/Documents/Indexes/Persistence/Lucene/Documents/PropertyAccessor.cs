@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static IPropertyAccessor Create(Type type)
         {
+            if (type == typeof(ObjectInstance))
+                return new JintPropertyAccessor(null);
             return new PropertyAccessor(type);
         }
 
@@ -154,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             foreach (var property in oi.GetOwnProperties())
             {
-                yield return (property.Key, GetValue(property.Value.Value), _groupByFields.Contains(property.Key));
+                yield return (property.Key, GetValue(property.Value.Value), _groupByFields?.Contains(property.Key)??false);
             }            
         }
 
