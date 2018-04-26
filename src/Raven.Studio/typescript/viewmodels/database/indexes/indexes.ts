@@ -268,7 +268,7 @@ class indexes extends viewModelBase {
     private getIndexesProgress() {
         
         if (shell.showConnectionLost()) {
-            // looks like we don't we connection to server, skip index progress update 
+            // looks like we don't have connection to server, skip index progress update 
             return;
         }
         

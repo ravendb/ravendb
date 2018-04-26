@@ -1,6 +1,6 @@
 import appUrl = require("common/appUrl");
 import indexProgress = require("models/database/index/indexProgress");
-
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class index {
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
@@ -217,8 +217,6 @@ class index {
                 return "Idle";
             }
 
-           
-
             return "Normal";
         });
     }
@@ -228,14 +226,24 @@ class index {
     }
 
     getGroupName() {
-        const collections = this.collectionNames;
+        const collections = this.collectionNames.map(c => {
+            // If collection already exists - use its exact name
+            const x = collectionsTracker.default.collections().find(x => x.name.toLowerCase() === c.toLowerCase()); 
+            if (x) {
+                return x.name; 
+            } 
+            // If collection does not exist - capitalize to be standard looking 
+            else {
+                return _.capitalize(c);
+            }
+        });
+        
         if (collections && collections.length) {
             return collections.slice(0).sort((l, r) => l.toLowerCase() > r.toLowerCase() ? 1 : -1).join(", ");
         } else {
             return index.DefaultIndexGroupName;
         }
     }
-
 }
 
 export = index; 
