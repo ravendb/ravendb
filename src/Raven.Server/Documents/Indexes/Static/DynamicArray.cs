@@ -75,7 +75,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return true;
             }
 
-            var i = (int)indexes[0];
+            if (!(indexes[0] is int i))
+                i = Convert.ToInt32(indexes[0]);
+
             var resultObject = _inner.ElementAt(i);
 
             result = TypeConverter.ToDynamicType(resultObject);
