@@ -1166,22 +1166,25 @@ namespace Raven.Client.Http
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
 
-            if (PlatformDetails.RunningOnMacOsx)
+            var serverCallBack = _serverCertificateCustomValidationCallback;
+            if (serverCallBack != null)
             {
-                var callback = ServerCertificateCustomValidationCallback;
-                if (callback != null)
+                if (PlatformDetails.RunningOnMacOsx)
+                {
                     throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
-            }
-            else
-            {
-                try
+                }
+                else
                 {
                     httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
                 }
-                catch (PlatformNotSupportedException)
+            }
+            else
+            {
+                _liveClients.TryAdd(new WeakReference<HttpClientHandler>(httpMessageHandler), null);
+                foreach (var client in _liveClients.Keys)
                 {
-                    // The user can set the following manually:
-                    // ServicePointManager.ServerCertificateValidationCallback += OnServerCertificateCustomValidationCallback;
+                    if (client.TryGetTarget(out _) == false)
+                        _liveClients.TryRemove(client, out _);
                 }
             }
 
@@ -1245,11 +1248,31 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
         }
 
-        public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback;
+        private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> _serverCertificateCustomValidationCallback;
+        private static ConcurrentDictionary<WeakReference<HttpClientHandler>, object> _liveClients = new ConcurrentDictionary<WeakReference<HttpClientHandler>, object>();
+
+        public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback
+        {
+            add
+            {
+                _serverCertificateCustomValidationCallback += value;
+                foreach (var client in _liveClients.Keys)
+                {
+                    if (client.TryGetTarget(out var t))
+                        t.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+                    else
+                        _liveClients.TryRemove(client, out _);
+                }
+            }
+            remove
+            {
+                _serverCertificateCustomValidationCallback -= value;
+            }
+        }
 
         private static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {
-            var onServerCertificateCustomValidationCallback = ServerCertificateCustomValidationCallback;
+            var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
             if (onServerCertificateCustomValidationCallback == null)
                 return errors == SslPolicyErrors.None;
             return onServerCertificateCustomValidationCallback(msg, cert, chain, errors);
