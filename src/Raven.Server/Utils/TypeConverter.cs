@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Jint.Native.Object;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
@@ -24,7 +25,7 @@ namespace Raven.Server.Utils
 
         private static readonly string TypeList = typeof(List<>).FullName;
 
-        private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
+        private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
         public static bool IsSupportedType(object value)
         {
@@ -90,9 +91,9 @@ namespace Raven.Server.Utils
 
             var accessor = GetPropertyAccessor(value);
 
-            foreach (var property in accessor.PropertiesInOrder)
+            foreach (var property in accessor.GetPropertiesInOrder(value))
             {
-                var propertyValue = property.Value.GetValue(value);
+                var propertyValue = property.Value;
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
@@ -189,9 +190,9 @@ namespace Raven.Server.Utils
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 
-            foreach (var property in accessor.PropertiesInOrder)
+            foreach (var property in accessor.GetPropertiesInOrder(value))
             {
-                var propertyValue = property.Value.GetValue(value);
+                var propertyValue = property.Value;
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
@@ -402,15 +403,18 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static PropertyAccessor GetPropertyAccessor(object value)
+        public static IPropertyAccessor GetPropertyAccessor(object value)
         {
             var type = value.GetType();
             return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
         }
 
-        public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<string> groupByFields)
+        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<string> groupByFields)
         {
             var type = value.GetType();
+            //We don't cache JS types
+            if (type == typeof(ObjectInstance))
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, groupByFields, true);
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(x, groupByFields));
         }
 
