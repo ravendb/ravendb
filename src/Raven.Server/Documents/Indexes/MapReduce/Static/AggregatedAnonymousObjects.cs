@@ -10,10 +10,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly List<object> _outputs;
         private readonly List<BlittableJsonReaderObject> _jsons;
-        private readonly PropertyAccessor _propertyAccessor;
+        private readonly IPropertyAccessor _propertyAccessor;
         private readonly JsonOperationContext _indexContext;
 
-        public AggregatedAnonymousObjects(List<object> results, PropertyAccessor propertyAccessor, JsonOperationContext indexContext)
+        public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
         {
             _outputs = results;
             _propertyAccessor = propertyAccessor;
@@ -34,9 +34,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 var djv = new DynamicJsonValue();
 
-                foreach (var property in _propertyAccessor.PropertiesInOrder)
+                foreach (var property in _propertyAccessor.GetPropertiesInOrder(output))
                 {
-                    var value = property.Value.GetValue(output);
+                    var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
                 }
 

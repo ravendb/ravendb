@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly DynamicIterationOfAggregationBatchWrapper _blittableToDynamicWrapper = new DynamicIterationOfAggregationBatchWrapper();
         private readonly IndexingFunc _reducingFunc;
-        private PropertyAccessor _propertyAccessor;
+        private IPropertyAccessor _propertyAccessor;
 
         public ReduceMapResultsOfStaticIndex(Index index, IndexingFunc reducingFunc, MapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
             : base(index, indexDefinition, indexStorage, metrics, mapReduceContext)

@@ -114,9 +114,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (_index.OutputReduceToCollectionPropertyAccessor == null)
                     _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
-                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.PropertiesInOrder)
+                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
                 {
-                    var value = property.Value.GetValue(reduceObject);
+                    var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
                 }
                 djv[Constants.Documents.Metadata.Key] = new DynamicJsonValue
