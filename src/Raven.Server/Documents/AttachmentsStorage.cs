@@ -300,7 +300,6 @@ namespace Raven.Server.Documents
                 // can cause corruption if we read from the old value (which we just deleted)
                 Memory.Copy(copyOfDoc.Address, tvr.Pointer, tvr.Size);
                 var copyTvr = new TableValueReader(copyOfDoc.Address, tvr.Size);
-                var lastModifiedTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref copyTvr);
                 var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out int size), size, context);
 
                 var attachments = GetAttachmentsMetadataForDocument(context, lowerDocumentId);
@@ -340,7 +339,7 @@ namespace Raven.Server.Documents
                 }
 
                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                return _documentsStorage.Put(context, documentId, null, data, lastModifiedTicks.Ticks, changeVector, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
+                return _documentsStorage.Put(context, documentId, null, data, null, changeVector, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
             }
             finally
             {
