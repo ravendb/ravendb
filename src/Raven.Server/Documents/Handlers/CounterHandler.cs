@@ -58,6 +58,25 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        public class DeleteCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private DocumentDatabase _database;
+            private string _doc, _counter;
+
+            public DeleteCounterCommand(DocumentDatabase database, string doc, string counter)
+            {
+                _database = database;
+                _doc = doc;
+                _counter = counter;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                _database.DocumentsStorage.CountersStorage.DeleteCounter(context, _doc, _counter);
+                return 1;
+            }
+        }
+
         [RavenAction("/databases/*/counters/increment", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Increment()
         {
@@ -198,6 +217,18 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             var cmd = new ResetCounterCommand(Database, id, name);
+            await Database.TxMerger.Enqueue(cmd);
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+        }
+
+        [RavenAction("/databases/*/counters/delete", "Delete", AuthorizationStatus.ValidUser)]
+        public async Task Delete()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            var cmd = new DeleteCounterCommand(Database, id, name);
             await Database.TxMerger.Enqueue(cmd);
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;

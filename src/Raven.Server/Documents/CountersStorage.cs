@@ -22,8 +22,10 @@ namespace Raven.Server.Documents
         private readonly DocumentsStorage _documentsStorage;
 
         private static readonly Slice CountersSlice;
+        private static readonly Slice CountersTombstonesSlice;
+        private static readonly Slice CountersEtagSlice;
 
-        public static readonly Slice CountersEtagSlice;
+        public static readonly string CountersTombstones = "Counters.Tombstones";
 
         private static readonly TableSchema CountersSchema = new TableSchema()
         {
@@ -46,6 +48,7 @@ namespace Raven.Server.Documents
         {
             Slice.From(StorageEnvironment.LabelsContext, "Counters", ByteStringType.Immutable, out CountersSlice);
             Slice.From(StorageEnvironment.LabelsContext, "CountersEtag", ByteStringType.Immutable, out CountersEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
 
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -65,6 +68,7 @@ namespace Raven.Server.Documents
             _documentsStorage = documentDatabase.DocumentsStorage;
 
             CountersSchema.Create(tx, CountersSlice, 32);
+            TombstonesSchema.Create(tx, CountersTombstonesSlice, 16);
         }
 
         public IEnumerable<ReplicationBatchItem> GetCountersFrom(DocumentsOperationContext context, long etag)
@@ -105,26 +109,14 @@ namespace Raven.Server.Documents
                             return;
                     }
 
-                    // if delete marker, remove all other items
-                    if (dbId == TombstoneMarker)
+                    // if tombstone exists, remove it
+                    using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
                     {
-                        using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
+                        var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+
+                        if (tombstoneTable.ReadByKey(counterKey, out var existingTombstone))
                         {
-                            foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
-                            {
-                                table.Delete(result.Value.Reader.Id);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // if exists delete marker, remove it
-                        using (GetCounterKey(context, documentId, name, TombstoneMarker, out var deleteMarkerKey))
-                        {
-                            if (table.ReadByKey(deleteMarkerKey, out existing))
-                            {
-                                table.Delete(existing.Id);
-                            }
+                            table.Delete(existingTombstone.Id);
                         }
                     }
 
@@ -159,12 +151,14 @@ namespace Raven.Server.Documents
                     Debug.Assert(size == sizeof(long));
                 }
 
-                // remove delete marker if exists
-                using (GetCounterKey(context, documentId, name, TombstoneMarker, out var deleteMarkerKey))
+                // if tombstone exists, remove it
+                using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
                 {
-                    if (table.ReadByKey(deleteMarkerKey, out existing))
+                    var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+
+                    if (tombstoneTable.ReadByKey(counterKey, out var existingTombstone))
                     {
-                        table.Delete(existing.Id);
+                        table.Delete(existingTombstone.Id);
                     }
                 }
 
@@ -349,6 +343,48 @@ namespace Raven.Server.Documents
             };
 
             return result;
+        }
+
+        public void DeleteCounter(DocumentsOperationContext context, string documentId, string name)
+        {
+            if (context.Transaction == null)
+            {
+                DocumentPutAction.ThrowRequiresTransaction();
+                Debug.Assert(false);// never hit
+            }
+
+            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
+            {
+                foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
+                {
+                    table.Delete(result.Value.Reader.Id);
+                }
+
+                var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                CreateTombstone(context, keyPerfix, 0, string.Empty, lastModifiedTicks);
+            }
+        }
+
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long counterEtag, string changeVector, long lastModifiedTicks)
+        {
+            var newEtag = _documentsStorage.GenerateNextEtag();
+
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+            using (table.Allocate(out TableValueBuilder tvb))
+            using (Slice.From(context.Allocator, changeVector, out var cv))
+            {
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(Bits.SwapBytes(newEtag));
+                tvb.Add(Bits.SwapBytes(counterEtag));
+                tvb.Add(context.GetTransactionMarker());
+                tvb.Add((byte)DocumentTombstone.TombstoneType.Attachment);
+                tvb.Add(null, 0);
+                tvb.Add((int)DocumentFlags.None);
+                tvb.Add(cv.Content.Ptr, cv.Size);
+                tvb.Add(lastModifiedTicks);
+                table.Insert(tvb);
+            }
         }
     }
 }

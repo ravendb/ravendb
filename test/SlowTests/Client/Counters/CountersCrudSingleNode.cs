@@ -107,5 +107,27 @@ namespace SlowTests.Client.Counters
 
             }
         }
+
+        [Fact]
+        public void DeleteCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" });
+                    session.SaveChanges();
+                }
+
+                store.Operations.Send(new IncrementCounterOperation(DocId, "likes", 10));
+                var val = store.Operations.Send(new GetCounterValueOperation(DocId, "likes"));
+                Assert.Equal(10, val);
+
+                store.Operations.Send(new DeleteCounterOperation(DocId, "likes"));
+                val = store.Operations.Send(new GetCounterValueOperation(DocId, "likes"));
+
+                Assert.Null(val);
+            }
+        }
     }
 }

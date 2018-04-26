@@ -6,28 +6,28 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class GetCounterValueOperation : IOperation<long?>
+    public class DeleteCounterOperation : IOperation
     {
         private readonly string _documentId;
         private readonly string _name;
 
-        public GetCounterValueOperation(string documentId, string name)
+        public DeleteCounterOperation(string documentId, string name)
         {
             _documentId = documentId;
             _name = name;
         }
 
-        public RavenCommand<long?> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCounterValueCommand(_documentId, _name);
+            return new DeleteCounterCommand(_documentId, _name);
         }
 
-        private class GetCounterValueCommand : RavenCommand<long?>
+        private class DeleteCounterCommand : RavenCommand
         {
             private readonly string _documentId;
             private readonly string _name;
 
-            public GetCounterValueCommand(string documentId, string name)
+            public DeleteCounterCommand(string documentId, string name)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -40,23 +40,13 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/getValue?doc={_documentId}&name={_name}";
+                url = $"{node.Url}/databases/{node.Database}/counters/delete?doc={_documentId}&name={_name}";
 
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Get
+                    Method = HttpMethod.Delete
                 };
             }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    return;
-
-                Result = (long)response["Value"];
-            }
-
-            public override bool IsReadRequest => true;
         }
     }
 }
