@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -180,7 +181,7 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    yield return current.ToString();
+                    yield return current.ToString(new UTF8Encoding());
 
                     prev = current;
                     scope = currentScope;
@@ -229,7 +230,7 @@ namespace Raven.Server.Documents
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractCounterName(DocumentsOperationContext context, Slice counterKey, Slice documentIdPrefix, out ByteString current, out Guid dbId)
         {
-            var scope = context.Allocator.FromPtr(counterKey.Content.Ptr + documentIdPrefix.Size, // add +1 for record separator ?
+            var scope = context.Allocator.FromPtr(counterKey.Content.Ptr + documentIdPrefix.Size,
                 counterKey.Size - documentIdPrefix.Size - sizeof(Guid) - 1, /* record separator*/
                 ByteStringType.Immutable,
                 out current
