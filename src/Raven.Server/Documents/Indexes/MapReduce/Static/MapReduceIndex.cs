@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
-        public PropertyAccessor OutputReduceToCollectionPropertyAccessor;
+        public IPropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
         protected MapReduceIndex(MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(IndexType.MapReduce, definition)
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly HashSet<string> _groupByFields;
             private readonly bool _isMultiMap;
-            private PropertyAccessor _propertyAccessor;
+            private IPropertyAccessor _propertyAccessor;
             private readonly StaticIndexBase _compiledIndex;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     using (_createBlittableResult.Start())
                     {
-                        PropertyAccessor accessor;
+                        IPropertyAccessor accessor;
 
                         if (_parent._isMultiMap == false)
                             accessor = _parent._propertyAccessor ??
@@ -423,18 +423,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         _reduceKeyProcessor.Reset();
 
-                        var propertiesInOrder = accessor.PropertiesInOrder;
-                        int properties = propertiesInOrder.Count;
-
-                        for (int i = 0; i < properties; i++)
+                        foreach (var property in accessor.GetPropertiesInOrder(output))
                         {
-                            var field = propertiesInOrder[i];
-
-                            var value = field.Value.GetValue(output);
+                            var value = property.Value;
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value);
-                            mapResult[field.Key] = blittableValue;
+                            mapResult[property.Key] = blittableValue;
 
-                            if (field.Value.IsGroupByField)
+                            if (property.IsGroupByField)
                                 _reduceKeyProcessor.Process(_parent._indexContext.Allocator, blittableValue);
                         }
 

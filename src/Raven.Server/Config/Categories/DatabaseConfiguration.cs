@@ -59,7 +59,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Databases.MaxConcurrentLoads", ConfigurationEntryScope.ServerWideOnly)]
         public int MaxConcurrentLoads { get; set; }
 
-        [DefaultValue(900)]
+        [DefaultValue(5)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.MaxIdleTimeInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxIdleTime { get; set; }
