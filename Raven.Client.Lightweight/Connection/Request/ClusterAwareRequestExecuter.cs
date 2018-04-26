@@ -289,7 +289,7 @@ namespace Raven.Client.Connection.Request
                         catch (Exception ex)
                         {
                             if (withClusterFailoverHeader == false)
-                                return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+                                return await HandleWithFailovers(operation, token, true).ConfigureAwait(false);
                             throw;
                         }                        
                     }

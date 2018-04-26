@@ -65,11 +65,36 @@ namespace Raven.Client
             if (configuration == null)
                 return;
 
-            if (configuration.FailoverBehavior.HasValue)
+            if(ShouldReplaceFailoverBehavior(configuration))
+                // ReSharper disable once PossibleInvalidOperationException
                 FailoverBehavior = configuration.FailoverBehavior.Value;
 
             if (configuration.RequestTimeSlaThresholdInMilliseconds.HasValue)
                 RequestTimeSlaThresholdInMilliseconds = configuration.RequestTimeSlaThresholdInMilliseconds.Value;
+        }
+
+        private bool ShouldReplaceFailoverBehavior(ReplicationClientConfiguration configuration)
+        {
+            var configurationFailoverBehavior = configuration.FailoverBehavior;
+            if (configurationFailoverBehavior.HasValue == false)
+                return false;
+            if (configuration.OnlyModifyFailoverIfNotInClusterAlready && IsClusterBehavior(FailoverBehavior))
+                return false;
+            return true;
+        }
+
+        private bool IsClusterBehavior(FailoverBehavior configurationFailoverBehavior)
+        {
+            switch (configurationFailoverBehavior)
+            {
+                case FailoverBehavior.ReadFromLeaderWriteToLeader:
+                case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
+                case FailoverBehavior.ReadFromAllWriteToLeader:
+                case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

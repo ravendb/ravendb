@@ -310,6 +310,7 @@ namespace Raven.Tests.Raft
             clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
             using (ForceNonClusterRequests(clusterStores))
             {
+                
                 clusterStores.ForEach(store => WaitFor(store.DatabaseCommands, commands =>
                 {
                     using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
