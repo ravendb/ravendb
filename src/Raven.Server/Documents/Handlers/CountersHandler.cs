@@ -53,8 +53,8 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                _database.DocumentsStorage.CountersStorage.DeleteCounter(context, _doc, _counter);
-                return 1;
+                var del = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, _doc, _counter);
+                return del ? 1 : 0;
             }
         }
 
