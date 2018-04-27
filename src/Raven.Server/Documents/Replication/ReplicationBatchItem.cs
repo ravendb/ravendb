@@ -31,6 +31,12 @@ namespace Raven.Server.Documents.Replication
 
         #endregion
 
+        #region Counter
+
+        public long Value;
+
+        #endregion
+
         public static ReplicationBatchItem From(Document doc)
         {
             return new ReplicationBatchItem
@@ -110,6 +116,19 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
+        public static ReplicationBatchItem From(Counter counter)
+        {
+            return new ReplicationBatchItem
+            {
+                Type = ReplicationItemType.Counter,
+                Id = counter.Key,
+                Etag = counter.Etag,
+                Name = counter.Name,
+                Value = counter.Value,
+                TransactionMarker = counter.TransactionMarker
+            };
+        }
+
         public enum ReplicationItemType : byte
         {
             Document = 1,
@@ -117,7 +136,8 @@ namespace Raven.Server.Documents.Replication
             Attachment = 3,
             AttachmentStream = 4,
             AttachmentTombstone = 5,
-            RevisionTombstone = 6
+            RevisionTombstone = 6,
+            Counter = 7
         }
     }
 }
