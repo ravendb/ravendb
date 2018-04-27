@@ -1330,10 +1330,11 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
-        public void DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null)
+        public bool DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null)
         {
             AssertWritableTable();
 
+            bool deleted = false;
             var pk = _schema.Key;
             var tree = GetTree(pk);
             TableValueHolder tableValueHolder = null;
@@ -1343,8 +1344,9 @@ namespace Voron.Data.Tables
                 {
                     it.SetRequiredPrefix(startSlice);
                     if (it.Seek(it.RequiredPrefix) == false)
-                        return;
+                        return deleted;
 
+                    deleted = true;
                     long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
 
                     if (beforeDelete != null)

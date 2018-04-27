@@ -338,6 +338,22 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        public void DeleteCountersForDocument(DocumentsOperationContext context, string documentId)
+        {
+            // this will called as part of document's delete, so we don't bother creating
+            // tombstones (existing tombstones will remain and be cleaned up by the usual
+            // tombstone cleaner task
+            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+
+            if (table.NumberOfEntries == 0)
+                return; 
+
+            using (GetCounterPartialKey(context, documentId, out var keyPerfix))
+            {
+                table.DeleteByPrimaryKeyPrefix(keyPerfix);
+            }
+        }
+
         public bool DeleteCounter(DocumentsOperationContext context, string documentId, string name)
         {
             if (context.Transaction == null)
@@ -349,14 +365,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
             {
-                bool actuallyDeleted =false;
-                foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
-                {
-                    actuallyDeleted = true;
-                    table.Delete(result.Value.Reader.Id);
-                }
-
-                if (actuallyDeleted == false)
+                if (table.DeleteByPrimaryKeyPrefix(keyPerfix))
                     return false;
 
                 // let's avoid creating a tombstone for something that was never here in the 
