@@ -112,7 +112,7 @@
         <div class="flex-grow scroll">
 
             <div data-bind="foreach: sortedGroups">
-                <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
+                <h2 data-bind="text: entityName, visible: !groupHidden(), attr: { title: 'Collection: ' + entityName }"></h2>
                 <div data-bind="foreach: indexes, visible: !groupHidden()">
                     <div data-bind="css: { 'sidebyside-indexes': replacement }, visible: !filteredOut()">
                         <div class="panel panel-state index" data-bind="template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
@@ -151,7 +151,7 @@
                     <label></label>
                 </div>
                 <h3 class="index-name">
-                    <a href="#" data-bind="text: name, attr: { href: editUrl(), title: name }"></a>
+                    <a href="#" data-bind="text: name, attr: { href: editUrl(), title: 'Index: ' + name }"></a>
                 </h3>
                 <div class="index-type">
                     <span data-bind="text: getTypeForUI()"></span>
