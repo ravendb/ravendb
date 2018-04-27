@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class GetCounterValuesOperation : IOperation<Dictionary<Guid, long>>
+    public class GetCounterValuesOperation : IOperation<Dictionary<string, long>>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -18,12 +18,12 @@ namespace Raven.Client.Documents.Operations.Counters
             _name = name;
         }
 
-        public RavenCommand<Dictionary<Guid, long>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<Dictionary<string, long>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetCounterValuesCommand(_documentId, _name);
         }
 
-        private class GetCounterValuesCommand : RavenCommand<Dictionary<Guid, long>>
+        private class GetCounterValuesCommand : RavenCommand<Dictionary<string, long>>
         {
             private readonly string _documentId;
             private readonly string _name;
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/getValues?doc={_documentId}&name={_name}";
+                url = $"{node.Url}/databases/{node.Database}/counters?doc={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}&mode=all";
 
                 return new HttpRequestMessage
                 {
@@ -51,21 +51,16 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                if (!(response["Values"] is BlittableJsonReaderArray values))
-                    return;
+                response.TryGet("Values", out BlittableJsonReaderArray values);
 
-                Result = new Dictionary<Guid, long>();
+                Result = new Dictionary<string, long>();
 
-                foreach (var v in values)
+                foreach (BlittableJsonReaderObject v in values)
                 {
-                    if (!(v is BlittableJsonReaderObject bjro))
-                        return;
-
-                    var key = bjro["DbId"];
-                    var val = bjro["Value"];
-                    Result[new Guid(key.ToString())] = (long)val;
+                    v.TryGet("DbId", out string dbid);
+                    v.TryGet("Value", out long value);
+                    Result[dbid] = value;
                 }
-
             }
 
             public override bool IsReadRequest => true;

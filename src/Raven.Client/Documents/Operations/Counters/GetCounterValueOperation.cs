@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/getValue?doc={_documentId}&name={_name}";
+                url = $"{node.Url}/databases/{node.Database}/counters?doc={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
 
                 return new HttpRequestMessage
                 {
@@ -53,7 +53,8 @@ namespace Raven.Client.Documents.Operations.Counters
                 if (response == null)
                     return;
 
-                Result = (long)response["Value"];
+                response.TryGet("Value", out long v);
+                Result = v;
             }
 
             public override bool IsReadRequest => true;
