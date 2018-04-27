@@ -223,7 +223,12 @@ namespace Raven.Server
                 if (Certificate.Certificate != null)
                 {
                     AssertServerCanContactItselfWhenAuthIsOn(Certificate.Certificate)
-                        .IgnoreUnobservedExceptions();
+                        .IgnoreUnobservedExceptions()
+                        // here we wait a bit, just enough so for normal servers
+                        // we'll be successful, but not enough to hang the server
+                        // startup if there is some issue talking to the node because
+                        // of firewall, ssl issues, etc. 
+                        .Wait(250);
                 }
 
                 if (Logger.IsInfoEnabled)
@@ -256,7 +261,7 @@ namespace Raven.Server
                     httpMessageHandler.SslProtocols = SslProtocols.Tls12;
 
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations("During server initialization, validating that the server can authenticate with itself.");
+                        Logger.Operations($"During server initialization, validating that the server can authenticate with itself using {url}.");
 
                     // Using the server certificate as a client certificate to test if we can talk to ourselves
                     httpMessageHandler.ClientCertificates.Add(certificateCertificate);
@@ -270,12 +275,12 @@ namespace Raven.Server
                     }
                 }
             }
-            catch
+            catch(Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Server failed to contact itself @ {url}.{Environment.NewLine}" +
-                                      $"This can happen if PublicServerUrl is not the same as the domain in the certificate or you have other certificate errors.{Environment.NewLine}" +
-                                      "Trying again, this time with a ServerCertificateCustomValidationCallback which allows connections with the same certificate.");
+                    Logger.Operations($"Server failed to contact itself @ {url}. " +
+                                      $"This can happen if PublicServerUrl is not the same as the domain in the certificate or you have other certificate errors. " +
+                                      "Trying again, this time with a ServerCertificateCustomValidationCallback which allows connections with the same certificate.", e);
 
                 try
                 {
@@ -301,14 +306,14 @@ namespace Raven.Server
                             }
 
                             if (Logger.IsOperationsEnabled)
-                                Logger.Operations("Successfull connection with ServerCertificateCustomValidationCallback.");
+                                Logger.Operations($"Successfull connection with ServerCertificateCustomValidationCallback to {url}.");
                         }
                     }
                 }
-                catch (Exception e)
+                catch (Exception e2)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Server failed to contact itself @ {url} even though ServerCertificateCustomValidationCallback allows connections with the same certificate.", e);
+                        Logger.Operations($"Server failed to contact itself @ {url} even though ServerCertificateCustomValidationCallback allows connections with the same certificate.", e2);
                 }
             }
         }
