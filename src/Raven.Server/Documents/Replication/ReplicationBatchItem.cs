@@ -34,6 +34,9 @@ namespace Raven.Server.Documents.Replication
         #region Counter
 
         public long Value;
+        public Guid DbId;
+        public long SourceEtag;
+
 
         #endregion
 
@@ -77,6 +80,9 @@ namespace Raven.Server.Documents.Replication
                     item.Type = ReplicationItemType.RevisionTombstone;
                     item.Collection = doc.Collection;
                     break;
+                case DocumentTombstone.TombstoneType.Counter:
+                    item.Type = ReplicationItemType.CounterTombstone;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(doc.Type));
             }
@@ -116,19 +122,6 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static ReplicationBatchItem From(Counter counter)
-        {
-            return new ReplicationBatchItem
-            {
-                Type = ReplicationItemType.Counter,
-                Id = counter.Key,
-                Etag = counter.Etag,
-                Name = counter.Name,
-                Value = counter.Value,
-                TransactionMarker = counter.TransactionMarker
-            };
-        }
-
         public enum ReplicationItemType : byte
         {
             Document = 1,
@@ -137,7 +130,8 @@ namespace Raven.Server.Documents.Replication
             AttachmentStream = 4,
             AttachmentTombstone = 5,
             RevisionTombstone = 6,
-            Counter = 7
+            Counter = 7,
+            CounterTombstone = 8
         }
     }
 }

@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 
 namespace Raven.Server.Documents
 {
@@ -76,8 +77,34 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CountersEtagSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToCounter(context, ref result.Reader));
+                yield return CreateReplicationBatchItem(context, result);
             }
+        }
+
+        private static ReplicationBatchItem CreateReplicationBatchItem(DocumentsOperationContext context, Table.TableValueHolder result)
+        {
+            var p = result.Reader.Read((int)CountersTable.CounterKey, out var size);
+            Debug.Assert(size > sizeof(Guid) + 2/* record separators */);
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == 30)
+                    break;
+            }
+            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
+            var name = context.AllocateStringValue(null, p + sizeOfDocId + 1, size - (sizeOfDocId + 1) - sizeof(Guid) - 1);
+
+            return new ReplicationBatchItem
+            {
+                Type = ReplicationItemType.Counter,
+                Id = doc,
+                Etag = TableValueToEtag((int)CountersTable.Etag, ref result.Reader),
+                Name = name,
+                SourceEtag = TableValueToLong((int)CountersTable.SourceEtag, ref result.Reader),
+                Value = TableValueToLong((int)CountersTable.Value, ref result.Reader),
+                TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(ReplicationBatchItem.TransactionMarker), ref result.Reader),
+                DbId = *(Guid*)(p + size - sizeof(Guid))
+            };
         }
 
         public void PutCounter(DocumentsOperationContext context, string documentId, string name, Guid dbId, long sourceEtag, long value)
@@ -320,22 +347,6 @@ namespace Raven.Server.Documents
 
                 return scope;
             }
-        }
-
-        private static Counter TableValueToCounter(DocumentsOperationContext context, ref TableValueReader tvr)
-        {
-            var result = new Counter
-            {
-                StorageId = tvr.Id,
-                Key = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr),
-                Name = TableValueToId(context, (int)CountersTable.Name, ref tvr),
-                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
-                Value = TableValueToEtag((int)CountersTable.Value, ref tvr),
-                SourceEtag = TableValueToEtag((int)CountersTable.SourceEtag, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)CountersTable.TransactionMarker, out int _)
-            };
-
-            return result;
         }
 
         public void DeleteCountersForDocument(DocumentsOperationContext context, string documentId)

@@ -1639,6 +1639,13 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long TableValueToLong(int index, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read(index, out _);
+            return *(long*)ptr;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
