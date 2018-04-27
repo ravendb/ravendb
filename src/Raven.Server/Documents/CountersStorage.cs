@@ -373,19 +373,24 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
             {
-                if (table.DeleteByPrimaryKeyPrefix(keyPerfix))
-                    return false;
-
-                // let's avoid creating a tombstone for something that was never here in the 
-                // first place
-
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                CreateTombstone(context, keyPerfix, lastModifiedTicks);
-                return true;
+                return DeleteCounter(context, keyPerfix, lastModifiedTicks,
+                    // let's avoid creating a tombstone for missing counter if writing locally
+                    forceTombstone: false);
             }
+        }
+
+        public bool DeleteCounter(DocumentsOperationContext context, Slice key, long lastModifiedTicks, bool forceTombstone)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            if (table.DeleteByPrimaryKeyPrefix(key) == false
+                && forceTombstone == false)
+                return false;
+          
+            CreateTombstone(context, key, lastModifiedTicks);
+            return true;
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long lastModifiedTicks)
@@ -397,7 +402,7 @@ namespace Raven.Server.Documents
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(0); // etag that was deleted
+                tvb.Add(0L); // etag that was deleted
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)DocumentTombstone.TombstoneType.Counter);
                 tvb.Add(null, 0); // doc data

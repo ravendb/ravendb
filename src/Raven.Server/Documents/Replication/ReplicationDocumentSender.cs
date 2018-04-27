@@ -83,6 +83,7 @@ namespace Raven.Server.Documents.Replication
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
+                    case ReplicationBatchItem.ReplicationItemType.CounterTombstone:
                         return _tombstoneRead;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -501,6 +502,12 @@ namespace Raven.Server.Documents.Replication
                 stats.RecordCounterOutput();
                 return;
             }
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
+            {
+                WriteCounterTombstoneToServer(item);
+                stats.RecordCounterOutput();
+                return;
+            }
 
             WriteDocumentToServer(context, item);
             stats.RecordDocumentOutput(item.Data?.Size ?? 0);
@@ -779,18 +786,24 @@ namespace Raven.Server.Documents.Replication
             fixed (byte* pTemp = _tempBuffer)
             {
                 var requiredSize = sizeof(byte) + // type
+                                   sizeof(int) + // change vector size, always 0
                                    sizeof(short) + // transaction marker
-                                   sizeof(int) + // size of key
+                                   sizeof(int) + // size of doc id
                                    item.Id.Size +
                                    sizeof(int) + // size of name
                                    item.Name.Size +
-                                   sizeof(long); // value
+                                   sizeof(long) + // value
+                                   sizeof(Guid) + // dbid
+                                   sizeof(long); // source etag
 
                 if (requiredSize > _tempBuffer.Length)
                     ThrowTooManyChangeVectorEntries(item);
 
                 var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
+
+                *(int*)(pTemp + tempBufferPos) = 0;
+                tempBufferPos += sizeof(int);
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -808,11 +821,50 @@ namespace Raven.Server.Documents.Replication
                 *(long*)(pTemp + tempBufferPos) = item.Value;
                 tempBufferPos += sizeof(long);
 
-                _stream.Write(_tempBuffer, 0, tempBufferPos);
+                *(Guid*)(pTemp + tempBufferPos) = item.DbId;
+                tempBufferPos += sizeof(Guid);
 
+                *(long*)(pTemp + tempBufferPos) = item.SourceEtag;
+                tempBufferPos += sizeof(long);
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }
 
+        private unsafe void WriteCounterTombstoneToServer(ReplicationBatchItem item)
+        {
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                var requiredSize = sizeof(byte) + // type
+                                   sizeof(int) + // change vector size, always 0
+                                   sizeof(short) + // transaction marker
+                                   sizeof(int) + // size of tombstone key
+                                   item.Id.Size +
+                                   sizeof(long); // last modified ticks
+
+                if (requiredSize > _tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(item);
+
+                var tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
+
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
+                tempBufferPos += sizeof(int);
+
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
+
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                tempBufferPos += item.Id.Size;
+
+                *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
+                tempBufferPos += sizeof(long);
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ThrowTooManyChangeVectorEntries(ReplicationBatchItem item)

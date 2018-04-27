@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication
 
         public IncomingReplicationHandler(TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
-            ReplicationLoader parent, 
+            ReplicationLoader parent,
             JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
         {
             _connectionOptions = options;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Replication
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-            
+
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
 
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
@@ -102,11 +102,11 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Error in accepting replication request ({FromToString})", e);
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Error in accepting replication request ({FromToString})", e);
                     }
-                }, null, IncomingReplicationThreadName);                
-            }            
+                }, null, IncomingReplicationThreadName);
+            }
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Incoming replication thread started ({FromToString})");
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (msg.Document != null)
                                 {
-                                    _parent.EnsureNotDeleted(_parent._server.NodeTag); 
+                                    _parent.EnsureNotDeleted(_parent._server.NodeTag);
 
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
                                     {
@@ -185,8 +185,8 @@ namespace Raven.Server.Documents.Replication
 
                             if (_log.IsInfoEnabled)
                             {
-                                if (e is AggregateException ae && 
-                                    ae.InnerExceptions.Count == 1 && 
+                                if (e is AggregateException ae &&
+                                    ae.InnerExceptions.Count == 1 &&
                                     ae.InnerException is SocketException ase)
                                 {
                                     HandleSocketException(ase);
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Replication
 
                             throw;
                         }
-                        
+
                         void HandleSocketException(SocketException e)
                         {
                             if (_log.IsInfoEnabled)
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Replication
                 if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag))
                     throw new InvalidOperationException("Expected LastDocumentEtag property in the replication message, " +
                                                         "but didn't find it..");
-                
+
                 switch (messageType)
                 {
                     case ReplicationMessageType.Documents:
@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Replication
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
                             // saving the change vector and the last received document etag
-                            long lastEtag ;
+                            long lastEtag;
                             string lastChangeVector;
                             using (documentsContext.OpenReadTransaction())
                             {
@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Replication
                                         $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
                                         $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                                 }
-                                
+
                                 var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
                                 if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                                 {
@@ -322,7 +322,7 @@ namespace Raven.Server.Documents.Replication
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
-                SendHeartbeatStatusToSource(documentsContext, writer, _lastDocumentEtag,  messageType);
+                SendHeartbeatStatusToSource(documentsContext, writer, _lastDocumentEtag, messageType);
             }
             catch (ObjectDisposedException)
             {
@@ -541,7 +541,7 @@ namespace Raven.Server.Documents.Replication
                     // in a bad state and likely in the process of shutting 
                     // down
                 }
-                if(writeBuffer.SizeInBytes > _initialReplicationBuffer)
+                if (writeBuffer.SizeInBytes > _initialReplicationBuffer)
                 {
                     if (_log.IsInfoEnabled)
                     {
@@ -597,9 +597,9 @@ namespace Raven.Server.Documents.Replication
 
         public string FromToString => $"In database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.GetNodeTcpServerUrl()} " +
                                       $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
-        
+
         public IncomingConnectionInfo ConnectionInfo { get; }
-        
+
         private readonly List<ReplicationItem> _replicatedItems = new List<ReplicationItem>();
         private readonly StreamsTempFile _attachmentStreamsTempFile;
         private readonly Dictionary<Slice, ReplicationAttachmentStream> _replicatedAttachmentStreams = new Dictionary<Slice, ReplicationAttachmentStream>(SliceComparer.Instance);
@@ -626,6 +626,15 @@ namespace Raven.Server.Documents.Replication
 
             #endregion
 
+            #region Counter
+
+            public long CounterValue;
+            public string CounterName;
+            public long CounterEtag;
+            public Guid CounterDbId;
+
+            #endregion
+
             #region Attachment
 
             public Slice Key;
@@ -640,6 +649,7 @@ namespace Raven.Server.Documents.Replication
             public Slice Base64Hash;
             public ByteStringContext.InternalScope Base64HashDispose;
 
+
             #endregion
 
             public void Dispose()
@@ -652,6 +662,7 @@ namespace Raven.Server.Documents.Replication
                     Base64HashDispose.Dispose();
                 }
                 else if (Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone ||
+                         Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone ||
                          Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                 {
                     KeyDispose.Dispose();
@@ -691,7 +702,9 @@ namespace Raven.Server.Documents.Replication
                 };
 
                 var changeVectorSize = *(int*)ReadExactly(sizeof(int));
-                item.ChangeVector = Encoding.UTF8.GetString(ReadExactly(changeVectorSize), changeVectorSize);
+
+                if(changeVectorSize != 0)
+                    item.ChangeVector = Encoding.UTF8.GetString(ReadExactly(changeVectorSize), changeVectorSize);
 
                 item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
 
@@ -735,7 +748,7 @@ namespace Raven.Server.Documents.Replication
                     using (tombstoneRead.Start())
                     {
                         item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
-                        
+
                         var keySize = *(int*)ReadExactly(sizeof(int));
                         item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
 
@@ -743,6 +756,25 @@ namespace Raven.Server.Documents.Replication
                         Debug.Assert(collectionSize > 0);
                         item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
                     }
+                }
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+                {
+                    var keySize = *(int*)ReadExactly(sizeof(int));
+                    item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
+
+                    var nameSize = *(int*)ReadExactly(sizeof(int));
+                    item.CounterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+                        
+                    item.CounterValue = *(long*)ReadExactly(sizeof(long));
+                    item.CounterDbId = *(Guid*)ReadExactly(sizeof(Guid));
+                    item.CounterEtag = *(long*)ReadExactly(sizeof(long));
+                }
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
+                {
+                    var keySize = *(int*)ReadExactly(sizeof(int));
+                    item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
+
+                    item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
                 }
                 else
                 {
@@ -887,7 +919,7 @@ namespace Raven.Server.Documents.Replication
                 _cts.Dispose();
 
                 _attachmentStreamsTempFile.Dispose();
-            
+
             }
             finally
             {
@@ -900,7 +932,7 @@ namespace Raven.Server.Documents.Replication
                     // can't do anything about it...
                 }
             }
-            
+
         }
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
@@ -1020,6 +1052,19 @@ namespace Raven.Server.Documents.Replication
                             {
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector, item.LastModifiedTicks);
                             }
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+                            {
+                                database.DocumentsStorage.CountersStorage.PutCounter(context,
+                                    item.Id, item.CounterName, item.CounterDbId, item.CounterEtag,
+                                    item.CounterValue);
+                            }
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
+                            {
+                                database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, 
+                                    item.LastModifiedTicks,
+                                    // we force the tombstone because we have to replicate it further
+                                    forceTombstone: true);
+                            }
                             else
                             {
                                 BlittableJsonReaderObject document = null;
@@ -1056,7 +1101,7 @@ namespace Raven.Server.Documents.Replication
 
                                     if ((item.Flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
                                     {
-                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null 
+                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null
                                             && item.Flags.Contain(DocumentFlags.Resolved) == false
                                             && item.Flags.Contain(DocumentFlags.Conflicted) == false)
                                         {
@@ -1064,7 +1109,7 @@ namespace Raven.Server.Documents.Replication
                                                 _incoming._log.Operations("Revisions are disabled but the node got a delete revision from replication.");
                                             continue;
                                         }
-                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, 
+                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document,
                                             item.Flags, NonPersistentDocumentFlags.FromReplication, rcvdChangeVector, item.LastModifiedTicks);
                                         continue;
                                     }
