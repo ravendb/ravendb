@@ -13,7 +13,6 @@ namespace SlowTests.Client.Counters
 {
     public class CountersCrudMultipuleNodes : ClusterTestBase
     {
-        private static readonly Guid TombstoneMarker = new Guid("DEAD0000-5A81-4CB1-9E4D-E60B8EBDCE64");
         private const string DocId = "users/1-A";
 
         [Fact]

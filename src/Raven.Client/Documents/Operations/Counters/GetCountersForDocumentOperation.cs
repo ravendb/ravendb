@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/getNames?doc={_documentId}";
+                url = $"{node.Url}/databases/{node.Database}/counters?doc={Uri.EscapeDataString(_documentId)}";
 
                 return new HttpRequestMessage
                 {
