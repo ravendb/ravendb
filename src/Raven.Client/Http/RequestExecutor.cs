@@ -1166,26 +1166,34 @@ namespace Raven.Client.Http
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
 
-            var serverCallBack = _serverCertificateCustomValidationCallback;
-            if (serverCallBack != null)
+            _serverCallbackRWLock.EnterReadLock();
+            try
             {
-                if (PlatformDetails.RunningOnMacOsx)
+                var serverCallBack = _serverCertificateCustomValidationCallback;
+                if (serverCallBack != null)
                 {
-                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
+                    if (PlatformDetails.RunningOnMacOsx)
+                    {
+                        throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
+                    }
+                    else
+                    {
+                        httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+                    }
                 }
                 else
                 {
-                    httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+                    _liveClients.TryAdd(new WeakReference<HttpClientHandler>(httpMessageHandler), null);
+                    foreach (var client in _liveClients.Keys)
+                    {
+                        if (client.TryGetTarget(out _) == false)
+                            _liveClients.TryRemove(client, out _);
+                    }
                 }
             }
-            else
+            finally
             {
-                _liveClients.TryAdd(new WeakReference<HttpClientHandler>(httpMessageHandler), null);
-                foreach (var client in _liveClients.Keys)
-                {
-                    if (client.TryGetTarget(out _) == false)
-                        _liveClients.TryRemove(client, out _);
-                }
+                _serverCallbackRWLock.ExitReadLock();
             }
 
             if (certificate != null)
@@ -1250,18 +1258,27 @@ namespace Raven.Client.Http
 
         private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> _serverCertificateCustomValidationCallback;
         private static ConcurrentDictionary<WeakReference<HttpClientHandler>, object> _liveClients = new ConcurrentDictionary<WeakReference<HttpClientHandler>, object>();
+        private static readonly ReaderWriterLockSlim _serverCallbackRWLock = new ReaderWriterLockSlim();
 
         public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback
         {
             add
             {
-                _serverCertificateCustomValidationCallback += value;
-                foreach (var client in _liveClients.Keys)
+                _serverCallbackRWLock.EnterWriteLock();
+                try
                 {
-                    if (client.TryGetTarget(out var t))
-                        t.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
-                    else
-                        _liveClients.TryRemove(client, out _);
+                    _serverCertificateCustomValidationCallback += value;
+                    foreach (var client in _liveClients.Keys)
+                    {
+                        if (client.TryGetTarget(out var t))
+                            t.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+                        else
+                            _liveClients.TryRemove(client, out _);
+                    }
+                }
+                finally
+                {
+                    _serverCallbackRWLock.ExitWriteLock();
                 }
             }
             remove
