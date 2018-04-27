@@ -434,7 +434,7 @@ namespace Raven.Server.Web.System
                     }
                     waitingTasks.Remove(task);
                     if (waitingTasks.Count == 1) // only the timeout task is left
-                        throw new InvalidDataException($"The database '{database}' was create but is not accessible, because all of the nodes on which this database was supose to be created, had thrown an exception.", task.Exception);
+                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was suposed to reside on, threw an exception.", task.Exception);
                 }
             }
             finally
