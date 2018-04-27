@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private IEnumerable<ReplicationBatchItem> GetDocsConflictsTombstonesRevisionsAttachmentsAndCountersAfter(DocumentsOperationContext ctx, long etag, ReplicationStats stats)
+        private IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats)
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Replication
                     short lastTransactionMarker = -1;
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetDocsConflictsTombstonesRevisionsAttachmentsAndCountersAfter(documentsContext, _lastEtag, _stats))
+                        foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
                             if (lastTransactionMarker != item.TransactionMarker)
                             {

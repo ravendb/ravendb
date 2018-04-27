@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public void DeleteCounter(DocumentsOperationContext context, string documentId, string name)
+        public bool DeleteCounter(DocumentsOperationContext context, string documentId, string name)
         {
             if (context.Transaction == null)
             {
@@ -349,32 +349,40 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
             {
+                bool actuallyDeleted =false;
                 foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
                 {
+                    actuallyDeleted = true;
                     table.Delete(result.Value.Reader.Id);
                 }
 
+                if (actuallyDeleted == false)
+                    return false;
+
+                // let's avoid creating a tombstone for something that was never here in the 
+                // first place
+
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                CreateTombstone(context, keyPerfix, 0, string.Empty, lastModifiedTicks);
+                CreateTombstone(context, keyPerfix, lastModifiedTicks);
+                return true;
             }
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long counterEtag, string changeVector, long lastModifiedTicks)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long lastModifiedTicks)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
             using (table.Allocate(out TableValueBuilder tvb))
-            using (Slice.From(context.Allocator, changeVector, out var cv))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(Bits.SwapBytes(counterEtag));
+                tvb.Add(0); // etag that was deleted
                 tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)DocumentTombstone.TombstoneType.Attachment);
-                tvb.Add(null, 0);
+                tvb.Add((byte)DocumentTombstone.TombstoneType.Counter);
+                tvb.Add(null, 0); // doc data
                 tvb.Add((int)DocumentFlags.None);
-                tvb.Add(cv.Content.Ptr, cv.Size);
+                tvb.Add(null, 0); // change vector
                 tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);
             }
