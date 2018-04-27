@@ -4,8 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -20,22 +23,50 @@ namespace Raven.Server.Documents.Handlers
             private DocumentDatabase _database;
             private string _doc, _counter;
             private long _value;
+            private bool _failTx;
 
             public long CurrentValue;
+            public bool DocumentMissing;
 
-            public IncrementCounterCommand(DocumentDatabase database, string doc, string counter, long value)
+            public IncrementCounterCommand(DocumentDatabase database, string doc, string counter, long value, bool failTx)
             {
                 _database = database;
                 _doc = doc;
                 _counter = counter;
                 _value = value;
+                _failTx = failTx;
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
+                try
+                {
+                    var doc = _database.DocumentsStorage.Get(context, _doc,
+                        throwOnConflict: true);
+                    if(doc == null)
+                    {
+                        DocumentMissing = true;
+                        if (_failTx == false)
+                            return 0;
+                        ThrowMissingDocument();
+                    }
+
+                }
+                catch (DocumentConflictException)
+                {
+                    // this is fine, we explicitly support
+                    // setting the flag if we are in conflicted state is 
+                    // done by the conflict resolver
+                }
+
                 _database.DocumentsStorage.CountersStorage.IncrementCounter(context, _doc, _counter, _value);
                 CurrentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(context, _doc, _counter) ?? 0;
                 return 1;
+            }
+
+            public void ThrowMissingDocument()
+            {
+                throw new CounterDocumentMissingException($"There is no document '{_doc}' (or it has been deleted), cannot set counter '{_counter}' for a missing document");
             }
         }
 
@@ -65,9 +96,21 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var value = GetLongQueryString("val", true) ?? 1;
 
-            var cmd = new IncrementCounterCommand(Database, id, name, value);
+            var cmd = new IncrementCounterCommand(Database, id, name, value, failTx: false);
 
             await Database.TxMerger.Enqueue(cmd);
+
+            if (cmd.DocumentMissing)
+            {
+                
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    cmd.ThrowMissingDocument();
+                }
+                return;// never hit
+            }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -99,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
 
         private Task GetCounterValue(string documentId, string name)
         {
-           var mode = GetStringQueryString("mode", required: false);
+            var mode = GetStringQueryString("mode", required: false);
 
             switch (mode)
             {
@@ -164,7 +207,7 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartArray();
                     var first = true;
-                    
+
                     foreach (var (db, val) in values)
                     {
                         if (first == false)
