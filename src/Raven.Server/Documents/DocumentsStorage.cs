@@ -1152,6 +1152,9 @@ namespace Raven.Server.Documents
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
+
+                CountersStorage.DeleteCountersForDocument(context, id);
+
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     Type = DocumentChangeTypes.Delete,
