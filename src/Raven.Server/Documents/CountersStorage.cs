@@ -16,8 +16,6 @@ namespace Raven.Server.Documents
 {
     public unsafe class CountersStorage
     {
-        private static readonly Guid TombstoneMarker = new Guid("DEAD0000-5A81-4CB1-9E4D-E60B8EBDCE64");
-
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
 
@@ -80,11 +78,6 @@ namespace Raven.Server.Documents
             {
                 yield return ReplicationBatchItem.From(TableValueToCounter(context, ref result.Reader));
             }
-        }
-
-        public void ResetCounter(DocumentsOperationContext context, string documentId, string name)
-        {
-            PutCounter(context, documentId, name, TombstoneMarker, _documentsStorage.GenerateNextEtag(), 0);
         }
 
         public void PutCounter(DocumentsOperationContext context, string documentId, string name, Guid dbId, long sourceEtag, long value)
@@ -192,9 +185,6 @@ namespace Raven.Server.Documents
 
                     var currentScope = ExtractCounterName(context, result.Key, key, out var current, out var dbId);
 
-                    if (dbId == TombstoneMarker)
-                        continue;
-
                     if (prev.HasValue && prev.Match(current))
                     {
                         // already seen this one, skip it 
@@ -230,24 +220,27 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Dictionary<Guid, long> GetCounterValues(DocumentsOperationContext context, string docId, string name)
+        public IEnumerable<(Guid DbId, long Value)> GetCounterValues(DocumentsOperationContext context, string docId, string name)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, docId, name, out var keyPerfix))
             {
-                var dic = new Dictionary<Guid, long>();
                 foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
                 {
-                    var counterKey = result.Value.Reader.Read((int)CountersTable.CounterKey, out var size);
-                    Debug.Assert(size > sizeof(Guid));
-                    Guid* pDbId = (Guid*)(counterKey + size - sizeof(Guid));
-                    var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out size);
-                    Debug.Assert(size == sizeof(long));
-                    dic[*pDbId] = *(long*)pCounterDbValue;
+                    (Guid, long) val = ExtractDbIdAndValue(result);
+                    yield return val;
                 }
-
-                return dic;
             }
+        }
+
+        private static (Guid DbId, long Value) ExtractDbIdAndValue((Slice Key, Table.TableValueHolder Value) result)
+        {
+            var counterKey = result.Value.Reader.Read((int)CountersTable.CounterKey, out var size);
+            Debug.Assert(size > sizeof(Guid));
+            Guid* pDbId = (Guid*)(counterKey + size - sizeof(Guid));
+            var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out size);
+            Debug.Assert(size == sizeof(long));
+            return (*pDbId, *(long*)pCounterDbValue);
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractCounterName(DocumentsOperationContext context, Slice counterKey, Slice documentIdPrefix, out ByteString current, out Guid dbId)

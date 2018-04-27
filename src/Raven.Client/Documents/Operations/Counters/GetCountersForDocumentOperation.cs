@@ -45,11 +45,10 @@ namespace Raven.Client.Documents.Operations.Counters
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                if (!(response["Names"] is BlittableJsonReaderArray bjra))
-                    return;
+                response.TryGet("Counters", out BlittableJsonReaderArray values);
 
-                var names = new List<string>(bjra.Length);
-                foreach (var name in bjra)
+                var names = new List<string>(values.Length);
+                foreach (var name in values)
                 {
                     names.Add(name.ToString());   
                 }
