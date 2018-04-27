@@ -182,6 +182,11 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
+        {
+            return new DynamicArray(Enumerable.SelectMany(this, func));
+        }
+
         public IEnumerable<object> Select(Func<object, object> func)
         {
             return new DynamicArray(Enumerable.Select(this, func));

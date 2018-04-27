@@ -221,6 +221,12 @@ namespace Sparrow.Json.Parsing
                     }
                     if (value.Properties.Count == 0)
                     {
+                        if (value?._source?.Modifications == value)
+                        {
+                            // reset modifications state so we can reuse the same
+                            // blittable object instance again
+                            value._source.Modifications = null;
+                        }
                         _state.CurrentTokenType = JsonParserToken.EndObject;
                         return true;
                     }
@@ -258,7 +264,7 @@ namespace Sparrow.Json.Parsing
                 if (current is BlittableJsonReaderObject bjro)
                 {
                     if (bjro.Modifications == null)
-                        bjro.Modifications = new DynamicJsonValue();
+                        bjro.Modifications = new DynamicJsonValue(bjro);
                     if (_seenValues.Add(bjro.Modifications))
                     {
                         _elements.Push(bjro);

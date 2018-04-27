@@ -226,7 +226,7 @@ namespace Raven.Client.ServerWide
         }
 
         // Find changes in the connection of the internal database group
-        internal static (HashSet<string> AddedDestinations, HashSet<string> RemovedDestiantions) FindChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
+        internal static (HashSet<string> AddedDestinations, HashSet<string> RemovedDestiantions) FindChanges(IEnumerable<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
         {
             var oldList = new List<string>();
             var newList = new List<string>();
