@@ -7,6 +7,7 @@ using Jint.Native.Function;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Esprima.Ast;
+using Jint.Runtime;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -20,26 +21,37 @@ namespace Raven.Server.Documents.Indexes.Static
             _resolver = resolver;
         }
         private readonly JsValue[] _oneItemArray = new JsValue[1];
+        private readonly JsValue[] _threeItemsArray = new JsValue[3];
         private JintPreventResolvingTasksReferenceResolver _resolver;
 
         public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
         {
             try
             {
-                //TODO: 1. we need to create an array of the items and pass it once to the reduce function.
-                //TODO: 2. we need to decide if we want to pass the actual key to the reduce function as it is tricky.
+                var map = Engine.Object.Construct(Arguments.Empty);
                 foreach (var item in items)
                 {
                     if (JavaScriptIndexUtils.GetValue(Engine, item, out JsValue jsItem, true) == false)
                         continue;
-                    _oneItemArray[0] = jsItem;
-                    jsItem = Reduce.Call(JsValue.Null, _oneItemArray);
+                    _threeItemsArray[0] = map;
+                    _threeItemsArray[1] = jsItem;
+                    _threeItemsArray[2] = Key;
+                    Engine.Invoke("groupItemsByKey", JsValue.Null, _threeItemsArray);
+                }
+
+                foreach (var (name, prop) in map.GetOwnProperties())
+                {
+                    _oneItemArray[0] = prop.Value;
+                    var jsItem = Reduce.Call(JsValue.Null, _oneItemArray);
                     yield return jsItem.AsObject();
                 }
             }
             finally
             {
                 _oneItemArray[0] = null;
+                _threeItemsArray[0] = null;
+                _threeItemsArray[1] = null;
+                _threeItemsArray[2] = null;
             }
         }
 
