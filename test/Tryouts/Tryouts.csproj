@@ -28,11 +28,6 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Lambda2Js.Signed.Custom">
-      <HintPath>..\..\libs\Lambda2Js.Signed.Custom.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 </Project>
