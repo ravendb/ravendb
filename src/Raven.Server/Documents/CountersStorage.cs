@@ -12,11 +12,14 @@ using Sparrow.Binary;
 using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents
 {
     public unsafe class CountersStorage
     {
+        private const int DbIdAsBase64Size = 22;
+
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
 
@@ -39,7 +42,7 @@ namespace Raven.Server.Documents
             Name = 1, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
             Etag = 2,
             Value = 3,
-            SourceEtag = 4,
+            ChangeVector = 4,
             TransactionMarker = 5
         }
 
@@ -52,12 +55,13 @@ namespace Raven.Server.Documents
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)CountersTable.CounterKey,
-                Count = 1
+                Count = 1,
             });
             CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)CountersTable.Etag,
-                Name = CountersEtagSlice
+                Name = CountersEtagSlice,
+                IsGlobal = true
             });
         }
 
@@ -84,7 +88,7 @@ namespace Raven.Server.Documents
         private static ReplicationBatchItem CreateReplicationBatchItem(DocumentsOperationContext context, Table.TableValueHolder result)
         {
             var p = result.Reader.Read((int)CountersTable.CounterKey, out var size);
-            Debug.Assert(size > sizeof(Guid) + 2/* record separators */);
+            Debug.Assert(size > DbIdAsBase64Size + 2/* record separators */);
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
             {
@@ -92,7 +96,7 @@ namespace Raven.Server.Documents
                     break;
             }
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = context.AllocateStringValue(null, p + sizeOfDocId + 1, size - (sizeOfDocId + 1) - sizeof(Guid) - 1);
+            var name = context.AllocateStringValue(null, p + sizeOfDocId + 1, size - (sizeOfDocId + 1) - DbIdAsBase64Size - 1);
 
             return new ReplicationBatchItem
             {
@@ -100,14 +104,13 @@ namespace Raven.Server.Documents
                 Id = doc,
                 Etag = TableValueToEtag((int)CountersTable.Etag, ref result.Reader),
                 Name = name,
-                SourceEtag = TableValueToLong((int)CountersTable.SourceEtag, ref result.Reader),
+                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref result.Reader),
                 Value = TableValueToLong((int)CountersTable.Value, ref result.Reader),
                 TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(ReplicationBatchItem.TransactionMarker), ref result.Reader),
-                DbId = *(Guid*)(p + size - sizeof(Guid))
             };
         }
 
-        public void PutCounter(DocumentsOperationContext context, string documentId, string name, Guid dbId, long sourceEtag, long value)
+        public void PutCounter(DocumentsOperationContext context, string documentId, string name, string changeVector, long value)
         {
             if (context.Transaction == null)
             {
@@ -116,16 +119,16 @@ namespace Raven.Server.Documents
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            using (GetCounterKey(context, documentId, name, dbId, out var counterKey))
+            using (GetCounterKey(context, documentId, name, changeVector, out var counterKey))
             {
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice nameSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     if (table.ReadByKey(counterKey, out var existing))
                     {
-                        var existingSourceEtag = *(long*)existing.Read((int)CountersTable.SourceEtag, out var size);
-                        Debug.Assert(size == sizeof(long));
-                        if (existingSourceEtag >= sourceEtag)
+                        var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
+
+                        if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
                             return;
                     }
 
@@ -141,14 +144,17 @@ namespace Raven.Server.Documents
                     }
 
                     var etag = _documentsStorage.GenerateNextEtag();
-                    tvb.Add(counterKey);
-                    tvb.Add(nameSlice);
-                    tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(value); 
-                    tvb.Add(sourceEtag);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    using (Slice.From(context.Allocator, changeVector, out var cv))
+                    {
+                        tvb.Add(counterKey);
+                        tvb.Add(nameSlice);
+                        tvb.Add(Bits.SwapBytes(etag));
+                        tvb.Add(value);
+                        tvb.Add(cv);
+                        tvb.Add(context.TransactionMarkerOffset);
 
-                    table.Set(tvb);
+                        table.Set(tvb);
+                    }
                 }
             }
         }
@@ -162,7 +168,7 @@ namespace Raven.Server.Documents
             }
             
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            using (GetCounterKey(context, documentId, name, context.Environment.DbId, out var counterKey))
+            using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
                 long prev = 0;
                 if (table.ReadByKey(counterKey, out var existing))
@@ -182,15 +188,18 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                var etag = _documentsStorage.GenerateNextEtag();
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty);
+
+                using (Slice.From(context.Allocator, result.ChangeVector, out var cv))
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice nameSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    var etag = _documentsStorage.GenerateNextEtag();
                     tvb.Add(counterKey);
                     tvb.Add(nameSlice);
                     tvb.Add(Bits.SwapBytes(etag));
                     tvb.Add(prev + value); //inc
-                    tvb.Add(etag); // source etag
+                    tvb.Add(cv); 
                     tvb.Add(context.TransactionMarkerOffset);
 
                     table.Set(tvb);
@@ -210,7 +219,7 @@ namespace Raven.Server.Documents
                     if (take-- <= 0)
                         break;
 
-                    var currentScope = ExtractCounterName(context, result.Key, key, out var current, out var dbId);
+                    var currentScope = ExtractCounterName(context, result.Key, key, out var current);
 
                     if (prev.HasValue && prev.Match(current))
                     {
@@ -247,52 +256,54 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<(Guid DbId, long Value)> GetCounterValues(DocumentsOperationContext context, string docId, string name)
+        public IEnumerable<(string ChangeVector, long Value)> GetCounterValues(DocumentsOperationContext context, string docId, string name)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, docId, name, out var keyPerfix))
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
                 {
-                    (Guid, long) val = ExtractDbIdAndValue(result);
+                    (string, long) val = ExtractDbIdAndValue(result);
                     yield return val;
                 }
             }
         }
 
-        private static (Guid DbId, long Value) ExtractDbIdAndValue((Slice Key, Table.TableValueHolder Value) result)
+        private static (string ChangeVector , long Value) ExtractDbIdAndValue((Slice Key, Table.TableValueHolder Value) result)
         {
             var counterKey = result.Value.Reader.Read((int)CountersTable.CounterKey, out var size);
-            Debug.Assert(size > sizeof(Guid));
-            Guid* pDbId = (Guid*)(counterKey + size - sizeof(Guid));
+            Debug.Assert(size > DbIdAsBase64Size);
             var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out size);
             Debug.Assert(size == sizeof(long));
-            return (*pDbId, *(long*)pCounterDbValue);
+            var changeVector = result.Value.Reader.Read((int)CountersTable.ChangeVector, out size);
+            
+            return (Encoding.UTF8.GetString(changeVector, size), *(long*)pCounterDbValue);
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractCounterName(DocumentsOperationContext context, Slice counterKey, Slice documentIdPrefix, out ByteString current, out Guid dbId)
+        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractCounterName(DocumentsOperationContext context, Slice counterKey, Slice documentIdPrefix, out ByteString current)
         {
             var scope = context.Allocator.FromPtr(counterKey.Content.Ptr + documentIdPrefix.Size,
-                counterKey.Size - documentIdPrefix.Size - sizeof(Guid) - 1, /* record separator*/
+                counterKey.Size - documentIdPrefix.Size - DbIdAsBase64Size - 1, /* record separator*/
                 ByteStringType.Immutable,
                 out current
             );
 
-            dbId = *(Guid*)(counterKey.Content.Ptr + counterKey.Size - sizeof(Guid));
-
             return scope;
         }
 
-        public ByteStringContext.InternalScope GetCounterKey(DocumentsOperationContext context, string documentId, string name, Guid dbId, out Slice partialKeySlice)
+        public ByteStringContext.InternalScope GetCounterKey(DocumentsOperationContext context, string documentId, string name, string changeVector, out Slice partialKeySlice)
         {
+            Debug.Assert(changeVector.Length >= DbIdAsBase64Size);
+
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out var docIdLower, out _))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out var nameLower, out _))
+            using (Slice.From(context.Allocator, changeVector, out var cv))
             {
                 var scope = context.Allocator.Allocate(docIdLower.Size
                                                        + 1 // record separator
                                                        + nameLower.Size
                                                        + 1 // record separator
-                                                       + sizeof(Guid),
+                                                       + DbIdAsBase64Size, // db id
                                                        out ByteString buffer);
 
                 docIdLower.CopyTo(buffer.Ptr);
@@ -300,7 +311,7 @@ namespace Raven.Server.Documents
                 byte* dest = buffer.Ptr + docIdLower.Size + 1;
                 nameLower.CopyTo(dest);
                 dest[nameLower.Size] = SpecialChars.RecordSeparator;
-                Memory.Copy(dest + nameLower.Size + 1, (byte*)&dbId, sizeof(Guid));
+                cv.CopyTo(cv.Size - DbIdAsBase64Size, dest, nameLower.Size + 1, DbIdAsBase64Size);
 
                 partialKeySlice = new Slice(buffer);
 
