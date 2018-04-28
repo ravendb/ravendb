@@ -630,8 +630,6 @@ namespace Raven.Server.Documents.Replication
 
             public long CounterValue;
             public string CounterName;
-            public long CounterEtag;
-            public Guid CounterDbId;
 
             #endregion
 
@@ -766,8 +764,6 @@ namespace Raven.Server.Documents.Replication
                     item.CounterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
                         
                     item.CounterValue = *(long*)ReadExactly(sizeof(long));
-                    item.CounterDbId = *(Guid*)ReadExactly(sizeof(Guid));
-                    item.CounterEtag = *(long*)ReadExactly(sizeof(long));
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                 {
@@ -1055,7 +1051,7 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
                             {
                                 database.DocumentsStorage.CountersStorage.PutCounter(context,
-                                    item.Id, item.CounterName, item.CounterDbId, item.CounterEtag,
+                                    item.Id, item.CounterName, item.ChangeVector,
                                     item.CounterValue);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)

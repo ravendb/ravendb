@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Replication
         public static ChangeVectorEntry[] ToChangeVector(this string changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
-                return new ChangeVectorEntry[0];
+                return Array.Empty<ChangeVectorEntry>();
 
             var list = new List<ChangeVectorEntry>();
             var start = 0;

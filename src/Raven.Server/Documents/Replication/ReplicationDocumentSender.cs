@@ -498,13 +498,13 @@ namespace Raven.Server.Documents.Replication
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
             {
-                WriteCounterToServer(item);
+                WriteCounterToServer(context, item);
                 stats.RecordCounterOutput();
                 return;
             }
             if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
             {
-                WriteCounterTombstoneToServer(item);
+                WriteCounterTombstoneToServer(context, item);
                 stats.RecordCounterOutput();
                 return;
             }
@@ -781,20 +781,20 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteCounterToServer(ReplicationBatchItem item)
+        private unsafe void WriteCounterToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {
+            using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
             fixed (byte* pTemp = _tempBuffer)
             {
-                var requiredSize = sizeof(byte) + // type
-                                   sizeof(int) + // change vector size, always 0
-                                   sizeof(short) + // transaction marker
-                                   sizeof(int) + // size of doc id
-                                   item.Id.Size +
-                                   sizeof(int) + // size of name
-                                   item.Name.Size +
-                                   sizeof(long) + // value
-                                   sizeof(Guid) + // dbid
-                                   sizeof(long); // source etag
+                    var requiredSize = sizeof(byte) + // type
+                                       sizeof(int) + // change vector size
+                                       cv.Size + // change vector
+                                       sizeof(short) + // transaction marker
+                                       sizeof(int) + // size of doc id
+                                       item.Id.Size +
+                                       sizeof(int) + // size of name
+                                       item.Name.Size +
+                                       sizeof(long); // value
 
                 if (requiredSize > _tempBuffer.Length)
                     ThrowTooManyChangeVectorEntries(item);
@@ -802,8 +802,11 @@ namespace Raven.Server.Documents.Replication
                 var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
 
-                *(int*)(pTemp + tempBufferPos) = 0;
+                *(int*)(pTemp + tempBufferPos) = cv.Size;
                 tempBufferPos += sizeof(int);
+
+                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                tempBufferPos += cv.Size;
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -821,22 +824,18 @@ namespace Raven.Server.Documents.Replication
                 *(long*)(pTemp + tempBufferPos) = item.Value;
                 tempBufferPos += sizeof(long);
 
-                *(Guid*)(pTemp + tempBufferPos) = item.DbId;
-                tempBufferPos += sizeof(Guid);
-
-                *(long*)(pTemp + tempBufferPos) = item.SourceEtag;
-                tempBufferPos += sizeof(long);
-
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }
 
-        private unsafe void WriteCounterTombstoneToServer(ReplicationBatchItem item)
+        private unsafe void WriteCounterTombstoneToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {
+            using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
             fixed (byte* pTemp = _tempBuffer)
             {
                 var requiredSize = sizeof(byte) + // type
-                                   sizeof(int) + // change vector size, always 0
+                                   sizeof(int) + // change vector size
+                                   cv.Size + // change vector size
                                    sizeof(short) + // transaction marker
                                    sizeof(int) + // size of tombstone key
                                    item.Id.Size +
@@ -848,8 +847,11 @@ namespace Raven.Server.Documents.Replication
                 var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
 
-                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
+                *(int*)(pTemp + tempBufferPos) = cv.Size;
                 tempBufferPos += sizeof(int);
+
+                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                tempBufferPos += cv.Size;
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);

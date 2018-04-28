@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -13,62 +15,62 @@ namespace SlowTests.Client.Counters
 {
     public class CountersCrudMultipuleNodes : ClusterTestBase
     {
-        private const string DocId = "users/1-A";
-
         [Fact]
         public async Task IncrementCounter()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
-            var db = await CreateDatabaseInCluster("MainDB", 3, leader.WebUrl);
+            var dbName = GetDatabaseName();
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
 
-            var serverNodes = db.Servers.Select(s => new ServerNode
+            var stores = db.Servers.Select(s => new DocumentStore
             {
-                ClusterTag = s.ServerStore.NodeTag,
-                Database = "MainDB",
-                Url = s.WebUrl
-            }).ToList();
-
-            var conventions = new DocumentConventions
-            {
-                DisableTopologyUpdates = true
-            };
-
-            using (var leaderStore = new DocumentStore
-            {
-                Database = "MainDB",
-                Urls = new[] { leader.WebUrl },
-                Conventions = conventions
-            }.Initialize())        
-            using (var session = leaderStore.OpenSession())
-            {
-                session.Store(new User { Name = "Aviv" });
-                session.SaveChanges();
-            }            
-
-            foreach (var node in serverNodes)
-            {
-                using (var store = new DocumentStore
+                Database = dbName,
+                Urls = new[] { s.WebUrl },
+                Conventions = new DocumentConventions
                 {
-                    Database = node.Database,
-                    Urls = new[] { node.Url },
-                    Conventions = conventions
-                }.Initialize())
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            .ToList();
+
+            try
+            {
+                using (var s = stores[0].OpenSession())
                 {
-                    store.Operations.Send(new IncrementCounterOperation(DocId, "likes", 10));
+                    s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    s.Store(new User { Name = "Aviv" }, "users/1");
+                    s.SaveChanges();
+                }
+                var tasks = new List<Task>();
+                foreach (var store in stores)
+                {
+                    var task = store.Operations.SendAsync(new IncrementCounterOperation("users/1", "likes", 10));
+                    tasks.Add(task);
+                }
+
+                Task.WaitAll(tasks.ToArray());
+
+                foreach (var store in stores)
+                {
+                    long? val = null;
+                    for (int i = 0; i < 100; i++)
+                    {
+                        val = store.Operations.Send(new GetCounterValueOperation("users/1", "likes"));
+                        if (val == 30)
+                            break;
+                        Thread.Sleep(50);
+                    }
+                    Assert.Equal(30, val);
+
                 }
             }
-
-            using (var leaderStore = new DocumentStore
+            finally
             {
-                Database = "MainDB",
-                Urls = new[] { leader.WebUrl },
-                Conventions = conventions
-            }.Initialize())
-            {
-                var val = leaderStore.Operations.Send(new GetCounterValueOperation(DocId, "likes"));
-                Assert.Equal(30, val);
+                foreach (var item in stores)
+                {
+                    item.Dispose();
+                }
             }
-
         }
     }
 }

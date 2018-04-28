@@ -34,9 +34,6 @@ namespace Raven.Server.Documents.Replication
         #region Counter
 
         public long Value;
-        public Guid DbId;
-        public long SourceEtag;
-
 
         #endregion
 

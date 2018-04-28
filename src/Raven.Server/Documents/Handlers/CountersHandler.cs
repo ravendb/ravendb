@@ -208,14 +208,14 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartArray();
                     var first = true;
 
-                    foreach (var (db, val) in values)
+                    foreach (var (cv, val) in values)
                     {
                         if (first == false)
                             writer.WriteComma();
                         first = false;
                         writer.WriteStartObject();
-                        writer.WritePropertyName("DbId");
-                        writer.WriteString(db.AsChangeVectorDbId());
+                        writer.WritePropertyName("ChangeVector");
+                        writer.WriteString(cv);
                         writer.WriteComma();
                         writer.WritePropertyName("Value");
                         writer.WriteInteger(val);
