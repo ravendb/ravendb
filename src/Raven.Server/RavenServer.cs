@@ -252,7 +252,7 @@ namespace Raven.Server
 
         private async Task AssertServerCanContactItselfWhenAuthIsOn(X509Certificate2 certificateCertificate)
         {
-            var url = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrls[0];
+            var url = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : WebUrl;
 
             try
             {
