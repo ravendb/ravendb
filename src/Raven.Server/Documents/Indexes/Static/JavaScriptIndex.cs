@@ -185,6 +185,18 @@ var globalDefinition =
     reduce: null
 }
 
+function groupItemsByKey(data, item, lambda) {
+
+    var key = lambda(item);
+    var current = data[key];
+    if(!current)
+    {
+        current = {key: key, values: [] };
+        data[key] = current;
+    }
+    current.values.push(current);
+}
+
 function map(name, lambda) {
 
     var map = {

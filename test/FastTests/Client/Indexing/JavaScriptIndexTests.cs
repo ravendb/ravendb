@@ -324,7 +324,11 @@ map('Users', function (u){
                             @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                             @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                         },
-                    Reduce = @"groupBy(function(x) { return x.Name;}).aggregate((key,values) => {return {Name: key,Count: values.reduce((total, val) => val.Count + total,0)};})",
+                    Reduce = @"groupBy( x =>  x.Name )
+                                .aggregate(g => {return {
+                                    Name: g.key,
+                                    Count: g.values.reduce((total, val) => val.Count + total,0)
+                               };})",
                     Type = IndexType.JavaScriptMapReduce,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
