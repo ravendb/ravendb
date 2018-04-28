@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            if (_index.Type == IndexType.MapReduce)
+            if (_index.Type == IndexType.MapReduce || _index.Type == IndexType.JavaScriptMapReduce)
             {
                 var mapReduceIndex = (MapReduceIndex)_index;
                 if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)

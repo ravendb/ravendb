@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     public sealed class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
     {
         private readonly bool _isMultiMap;
-        private PropertyAccessor _propertyAccessor;
+        private IPropertyAccessor _propertyAccessor;
 
         public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool reduceOutput = false)
             : base(fields, reduceOutput)
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var boostedValue = document as BoostedValue;
             var documentToProcess = boostedValue == null ? document : boostedValue.Value;
 
-            PropertyAccessor accessor;
+            IPropertyAccessor accessor;
 
             if (_isMultiMap == false)
                 accessor = _propertyAccessor ?? (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType()));
@@ -39,9 +39,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var reduceResult = _reduceOutput ? new DynamicJsonValue() : null;
 
-            foreach (var property in accessor.PropertiesInOrder)
+            foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
             {
-                var value = property.Value.GetValue(documentToProcess);
+                var value = property.Value;
 
                 IndexField field;
 
