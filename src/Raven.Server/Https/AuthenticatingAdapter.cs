@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Pipelines;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security.Authentication;
@@ -7,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 using Sparrow.Logging;
 
 namespace Raven.Server.Https
@@ -18,12 +18,12 @@ namespace Raven.Server.Https
 
         private readonly RavenServer _server;
         private readonly HttpsConnectionAdapter _httpsConnectionAdapter;
-        private static readonly Func<RawStream, IPipeReader> GetInput;
+        private static readonly Func<RawStream, PipeReader> GetInput;
 
         static AuthenticatingAdapter()
         {
             var field = typeof(RawStream).GetField("_input", BindingFlags.Instance | BindingFlags.NonPublic);
-            var getter = new DynamicMethod("GetInput", typeof(IPipeReader), new[]
+            var getter = new DynamicMethod("GetInput", typeof(PipeReader), new[]
             {
                 typeof(RawStream),
             });
@@ -32,8 +32,8 @@ namespace Raven.Server.Https
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, field);
             ilGenerator.Emit(OpCodes.Ret);
-            GetInput = (Func<RawStream, IPipeReader>)getter.CreateDelegate(
-                typeof(Func<RawStream, IPipeReader>));
+            GetInput = (Func<RawStream, PipeReader>)getter.CreateDelegate(
+                typeof(Func<RawStream, PipeReader>));
         }
 
         public AuthenticatingAdapter(RavenServer server, HttpsConnectionAdapter httpsConnectionAdapter)
@@ -69,9 +69,9 @@ namespace Raven.Server.Https
                 var result = await input.ReadAsync();
                 try
                 {
-                    if (result.Buffer.First.TryGetArray(out var bytes) && bytes.Count > 0)
+                    if (result.Buffer.First.IsEmpty == false)
                     {
-                        var b = bytes.Array[bytes.Offset];
+                        var b = result.Buffer.First.Span[0];
                         if (b >= 'A' && b <= 'Z')
                         {
                             // this is a good indication that we have been connected using HTTP, instead of HTTPS
@@ -88,7 +88,7 @@ namespace Raven.Server.Https
                 }
                 finally
                 {
-                    input.Advance(result.Buffer.Start, result.Buffer.Start);
+                    input.AdvanceTo(result.Buffer.Start, result.Buffer.Start);
                 }
             }
 
@@ -99,7 +99,7 @@ namespace Raven.Server.Https
                 {
                     context.Features.Set<IHttpAuthenticationFeature>(new RavenServer.AuthenticateConnection
                     {
-                        WrongProtocolMessage = "RavenDB requires clients to connect using TLS 1.2, but the client used: '" + c.SslProtocol +"'."
+                        WrongProtocolMessage = "RavenDB requires clients to connect using TLS 1.2, but the client used: '" + c.SslProtocol + "'."
                     });
 
                     return c;
@@ -109,7 +109,7 @@ namespace Raven.Server.Https
             var tls = context.Features.Get<ITlsConnectionFeature>();
             var certificate = tls?.ClientCertificate;
             var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
-        
+
             // build the token
             context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
 

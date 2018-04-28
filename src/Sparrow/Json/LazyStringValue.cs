@@ -247,7 +247,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator byte[](LazyStringValue self)
+        public static implicit operator byte[] (LazyStringValue self)
         {
             var valueAsString = (string)self;
             return Convert.FromBase64String(valueAsString);
@@ -347,6 +347,30 @@ namespace Sparrow.Json
             IsDisposed = true;
         }
 
+        public bool Contains(char value)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (_string != null)
+                return _string.Contains(value);
+
+            return ToString().Contains(value);
+        }
+
+#if NETCOREAPP
+        public bool Contains(char value, StringComparison comparisonType)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (_string != null)
+                return _string.Contains(value, comparisonType);
+
+            return ToString().Contains(value, comparisonType);
+        }
+#endif
+
         public bool Contains(string value)
         {
             if (IsDisposed)
@@ -357,6 +381,19 @@ namespace Sparrow.Json
 
             return ToString().Contains(value);
         }
+
+#if NETCOREAPP
+        public bool Contains(string value, StringComparison comparisonType)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (_string != null)
+                return _string.Contains(value, comparisonType);
+
+            return ToString().Contains(value, comparisonType);
+        }
+#endif
 
         public bool EndsWith(string value)
         {
@@ -410,6 +447,19 @@ namespace Sparrow.Json
         {
             return IndexOf(value, 0, Length);
         }
+
+#if NETCOREAPP
+        public int IndexOf(char value, StringComparison comparisonType)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (_string != null)
+                return _string.IndexOf(value, comparisonType);
+
+            return ToString().IndexOf(value, comparisonType);
+        }
+#endif
 
         public int IndexOf(char value, int startIndex)
         {
@@ -906,7 +956,7 @@ namespace Sparrow.Json
                     return GetReversedStringFromBuffer(buffer);
                 }
             }
-            
+
             return GetReversedStringFromBuffer(buffer);
         }
 
@@ -943,6 +993,6 @@ namespace Sparrow.Json
             return b < 32 || (b >= 127 && b <= 159);
         }
 
-                
+
     }
 }

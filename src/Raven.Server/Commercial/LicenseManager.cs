@@ -974,7 +974,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
+                Raven.Server.Extensions.MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
             }
             catch (Exception e)
             {
