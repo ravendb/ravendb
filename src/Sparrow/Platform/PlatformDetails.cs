@@ -36,11 +36,11 @@ namespace Sparrow.Platform
 
         private static bool IsWindows8OrNewer()
         {
-            var winString = "Windows ";
-            var os = RuntimeInformation.OSDescription;
-
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
                 return false;
+
+            const string winString = "Windows ";
+            var os = RuntimeInformation.OSDescription;
 
             var idx = os.IndexOf(winString, StringComparison.OrdinalIgnoreCase);
             if (idx < 0)
