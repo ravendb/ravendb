@@ -16,12 +16,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly Dictionary<string, Accessor> Properties = new Dictionary<string, Accessor>();
 
-        private readonly List<KeyValuePair<string, Accessor>> propertiesInOrder =
+        private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder =
             new List<KeyValuePair<string, Accessor>>();
 
         public IEnumerable<(string Key, object Value, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
-            foreach ((var key, var value) in propertiesInOrder)
+            foreach ((var key, var value) in _propertiesInOrder)
             {
                 yield return (key, value.GetValue(target), value.IsGroupByField);
             }
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     getMethod.IsGroupByField = true;
 
                 Properties.Add(prop.Name, getMethod);
-                propertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
+                _propertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
             }
         }
 
@@ -151,8 +151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public IEnumerable<(string Key, object Value, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
-            var oi = target as ObjectInstance;
-            if(oi == null)
+            if(!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             foreach (var property in oi.GetOwnProperties())
             {
@@ -162,8 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public object GetValue(string name, object target)
         {
-            var oi = target as ObjectInstance;
-            if (oi == null)
+            if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetValue is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             if(oi.HasOwnProperty(name) == false)
                 throw new MissingFieldException($"The target for 'JintPropertyAccessor.GetValue' doesn't contain the property {name}.");
