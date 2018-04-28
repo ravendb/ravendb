@@ -13,6 +13,7 @@ using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
+using Raven.Client.Documents.Changes;
 
 namespace Raven.Server.Documents
 {
@@ -110,7 +111,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void PutCounter(DocumentsOperationContext context, string documentId, string name, string changeVector, long value)
+        public void PutCounterFromReplication(DocumentsOperationContext context, string documentId, string name, string changeVector, long value)
         {
             if (context.Transaction == null)
             {
@@ -155,6 +156,14 @@ namespace Raven.Server.Documents
 
                         table.Set(tvb);
                     }
+
+                    context.Transaction.AddAfterCommitNotification(new DocumentChange
+                    {
+                        ChangeVector = changeVector,
+                        Id = documentId,
+                        CounterName = name,
+                        Type = DocumentChangeTypes.Counter,
+                    });
                 }
             }
         }
@@ -204,6 +213,14 @@ namespace Raven.Server.Documents
 
                     table.Set(tvb);
                 }
+
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    ChangeVector = result.ChangeVector,
+                    Id = documentId,
+                    CounterName = name,
+                    Type = DocumentChangeTypes.Counter,
+                });
             }
         }
 
