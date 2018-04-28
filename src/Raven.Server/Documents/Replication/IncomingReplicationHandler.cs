@@ -1050,7 +1050,7 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
                             {
-                                database.DocumentsStorage.CountersStorage.PutCounter(context,
+                                database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context,
                                     item.Id, item.CounterName, item.ChangeVector,
                                     item.CounterValue);
                             }

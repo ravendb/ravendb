@@ -23,6 +23,11 @@ namespace Raven.Client.Documents.Changes
         public string Id { get; set; }
 
         /// <summary>
+        /// The name of the counter  being modified
+        /// </summary>
+        public string CounterName { get; set; }
+
+        /// <summary>
         /// Document collection name.
         /// </summary>
         public string CollectionName { get; set; }
@@ -87,6 +92,8 @@ namespace Raven.Client.Documents.Changes
         BulkInsertError = 16,
         DeleteOnTombstoneReplication = 32,
         Conflict = 64,
+        Counter = 128,
+
         Common = Put | Delete
     }
 
