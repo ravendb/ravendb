@@ -119,11 +119,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 list.Add(operation);
             }
-            var reduceObj = definitions.GetProperty(ReduceProperty).Value.AsObject();
-            var groupByKey = reduceObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
-            var reduce = reduceObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-            if (reduce != null)
+
+            var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
+            if (reduceObj != null && reduceObj.IsObject())
             {
+                var reduceAsObj = reduceObj.AsObject();
+                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
                 ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, _resolver);
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
@@ -191,10 +193,10 @@ function groupItemsByKey(data, item, lambda) {
     var current = data[key];
     if(!current)
     {
-        current = {key: key, values: [] };
+        current = { key: key, values: [] };
         data[key] = current;
     }
-    current.values.push(current);
+    current.values.push(item);
 }
 
 function map(name, lambda) {

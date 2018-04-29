@@ -36,7 +36,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateKeyField(key));
                 newFields++;
             }
-           
+
+            if (_reduceOutput)
+            {
+                var reduceResult = JsBlittableBridge.Translate(indexContext,
+                    documentToProcess.Engine,
+                    documentToProcess);
+
+                instance.Add(GetReduceResultValueField(reduceResult));
+                newFields++;
+            }
+
             foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 _fields.TryGetValue(property, out var field);

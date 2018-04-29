@@ -41,9 +41,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 foreach (var (name, prop) in map.GetOwnProperties())
                 {
+                    //_oneItemArray[0] = prop.Value.AsObject().Get("key");
+                    //var key = Engine.Json.Stringify(JsValue.Null, _oneItemArray);
                     _oneItemArray[0] = prop.Value;
-                    var jsItem = Reduce.Call(JsValue.Null, _oneItemArray);
-                    yield return jsItem.AsObject();
+                    var jsItem = Reduce.Call(JsValue.Null, _oneItemArray).AsObject();
+                    yield return jsItem;
                 }
             }
             finally
