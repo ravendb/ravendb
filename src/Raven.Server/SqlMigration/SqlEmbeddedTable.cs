@@ -29,7 +29,7 @@ namespace Raven.Server.SqlMigration
 
         public override SqlReader GetReader()
         {
-            if (Reader != null)
+            if (Reader != null && Reader.Disposed == false)
                 return Reader;
 
             var query = InitialQuery + SqlQueries.OrderByColumns(GetColumnsReferencingParentTable());
@@ -42,7 +42,7 @@ namespace Raven.Server.SqlMigration
         {
             var query = SqlQueries.SelectFromQueryWhere(InitialQuery, GetColumnsReferencingParentTable(), values) + SqlQueries.OrderByColumns(GetColumnsReferencingParentTable());
 
-            if (Reader != null)
+            if (Reader != null && Reader.Disposed == false)
             {
                 Reader.SetCommand(query);
                 return Reader;
