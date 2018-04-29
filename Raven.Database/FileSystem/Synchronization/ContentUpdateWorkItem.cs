@@ -165,7 +165,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (log.IsDebugEnabled)
                 log.Debug(
                 "Synchronizing a file '{0}' (ETag {1}) to {2} by using multipart request. Need list length is {3}. Number of bytes that needs to be transfered is {4}",
-                FileName, FileETag, synchronizationServerClient, needList.Count, bytesToTransferCount);
+                FileName, FileETag, synchronizationServerClient.BaseUrl, needList.Count, bytesToTransferCount);
 
             return multipartRequest.PushChangesAsync(Cts.Token);
         }

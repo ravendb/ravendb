@@ -505,5 +505,14 @@ namespace Raven.Database.FileSystem.Controllers
 
             return result;
         }
+
+        [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/synchronization/resetDestinations")]
+        public async Task<HttpResponseMessage> ResetDestinations()
+        {
+            await SynchronizationTask.ResetDestinations().ConfigureAwait(false);
+
+            return GetEmptyMessage();
+        }
     }
 }

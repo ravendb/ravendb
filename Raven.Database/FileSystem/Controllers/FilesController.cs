@@ -25,6 +25,7 @@ using Raven.Database.Extensions;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Util;
+using Raven.Client.FileSystem;
 using Raven.Database.FileSystem.Bundles.Versioning;
 using Raven.Json.Linq;
 
@@ -118,6 +119,59 @@ namespace Raven.Database.FileSystem.Controllers
 
             return GetMessageWithObject(list)
                 .WithNoCache();
+        }
+
+        [HttpGet]
+        [RavenRoute("fs/{fileSystemName}/debug/files/count")]
+        public HttpResponseMessage Count()
+        {
+            int FileCountFromStats = 0;
+            int FileCount = 0;
+            int TombstoneCount = 0;
+            int RenameTombstoneCount = 0;
+            int DeletingCount = 0;
+            int DownloadingCount = 0;
+
+            Storage.Batch(accessor =>
+            {
+                FileCountFromStats = accessor.GetFileCount();
+
+                var fileHeaders = accessor.GetFilesAfter(Etag.Empty, int.MaxValue);
+
+                foreach (var file in fileHeaders)
+                {
+                    if (file.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+                    {
+                        if (file.Metadata.Keys.Contains(SynchronizationConstants.RavenRenameFile))
+                        {
+                            RenameTombstoneCount++;
+                        }
+                        else
+                        {
+                            TombstoneCount++;
+                        }
+
+                        continue;
+                    }
+
+                    FileCount++;
+
+                    if (file.FullPath.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
+                        DownloadingCount++;
+                    else if (file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
+                        DeletingCount++;
+                }
+            });
+
+            return GetMessageWithObject(new
+            {
+                FileCountFromStats = FileCountFromStats,
+                FileCount = FileCount,
+                TombstoneCount = TombstoneCount,
+                RenameTombstoneCount = RenameTombstoneCount,
+                DownloadingCount = DownloadingCount,
+                DeletingCount = DeletingCount
+            }).WithNoCache();
         }
 
         [HttpGet]
@@ -425,6 +479,9 @@ namespace Raven.Database.FileSystem.Controllers
                 return GetMessageWithString(string.Format("File '{0}' was not created due to illegal name length", name), HttpStatusCode.BadRequest);
             }
 
+            if (Log.IsDebugEnabled)
+                Log.Debug("Putting file '{0}'", name);
+
             var options = new FileActions.PutOperationOptions();
 
             long contentSize;
@@ -442,6 +499,9 @@ namespace Raven.Database.FileSystem.Controllers
             await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options).ConfigureAwait(false);
 
             SynchronizationTask.Context.NotifyAboutWork();
+
+            if (Log.IsDebugEnabled)
+                Log.Debug("File '{0}' has been put", name);
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }

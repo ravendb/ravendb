@@ -22,6 +22,7 @@ using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 using System.Diagnostics;
+using System.Threading;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 
@@ -92,7 +93,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (activeForDestination.TryAdd(fileName, syncDetails))
             {
                 if (Log.IsDebugEnabled)
-                    Log.Debug("File '{0}' with ETag {1} was added to an incoming active synchronization queue for a destination {2}",
+                    Log.Debug("File '{0}' with ETag {1} was added to an incoming active synchronization queue for a source {2}",
                           fileName,
                           sourceFileETag, sourceFileSystemInfo.Url);
             }
@@ -220,7 +221,8 @@ namespace Raven.Database.FileSystem.Synchronization
                         var result = Execute(true);
                         var synchronizations = result.Values.SelectMany(x => x.Result as IEnumerable<Task>);
 
-                        Task.WaitAny(synchronizations.ToArray()); // if any synchronization slot gets released try to schedule another synchronization 
+                        Task.WaitAll(synchronizations.ToArray());
+
                     }
                     catch (Exception e)
                     {
@@ -319,7 +321,9 @@ namespace Raven.Database.FileSystem.Synchronization
             RavenJObject localMetadata = GetLocalMetadata(fileName);
 
             NoSyncReason reason;
-            SynchronizationWorkItem work = synchronizationStrategy.DetermineWork(fileName, localMetadata, destinationMetadata, FileSystemUrl, out reason);
+            SynchronizationWorkItem work = synchronizationStrategy.DetermineWork(fileName, localMetadata, destinationMetadata, FileSystemUrl,
+                x => destinationClient.GetMetadataForAsync(x).Result,
+                out reason);
 
             if (work == null)
             {
@@ -422,9 +426,20 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             LogFilesInfo("There were {0} file(s) that needed synchronization because the previous one went wrong: {1}",
                          needSyncingAgain);
+            
+            var toSynchronization = GetFilesToSynchronization(synchronizationInfo.LastSourceFileEtag, NumberOfFilesToCheckForSynchronization);
+                
 
-            var filesToSynchronization = new HashSet<FileHeader>(GetFilesToSynchronization(synchronizationInfo.LastSourceFileEtag, NumberOfFilesToCheckForSynchronization),
-                                                                    FileHeaderNameEqualityComparer.Instance);
+            var filesToSynchronization = new HashSet<FileHeader>(FileHeaderNameEqualityComparer.Instance);
+
+            foreach (var item in toSynchronization)
+            {
+                if (filesToSynchronization.Add(item) == false)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"File '{item.FullPath}' already exists in fies to synchronization. Metadata {item.Metadata}");
+                }
+            }
 
             LogFilesInfo("There were {0} file(s) that needed synchronization because of greater ETag value: {1}",
                             filesToSynchronization);
@@ -482,7 +497,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 }
 
                 NoSyncReason reason;
-                var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
+                var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, x => destinationSyncClient.GetMetadataForAsync(x).Result,
+                    out reason);
 
                 if (work == null)
                 {
@@ -766,40 +782,65 @@ namespace Raven.Database.FileSystem.Synchronization
 
         private void CreateSyncingConfiguration(string fileName, Guid etag, string destinationFileSystemUrl, SynchronizationType synchronizationType)
         {
-            try
-            {
-                var name = RavenFileNameHelper.SyncNameForFile(fileName, destinationFileSystemUrl);
+            var name = RavenFileNameHelper.SyncNameForFile(fileName, destinationFileSystemUrl);
 
-                var details = new SynchronizationDetails
+            var details = new SynchronizationDetails
+            {
+                DestinationUrl = destinationFileSystemUrl,
+                FileName = fileName,
+                FileETag = etag,
+                Type = synchronizationType
+            };
+
+            var retries = 100;
+
+            while (retries-- > 0)
+            {
+                try
                 {
-                    DestinationUrl = destinationFileSystemUrl,
-                    FileName = fileName,
-                    FileETag = etag,
-                    Type = synchronizationType
-                };
+                    storage.Batch(accessor => accessor.SetConfig(name, JsonExtensions.ToJObject(details)));
+                    break;
+                }
+                catch (Exception e)
+                {
+                    if (retries > 0)
+                    {
+                        Thread.Sleep(10);
+                        continue;
+                    }
 
-                storage.Batch(accessor => accessor.SetConfig(name, JsonExtensions.ToJObject(details)));
-            }
-            catch (Exception e)
-            {
-                Log.WarnException(
-                    string.Format("Could not create syncing configurations for a file {0} and destination {1}", fileName, destinationFileSystemUrl),
-                    e);
+                    Log.WarnException(
+                        string.Format("Could not create syncing configurations for a file {0} and destination {1}", fileName, destinationFileSystemUrl),
+                        e);
+                }
             }
         }
 
         private void RemoveSyncingConfiguration(string fileName, string destination)
         {
-            try
+            var name = RavenFileNameHelper.SyncNameForFile(fileName, destination);
+
+            var retries = 100;
+
+            while (retries-- > 0)
             {
-                var name = RavenFileNameHelper.SyncNameForFile(fileName, destination);
-                storage.Batch(accessor => accessor.DeleteConfig(name));
-            }
-            catch (Exception e)
-            {
-                Log.WarnException(
-                    string.Format("Could not remove syncing configurations for a file {0} and a destination {1}", fileName, destination),
-                    e);
+                try
+                {
+                    storage.Batch(accessor => accessor.DeleteConfig(name));
+                    break;
+                }
+                catch (Exception e)
+                {
+                    if (retries > 0)
+                    {
+                        Thread.Sleep(10);
+                        continue;
+                    }
+
+                    Log.WarnException(
+                        string.Format("Could not remove syncing configurations for a file {0} and a destination {1}", fileName, destination),
+                        e);
+                }
             }
         }
 
@@ -927,6 +968,36 @@ namespace Raven.Database.FileSystem.Synchronization
                 RequestFactory = factory;
                 Conventions = conventions;
             }
+        }
+        
+        public async Task ResetDestinations()
+        {
+            var synchronizationDestinations = GetSynchronizationDestinations();
+
+            foreach (var destination in synchronizationDestinations)
+            {
+                var request = GetDestinationRequest(destination);
+
+                var client = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey,
+                    destination.Credentials, request.RequestFactory, request.Conventions);
+
+                while (true)
+                {
+                    var syncingConf = GetSyncingConfigurations(destination).ToList();
+
+                    if (syncingConf.Count == 0)
+                        break;
+
+                    foreach (var details in syncingConf)
+                    {
+                        RemoveSyncingConfiguration(details.FileName, destination.Url);
+                    }
+                }
+                
+                await client.IncrementLastETagAsync(storage.Id, FileSystemUrl, Etag.Empty, force: true).ConfigureAwait(false);
+            }
+
+            context.NotifyAboutWork();
         }
     }
 }

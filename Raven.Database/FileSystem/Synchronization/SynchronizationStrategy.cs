@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 using Raven.Database.Config;
@@ -10,11 +11,15 @@ using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationStrategy
     {
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
         private readonly SigGenerator sigGenerator;
 
         private readonly InMemoryRavenConfiguration configuration;
@@ -41,10 +46,20 @@ namespace Raven.Database.FileSystem.Synchronization
                 return false;
 
             if (file.IsFileBeingUploadedOrUploadHasBeenBroken())
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"File {file.FullPath} is being uploaded or upload has been broken (etag: {file.Etag})");
+
                 return false;
+            }
 
             if (ExistsRenameTombstone(file.FullPath, candidatesToSynchronization))
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"File {file.FullPath} has been filtered out due to ExistsRenameTombstone");
+
                 return false;
+            }
 
             if (file.FullPath.Contains("/revisions/"))
                 return false;
@@ -61,7 +76,9 @@ namespace Raven.Database.FileSystem.Synchronization
                     x.Metadata.Value<string>(SynchronizationConstants.RavenRenameFile) == name);
         }
 
-        public SynchronizationWorkItem DetermineWork(string file, RavenJObject localMetadata, RavenJObject destinationMetadata, string localServerUrl, out NoSyncReason reason)
+        public SynchronizationWorkItem DetermineWork(string file, RavenJObject localMetadata, RavenJObject destinationMetadata, string localServerUrl,
+                Func<string, RavenJObject> getDestinationMetadata,
+                out NoSyncReason reason)
         {
             reason = NoSyncReason.Unknown;
 
@@ -92,17 +109,23 @@ namespace Raven.Database.FileSystem.Synchronization
                     if (destinationMetadata != null)
                         return new RenameWorkItem(file, rename, localServerUrl, storage);
 
-                    return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator, configuration);
-                    // we have a rename tombstone but file does not exists on destination
-                }
+                    destinationMetadata = getDestinationMetadata(rename);
 
-                if (destinationMetadata == null)
+                    if (destinationMetadata == null)
+                    {
+                        // we have a rename tombstone but file does not exists on destination
+                        return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator, configuration);
+                    } 
+                }
+                else if (destinationMetadata == null)
                 {
                     reason = NoSyncReason.NoNeedToDeleteNonExistigFile;
                     return null;
                 }
-
-                return new DeleteWorkItem(file, localServerUrl, storage);
+                else
+                {
+                    return new DeleteWorkItem(file, localServerUrl, storage);
+                }
             }
 
             if (destinationMetadata != null && Historian.IsDirectChildOfCurrent(localMetadata, destinationMetadata))
@@ -115,7 +138,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (destinationMetadata != null && localMetadata.Value<string>("Content-MD5") == destinationMetadata.Value<string>("Content-MD5"))
             {
                 // check metadata to detect if any synchronization is needed
-                if (localMetadata.Keys.Except(new[] { Constants.MetadataEtagField, Constants.RavenLastModified, Constants.LastModified })
+                if (localMetadata.Keys.Except(MetadataToIgnore)
                                  .Any(key => !destinationMetadata.ContainsKey(key) || localMetadata[key] != destinationMetadata[key]))
                 {
                     return new MetadataUpdateWorkItem(file, localServerUrl, destinationMetadata, storage);
@@ -128,5 +151,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
             return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator, configuration);
         }
+
+        private static readonly string[] MetadataToIgnore = {Constants.MetadataEtagField, Constants.RavenLastModified, Constants.LastModified, Constants.RavenCreationDate, Constants.CreationDate};
     }
 }

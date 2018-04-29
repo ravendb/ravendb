@@ -452,7 +452,7 @@ namespace Raven.Client.FileSystem
         Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
         Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
         Task<SignatureManifest> GetRdcManifestAsync(string path);
-        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
+        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag, bool force = false);
     }
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation

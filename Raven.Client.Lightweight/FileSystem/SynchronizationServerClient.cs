@@ -298,11 +298,14 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag)
+        public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag, bool force = false)
         {
             var requestUriString =
                 string.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",
                     baseUrl, sourceServerId, sourceFileSystemUrl, sourceFileETag);
+
+            if (force)
+                requestUriString += "&force=true";
 
             using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
             {
