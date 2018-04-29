@@ -39,31 +39,36 @@ namespace Sparrow.Platform
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
                 return false;
 
-            const string winString = "Windows ";
-            var os = RuntimeInformation.OSDescription;
-
-            var idx = os.IndexOf(winString, StringComparison.OrdinalIgnoreCase);
-            if (idx < 0)
-                return false;
-
-            var ver = os.Substring(idx + winString.Length);
-
-            if (ver != null)
+            try
             {
-                // remove second occurance of '.' (win 10 might be 10.123.456)
-                var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
-                ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
+                const string winString = "Windows ";
+                var os = RuntimeInformation.OSDescription;
 
-                decimal output;
-                if (decimal.TryParse(ver, out output))
+                var idx = os.IndexOf(winString, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0)
+                    return false;
+
+                var ver = os.Substring(idx + winString.Length);
+
+                if (ver != null)
                 {
-                    return output >= 6.19M; // 6.2 is win8, 6.1 win7..
+                    // remove second occurance of '.' (win 10 might be 10.123.456)
+                    var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
+                    ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
+
+                    decimal output;
+                    if (decimal.TryParse(ver, out output))
+                    {
+                        return output >= 6.19M; // 6.2 is win8, 6.1 win7..
+                    }
                 }
+
+                return false;
             }
-
-            return false;
-
-
+            catch (DllNotFoundException)
+            {
+                return false;
+            }
         }
     }
 }
