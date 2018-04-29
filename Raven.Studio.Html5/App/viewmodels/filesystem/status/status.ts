@@ -3,6 +3,7 @@ import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changeSubscription = require('common/changeSubscription');
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
+import resetSynchronizationCommand = require("commands/filesystem/resetSynchronizationCommand");
 import activityItems = require("viewmodels/filesystem/status/activityItems");
 import getConfigurationNamesByPrefixCommand = require("commands/filesystem/getConfigurationsByPrefixCommand");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
@@ -103,6 +104,13 @@ class status extends viewModelBase {
         var fs = this.activeFilesystem();
         if (fs) {
             new synchronizeNowCommand(fs).execute();
+        }
+    }
+
+    resetSynchronization() {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            new resetSynchronizationCommand(fs).execute();
         }
     }
 
