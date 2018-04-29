@@ -13,6 +13,7 @@ namespace Raven.Server.SqlMigration
         private IDataReader _reader;
         private bool _executed;
         public static int RowsRead;
+        public bool Disposed => _reader.IsClosed;
 
         private static readonly List<SqlReader> AllReaders = new List<SqlReader>();
 
