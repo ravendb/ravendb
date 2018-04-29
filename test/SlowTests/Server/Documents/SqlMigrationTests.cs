@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents
             }
         }
 
-        [Fact(Skip = "RavenDB-9760")]
+        [Fact]
         public void CanMigrateSqlDatabase()
         {
             using (var store = GetDocumentStore())

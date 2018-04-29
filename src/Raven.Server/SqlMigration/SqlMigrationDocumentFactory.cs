@@ -19,7 +19,7 @@ namespace Raven.Server.SqlMigration
         public SqlMigrationDocument FromReader(SqlReader reader, SqlTable table, out Dictionary<string, byte[]> attachments, SqlDatabase.Validator validator = null)
         {
             _currentAttachments?.Clear();
-            var document =  FromReaderInternal(reader, table, validator);
+            var document = FromReaderInternal(reader, table, validator);
             attachments = _currentAttachments.ToDictionary(entry => entry.Key, entry => entry.Value);
             return document;
         }
@@ -89,7 +89,7 @@ namespace Raven.Server.SqlMigration
                 if (Options.BinaryToAttachment && reader.GetFieldType(i) == typeof(byte[]))
                 {
                     if (isNullOrEmpty == false)
-                        _currentAttachments.Add($"{columnName}_{_currentAttachments.Count}", (byte[]) value);
+                        _currentAttachments.Add($"{columnName}_{_currentAttachments.Count}", (byte[])value);
                 }
 
                 else
@@ -103,52 +103,57 @@ namespace Raven.Server.SqlMigration
 
             document.Id = id;
 
-            if (validator == null) 
-                SetEmbeddedDocuments(document, table);
+            if (validator != null)
+                return document;
 
+            SetEmbeddedDocuments(reader, document, table);
             return document;
         }
 
-        private void SetEmbeddedDocuments(SqlMigrationDocument document, SqlTable parentTable)
+        private void SetEmbeddedDocuments(SqlReader reader, SqlMigrationDocument document, SqlTable parentTable)
         {
+
             foreach (var childTable in parentTable.EmbeddedTables)
             {
-                using (var parentReader = parentTable.GetReader()) 
+                var parentValues = GetValuesFromColumns(reader, parentTable.PrimaryKeys); // values of referenced columns
+
+                var childColumns = childTable.GetColumnsReferencingParentTable(); // values of referencing columns
+
+                using (var childReader = GetChildReader(parentTable, childColumns, childTable, parentValues))
                 {
-                    var parentValues = GetValuesFromColumns(parentReader, parentTable.PrimaryKeys); // values of referenced columns
+                    if (childReader.HasValue() == false && childReader.Read() == false)
+                        continue;
 
-                    var childColumns = childTable.GetColumnsReferencingParentTable(); // values of referencing columns
+                    var continueLoop = false;
 
-                    using (var childReader = GetChildReader(parentTable, childColumns, childTable, parentValues))
+                    while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out var isBigger) == false)
                     {
-                        if (childReader.HasValue() == false && childReader.Read() == false)
+                        if (isBigger == false && childReader.Read())
                             continue;
 
-                        var continueLoop = false;
-
-                        while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out var isBigger) == false)
-                        {
-                            if (isBigger == false && childReader.Read()) continue;
-
-                            continueLoop = true; // If parent value is greater than child value => childReader move to next. Otherwise => parentReader move to next
-                            break;
-                        }
-
-                        if (continueLoop)
-                            continue;
-
-                        do
-                        {
-                            var innerDocument = FromReaderInternal(childReader, childTable);
-
-                            document.Append(childTable.NewName, innerDocument);
-
-                            if (childReader.Read() == false) break;
-
-                        } while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out _));
+                        continueLoop = true; // If parent value is greater than child value => childReader move to next. Otherwise => parentReader move to next
+                        break;
                     }
+
+                    if (continueLoop)
+                        continue;
+
+                    do
+                    {
+                        var innerDocument = FromReaderInternal(childReader, childTable);
+
+                        document.Append(childTable.NewName, innerDocument);
+
+                        if (childReader.Read() == false)
+                            break;
+                       
+
+                        
+
+                    } while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out _));
                 }
             }
+
         }
 
         private static SqlReader GetChildReader(SqlTable parentTable, List<string> childColumns, SqlEmbeddedTable childTable, List<string> parentValues)
@@ -166,7 +171,7 @@ namespace Raven.Server.SqlMigration
             var lst = new List<string>();
 
             foreach (var columnName in childColumnName)
-                    lst.Add(reader[columnName].ToString());
+                lst.Add(reader[columnName].ToString());
 
             return lst;
         }
@@ -181,7 +186,8 @@ namespace Raven.Server.SqlMigration
 
                 for (var j = 0; j < parentValues.Count; j++)
                 {
-                    if (parentValues[j] == childValues[i * parentValues.Count + j]) continue;
+                    if (parentValues[j] == childValues[i * parentValues.Count + j])
+                        continue;
 
                     if (IsSmallerThan(parentValues[j], childValues[i * parentValues.Count + j]))
                         continueLoop = true;
