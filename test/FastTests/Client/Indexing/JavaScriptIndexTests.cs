@@ -167,7 +167,6 @@ namespace FastTests.Client.Indexing
                         IsAvailable = true
                     });
                     session.SaveChanges();
-                    WaitForUserToContinueTheTest(store);
                     WaitForIndexing(store);
                     session.Query<User>("UsersAndProductsByNameAndCount").OfType<ReduceResults>().Single(x => x.Name == "Brendan Eich");
                 }
