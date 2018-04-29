@@ -222,13 +222,21 @@ namespace Raven.Server
 
                 if (Certificate.Certificate != null)
                 {
-                    AssertServerCanContactItselfWhenAuthIsOn(Certificate.Certificate)
-                        .IgnoreUnobservedExceptions()
-                        // here we wait a bit, just enough so for normal servers
-                        // we'll be successful, but not enough to hang the server
-                        // startup if there is some issue talking to the node because
-                        // of firewall, ssl issues, etc. 
-                        .Wait(250);
+                    try
+                    {
+                        AssertServerCanContactItselfWhenAuthIsOn(Certificate.Certificate)
+                            .IgnoreUnobservedExceptions()
+                            // here we wait a bit, just enough so for normal servers
+                            // we'll be successful, but not enough to hang the server
+                            // startup if there is some issue talking to the node because
+                            // of firewall, ssl issues, etc. 
+                            .Wait(250);
+                    }
+                    catch (Exception)
+                    {
+                        // the .Wait() can throw as well, so we'll ignore any
+                        // errors here, it all goes to the log anyway
+                    }
                 }
 
                 if (Logger.IsInfoEnabled)
