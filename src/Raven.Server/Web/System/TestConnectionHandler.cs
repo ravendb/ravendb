@@ -23,37 +23,63 @@ namespace Raven.Server.Web.System
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             url = UrlHelper.TryGetLeftPart(url);
-            DynamicJsonValue result;
+            DynamicJsonValue result = null;
+
+            Task<TcpConnectionInfo> connectionInfo = null;
 
             try
             {
-                var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
-                Task<TcpConnectionInfo> connectionInfo;
-                using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                try
                 {
-                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.Certificate.Certificate,
-                        cts.Token);
-                }
-                if (await Task.WhenAny(timeout, connectionInfo) == timeout)
-                {
-                    throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
-                }
-                result = await ConnectToClientNodeAsync(connectionInfo.Result, ServerStore.Engine.TcpConnectionTimeout, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
-            }
-            catch (Exception e)
-            {
-                result = new DynamicJsonValue
-                {
-                    [nameof(NodeConnectionTestResult.Success)] = false,
-                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}"
-                };
-            }
+                    var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, result);
+                    using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                    {
+                        connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.Certificate.Certificate,
+                            cts.Token);
+                    }
+                    Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);
+                    if (timeoutTask == timeout)
+                    {
+                        throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
+                    }
+                    await connectionInfo;
+                }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.HTTPSuccess)] = false,
+                        [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}"
+                    };
+                    return;
+                }
+
+                try
+                {
+                    result = await ConnectToClientNodeAsync(connectionInfo.Result, ServerStore.Engine.TcpConnectionTimeout, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
+                }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.HTTPSuccess)] = true,
+                        [nameof(NodeConnectionTestResult.TcpServerUrl)] = connectionInfo.Result.Url,
+                        [nameof(NodeConnectionTestResult.Error)] = $"Was able to connect to url {url}, but exception was thrown while trying to connect to TCP port {connectionInfo.Result.Url}: {e}"
+                    };
+                    return;
+                }
             }
+            finally
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }            
         }
 
 
@@ -122,6 +148,8 @@ namespace Raven.Server.Web.System
     public class NodeConnectionTestResult
     {
         public bool Success;
+        public bool HTTPSuccess;
+        public string TcpServerUrl;
         public string Error;
     }
 }
