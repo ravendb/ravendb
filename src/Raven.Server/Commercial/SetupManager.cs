@@ -645,7 +645,10 @@ namespace Raven.Server.Commercial
                 var serializeObject = JsonConvert.SerializeObject(registrationInfo);
 
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Start update process for certificate: " + serializeObject);
+                    Logger.Operations($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
+                                      $"License Name: {registrationInfo.License.Name}, " +
+                                      $"Domain: {registrationInfo.Domain}, " +
+                                      $"RootDomain: {registrationInfo.RootDomain}");
 
                 HttpResponseMessage response;
                 try
