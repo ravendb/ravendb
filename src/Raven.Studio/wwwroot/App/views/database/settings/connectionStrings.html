@@ -115,10 +115,29 @@
                         <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to the node.</div>
                         <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to the SQL Sever.</div>
                     </div>
-                    <div class="padding bg-danger small" data-bind="visible: !Success">
-                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                        <div>
-                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                    <div class="padding" data-bind="visible: !Success">
+                        <div class="bg-danger small">
+                            <h2>Conneciton test failed!</h2>
+                            <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                            <div>
+                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                            </div>
+                        </div>
+                        <div class="padding bg-info">
+                            <h2>About this error</h2>
+                            <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced clien-server communicaitons.</div>
+                            <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
+                            <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
+                            <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>
+                            <div>
+                                Please verify that:
+                                <ul>
+                                    <li>The URL is correct</li>
+                                    <li>Both RavenDB and the target machine are up and running</li>
+                                    <li>There is no firewall settings on either machine blocking usage of that URL</li>
+                                    <li>There is no network configurations that prevent communication</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
