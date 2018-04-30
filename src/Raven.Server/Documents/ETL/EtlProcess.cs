@@ -489,7 +489,7 @@ namespace Raven.Server.Documents.ETL
                     if (didWork)
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
-                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag);
+                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks());
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
                         sendToLeaderTask.Wait(CancellationToken);
