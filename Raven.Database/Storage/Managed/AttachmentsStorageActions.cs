@@ -89,7 +89,12 @@ namespace Raven.Storage.Managed
 			logger.Debug("Attachment with key '{0}' was deleted", key);
 		}
 
-		public Attachment GetAttachment(string key)
+	    public long GetAttachmentsCount()
+	    {
+	        return storage.Attachments.Count;
+	    }
+
+        public Attachment GetAttachment(string key)
 		{
 			var readResult = storage.Attachments.Read(new RavenJObject { { "key", key } });
 			if (readResult == null)
