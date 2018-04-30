@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
+        public bool HasHighlyAvailableTasks;
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
