@@ -302,6 +302,8 @@ namespace Raven.Server.Web.System
 
                             case IndexType.Map:
                             case IndexType.MapReduce:
+                            case IndexType.JavaScriptMap:
+                            case IndexType.JavaScriptMapReduce:
                                 var indexDefinition = index.GetIndexDefinition();
                                 databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
                                 break;
