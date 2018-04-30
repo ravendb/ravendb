@@ -400,6 +400,7 @@ namespace Raven.Database
 
                     result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
+                    result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
                     result.StaleIndexes = IndexStorage.Indexes
                         .Where(s =>
                         {

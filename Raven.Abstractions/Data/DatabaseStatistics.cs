@@ -17,6 +17,7 @@ namespace Raven.Abstractions.Data
 		public long ApproximateTaskCount { get; set; }
 
 		public long CountOfDocuments { get; set; }
+		public long CountOfAttachments { get; set; }
 
 		public string[] StaleIndexes { get; set; }
 
