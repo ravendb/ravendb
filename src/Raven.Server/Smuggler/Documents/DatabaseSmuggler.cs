@@ -327,6 +327,8 @@ namespace Raven.Server.Smuggler.Documents
                             break;
                         case IndexType.Map:
                         case IndexType.MapReduce:
+                        case IndexType.JavaScriptMap:
+                        case IndexType.JavaScriptMapReduce:
                             var indexDefinition = (IndexDefinition)index.IndexDefinition;
                             if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
                             {

@@ -36,6 +36,8 @@ namespace Raven.Server.Smuggler.Documents.Processors
                             return AutoMapReduceIndexDefinition.LoadFromJson(reader);
                         case IndexType.Map:
                         case IndexType.MapReduce:
+                        case IndexType.JavaScriptMap:
+                        case IndexType.JavaScriptMapReduce:
                             return JsonDeserializationServer.IndexDefinition(reader);
                         default:
                             throw new NotSupportedException(type.ToString());
@@ -61,6 +63,8 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     break;
                 case IndexType.Map:
                 case IndexType.MapReduce:
+                case IndexType.JavaScriptMap:
+                case IndexType.JavaScriptMapReduce:
                     var indexDefinition = (IndexDefinition)definition;
                     if (removeAnalyzers)
                     {
@@ -89,7 +93,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
             writer.WritePropertyName(nameof(IndexDefinition));
 
-            if (index.Type == IndexType.Map || index.Type == IndexType.MapReduce)
+            if (index.Type == IndexType.Map || index.Type == IndexType.MapReduce || index.Type == IndexType.JavaScriptMap || index.Type == IndexType.JavaScriptMapReduce)
             {
                 var indexDefinition = index.GetIndexDefinition();
                 writer.WriteIndexDefinition(context, indexDefinition, removeAnalyzers);

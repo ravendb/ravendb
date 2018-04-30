@@ -447,6 +447,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             break;
                         case IndexType.Map:
                         case IndexType.MapReduce:
+                        case IndexType.JavaScriptMap:
+                        case IndexType.JavaScriptMapReduce:
                             var indexDefinition = (IndexDefinition)indexAndType.IndexDefinition;
                             databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
                             break;

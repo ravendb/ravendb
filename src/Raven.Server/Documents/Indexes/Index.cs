@@ -288,8 +288,10 @@ namespace Raven.Server.Documents.Indexes
                             switch (staticDef.Type)
                             {
                                 case IndexType.Map:
+                                case IndexType.JavaScriptMap:
                                     return MapIndex.CreateNew(staticDef, documentDatabase);
                                 case IndexType.MapReduce:
+                                case IndexType.JavaScriptMapReduce:
                                     return MapReduceIndex.CreateNew(staticDef, documentDatabase);
                             }
                         }
@@ -2632,10 +2634,12 @@ namespace Raven.Server.Documents.Indexes
                 {
                     case IndexType.Map:
                     case IndexType.AutoMap:
+                    case IndexType.JavaScriptMap:
                         _minBatchSize = MinMapBatchSize;
                         break;
                     case IndexType.MapReduce:
                     case IndexType.AutoMapReduce:
+                    case IndexType.JavaScriptMapReduce:
                         _minBatchSize = MinMapReduceBatchSize;
                         break;
                     default:

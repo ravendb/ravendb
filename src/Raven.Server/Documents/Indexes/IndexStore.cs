@@ -456,9 +456,11 @@ namespace Raven.Server.Documents.Indexes
             switch (definition.Type)
             {
                 case IndexType.Map:
+                case IndexType.JavaScriptMap:
                     MapIndex.Update(existingIndex, definition, _documentDatabase);
                     break;
                 case IndexType.MapReduce:
+                case IndexType.JavaScriptMapReduce:
                     MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                     break;
                 default:
