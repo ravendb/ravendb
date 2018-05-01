@@ -26,8 +26,7 @@ namespace Sparrow.Json
         {
             _parent = parent;
 
-            byte arraySizeOffset;
-            _count = parent.ReadVariableSizeInt(pos, out arraySizeOffset);
+            _count = parent.ReadVariableSizeInt(pos, out byte arraySizeOffset);
 
             _dataStart = parent.BasePointer + pos;
             _metadataPtr = _dataStart + arraySizeOffset;
@@ -70,11 +69,36 @@ namespace Sparrow.Json
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
+        public int BinarySearch(string key)
+        {
+            int min = 0;
+            int max = Length - 1;
+            
+            while (min <= max)
+            {
+                int mid = (min + max) >> 1;
+                var current = GetStringByIndex(mid);
+                var result = string.Compare(key, current, StringComparison.OrdinalIgnoreCase);
+                if (result == 0)
+                {
+                    return mid;
+                }
+                else if (result < 0)
+                {
+                    max = mid - 1;
+                }
+                else
+                {
+                    min = mid + 1;
+                }
+            }
+            return ~(((min + max) >> 1) + 1);
+        }
+
         public T GetByIndex<T>(int index)
         {
             var obj = GetValueTokenTupleByIndex(index).Item1;
-            T result;
-            BlittableJsonReaderObject.ConvertType(obj, out result);
+            BlittableJsonReaderObject.ConvertType(obj, out T result);
             return result;
         }
 
