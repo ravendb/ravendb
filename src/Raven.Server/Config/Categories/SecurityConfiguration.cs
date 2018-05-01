@@ -10,6 +10,11 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
+        [Description("Disable automatic redirection when listening to HTTPS. By default, when using port 443, RavenDB redirects all incoming HTTP traffic on port 80 to HTTPS on port 443.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Security.DisableHttpsRedirection", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableHttpsRedirection { get; set; }
+
         [Description("The path to a folder where RavenDB will store the access audit logs")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.AuditLog.FolderPath", ConfigurationEntryScope.ServerWideOnly)]
