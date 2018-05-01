@@ -261,13 +261,8 @@ namespace Raven.Server
 
         private static bool RunInteractive(RavenServer server)
         {
-            var configuration = server.Configuration;
-
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
-
-            // set log mode to the previous original mode:
-            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
 
             return new RavenCli().Start(server, Console.Out, Console.In, true);
         }
