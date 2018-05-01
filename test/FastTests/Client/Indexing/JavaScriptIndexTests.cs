@@ -110,7 +110,6 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        //FanoutByNumbersWithReduce
         [Fact]
         public void CanIndexMapReduceWithFanout()
         {

@@ -31,21 +31,27 @@ namespace Raven.Server.Documents.Indexes.Static
                 var map = Engine.Object.Construct(Arguments.Empty);
                 foreach (var item in items)
                 {
+                    Engine.ResetCallStack();
+                    Engine.ResetStatementsCount();
+                    Engine.ResetTimeoutTicks();
                     if (JavaScriptIndexUtils.GetValue(Engine, item, out JsValue jsItem, true) == false)
                         continue;
                     _threeItemsArray[0] = map;
                     _threeItemsArray[1] = jsItem;
                     _threeItemsArray[2] = Key;
                     Engine.Invoke("groupItemsByKey", JsValue.Null, _threeItemsArray);
+                    _resolver.ExplodeArgsOn(null, null);
                 }
 
                 foreach (var (name, prop) in map.GetOwnProperties())
                 {
-                    //_oneItemArray[0] = prop.Value.AsObject().Get("key");
-                    //var key = Engine.Json.Stringify(JsValue.Null, _oneItemArray);
+                    Engine.ResetCallStack();
+                    Engine.ResetStatementsCount();
+                    Engine.ResetTimeoutTicks();
                     _oneItemArray[0] = prop.Value;
                     var jsItem = Reduce.Call(JsValue.Null, _oneItemArray).AsObject();
                     yield return jsItem;
+                    _resolver.ExplodeArgsOn(null, null);
                 }
             }
             finally
