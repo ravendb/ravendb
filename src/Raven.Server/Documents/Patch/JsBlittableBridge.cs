@@ -124,7 +124,11 @@ namespace Raven.Server.Documents.Patch
             {
                 if (property.Key == "length")
                     continue;
-                WriteJsonValue(arrayInstance, false, property.Key, SafelyGetJsValue(property.Value));
+
+                JsValue propertyValue = SafelyGetJsValue(property.Value);
+                                
+                WriteJsonValue(arrayInstance, false, property.Key, propertyValue);
+                
             }
             _writer.WriteArrayEnd();
         }
@@ -326,9 +330,7 @@ namespace Raven.Server.Documents.Patch
                 var value = property.Value;
                 if (value == null)
                     continue;
-                JsValue safeValue = SafelyGetJsValue(value);
-                if (safeValue.IsUndefined())
-                    continue;
+                JsValue safeValue = SafelyGetJsValue(value);                
 
                 _writer.WritePropertyName(propertyName);
                 
