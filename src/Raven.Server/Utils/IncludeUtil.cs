@@ -77,6 +77,8 @@ namespace Raven.Server.Utils
             {
                 foreach (var item in collectionOfIds)
                 {
+                    if (item == null)
+                        continue;
                     if (addition != null)
                     {
                         var includedId = _valueHandler(item, addition.Value);
