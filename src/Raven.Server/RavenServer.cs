@@ -241,11 +241,10 @@ namespace Raven.Server
                         // errors here, it all goes to the log anyway
                     }
 
-                    var httpsUrl = new Uri(WebUrl);
-                    
-                    if (httpsUrl.Port == 443 && Configuration.Security.DisableHttpsRedirection == false)
+                    var port = new Uri(Configuration.Core.ServerUrls[0]).Port;
+                    if (port == 443 && Configuration.Security.DisableHttpsRedirection == false)
                     {
-                        RedirectsHttpTrafficToHttps(httpsUrl);
+                        RedirectsHttpTrafficToHttps();
                     }
                 }
 
@@ -268,23 +267,24 @@ namespace Raven.Server
             }
         }
 
-        private void RedirectsHttpTrafficToHttps(Uri httpsUrl)
+        private void RedirectsHttpTrafficToHttps()
         {
             try
             {
-                var uriBuilder = new UriBuilder(httpsUrl)
-                {
-                    Scheme = "http",
-                    Port = 80
-                };
-                var httpUrl = uriBuilder.Uri;
+                var serverUrlsToRedirect = Configuration.Core.ServerUrls.Select(serverUrl => new Uri(serverUrl))
+                    .Select(newUri => new UriBuilder(newUri)
+                    {
+                        Scheme = "http",
+                        Port = 80
+                    }.Uri.ToString())
+                    .ToArray();
 
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"HTTPS is on. Setting up a web host to redirect incoming HTTP traffic to HTTPS: from '{httpUrl.AbsoluteUri}' to '{httpsUrl.AbsoluteUri}'.");
+                    Logger.Operations($"HTTPS is on. Setting up a new web host to redirect incoming HTTP traffic on port 80 to HTTPS on port 443. The new web host is listening to { string.Join(", ", serverUrlsToRedirect) }");
 
                 _redirectingWebHost = new WebHostBuilder()
                     .UseKestrel()
-                    .UseUrls(httpUrl.AbsoluteUri)
+                    .UseUrls(serverUrlsToRedirect)
                     .UseStartup<RedirectServerStartup>()
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .Build();
