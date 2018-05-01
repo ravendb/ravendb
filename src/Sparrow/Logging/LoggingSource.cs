@@ -199,7 +199,7 @@ namespace Sparrow.Logging
                     {
                         _today = DateTime.Today;
                         _dateString = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                        _logNumber = 0;
+                        _logNumber = GetNextLogNumberForToday();
 
                         CleanupOldLogFiles();
                     }
@@ -212,9 +212,36 @@ namespace Sparrow.Logging
                                nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
                 if (File.Exists(fileName) && new FileInfo(fileName).Length >= maxFileSize)
                     continue;
-                var fileStream = SafeFileStream.Create(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024, false);
+                var fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
                 return fileStream;
+            }
+        }
+
+        private int GetNextLogNumberForToday()
+        {
+            var lastLogFile = Directory.GetFiles(_path, $"{_dateString}.*.log").LastOrDefault();
+            if (lastLogFile == null) 
+                return 0;
+            
+            int start = lastLogFile.LastIndexOf('.', lastLogFile.Length - "000.log".Length);
+            if (start == -1)
+                return 0;
+
+            try
+            {
+                start++;
+                var length = lastLogFile.Length - ".log".Length - start;
+                var logNumber = lastLogFile.Substring(start, length);
+                if (int.TryParse(logNumber, out var number) == false ||
+                    number <= 0)
+                    return 0;
+
+                return --number;
+            }
+            catch
+            {
+                return 0;
             }
         }
 
