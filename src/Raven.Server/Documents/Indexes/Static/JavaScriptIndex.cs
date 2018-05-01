@@ -148,6 +148,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     
                 }
             }
+            if (definition.Fields != null)
+            {
+                foreach (var item in definition.Fields)
+                {
+                    fields.Add(item.Key);
+                }
+            }
             OutputFields = fields.ToArray();
         }
 
