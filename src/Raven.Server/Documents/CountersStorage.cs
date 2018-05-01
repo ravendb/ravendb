@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using Raven.Client;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -14,6 +15,7 @@ using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
@@ -446,5 +448,26 @@ namespace Raven.Server.Documents
                 table.Insert(tvb);
             }
         }
+
+        public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
+        {
+            if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+            {
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _) == false)
+                {
+                    Debug.Assert(false, $"Found {DocumentFlags.HasCounters} flag but {Constants.Documents.Metadata.Counters} is missing from metadata.");
+                }
+            }
+            else
+            {
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
+                {
+                    Debug.Assert(false, $"Found {Constants.Documents.Metadata.Counters}({counters.Length}) in metadata but {DocumentFlags.HasCounters} flag is missing.");
+                }
+            }
+        }
+
     }
 }

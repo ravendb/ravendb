@@ -19,7 +19,8 @@ namespace Raven.Server.Documents
 
         HasAttachments = 0x100,
         Resolved = 0x200,
-        Conflicted = 0x400
+        Conflicted = 0x400,
+        HasCounters = 0x800
     }
 
     [Flags]
@@ -34,7 +35,8 @@ namespace Raven.Server.Documents
         ByAttachmentUpdate = 0x10,
         ResolveAttachmentsConflict = 0x20,
         FromRevision = 0x40,
-        Resolved = 0x80
+        Resolved = 0x80,
+        ResolveCountersConflict = 0x100
     }
 
     public static class EnumExtensions

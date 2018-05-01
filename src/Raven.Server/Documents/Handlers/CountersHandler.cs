@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, _doc, _counter, _value);
+
                 try
                 {
                     var doc = _database.DocumentsStorage.Get(context, _doc,
@@ -62,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
                     if (metadata.Modifications != null)
                     {
                         var data = context.ReadObject(doc.Data, _doc, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        _database.DocumentsStorage.Put(context, _doc, null, data);
+                        _database.DocumentsStorage.Put(context, _doc, null, data, flags: DocumentFlags.HasCounters);
                     }
                 }
                 catch (DocumentConflictException)
@@ -72,7 +74,6 @@ namespace Raven.Server.Documents.Handlers
                     // done by the conflict resolver
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, _doc, _counter, _value);
                 CurrentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(context, _doc, _counter) ?? 0;
                 return 1;
             }
@@ -135,12 +136,14 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
+                var del = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, _doc, _counter);
+
                 try
                 {
                     var doc = _database.DocumentsStorage.Get(context, _doc,
                         throwOnConflict: true);
                     if (doc == null)
-                        return 0;                   
+                        return 0;
                     if (doc.TryGetMetadata(out var metadata) == false)
                         ThrowInvalidDocumentWithNoMetadata(doc, _counter);
 
@@ -158,7 +161,6 @@ namespace Raven.Server.Documents.Handlers
                     // done by the conflict resolver
                 }
 
-                var del = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, _doc, _counter);
                 return del ? 1 : 0;
             }
 

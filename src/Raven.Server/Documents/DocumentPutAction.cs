@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -140,7 +141,26 @@ namespace Raven.Server.Documents
                         AttachmentsStorage.AssertAttachments(document, flags);
 #endif
                     }
-                    
+
+                    if (ShouldRecreateCounters(context, id, oldDoc, document, ref flags, nonPersistentFlags))
+                    {
+#if DEBUG
+                        if (document.DebugHash != documentDebugHash)
+                        {
+                            throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
+                                                           "this is likely because you are trying to save a document that is already stored and was moved");
+                        }
+#endif
+                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+#if DEBUG
+                        documentDebugHash = document.DebugHash;
+                        document.BlittableValidation();
+                        BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+                        AssertMetadataWasFiltered(document);
+                        CountersStorage.AssertCounters(document, flags);
+#endif
+                    }
+
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
                         (flags.Contain(DocumentFlags.Resolved) || 
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null
@@ -394,6 +414,91 @@ namespace Raven.Server.Documents
                         attachments.Equals(oldAttachments) == false)
                     {
                         RecreateAttachments(context, lowerId, document, metadata, ref flags);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
+            BlittableJsonReaderObject metadata, ref DocumentFlags flags)
+        {
+
+            var countersStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage;
+            var onDiskCounters = countersStorage.GetCountersForDocument(context, id, 0, int.MaxValue);
+            var sortedCounters = new HashSet<string>(onDiskCounters, StringComparer.OrdinalIgnoreCase).ToList();
+            if (sortedCounters.Count == 0)
+            {
+                if (metadata != null)
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    document.Modifications = new DynamicJsonValue(document)
+                    {
+                        [Constants.Documents.Metadata.Key] = metadata
+                    };
+                }
+
+                flags &= ~DocumentFlags.HasCounters;
+                return;
+            }
+
+            sortedCounters.Sort(StringComparer.OrdinalIgnoreCase);
+            flags |= DocumentFlags.HasCounters;
+
+            if (metadata == null)
+            {
+                document.Modifications = new DynamicJsonValue(document)
+                {
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Counters] = sortedCounters
+                    }
+                };
+            }
+            else
+            {
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(sortedCounters)
+                };
+
+                document.Modifications = new DynamicJsonValue(document)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+
+            }
+        }
+
+        private bool ShouldRecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc,
+            BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveCountersConflict) == NonPersistentDocumentFlags.ResolveCountersConflict)
+            {
+                document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+                RecreateCounters(context, id, document, metadata, ref flags);
+                return true;
+            }
+
+            if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters &&
+                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+            {
+                if (oldDoc != null &&
+                    oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
+                    oldMetadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray oldCounters))
+                {
+                    // Make sure the user did not change the value of @counters in the @metadata
+                    // In most cases it won't be changed so we can use this value 
+                    // instead of recreating the document's blittable from scratch
+                    if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                        metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
+                        counters.Length != oldCounters.Length ||
+                        !counters.All(oldCounters.Contains) )
+                    {
+                        RecreateCounters(context, id, document, metadata, ref flags);
                         return true;
                     }
                 }
