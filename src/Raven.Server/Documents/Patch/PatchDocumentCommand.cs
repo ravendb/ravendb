@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Patch
                     result.Status = PatchStatus.Created;
                 }
                 else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument,
-                    tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
+                    tryMergeMetadataConflicts: true) == DocumentCompareResult.NotEqual)
                 {
                     Debug.Assert(originalDocument != null);
                     if (_isTest == false || _run.PutOrDeleteCalled)

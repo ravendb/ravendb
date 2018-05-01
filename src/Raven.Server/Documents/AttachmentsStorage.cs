@@ -977,7 +977,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _) == false)
                 {
-                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag bug {Constants.Documents.Metadata.Attachments} is missing from metadata.");
+                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag but {Constants.Documents.Metadata.Attachments} is missing from metadata.");
                 }
             }
             else

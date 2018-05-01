@@ -12,7 +12,7 @@ namespace Raven.Server.Documents
     public static class DocumentCompare
     {
         public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
-            bool tryMergeAttachmentsConflict)
+            bool tryMergeMetadataConflicts)
         {
             if (ReferenceEquals(original, modified))
                 return DocumentCompareResult.Equal;
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents
             // Performance improvemnt: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
-            var result = IsMetadataEqualTo(original, modified, tryMergeAttachmentsConflict);
+            var result = IsMetadataEqualTo(original, modified, tryMergeMetadataConflicts);
             if (result == DocumentCompareResult.NotEqual)
                 return DocumentCompareResult.NotEqual;
 
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, bool tryMergeAttachmentsConflict)
+        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, bool tryMergeConflicts)
         {
             if (modified == null)
                 return DocumentCompareResult.NotEqual;
@@ -56,30 +56,31 @@ namespace Raven.Server.Documents
 
             if (currentMetadata == null || objMetadata == null)
             {
-                DocumentCompareResult result = DocumentCompareResult.Equal;
-
-                if (currentMetadata == null)
-                    currentMetadata = objMetadata;
-
-                if (tryMergeAttachmentsConflict)
+                if (tryMergeConflicts)
                 {
-                    // If the conflict is just on @metadata with @attachment we know how to resolve it.
-                    if (currentMetadata.Count == 1 && currentMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                    DocumentCompareResult result = DocumentCompareResult.Equal;
+
+                    if (currentMetadata == null)
+                        currentMetadata = objMetadata;
+
+                    // If there is a conflict on @metadata with @counters and/or with @attachments, we know how to resolve it.
+                    if (currentMetadata.GetPropertyNames().Contains(Constants.Documents.Metadata.Counters, StringComparer.OrdinalIgnoreCase))
+                        result |= DocumentCompareResult.CountersNotEqual;
+
+                    if (currentMetadata.GetPropertyNames().Contains(Constants.Documents.Metadata.Attachments, StringComparer.OrdinalIgnoreCase))
                         result |= DocumentCompareResult.AttachmentsNotEqual;
+
+                    return result != DocumentCompareResult.Equal ? result : DocumentCompareResult.NotEqual;
                 }
 
-                // If the conflict is just on @metadata with @counters we know how to resolve it.
-                if (currentMetadata.Count == 1 && currentMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Counters, StringComparison.OrdinalIgnoreCase))
-                    result |= DocumentCompareResult.CountersNotEqual;
-
-                return result != DocumentCompareResult.Equal ? result : DocumentCompareResult.NotEqual;
+                return DocumentCompareResult.NotEqual;
             }
 
-            return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, tryMergeAttachmentsConflict);
+            return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, tryMergeConflicts);
         }
 
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, 
-            bool isMetadata = false, bool tryMergeAttachmentsConflict = false)
+            bool isMetadata = false, bool tryMergeMetadataConflicts = false)
         {
             var resolvedAttachmetConflict = false;
             var resolvedCountesConflict = false;
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents
                     {
                         if (property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (tryMergeAttachmentsConflict)
+                            if (tryMergeMetadataConflicts)
                             {
                                 if (current.TryGetMember(property, out object _) == false ||
                                     modified.TryGetMember(property, out object _) == false)
@@ -117,16 +118,19 @@ namespace Raven.Server.Documents
                         }
                         else if (property.Equals(Constants.Documents.Metadata.Counters, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (current.TryGetMember(property, out object _) == false ||
-                                modified.TryGetMember(property, out object _) == false)
+                            if (tryMergeMetadataConflicts)
                             {
-                                // Resolve when just 1 document have counters
-                                resolvedCountesConflict = true;
+                                if (current.TryGetMember(property, out object _) == false ||
+                                    modified.TryGetMember(property, out object _) == false)
+                                {
+                                    // Resolve when just 1 document have counters
+                                    resolvedCountesConflict = true;
+                                    continue;
+                                }
+
+                                resolvedCountesConflict = ShouldResolveCountersConflict(current, modified);
                                 continue;
                             }
-
-                            resolvedCountesConflict = ShouldResolveCountersConflict(current, modified);
-                            continue;
                         }
                         else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
