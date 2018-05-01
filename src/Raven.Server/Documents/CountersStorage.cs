@@ -413,15 +413,21 @@ namespace Raven.Server.Documents
         public bool DeleteCounter(DocumentsOperationContext context, Slice key, long lastModifiedTicks, bool forceTombstone)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            if (table.DeleteByPrimaryKeyPrefix(key) == false
+            long deletedEtag = -1;
+            if (table.DeleteByPrimaryKeyPrefix(key, tvh =>
+                {
+                    long etag = *(long*)tvh.Reader.Read((int)CountersTable.Etag, out var size);
+                    deletedEtag = Math.Max(etag, deletedEtag);
+                    Debug.Assert(size == sizeof(long));
+                }) == false
                 && forceTombstone == false)
                 return false;
           
-            CreateTombstone(context, key, lastModifiedTicks);
+            CreateTombstone(context, key, deletedEtag, lastModifiedTicks);
             return true;
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long lastModifiedTicks)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long deletedEtag, long lastModifiedTicks)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -430,7 +436,7 @@ namespace Raven.Server.Documents
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(0L); // etag that was deleted
+                tvb.Add(deletedEtag); // etag that was deleted
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)DocumentTombstone.TombstoneType.Counter);
                 tvb.Add(null, 0); // doc data
