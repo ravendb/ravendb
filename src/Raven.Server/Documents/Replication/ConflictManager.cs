@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 
@@ -202,7 +205,13 @@ namespace Raven.Server.Documents.Replication
 
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                var nonPersistentFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
+
+                if ((compareResult & DocumentCompareResult.CountersNotEqual) == DocumentCompareResult.CountersNotEqual)
+                {
+                    incomingDoc = RecreateCounters(context, id, existingDoc.Data, incomingDoc);
+                }
+
+                var nonPersistentFlags = (compareResult & DocumentCompareResult.AttachmentsNotEqual) == DocumentCompareResult.AttachmentsNotEqual 
                     ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
                 return true;
@@ -220,6 +229,46 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
+        }
+
+        private static BlittableJsonReaderObject RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc, BlittableJsonReaderObject newDoc)
+        {
+            var newDocMetadata = newDoc.GetMetadata();
+            var countersStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage;
+            var onDiskCounters = countersStorage.GetCountersForDocument(context, id, 0, int.MaxValue);
+
+            var counters = new HashSet<string>(onDiskCounters, StringComparer.OrdinalIgnoreCase);
+            AddCountersFromMetadata(oldDoc.GetMetadata(), counters);
+            AddCountersFromMetadata(newDocMetadata, counters);
+
+            var sortedCounters = counters.ToList();
+            sortedCounters.Sort(StringComparer.OrdinalIgnoreCase);
+
+            newDocMetadata.Modifications = new DynamicJsonValue(newDocMetadata)
+            {
+                [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(sortedCounters)
+            };
+
+            newDoc.Modifications = new DynamicJsonValue(newDoc)
+            {
+                [Constants.Documents.Metadata.Key] = newDocMetadata
+            };
+
+            return context.ReadObject(newDoc, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+        }
+
+        private static void AddCountersFromMetadata(BlittableJsonReaderObject metadata, HashSet<string> counters)
+        {
+            if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray metadataCounters) &&
+                metadataCounters != null)
+            {
+                foreach (var counter in metadataCounters)
+                {
+                    if (counter == null)
+                        continue; // should never happen
+                    counters.Add(counter.ToString());
+                }
+            }
         }
     }
 }
