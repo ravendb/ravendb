@@ -51,6 +51,97 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
+        public void CanIndexArrayProperties()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersByPhones());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Jow",
+                        PhoneNumbers = new [] {"555-234-8765","555-987-3425"}
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var result = session.Query<UsersByPhones.UsersByPhonesResult>("UsersByPhones")
+                        .Where(x => x.Phone == "555-234-8765")
+                        .OfType<User>()
+                        .Single();
+                }
+
+            }
+        }
+
+        private class Fanout
+        {
+            public string Foo { get; set; }
+            public int[] Numbers { get; set; }
+        }
+
+        [Fact]
+        public void CanIndexMapWithFanout()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new FanoutByNumbers());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Fanout
+                    {
+                        Foo = "Foo",
+                        Numbers = new[] {4,6,11,9 }
+                    });
+                    session.Store(new Fanout
+                    {
+                        Foo = "Bar",
+                        Numbers = new[] { 3, 8, 5, 17 }
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var result = session.Query<FanoutByNumbers.Result>("FanoutByNumbers")
+                        .Where(x => x.Sum == 17 )
+                        .OfType<Fanout>()
+                        .Single();
+                    Assert.Equal("Bar", result.Foo);
+                }
+
+            }
+        }
+
+        //FanoutByNumbersWithReduce
+        [Fact]
+        public void CanIndexMapReduceWithFanout()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new FanoutByNumbersWithReduce());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Fanout
+                    {
+                        Foo = "Foo",
+                        Numbers = new[] { 4, 6, 11, 9 }
+                    });
+                    session.Store(new Fanout
+                    {
+                        Foo = "Bar",
+                        Numbers = new[] { 3, 8, 5, 17 }
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    WaitForUserToContinueTheTest(store);
+                    var result = session.Query<FanoutByNumbersWithReduce.Result>("FanoutByNumbersWithReduce")
+                        .Where(x => x.Sum == 33)
+                        .Single();
+                    Assert.Equal("Bar", result.Foo);
+                }
+
+            }
+        }
+
+        [Fact]
         public void CanUseJavaScriptIndexWithDynamicFields()
         {
             using (var store = GetDocumentStore())
@@ -179,6 +270,7 @@ namespace FastTests.Client.Indexing
             public string Name { get; set; }
             public bool IsActive { get; set; }
             public string Product { get; set; }
+            public string[] PhoneNumbers { get; set; }
         }
 
         private class Product
@@ -203,6 +295,108 @@ namespace FastTests.Client.Indexing
                     Maps = new HashSet<string>
                     {
                         @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class FanoutByNumbers : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "FanoutByNumbers",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Fanouts', function (f){ 
+ var result = [];
+for(var i = 0; i < f.Numbers.length; i++)
+{
+    result.push({
+        Foo: f.Foo,
+        Sum: f.Numbers[i]
+    });
+}
+return result;
+})",
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+
+            internal class Result
+            {
+                public string Foo { get; set; }
+                public int Sum { get; set; } 
+            }
+        }
+
+        private class FanoutByNumbersWithReduce : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "FanoutByNumbersWithReduce",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Fanouts', function (f){ 
+ var result = [];
+for(var i = 0; i < f.Numbers.length; i++)
+{
+    result.push({
+        Foo: f.Foo,
+        Sum: f.Numbers[i]
+    });
+}
+return result;
+})",
+                    },
+                    Reduce =
+                    @"
+groupBy( f => f.Foo )
+ .aggregate( g => ({
+     Foo: g.key,
+     Sum: g.values.reduce((total, val) => val.Sum + total,0)
+ }))",//TODO: do actual reduction here
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+
+            internal class Result
+            {
+                public string Foo { get; set; }
+                public int Sum { get; set; }
+            }
+        }
+
+        private class UsersByPhones : AbstractIndexCreationTask
+        {
+            public class UsersByPhonesResult
+            {
+                public string Name { get; set; }
+                public string Phone { get; set; }
+            }
+
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "UsersByPhones",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Users', function (u){ return { Name: u.Name, Phone: u.PhoneNumbers};})",
                     },
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,

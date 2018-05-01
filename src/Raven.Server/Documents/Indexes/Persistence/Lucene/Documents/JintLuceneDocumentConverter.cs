@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Raven.Client;
@@ -15,7 +16,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public class JintLuceneDocumentConverter: LuceneDocumentConverterBase
+    public class JintLuceneDocumentConverter : LuceneDocumentConverterBase
     {
         public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false) : base(fields, reduceOutput)
         {
@@ -49,56 +50,58 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
-                _fields.TryGetValue(property, out var field);
-
-                if (propertyDescriptor.Value.IsObject())
+                if (_fields.TryGetValue(property, out var field) == false)
                 {
-                    var result = TryDetectDynamicFieldCreation(property, propertyDescriptor.Value.AsObject());
-                    if (result != null)
+                    field = new IndexField
                     {
-                        foreach (var value in GetValue(result.Value.Value))
-                        {
-                            newFields += GetRegularFields(instance, result.Value.IndexField, value, indexContext);
-                        }
+                        Name = property,
+                        Indexing = _allFields.Indexing,
+                        Storage = _allFields.Storage,
+                        Analyzer = _allFields.Analyzer,
+                        Spatial = _allFields.Spatial,
+                        HasSuggestions = _allFields.HasSuggestions,
+                        TermVector = _allFields.TermVector
+                    };
+                }
+
+                var obj = propertyDescriptor.Value;
+                object value;
+                if (obj.IsObject() && obj.IsArray() == false)
+                {
+                    var val = TryDetectDynamicFieldCreation(property, obj.AsObject(), field);
+                    if (val != null)
+                    {
+                        value = GetValue(val);
+                        newFields += GetRegularFields(instance, field, value, indexContext);
                         continue;
                     }
                 }
 
-                foreach (var value in GetValue(propertyDescriptor.Value))
-                {
-                    newFields += GetRegularFields(instance, field, value, indexContext);
-                }
+                value = GetValue(propertyDescriptor.Value);
+                newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
             }
 
             return newFields;
         }
 
-        private static readonly string[] IndexFieldValues = {"index", "Index"};
+        private static readonly string[] IndexFieldValues = { "index", "Index" };
 
         private static readonly string[] StoreFieldValues = { "store", "Store" };
 
-        private (IndexField IndexField, JsValue Value)? TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject)
+        private JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-            if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName) || 
+            if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName) ||
                 !valueAsObject.HasOwnProperty(CreatedFieldNamePropertyName))
                 return null;
 
             var value = valueAsObject.GetOwnProperty(CreatedFieldValuePropertyName).Value;
             var fieldNameObj = valueAsObject.GetOwnProperty(CreatedFieldNamePropertyName).Value;
-            if(fieldNameObj.IsString() == false)
+            if (fieldNameObj.IsString() == false)
                 throw new ArgumentException($"Dynamic field {property} is expected to have a string {CreatedFieldNamePropertyName} property but got {fieldNameObj}");
 
-            var actualFieldOption = new IndexField
-            {
-                Name = fieldNameObj.AsString(),
-                Indexing = _allFields.Indexing,
-                Storage = _allFields.Storage,
-                Analyzer = _allFields.Analyzer,
-                Spatial = _allFields.Spatial,
-                HasSuggestions = _allFields.HasSuggestions,
-                TermVector = _allFields.TermVector
-            };
+
+            field.Name = fieldNameObj.AsString();
 
             if (valueAsObject.HasOwnProperty(CreatedFieldOptionsPropertyName))
             {
@@ -108,14 +111,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
                                                 $"{CreatedFieldOptionsPropertyName}, {CreatedFieldNamePropertyName} and {CreatedFieldOptionsPropertyName} the later should be a valid IndexFieldOptions object.");
                 }
-                    
+
                 var optionObj = options.AsObject();
                 foreach (var searchField in IndexFieldValues)
                 {
                     if (optionObj.Get(searchField).IsBoolean())
                     {
                         var indexing = optionObj.Get(searchField).AsBoolean();
-                        actualFieldOption.Indexing = indexing ? FieldIndexing.Search : FieldIndexing.No;
+                        field.Indexing = indexing ? FieldIndexing.Search : FieldIndexing.No;
                     }
                 }
                 foreach (var storeFieldd in StoreFieldValues)
@@ -123,46 +126,57 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     if (optionObj.Get(storeFieldd).IsBoolean())
                     {
                         var store = optionObj.Get(storeFieldd).AsBoolean();
-                        actualFieldOption.Storage = store ? FieldStorage.Yes : FieldStorage.No;
+                        field.Storage = store ? FieldStorage.Yes : FieldStorage.No;
                     }
                 }
             }
 
-            return (actualFieldOption, value);
+            return value;
         }
 
         [ThreadStatic]
         private static JsValue[] _oneItemArray;
 
-        private IEnumerable GetValue(JsValue jsValue)
+        private object GetValue(JsValue jsValue)
         {
             if (jsValue.IsNull())
-                yield return null;
+                return null;
             if (jsValue.IsString())
-                yield return jsValue.AsString();
+                return jsValue.AsString();
             if (jsValue.IsBoolean())
-                yield return jsValue.AsBoolean().ToString(); // avoid boxing the boolean
+                return jsValue.AsBoolean().ToString(); // avoid boxing the boolean
             if (jsValue.IsNumber())
-                yield return jsValue.AsNumber();
+                return jsValue.AsNumber();
             if (jsValue.IsDate())
-                yield return jsValue.AsDate();
-            if (jsValue.IsObject())
-            {
-                yield return StringifyObject(jsValue);
-            }                        
+                return jsValue.AsDate();
+            //Array is an object in Jint
             if (jsValue.IsArray())
             {
                 var arr = jsValue.AsArray();
-                foreach ((var key, var val)  in arr.GetOwnProperties())
-                {
-                    if(key == "length")
-                        continue;
-                   
-                    foreach (var innerVal in GetValue(val.Value))
-                    {
-                        yield return innerVal;
-                    }
-                }
+                return EnumerateArray(arr);
+            }
+            else if (jsValue.IsObject())
+            {
+                return StringifyObject(jsValue);
+            }
+
+            ThrowInvalidObject(jsValue);
+            return null;
+        }
+
+        private static void ThrowInvalidObject(JsValue jsValue)
+        {
+            throw new InvalidOperationException("Invalid type " + jsValue);
+        }
+
+        private IEnumerable EnumerateArray(ArrayInstance arr)
+        {
+            foreach ((var key, var val) in arr.GetOwnProperties())
+            {
+                if (key == "length")
+                    continue;
+
+                yield return GetValue(val.Value);
             }
         }
 
