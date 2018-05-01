@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Sparrow;
@@ -55,17 +56,23 @@ namespace Raven.Server.Documents
 
             if (currentMetadata == null || objMetadata == null)
             {
+                DocumentCompareResult result = DocumentCompareResult.Equal;
+
+                if (currentMetadata == null)
+                    currentMetadata = objMetadata;
+
                 if (tryMergeAttachmentsConflict)
                 {
-                    if (currentMetadata == null)
-                        currentMetadata = objMetadata;
-
                     // If the conflict is just on @metadata with @attachment we know how to resolve it.
                     if (currentMetadata.Count == 1 && currentMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
-                        return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
+                        result |= DocumentCompareResult.AttachmentsNotEqual;
                 }
 
-                return DocumentCompareResult.NotEqual;
+                // If the conflict is just on @metadata with @counters we know how to resolve it.
+                if (currentMetadata.Count == 1 && currentMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Counters, StringComparison.OrdinalIgnoreCase))
+                    result |= DocumentCompareResult.CountersNotEqual;
+
+                return result != DocumentCompareResult.Equal ? result : DocumentCompareResult.NotEqual;
             }
 
             return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, tryMergeAttachmentsConflict);
@@ -75,6 +82,7 @@ namespace Raven.Server.Documents
             bool isMetadata = false, bool tryMergeAttachmentsConflict = false)
         {
             var resolvedAttachmetConflict = false;
+            var resolvedCountesConflict = false;
 
             var properties = new HashSet<string>(current.GetPropertyNames());
             foreach (var propertyName in modified.GetPropertyNames())
@@ -107,6 +115,19 @@ namespace Raven.Server.Documents
                                 return DocumentCompareResult.NotEqual;
                             }
                         }
+                        else if (property.Equals(Constants.Documents.Metadata.Counters, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (current.TryGetMember(property, out object _) == false ||
+                                modified.TryGetMember(property, out object _) == false)
+                            {
+                                // Resolve when just 1 document have counters
+                                resolvedCountesConflict = true;
+                                continue;
+                            }
+
+                            resolvedCountesConflict = ShouldResolveCountersConflict(current, modified);
+                            continue;
+                        }
                         else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
                     }
@@ -128,7 +149,10 @@ namespace Raven.Server.Documents
                 }
             }
 
-            return DocumentCompareResult.Equal | (resolvedAttachmetConflict ? DocumentCompareResult.ShouldRecreateDocument : DocumentCompareResult.None);
+            var shouldRecreateAttachment = resolvedAttachmetConflict ? DocumentCompareResult.AttachmentsNotEqual : DocumentCompareResult.None;
+            var shouldRecreateCounters = resolvedCountesConflict ? DocumentCompareResult.CountersNotEqual : DocumentCompareResult.None;
+            
+            return DocumentCompareResult.Equal | shouldRecreateAttachment | shouldRecreateCounters;
         }
 
         private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata)
@@ -180,6 +204,21 @@ namespace Raven.Server.Documents
 
             return true;
         }
+
+
+        private static bool ShouldResolveCountersConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata)
+        {
+            currentMetadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray currentCounters);
+            modifiedMetadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray modifiedCounters);
+            Debug.Assert(currentCounters != null || modifiedCounters != null, "Cannot happen. We verified that we have a conflict in @counters.");
+
+            if (currentCounters == null)
+                return true;
+
+            return currentCounters.Length != modifiedCounters.Length ||
+                   !currentCounters.All(modifiedCounters.Contains);
+        }
+
     }
 
     [Flags]
@@ -190,6 +229,8 @@ namespace Raven.Server.Documents
         NotEqual = 0x1,
         Equal = 0x2,
 
-        ShouldRecreateDocument = 0x8
+        AttachmentsNotEqual = 0x4,
+
+        CountersNotEqual = 0x8
     }
 }

@@ -67,5 +67,53 @@ namespace SlowTests.Client.Counters
 
             }
         }
+
+        [Fact]
+        public async Task ConflictsInMetadata()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                await SetupReplicationAsync(storeA, storeB);
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1-A");
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
+
+                await storeB.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "likes", 14));
+                await storeB.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "dislikes", 13));
+
+                await storeA.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "likes", 12));
+                await storeA.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "cats", 11));
+
+                EnsureReplicating(storeA, storeB);
+
+                var val = await storeB.Operations.SendAsync(new GetCounterValueOperation("users/1-A", "likes"));
+                Assert.Equal(26, val);
+
+                val = await storeB.Operations.SendAsync(new GetCounterValueOperation("users/1-A", "dislikes"));
+                Assert.Equal(13, val);
+
+                val = await storeB.Operations.SendAsync(new GetCounterValueOperation("users/1-A", "cats"));
+                Assert.Equal(11, val);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1-A");
+                    var counters = (object[])session.Advanced.GetMetadataFor(user)["@counters"];
+
+                    Assert.Equal(3, counters.Length);
+                    // verify that counters are sorted
+                    Assert.Equal("cats", counters[0]);
+                    Assert.Equal("dislikes", counters[1]);
+                    Assert.Equal("likes", counters[2]);
+
+                }
+            }
+        }
     }
 }
