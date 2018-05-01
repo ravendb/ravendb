@@ -45,8 +45,11 @@ namespace SlowTests.Issues
         public void CanGetDefaultNonSerializedEnumValue()
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options: new Options
             {
+                ModifyDocumentStore = x => x.Conventions.CustomizeJsonSerializer = c => c.NullValueHandling = NullValueHandling.Ignore
+            }))
+            {                
                 using (var session = store.OpenSession())
                 {
                     var doc = new Document
@@ -80,6 +83,7 @@ namespace SlowTests.Issues
                                 .ToList()
                         };
 
+                    var projQuery = projection.ToString();
                     var projectionResult = projection.ToList();
 
                     var result = Assert.Single(projectionResult);

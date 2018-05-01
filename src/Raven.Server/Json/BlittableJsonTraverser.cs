@@ -259,6 +259,10 @@ namespace Raven.Server.Json
                             yield return result;
                         }
                     }
+                    else
+                    {
+                        yield return null;
+                    }
                 }
                 else
                 {
