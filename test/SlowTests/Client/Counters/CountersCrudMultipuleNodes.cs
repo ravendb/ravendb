@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Http;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -44,7 +42,7 @@ namespace SlowTests.Client.Counters
                 var tasks = new List<Task>();
                 foreach (var store in stores)
                 {
-                    var task = store.Operations.SendAsync(new IncrementCounterOperation("users/1", "likes", 10));
+                    var task = store.Counters.IncrementAsync("users/1", "likes", 10);
                     tasks.Add(task);
                 }
 
