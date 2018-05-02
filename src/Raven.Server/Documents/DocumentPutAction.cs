@@ -425,11 +425,10 @@ namespace Raven.Server.Documents
         private void RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             BlittableJsonReaderObject metadata, ref DocumentFlags flags)
         {
-
             var countersStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage;
-            var onDiskCounters = countersStorage.GetCountersForDocument(context, id, 0, int.MaxValue);
-            var sortedCounters = new HashSet<string>(onDiskCounters, StringComparer.OrdinalIgnoreCase).ToList();
-            if (sortedCounters.Count == 0)
+            var onDiskCounters = countersStorage.GetCountersForDocument(context, id).ToList();
+
+            if (onDiskCounters.Count == 0)
             {
                 if (metadata != null)
                 {
@@ -445,7 +444,6 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            sortedCounters.Sort(StringComparer.OrdinalIgnoreCase);
             flags |= DocumentFlags.HasCounters;
 
             if (metadata == null)
@@ -454,7 +452,7 @@ namespace Raven.Server.Documents
                 {
                     [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Documents.Metadata.Counters] = sortedCounters
+                        [Constants.Documents.Metadata.Counters] = onDiskCounters
                     }
                 };
             }
@@ -462,7 +460,7 @@ namespace Raven.Server.Documents
             {
                 metadata.Modifications = new DynamicJsonValue(metadata)
                 {
-                    [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(sortedCounters)
+                    [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(onDiskCounters)
                 };
 
                 document.Modifications = new DynamicJsonValue(document)
