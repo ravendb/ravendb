@@ -129,6 +129,7 @@ namespace Raven.Database.Indexing
 			bool resetTried = false;
 			bool recoveryTried = false;
 			string[] keysToDeleteAfterRecovery = null;
+
 			while (true)
 			{
 				Lucene.Net.Store.Directory luceneDirectory = null;
@@ -198,6 +199,16 @@ namespace Raven.Database.Indexing
 				}
 			}
 			indexes.TryAdd(fixedName, indexImplementation);
+
+            documentDatabase.TransactionalStorage.Batch(accessor =>
+            {
+                var indexes = accessor.Indexing.GetIndexesStats();
+                var indexNames = new HashSet<string>(indexes.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
+                if (indexNames.Contains(fixedName))
+                    return;
+
+                accessor.Indexing.AddIndex(fixedName, indexDefinition.Reduce != null);
+            });
 		}
 
 	    private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
