@@ -15,6 +15,7 @@ using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.Counters;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -226,18 +227,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId, int skip, int take)
+        public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterPartialKey(context, docId, out var key))
             {
                 ByteStringContext<ByteStringMemoryCache>.ExternalScope scope = default;
                 ByteString prev = default;
-                foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, skip))
+                foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    if (take-- <= 0)
-                        break;
-
                     var currentScope = ExtractCounterName(context, result.Key, key, out var current);
 
                     if (prev.HasValue && prev.Match(current))
