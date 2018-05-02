@@ -1463,35 +1463,6 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public object SecedeFromCluster()
-        {
-            var topologyId = Guid.NewGuid();
-            Engine.Bootstrap(GetNodeHttpServerUrl(), new RachisConsensus.BootstrapOptions
-            {
-                NewNodeTag = "A",
-                TopologyId = topologyId
-            });
-
-            return new
-            {
-                TopologyId = topologyId.ToString()
-            };
-        }
-
-        public object SecedeFromCluster(string nodeTag, string topologyId)
-        {
-            Engine.Bootstrap(GetNodeHttpServerUrl(), new RachisConsensus.BootstrapOptions
-            {
-                NewNodeTag = nodeTag,
-                TopologyId = Guid.Parse(topologyId)
-            });
-
-            return new
-            {
-                TopologyId = topologyId
-            };
-        }
-
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index,
             Dictionary<string, ExpandoObject> databaseValues = null, bool isRestore = false)

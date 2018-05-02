@@ -1581,7 +1581,7 @@ namespace Raven.Server.Rachis
             public Guid? TopologyId;
         }
 
-        public void Bootstrap(string selfUrl, BootstrapOptions options = null)
+        public void Bootstrap(string selfUrl)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1589,22 +1589,47 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                if (CurrentState != RachisState.Passive && options == null)
+                if (CurrentState != RachisState.Passive)
                     return;
 
-                var lastNode = _tag == InitialTag ? "A" : GetTopology(ctx).LastNodeId;
-                // If we secede from a cluster we want to keep the old cluster's tag and lastNode
-                // but if we are new born we will set our tag to A. 
-                if (options?.NewNodeTag != null || _tag == InitialTag)
+                if(_tag == InitialTag)
                 {
-                    UpdateNodeTag(ctx, options.NewNodeTag ?? "A");
+                    UpdateNodeTag(ctx, "A");
                 }
-
+                
                 var topology = new ClusterTopology(
-                    (options?.TopologyId ?? Guid.NewGuid()).ToString(),
+                    Guid.NewGuid().ToString(),
                     new Dictionary<string, string>
                     {
                         [_tag] = selfUrl
+                    },
+                    new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
+                    "A"
+                );
+
+                SetTopology(null, ctx, topology);
+
+                SwitchToSingleLeader(ctx);
+
+                tx.Commit();
+            }
+        }
+
+        public string HardResetToNewCluster()
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                var lastNode =  GetTopology(ctx).LastNodeId;
+                UpdateNodeTag(ctx, "A");
+
+                var topologyId = Guid.NewGuid().ToString();
+                var topology = new ClusterTopology(
+                    topologyId,
+                    new Dictionary<string, string>
+                    {
+                        [_tag] = Url
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
@@ -1614,6 +1639,35 @@ namespace Raven.Server.Rachis
                 SetTopology(null, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
+
+                tx.Commit();
+
+                return topologyId;
+            }
+        }
+
+        public void HardResetToPassive(string topologyId)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                UpdateNodeTag(ctx, InitialTag);
+
+                var topology = new ClusterTopology(
+                    topologyId,
+                    new Dictionary<string, string>
+                    {
+                        [_tag] = Url
+                    },
+                    new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
+                    string.Empty
+                );
+
+                SetTopology(null, ctx, topology);
+
+                SetNewStateInTx(ctx, RachisState.Passive, null, CurrentTerm,
+                    "Hard reset to passive by admin");
 
                 tx.Commit();
             }
