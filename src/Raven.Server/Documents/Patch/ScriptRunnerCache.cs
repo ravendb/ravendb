@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -39,6 +41,14 @@ namespace Raven.Server.Documents.Patch
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
+        public IEnumerable<DynamicJsonValue> GetDebugInfo(bool detailed = false)
+        {
+            foreach (var item in _cache)
+            {
+                yield return item.Value.Value.GetDebugInfo(detailed);
+            }
+        }
+
         public abstract class Key
         {
             public abstract void GenerateScript(ScriptRunner runner);
@@ -65,7 +75,7 @@ namespace Raven.Server.Documents.Patch
 
         private ScriptRunner GetScriptRunner(Key script)
         {
-            if (_cache.TryGetValue(script, out var lazy))
+            if (_cache.TryGetValue(script, out var lazy))                
                 return lazy.Value;
 
             return GetScriptRunnerUnlikely(script);
@@ -77,6 +87,7 @@ namespace Raven.Server.Documents.Patch
             {
                 var runner = new ScriptRunner(_database, _configuration, EnableClr);
                 script.GenerateScript(runner);
+                runner.ScriptType = script.GetType().Name;
                 return runner;
             });
             var lazy = _cache.GetOrAdd(script, value);
