@@ -10,8 +10,10 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Json.Converters;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -28,53 +30,79 @@ namespace Raven.Server.Documents.Handlers
             private readonly long _value;
             private readonly bool _failTx;
 
+            private CounterBatch _counterBatch;
+
+            public CountersDetail CountersDetail;
+
             public long CurrentValue;
             public bool DocumentMissing;
 
-            public IncrementCounterCommand(DocumentDatabase database, string doc, string counter, long value, bool failTx)
+            public IncrementCounterCommand(DocumentDatabase database, CounterBatch counterBatch, bool failTx)
             {
                 _database = database;
-                _doc = doc;
-                _counter = counter;
-                _value = value;
+                _counterBatch = counterBatch;
                 _failTx = failTx;
+
+                CountersDetail = new CountersDetail();
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, _doc, _counter, _value);
-
-                try
+                foreach (var counter in _counterBatch.Counters)
                 {
-                    var doc = _database.DocumentsStorage.Get(context, _doc,
-                        throwOnConflict: true);
-                    if (doc == null)
+                    _database.DocumentsStorage.CountersStorage.IncrementCounter(context, counter.DocumentId, counter.CounterName, counter.Delta);
+
+                    try
                     {
-                        DocumentMissing = true;
-                        if (_failTx == false)
-                            return 0;
-                        ThrowMissingDocument();
-                        return 0; // never hit
+                        var doc = _database.DocumentsStorage.Get(context, counter.DocumentId,
+                            throwOnConflict: true);
+                        if (doc == null)
+                        {
+                            DocumentMissing = true;
+                            if (_failTx == false)
+                                return 0;
+                            ThrowMissingDocument();
+                            return 0; // never hit
+                        }
+
+                        if (doc.TryGetMetadata(out var metadata) == false)
+                            ThrowInvalidDocumentWithNoMetadata(doc, _counter);
+
+                        UpdateDocumentCounters(metadata);
+
+                        if (metadata.Modifications != null)
+                        {
+                            var data = context.ReadObject(doc.Data, counter.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            _database.DocumentsStorage.Put(context, counter.DocumentId, null, data, flags: DocumentFlags.HasCounters);
+                        }
+                    }
+                    catch (DocumentConflictException)
+                    {
+                        // this is fine, we explicitly support
+                        // setting the flag if we are in conflicted state is 
+                        // done by the conflict resolver
                     }
 
-                    if (doc.TryGetMetadata(out var metadata) == false)
-                        ThrowInvalidDocumentWithNoMetadata(doc, _counter);
-
-                    UpdateDocumentCounters(metadata);
-                    if (metadata.Modifications != null)
+                    var fullValues = new Dictionary<string, long>();
+                    long value = 0;
+                    foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(context, counter.DocumentId, counter.CounterName))
                     {
-                        var data = context.ReadObject(doc.Data, _doc, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        _database.DocumentsStorage.Put(context, _doc, null, data, flags: DocumentFlags.HasCounters);
+                        value += val;
+                        if (fullValues != null)
+                        {
+                            fullValues[cv] = val;
+                        }
                     }
-                }
-                catch (DocumentConflictException)
-                {
-                    // this is fine, we explicitly support
-                    // setting the flag if we are in conflicted state is 
-                    // done by the conflict resolver
+
+                    CountersDetail.Counters.Add(new CounterDetail
+                    {
+                        DocumentId = counter.DocumentId,
+                        CounterName = counter.CounterName,
+                        TotalValue = value,
+                        CounterValues = fullValues
+                    });
                 }
 
-                CurrentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(context, _doc, _counter) ?? 0;
                 return 1;
             }
 
@@ -124,52 +152,62 @@ namespace Raven.Server.Documents.Handlers
 
         public class DeleteCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private DocumentDatabase _database;
-            private string _doc, _counter;
+            private readonly DocumentDatabase _database;
+            private readonly GetOrDeleteCounters _countersBatch;
 
-            public DeleteCounterCommand(DocumentDatabase database, string doc, string counter)
+            public DeleteCounterCommand(DocumentDatabase database, GetOrDeleteCounters counters)
             {
                 _database = database;
-                _doc = doc;
-                _counter = counter;
+                _countersBatch = counters;
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var del = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, _doc, _counter);
-
-                try
+                foreach (var counterOperation in _countersBatch.Counters)
                 {
-                    var doc = _database.DocumentsStorage.Get(context, _doc,
-                        throwOnConflict: true);
-                    if (doc == null)
-                        return 0;
-                    if (doc.TryGetMetadata(out var metadata) == false)
-                        ThrowInvalidDocumentWithNoMetadata(doc, _counter);
-
-                    UpdateDocumentCounters(metadata);
-                    if (metadata.Modifications != null)
+                    foreach (var counterName in counterOperation.Counters)
                     {
-                        var data = context.ReadObject(doc.Data, _doc, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        _database.DocumentsStorage.Put(context, _doc, null, data);
+                        var id = counterOperation.DocumentId;
+                        var del = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, id, counterName);
+
+                        if (del == false)
+                            return 0;
+                        try
+                        {
+                            var doc = _database.DocumentsStorage.Get(context, id);
+                            if (doc == null)
+                                return 0;
+                            if (doc.TryGetMetadata(out var metadata) == false)
+                                ThrowInvalidDocumentWithNoMetadata(doc, counterName);
+
+                            UpdateDocumentCounters(metadata, counterName);
+                            if (metadata.Modifications != null)
+                            {
+                                var data = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                _database.DocumentsStorage.Put(context, id, null, data);
+                            }
+                        }
+                        catch (DocumentConflictException)
+                        {
+                            // this is fine, we explicitly support
+                            // setting the flag if we are in conflicted state is 
+                            // done by the conflict resolver
+                        }
+
                     }
-                }
-                catch (DocumentConflictException)
-                {
-                    // this is fine, we explicitly support
-                    // setting the flag if we are in conflicted state is 
-                    // done by the conflict resolver
+
                 }
 
-                return del ? 1 : 0;
+
+                return 1;
             }
 
-            private void UpdateDocumentCounters(BlittableJsonReaderObject metadata)
+            private void UpdateDocumentCounters(BlittableJsonReaderObject metadata, string counter)
             {
                 if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
                 {
 
-                    var counterIndex = counters.BinarySearch(_counter);
+                    var counterIndex = counters.BinarySearch(counter);
                     if (counterIndex < 0)
                         return;
 
@@ -190,184 +228,97 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
-
         }
 
-        [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]
-        public async Task Increment()
+        [RavenAction("/databases/*/counters/batch", "POST", AuthorizationStatus.ValidUser)]
+        public async Task Batch()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var value = GetLongQueryString("val", true) ?? 1;
-
-            var cmd = new IncrementCounterCommand(Database, id, name, value, failTx: false);
-
-            await Database.TxMerger.Enqueue(cmd);
-
-            if (cmd.DocumentMissing)
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                
-                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                var countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
+
+                var counterBatch = JsonDeserializationClient.CounterBatch(countersBlittable);
+
+                var cmd = new IncrementCounterCommand(Database, counterBatch, failTx: false);
+
+                await Database.TxMerger.Enqueue(cmd);
+
+                if (cmd.DocumentMissing)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     cmd.ThrowMissingDocument();
-                }
-                return;// never hit
-            }
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Document");
-                writer.WriteString(id);
-                writer.WriteComma();
-                writer.WritePropertyName("Counter");
-                writer.WriteString(name);
-                writer.WriteComma();
-                writer.WritePropertyName("Value");
-                writer.WriteInteger(cmd.CurrentValue);
-                writer.WriteEndObject();
-            }
-        }
-
-        [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
-        public Task Get()
-        {
-            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
-            var name = GetStringQueryString("name", required: false);
-
-            if (string.IsNullOrEmpty(name))
-                return GetCountersForDocument(documentId);
-
-            return GetCounterValue(documentId, name);
-        }
-
-        private Task GetCounterValue(string documentId, string name)
-        {
-            var mode = GetStringQueryString("mode", required: false);
-
-            switch (mode)
-            {
-                default: // likely to be the common option
-                    return GetSingleCounterValue(documentId, name);
-
-                case "all":
-                case "ALL":
-                case "All":
-                    return GetCounterValues(documentId, name);
-            }
-
-        }
-
-        private Task GetSingleCounterValue(string documentId, string name)
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(context, documentId, name);
-                if (value == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return; // never hit
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Document");
-                    writer.WriteString(documentId);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Counter");
-                    writer.WriteString(name);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Value");
-                    writer.WriteInteger(value.Value);
-                    writer.WriteEndObject();
+                    context.Write(writer, cmd.CountersDetail.ToJson());
+                    writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        private Task GetCounterValues(string documentId, string name)
+        [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]
+        public async Task GetCounters()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var values = Database.DocumentsStorage.CountersStorage.GetCounterValues(context, documentId, name);
+                var full = GetBoolValueQueryString("full", required: false) ?? false;
+                BlittableJsonReaderObject countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
+                var counters = JsonDeserializationClient.CountersBatch(countersBlittable).Counters;
+                var result = new CountersDetail();
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                foreach (var getCounterDetails in counters)
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Document");
-                    writer.WriteString(documentId);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Counter");
-                    writer.WriteString(name);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Values");
-
-                    writer.WriteStartArray();
-                    var first = true;
-
-                    foreach (var (cv, val) in values)
+                    foreach (var counter in getCounterDetails.Counters)
                     {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("ChangeVector");
-                        writer.WriteString(cv);
-                        writer.WriteComma();
-                        writer.WritePropertyName("Value");
-                        writer.WriteInteger(val);
-                        writer.WriteEndObject();
+                        var id = getCounterDetails.DocumentId;
+                        var fullValues = full ? new Dictionary<string, long>() : null;
+                        long? value = null;
+                        foreach (var (cv, val) in Database.DocumentsStorage.CountersStorage.GetCounterValues(context, id, counter))
+                        {
+                            value = value ?? 0;
+                            value += val;
+                            if (fullValues != null)
+                            {
+                                fullValues[cv] = val;
+                            }
+                        }
+
+                        if (value == null)
+                            continue;
+
+                        result.Counters.Add(new CounterDetail
+                        {
+                            CounterName = counter,
+                            DocumentId = id,
+                            CounterValues = fullValues,
+                            TotalValue = value.Value
+                        });
                     }
-                    writer.WriteEndArray();
-
-                    writer.WriteEndObject();
                 }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private Task GetCountersForDocument(string documentId)
-        {
-            var skip = GetStart();
-            var take = GetPageSize();
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var counters = Database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, documentId, skip, take);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Document");
-                    writer.WriteString(documentId);
-                    writer.WriteComma();
-                    writer.WriteArray("Counters", counters);
-                    writer.WriteEndObject();
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/counters", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/counters/delete", "POST", AuthorizationStatus.ValidUser)]
         public async Task Delete()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("doc");
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
+                var countersToDelete = JsonDeserializationClient.CountersBatch(countersBlittable);
+                var cmd = new DeleteCounterCommand(Database, countersToDelete);
+                await Database.TxMerger.Enqueue(cmd);
 
-            var cmd = new DeleteCounterCommand(Database, id, name);
-            await Database.TxMerger.Enqueue(cmd);
-
-            NoContentStatus();
+                NoContentStatus();
+            }
         }
 
         private static void ThrowInvalidDocumentWithNoMetadata(Document doc, string counter)

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Migration;
@@ -121,6 +122,8 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
 
+        public static readonly Func<BlittableJsonReaderObject, CountersDetail> CountersDetail = GenerateJsonDeserializationRoutine<CountersDetail>();
+
         internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();
 
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
@@ -164,5 +167,10 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, FtpSettings> FtpSettings = GenerateJsonDeserializationRoutine<FtpSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, ClaimDomainResult> ClaimDomainResult = GenerateJsonDeserializationRoutine<ClaimDomainResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CounterBatch> CounterBatch = GenerateJsonDeserializationRoutine<CounterBatch>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetOrDeleteCounters> CountersBatch = GenerateJsonDeserializationRoutine<GetOrDeleteCounters>();
+
     }
 }
