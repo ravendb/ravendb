@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Http;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -21,7 +23,7 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Operations.Send(new IncrementCounterOperation("users/1-A", "likes", 10));
+                store.Counters.Increment("users/1-A", "likes", 10);
 
                 using (var session = store.OpenSession())
                 {
@@ -33,7 +35,7 @@ namespace SlowTests.Client.Counters
                     Assert.True(((object[])counters).Contains("likes"));
                 }
 
-                store.Operations.Send(new IncrementCounterOperation("users/1-A", "votes", 50));
+                store.Counters.Increment("users/1-A", "votes", 50);
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
@@ -84,11 +86,11 @@ namespace SlowTests.Client.Counters
 
                 EnsureReplicating(storeA, storeB);
 
-                await storeB.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "likes", 14));
-                await storeB.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "dislikes", 13));
+                await storeB.Counters.IncrementAsync("users/1-A", "likes", 14);
+                await storeB.Counters.IncrementAsync("users/1-A", "dislikes", 13);
 
-                await storeA.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "likes", 12));
-                await storeA.Operations.SendAsync(new IncrementCounterOperation("users/1-A", "cats", 11));
+                await storeA.Counters.IncrementAsync("users/1-A", "likes", 12);
+                await storeA.Counters.IncrementAsync("users/1-A", "cats", 11);
 
                 EnsureReplicating(storeA, storeB);
 
