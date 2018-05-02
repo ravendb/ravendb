@@ -1575,7 +1575,13 @@ namespace Raven.Server.Rachis
 
         public abstract Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
 
-        public void Bootstrap(string selfUrl, bool forNewCluster = false)
+        public class BootstrapOptions
+        {
+            public string NewNodeTag;
+            public Guid? TopologyId;
+        }
+
+        public void Bootstrap(string selfUrl, BootstrapOptions options = null)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1583,19 +1589,19 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                if (CurrentState != RachisState.Passive && forNewCluster == false)
+                if (CurrentState != RachisState.Passive && options == null)
                     return;
 
                 var lastNode = _tag == InitialTag ? "A" : GetTopology(ctx).LastNodeId;
-                // If we were kicked out form a cluster we want to keep the old cluster's tag and lastNode
+                // If we secede from a cluster we want to keep the old cluster's tag and lastNode
                 // but if we are new born we will set our tag to A. 
-                if (forNewCluster == false && _tag == InitialTag)
+                if (options?.NewNodeTag != null || _tag == InitialTag)
                 {
-                    UpdateNodeTag(ctx, "A");
+                    UpdateNodeTag(ctx, options.NewNodeTag ?? "A");
                 }
 
                 var topology = new ClusterTopology(
-                    Guid.NewGuid().ToString(),
+                    (options?.TopologyId ?? Guid.NewGuid()).ToString(),
                     new Dictionary<string, string>
                     {
                         [_tag] = selfUrl
