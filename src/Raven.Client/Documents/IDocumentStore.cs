@@ -168,6 +168,8 @@ namespace Raven.Client.Documents
 
         OperationExecutor Operations { get; }
 
+        CountersOperationExecutor Counters { get; }
+
         DatabaseSmuggler Smuggler { get; }
 
         IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);

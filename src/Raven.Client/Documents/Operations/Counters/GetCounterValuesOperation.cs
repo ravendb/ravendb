@@ -1,66 +1,62 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class GetCounterValuesOperation : IOperation<Dictionary<string, long>>
+    public class GetCounterValuesOperation : IOperation<CountersDetail>
     {
-        private readonly string _documentId;
-        private readonly string _name;
+        private readonly GetOrDeleteCounters _counters;
 
-        public GetCounterValuesOperation(string documentId, string name)
+
+        public GetCounterValuesOperation(GetOrDeleteCounters counters)
         {
-            _documentId = documentId;
-            _name = name;
+            _counters = counters;
         }
 
-        public RavenCommand<Dictionary<string, long>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<CountersDetail> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCounterValuesCommand(_documentId, _name);
+            return new GetCounterValuesCommand(_counters, conventions);
         }
 
-        private class GetCounterValuesCommand : RavenCommand<Dictionary<string, long>>
+        private class GetCounterValuesCommand : RavenCommand<CountersDetail>
         {
-            private readonly string _documentId;
-            private readonly string _name;
+            private readonly GetOrDeleteCounters _counters;
+            private readonly DocumentConventions _conventions;
 
-            public GetCounterValuesCommand(string documentId, string name)
+
+            public GetCounterValuesCommand(GetOrDeleteCounters counters, DocumentConventions conventions)
             {
-                if (string.IsNullOrWhiteSpace(documentId))
-                    throw new ArgumentNullException(nameof(documentId));
-                if (string.IsNullOrWhiteSpace(name))
-                    throw new ArgumentNullException(nameof(name));
-
-                _documentId = documentId;
-                _name = name;
+                _counters = counters ?? throw new ArgumentNullException(nameof(counters));
+                _conventions = conventions;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters?doc={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}&mode=all";
+                url = $"{node.Url}/databases/{node.Database}/counters";
 
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Get
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_counters, _conventions, ctx);
+                        ctx.Write(stream, config);
+                    })
                 };
             }
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                response.TryGet("Values", out BlittableJsonReaderArray values);
+                if (response == null)
+                    return;
 
-                Result = new Dictionary<string, long>();
-
-                foreach (BlittableJsonReaderObject v in values)
-                {
-                    v.TryGet("DbId", out string dbid);
-                    v.TryGet("Value", out long value);
-                    Result[dbid] = value;
-                }
+                Result = JsonDeserializationClient.CountersDetail(response);
             }
 
             public override bool IsReadRequest => true;
