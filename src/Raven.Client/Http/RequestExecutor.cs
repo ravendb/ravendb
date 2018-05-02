@@ -851,10 +851,14 @@ namespace Raven.Client.Http
 
         private bool ShouldExecuteOnAll<TResult>(ServerNode chosenNode, RavenCommand<TResult> command)
         {
-            return _readBalanceBehavior == ReadBalanceBehavior.FastestNode &&
-                   _nodeSelector != null &&
-                   _nodeSelector.InSpeedTestPhase &&
-                   _nodeSelector.Topology?.Nodes?.Count > 1 &&
+            if (_readBalanceBehavior != ReadBalanceBehavior.FastestNode)
+                return false;
+
+            var selector = _nodeSelector;
+
+            return selector != null &&
+                   selector.InSpeedTestPhase &&
+                   selector.Topology?.Nodes?.Count > 1 &&
                    command.IsReadRequest &&
                    command.ResponseType == RavenCommandResponseType.Object &&
                    chosenNode != null;
