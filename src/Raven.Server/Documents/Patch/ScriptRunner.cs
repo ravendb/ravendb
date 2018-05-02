@@ -32,15 +32,36 @@ namespace Raven.Server.Documents.Patch
         private readonly DocumentDatabase _db;
         private readonly RavenConfiguration _configuration;
         private readonly bool _enableClr;
+        private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
 
         public long Runs;
+        DateTime _lastRun;
+
+        public string ScriptType { get; internal set; }
 
         public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr)
         {
             _db = db;
             _configuration = configuration;
             _enableClr = enableClr;
+            _creationTime = DateTime.UtcNow;
+        }
+
+        public DynamicJsonValue GetDebugInfo(bool detailed=false)
+        {
+            var djv = new DynamicJsonValue
+            {
+                ["Type"] = ScriptType,
+                ["CreationTime"] = _creationTime,
+                ["LastRun"] = _lastRun,
+                ["Runs"] = Runs,
+                ["CachedScriptsCount"] = _cache.Count                
+            };
+            if (detailed)
+                djv["ScriptsSource"] = ScriptsSource;                
+
+            return djv;
         }
 
         public void AddScript(string script)
@@ -50,6 +71,7 @@ namespace Raven.Server.Documents.Patch
 
         public ReturnRun GetRunner(out SingleRun run)
         {
+            _lastRun = DateTime.UtcNow;
             if (_cache.TryDequeue(out run) == false)
                 run = new SingleRun(_db, _configuration, this, ScriptsSource);
             Interlocked.Increment(ref Runs);
