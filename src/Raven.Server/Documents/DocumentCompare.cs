@@ -64,10 +64,11 @@ namespace Raven.Server.Documents
                         currentMetadata = objMetadata;
 
                     // If there is a conflict on @metadata with @counters and/or with @attachments, we know how to resolve it.
-                    if (currentMetadata.GetPropertyNames().Contains(Constants.Documents.Metadata.Counters, StringComparer.OrdinalIgnoreCase))
+                    var propertyNames = currentMetadata.GetPropertyNames();
+                    if (propertyNames.Contains(Constants.Documents.Metadata.Counters, StringComparer.OrdinalIgnoreCase))
                         result |= DocumentCompareResult.CountersNotEqual;
 
-                    if (currentMetadata.GetPropertyNames().Contains(Constants.Documents.Metadata.Attachments, StringComparer.OrdinalIgnoreCase))
+                    if (propertyNames.Contains(Constants.Documents.Metadata.Attachments, StringComparer.OrdinalIgnoreCase))
                         result |= DocumentCompareResult.AttachmentsNotEqual;
 
                     return result != DocumentCompareResult.Equal ? result : DocumentCompareResult.NotEqual;
