@@ -26,16 +26,13 @@ namespace Raven.Server.Documents.Handlers
         public class IncrementCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly string _doc, _counter;
-            private readonly long _value;
+            private readonly CounterBatch _counterBatch;
             private readonly bool _failTx;
-
-            private CounterBatch _counterBatch;
 
             public CountersDetail CountersDetail;
 
             public long CurrentValue;
-            public bool DocumentMissing;
+            public (bool missing, string missingId, string counterName) DocumentMissing;
 
             public IncrementCounterCommand(DocumentDatabase database, CounterBatch counterBatch, bool failTx)
             {
@@ -58,17 +55,17 @@ namespace Raven.Server.Documents.Handlers
                             throwOnConflict: true);
                         if (doc == null)
                         {
-                            DocumentMissing = true;
+                            DocumentMissing = (true, counter.DocumentId, counter.CounterName);
                             if (_failTx == false)
                                 return 0;
-                            ThrowMissingDocument();
+                            ThrowMissingDocument(counter.DocumentId, counter.CounterName);
                             return 0; // never hit
                         }
 
                         if (doc.TryGetMetadata(out var metadata) == false)
-                            ThrowInvalidDocumentWithNoMetadata(doc, _counter);
+                            ThrowInvalidDocumentWithNoMetadata(doc, counter.CounterName);
 
-                        UpdateDocumentCounters(metadata);
+                        UpdateDocumentCounters(metadata, counter.CounterName);
 
                         if (metadata.Modifications != null)
                         {
@@ -106,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            private void UpdateDocumentCounters(BlittableJsonReaderObject metadata)
+            private void UpdateDocumentCounters(BlittableJsonReaderObject metadata, string counter)
             {
                 if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
                 {
@@ -114,13 +111,13 @@ namespace Raven.Server.Documents.Handlers
                     {
                         [Constants.Documents.Metadata.Counters] = new DynamicJsonArray
                         {
-                            _counter
+                            counter
                         }
                     };
                 }
                 else
                 {
-                    var loc = counters.BinarySearch(_counter);
+                    var loc = counters.BinarySearch(counter);
                     if (loc < 0)
                     {
                         loc = ~loc; // flip the bits and find the right location
@@ -130,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
                             list.Add(counters.GetStringByIndex(i));
                         }
 
-                        list.Add(_counter);
+                        list.Add(counter);
                         for (int i = loc; i < counters.Length; i++)
                         {
                             list.Add(counters.GetStringByIndex(i));
@@ -144,9 +141,9 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            public void ThrowMissingDocument()
+            public void ThrowMissingDocument(string docId, string counter)
             {
-                throw new CounterDocumentMissingException($"There is no document '{_doc}' (or it has been deleted), cannot set counter '{_counter}' for a missing document");
+                throw new CounterDocumentMissingException($"There is no document '{docId}' (or it has been deleted), cannot set counter '{counter}' for a missing document");
             }
         }
 
@@ -243,10 +240,10 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
 
-                if (cmd.DocumentMissing)
+                if (cmd.DocumentMissing.missing)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    cmd.ThrowMissingDocument();
+                    cmd.ThrowMissingDocument(cmd.DocumentMissing.missingId, cmd.DocumentMissing.counterName);
                     return; // never hit
                 }
 
