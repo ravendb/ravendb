@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.Queries
             if (IsDynamic == false || IsGroupBy || IsDistinct)
                 IsCollectionQuery = false;
 
+            DeclaredFunctions = Query.DeclaredFunctions;
+
             Build(parameters);
 
             CanCache = cacheKey != 0;
@@ -75,6 +77,7 @@ namespace Raven.Server.Documents.Queries
         public bool HasCmpXchg { get; private set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
+        public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
 
         public readonly string CollectionName;
 
