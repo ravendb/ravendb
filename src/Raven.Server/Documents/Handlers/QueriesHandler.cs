@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
 
-                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
+                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
                 var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
 
-                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
+                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
                 ExecuteQueryOperation(query,
                     (runner, options, onProgress, token) => runner.ExecutePatchQuery(
