@@ -208,9 +208,9 @@ namespace Raven.Server.Documents.Indexes
             _stats.ReduceSuccesses += numberOfEntries;
         }
 
-        public void RecordReduceErrors(int numberOfEntries)
+        public int RecordReduceErrors(int numberOfEntries)
         {
-            _stats.ReduceErrors += numberOfEntries;
+            return _stats.ReduceErrors += numberOfEntries;
         }
 
         public IndexingPerformanceOperation ToIndexingPerformanceOperation(string name)

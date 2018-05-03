@@ -592,8 +592,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 Debug.Assert(errorCount != -1);
 
-                stats.RecordReduceErrors(errorCount);
-                stats.AddReduceError(message + $" Exception: {error}");
+                // we'll only want to record exceptions on some of these, to give the 
+                // user information about what is going on, otherwise we'll have to wait a lot if we 
+                // are processing a big batch, and this can be a perf killer. See: RavenDB-11038
+                var totalErrors = stats.RecordReduceErrors(errorCount);
+                if (totalErrors < 100)
+                {
+                    stats.AddReduceError(message + $" Exception: {error}");
+                }
             }
         }
 
