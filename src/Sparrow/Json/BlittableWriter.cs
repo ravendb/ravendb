@@ -158,7 +158,8 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
-            _innerBuffer = _context.GetMemory(32);
+            if(_innerBuffer == null)
+                _innerBuffer = _context.GetMemory(32);
         }
 
         public WriteToken WriteObjectMetadata(FastList<PropertyTag> properties, long firstWrite, int maxPropId)

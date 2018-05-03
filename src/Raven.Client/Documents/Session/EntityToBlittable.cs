@@ -76,7 +76,12 @@ namespace Raven.Client.Documents.Session
             changes |= TrySimplifyJson(reader);
 
             if (changes)
-                reader = context.ReadObject(reader, "convert/entityToBlittable");
+            {
+                using (var old = reader)
+                {
+                    reader = context.ReadObject(reader, "convert/entityToBlittable");
+                }
+            }
 
             return reader;
         }
