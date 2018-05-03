@@ -13,9 +13,10 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.10.14" />
-    <PackageReference Include="xunit" Version="2.4.0-beta.1.build3958" />
-    <PackageReference Include="xunit" Version="2.4.0-beta1-build3909" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.*" />    
+    <PackageReference Include="xunit" Version="2.4.0-beta.*" />
+    <PackageReference Include="System.Runtime.Intrinsics.Experimental" Version="4.5.0-preview2-*" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.0-preview2-*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
