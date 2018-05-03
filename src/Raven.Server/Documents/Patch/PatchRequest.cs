@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -8,8 +10,7 @@ namespace Raven.Server.Documents.Patch
     {
         None,
         Patch,
-        Conflict,
-        Subscription,
+        Conflict,        
         SqlEtl,
         RavenEtl,
         Smuggler
@@ -27,23 +28,47 @@ namespace Raven.Server.Documents.Patch
 
         public readonly PatchRequestType Type;
 
-        public PatchRequest(string script, PatchRequestType type)
+        private readonly Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> _functions;
+
+        public PatchRequest(string script, PatchRequestType type, Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> functions = null)
         {
             Script = script;
+            _functions = functions;
             Type = type;
         }
 
         protected bool Equals(PatchRequest other)
         {
-            return string.Equals(Script, other.Script) && Type == other.Type;
+            if ((string.Equals(Script, other.Script) && Type == other.Type) == false)
+                return false;
+
+            if (_functions != null)
+            {
+                foreach (var function in _functions)
+                {
+                    if (other._functions.TryGetValue(function.Key, out var otherVal) == false
+                        || function.Value.FunctionText != otherVal.FunctionText)
+                        return false;
+                }
+            }
+
+            return true;
+
         }
 
         public override void GenerateScript(ScriptRunner runner)
         {
-            runner.AddScript(GenerateScript());
+            if (_functions!= null)
+            {
+                foreach(var function in _functions)
+                {
+                    runner.AddScript(function.Value.FunctionText);
+                }
+            }
+            runner.AddScript(GenerateRootScript());
         }
 
-        private string GenerateScript()
+        private string GenerateRootScript()
         {
             switch (Type)
             {
@@ -64,19 +89,7 @@ function execute(doc, args){{
     __actual_func.call(doc, args);
     return doc;
 }}";
-                    // get the document and return the result of the script
-                    // and without arguments
-                case PatchRequestType.Subscription:
-                    return $@"
-function __actual_func() {{ 
-
-{Script}
-
-}};
-
-function execute(doc){{ 
-    return __actual_func.call(doc);
-}}";
+                
                 case PatchRequestType.Conflict:
                     return $@"
 function resolve(docs, hasTombstone, resolveToTombstone){{ 
@@ -107,16 +120,25 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
                 int hashCode = 0;
                 hashCode = (hashCode * 397) ^ (Script != null ? Script.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)Type;
+                if (_functions != null)
+                {
+                    foreach (var function in _functions)
+                    {
+                        hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
+                    }
+                }
                 return hashCode;
             }
         }
 
         public static PatchRequest Parse(BlittableJsonReaderObject input, out BlittableJsonReaderObject args)
         {
+            
             if (input.TryGet("Script", out string script) == false || script == null)
                 throw new InvalidDataException("Missing 'Script' property on 'Patch'");
 
-            var patch = new PatchRequest(script, PatchRequestType.Patch);
+            // todo: maybe support receiving functions here? not sure, because this function is for single-document patches, which is not in RQL notation in the first place
+            var patch = new PatchRequest(script,PatchRequestType.Patch);
 
             input.TryGet("Values", out args);
 
