@@ -51,6 +51,27 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
+        public void CanUseJavaScriptIndexWithAdditionalSources()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersByNameWithAdditionalSources());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Brendan Eich",
+                        IsActive = true
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    session.Query<User>("UsersByNameWithAdditionalSources").Single(x => x.Name == "Mr. Brendan Eich");
+                }
+
+            }
+        }
+
+        [Fact]
         public void CanIndexArrayProperties()
         {
             using (var store = GetDocumentStore())
@@ -303,6 +324,32 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        private class UsersByNameWithAdditionalSources : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "UsersByName",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Users', function (u){ return { Name: Mr(u.Name)};})",
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration(),
+                    AdditionalSources = new Dictionary<string, string>
+                    {
+                        ["The Script"] = @"
+function Mr(x){
+    return 'Mr. ' + x;
+}"
+                    }
+                    
+                };
+            }
+        }
         private class FanoutByNumbers : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
