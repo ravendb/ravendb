@@ -30,11 +30,6 @@ namespace Raven.Client.Documents.Operations.Counters
         public long TotalValue { get; set; }
         public Dictionary<string, long> CounterValues { get; set; }
 
-        public CounterDetail()
-        {
-            CounterValues = new Dictionary<string, long>();
-        }
-
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -42,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 [nameof(DocumentId)] = DocumentId,
                 [nameof(CounterName)] = CounterName,
                 [nameof(TotalValue)] = TotalValue,
-                [nameof(CounterValues)] = CounterValues.ToJson()
+                [nameof(CounterValues)] = CounterValues?.ToJson()
             };
         }
     }

@@ -169,8 +169,5 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, ClaimDomainResult> ClaimDomainResult = GenerateJsonDeserializationRoutine<ClaimDomainResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, CounterBatch> CounterBatch = GenerateJsonDeserializationRoutine<CounterBatch>();
-
-        internal static readonly Func<BlittableJsonReaderObject, GetOrDeleteCounters> CountersBatch = GenerateJsonDeserializationRoutine<GetOrDeleteCounters>();
-
     }
 }
