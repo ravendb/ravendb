@@ -82,6 +82,8 @@ namespace FastTests
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
+            RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
+
             var fileInfo = new FileInfo(XunitConfigurationFile);
             if (fileInfo.Exists)
             {
@@ -128,7 +130,6 @@ namespace FastTests
                     return _selfSignedCertFileName;
 
                 var certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
-                RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
                 var tempFileName = Path.GetTempFileName();
                 File.WriteAllBytes(tempFileName, certBytes);
                 _selfSignedCertFileName = tempFileName;
