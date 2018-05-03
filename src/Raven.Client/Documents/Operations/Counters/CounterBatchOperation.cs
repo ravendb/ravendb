@@ -4,11 +4,12 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class CounterBatchOperation : IOperation
+    public class CounterBatchOperation : IOperation<CountersDetail>
     {
         private readonly CounterBatch _counterBatch;
 
@@ -17,15 +18,14 @@ namespace Raven.Client.Documents.Operations.Counters
             _counterBatch = counterBatch;
         }
 
-        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<CountersDetail> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new CounterBatchCommand(_counterBatch, conventions);
         }
 
-        public class CounterBatchCommand : RavenCommand
+        public class CounterBatchCommand : RavenCommand<CountersDetail>
         {
             private readonly DocumentConventions _conventions;
-
             private readonly CounterBatch _counterBatch;
 
             public CounterBatchCommand(CounterBatch counterBatch, DocumentConventions conventions)
@@ -34,9 +34,10 @@ namespace Raven.Client.Documents.Operations.Counters
                 _conventions = conventions;
             }
 
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/batch";
+                url = $"{node.Url}/databases/{node.Database}/counters";
 
                 return new HttpRequestMessage
                 {
@@ -49,6 +50,19 @@ namespace Raven.Client.Documents.Operations.Counters
                     })
                 };
             }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    return;
+
+                Result = JsonDeserializationClient.CountersDetail(response);
+            }
+
+            public override bool IsReadRequest => false;
+
         }
+
+
     }
 }

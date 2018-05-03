@@ -2,27 +2,30 @@
 
 namespace Raven.Client.Documents.Operations.Counters
 {
-    public class CounterBatch 
+    public class CounterBatch
     {
-        public List<CounterOperation> Counters = new List<CounterOperation>();
+        public bool ReplyWithAllNodesValues;
+        public List<DocumentCountersOperation> Documents;
     }
 
-    public class CounterOperation 
+    public class DocumentCountersOperation
     {
+        public List<CounterOperation> Operations;
         public string DocumentId;
+    }
+
+    public enum CounterOperationType
+    {
+        None,
+        Increment,
+        Delete,
+        Get
+    }
+
+    public class CounterOperation
+    {
+        public CounterOperationType Type;
         public string CounterName;
         public long Delta; 
-    }
-
-
-    public class GetOrDeleteCounters
-    {
-        public List<CountersOperation> Counters = new List<CountersOperation>();
-    }
-
-    public class CountersOperation
-    {
-        public string DocumentId;
-        public string[] Counters;
     }
 }

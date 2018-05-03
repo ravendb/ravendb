@@ -69,7 +69,7 @@ namespace Sparrow.Json
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
-        public int BinarySearch(string key)
+        public int BinarySearch(string key, StringComparison comparison)
         {
             int min = 0;
             int max = Length - 1;
@@ -78,7 +78,7 @@ namespace Sparrow.Json
             {
                 int mid = (min + max) >> 1;
                 var current = GetStringByIndex(mid);
-                var result = string.Compare(key, current, StringComparison.OrdinalIgnoreCase);
+                var result = string.Compare(key, current, comparison);
                 if (result == 0)
                 {
                     return mid;
