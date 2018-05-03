@@ -144,8 +144,9 @@ namespace SlowTests.Authentication
             DoNotReuseServer(customSettings);
             UseNewLocalServer();
 
-            // We need this here because we use a staging lets encrypt cert, the chain is not trusted.
-            RequestExecutor.ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
+            // Note: because we use a staging lets encrypt cert, the chain is not trusted.
+            // It only works because in the TestBase ctor we do:
+            // RequestExecutor.ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
 
             using (var store = GetDocumentStore(new Options
             {

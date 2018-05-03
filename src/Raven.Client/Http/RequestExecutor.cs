@@ -1164,6 +1164,8 @@ namespace Raven.Client.Http
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
         protected bool Disposed => _disposeOnceRunner.Disposed;
 
+        public static bool HasServerCertificateCustomValidationCallback => _serverCertificateCustomValidationCallback != null;
+
         public virtual void Dispose()
         {
             if (_disposeOnceRunner.Disposed)
