@@ -61,13 +61,13 @@ namespace Raven.Server.Documents.Handlers
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
-                                LoadDocument();
-                            {
+                                LoadDocument();                           
+
                                 _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docOps.DocumentId,
                                     operation.CounterName, operation.Delta);
 
                                 GetCounterValue(context, _database, docOps.DocumentId, operation.CounterName, _counterBatch.ReplyWithAllNodesValues, CountersDetail);
-                            }
+                               
                                 break;
                             case CounterOperationType.Delete:
                                 LoadDocument();
@@ -92,8 +92,13 @@ namespace Raven.Server.Documents.Handlers
                         if (metadata.Modifications != null)
                         {
                             var data = context.ReadObject(doc.Data, docOps.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            _database.DocumentsStorage.Put(context, docOps.DocumentId, null, data, 
-                                flags: DocumentFlags.HasCounters); // todo: CHECK FLAG HERE
+
+                            var flags = data.TryGet(Constants.Documents.Metadata.Key, out metadata) && 
+                                        metadata.TryGet(Constants.Documents.Metadata.Counters, out object _)
+                                        ? DocumentFlags.HasCounters
+                                        : DocumentFlags.None;
+
+                            _database.DocumentsStorage.Put(context, docOps.DocumentId, null, data, flags: flags); 
                         }
                     }
 
@@ -183,10 +188,18 @@ namespace Raven.Server.Documents.Handlers
 
                 if (updates != null)
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    if (updates.Count == 0)
                     {
-                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(updates)
-                    };
+                        metadata.Modifications = new DynamicJsonValue(metadata);
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    }
+                    else
+                    {
+                        metadata.Modifications = new DynamicJsonValue(metadata)
+                        {
+                            [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(updates)
+                        };
+                    }
                 }
 
                 void CreateUpdatesIfNeeded()
