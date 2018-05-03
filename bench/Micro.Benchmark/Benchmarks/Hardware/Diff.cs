@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -14,14 +13,13 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow;
-using Sparrow.Threading;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Sparrow.Utils;
-using Voron.Util;
 
 namespace Micro.Benchmark.Benchmarks.Hardware
 {
+    [DisassemblyDiagnoser]
     [Config(typeof(DiffNonZeroes.Config))]
     public unsafe class DiffNonZeroes
     {
@@ -53,16 +51,14 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             }
         }
 
-        private ByteStringContext _context;
         private int size = 1024 * 1024 * 64;
-        private ByteString source;
-        private ByteString modified;
-        private ByteString destination;
+        private byte* source;
+        private byte* modified;
+        private byte* destination;
 
         private ScalarDiff original;
         private DiffPages _current;
-        //private AvxDiff _avx;
-        //private SseDiff _sse;
+
         private NumericsDiff _numerics;
 
         
@@ -70,209 +66,290 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         [GlobalSetup]
         public void Setup()
         {
-            _context = new ByteStringContext( SharedMultipleUseFlag.None );
-
-            _context.Allocate(size, out source);
-            _context.Allocate(size, out modified);
-            _context.Allocate(size, out destination);
+            source = NativeMemory.AllocateMemory(size, out var _);
+            modified = NativeMemory.AllocateMemory(size, out var _);
+            destination = NativeMemory.AllocateMemory(size, out var _);
 
             var r = new Random();
             for (int i = 0; i < size; i++)
             {
                 int b = r.Next();
-                source.Ptr[i] = (byte)b;
-                modified.Ptr[i] = (byte)b;
+                source[i] = (byte)b;
+                modified[i] = (byte)b;
             }
 
             for (int i = 0; i < 100; i++)
             {
                 int start = r.Next(size - 1000);
-                int end = start + 256 + r.Next(512);
+                int end = start + 256 + r.Next(4096);
 
-                for (;start < end; start++)
-                    source.Ptr[i] = 0;
+                for (; start < end; start++)
+                    source[start+i] = 0;
             }
 
             original = new ScalarDiff
             {
                 OutputSize = 0,
-                Output = destination.Ptr
+                Output = destination
             };
-
-            //_avx = new AvxDiff
-            //{
-            //    OutputSize = 0,
-            //    Output = destination.Ptr
-            //};
-
-            //_sse = new SseDiff
-            //{
-            //    OutputSize = 0,
-            //    Output = destination.Ptr
-            //};
 
             _numerics = new NumericsDiff
             {
                 OutputSize = 0,
-                Output = destination.Ptr
+                Output = destination
             };
 
             _current = new DiffPages
             {
                 OutputSize = 0,
-                Output = destination.Ptr,
+                Output = destination,
             };
         }
 
+        [Benchmark]
+        public void Current_Sequential()
+        {
+            _current.ComputeDiff(source, modified, size);
+        }
 
+        [Benchmark]
+        public void Naive_Sequential()
+        {
+            original.ComputeNaive_Diff(source, modified, size);
+        }
 
-        //[Benchmark]
-        //public void Current_Sequential()
-        //{
-        //    _current.ComputeDiff(source.Ptr, modified.Ptr, size);
-        //}
+        [Benchmark]
+        public void Naive_8bytes_Sequential()
+        {
+            original.ComputeNaive_8Bytes_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_16bytes_Sequential()
+        {
+            original.ComputeNaive_16Bytes_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32bytes_Sequential()
+        {
+            original.ComputeNaive_32Bytes_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32bytes_WithPrefetch_Sequential()
+        {
+            original.ComputeNaive_32Bytes_WithPrefetch_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32bytes_WithPrefetch_Indirect_Sequential()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Indirect_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32bytes_WithPrefetch_Alt_Indirect_Sequential()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Alt_Indirect_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeWord_32Bytes_WithPrefetch_Indirect_WholeBlock_Diff()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Indirect_WholeBlock_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32bytes_WithPrefetch_Indirect_NoCount_Sequential()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_Sequential()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_Diff(source, modified, size);
+        }
+
+        [Benchmark(Baseline = true)]
+        public void Naive_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_Diff()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_NonTemporal_Diff()
+        {
+            original.ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_NonTemporal_Diff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_WithPrefetch_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_WithPrefetch(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_NonTemporalRead_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_NonTemporalRead(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_WithPrefetch_NonTemporalRead_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_WithPrefetch_NonTemporalRead(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Naive_CopyBlock_Sequential()
+        {
+            original.ComputeNaive_CopyBlock_Diff(source, modified, size);
+        }
 
         [Benchmark]
         public void PointerOffset_Sequential()
         {
-            original.ComputeDiffPointerOffset(source.Ptr, modified.Ptr, size);
+            original.ComputeDiffPointerOffset(source, modified, size);
         }
 
-        //[Benchmark]
-        //public void PointerOffsetWithRefs_Sequential()
-        //{
-        //    original.ComputeDiffPointerOffsetWithRefs(source.Ptr, modified.Ptr, size);
-        //}
+        [Benchmark]
+        public void PointerOffsetWithRefs_Sequential()
+        {
+            original.ComputeDiffPointerOffsetWithRefs(source, modified, size);
+        }
 
-
-        //[Benchmark]
-        //public void CacheAware_Sequential()
-        //{
-        //    original.ComputeCacheAware(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void CacheAware_MagicMult_Sequential()
-        //{
-        //    original.ComputeCacheAware_MagicMult(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_Blocks_Sequential()
-        //{
-        //    original.ComputeCacheAware_Blocks(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_BlocksInBytes_Sequential()
-        //{
-        //    original.ComputeCacheAware_BlocksInBytes(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_Branchless_Sequential()
-        //{
-        //    original.ComputeCacheAware_Branchless(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_Branchless_LessRegisters_Sequential()
-        //{
-        //    original.ComputeCacheAware_Branchless_LessRegisters(source.Ptr, modified.Ptr, size);
-        //}
-
-
-        //[Benchmark]
-        //public void ComputeCacheAware_Branchless_LessRegisters_WithPrefetching_Sequential()
-        //{
-        //    original.ComputeCacheAware_Branchless_LessRegisters_WithPrefetching(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_NoInnerLoop_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody_NoInnerLoop(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_InvertedBuffer_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody_InvertedBuffer(source.Ptr, modified.Ptr, size);
-        //}
-
-
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_InvertedBuffer_Prefetch_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody_InvertedBuffer_WithPrefetch(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void Numerics32_Sequential()
-        //{
-        //    _numerics.ComputeDiff(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse(source.Ptr, modified.Ptr, size);
-        //}
 
         [Benchmark]
-        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_Sequential()
+        public void CacheAware_Sequential()
         {
-            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout(source.Ptr, modified.Ptr, size);
+            original.ComputeCacheAware(source, modified, size);
+        }
+
+        [Benchmark]
+        public void CacheAware_MagicMult_Sequential()
+        {
+            original.ComputeCacheAware_MagicMult(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_Blocks_Sequential()
+        {
+            original.ComputeCacheAware_Blocks(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_BlocksInBytes_Sequential()
+        {
+            original.ComputeCacheAware_BlocksInBytes(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_Branchless_Sequential()
+        {
+            original.ComputeCacheAware_Branchless(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_Branchless_LessRegisters_Sequential()
+        {
+            original.ComputeCacheAware_Branchless_LessRegisters(source, modified, size);
+        }
+
+
+        [Benchmark]
+        public void ComputeCacheAware_Branchless_LessRegisters_WithPrefetching_Sequential()
+        {
+            original.ComputeCacheAware_Branchless_LessRegisters_WithPrefetching(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_NoInnerLoop_Numerics_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_NoInnerLoop_Numerics(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer(source, modified, size);
+        }
+
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_Prefetch_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithPrefetch(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch(source, modified, size);
+        }
+
+        [Benchmark]
+        public void Numerics32_Sequential()
+        {
+            _numerics.ComputeDiff(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Layout_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Layout(source, modified, size);
         }
 
         [Benchmark]
         public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_NoFastPath_Sequential()
         {
-            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_NoFastPath(source.Ptr, modified.Ptr, size);
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_NoFastPath(source, modified, size);
         }
 
         [Benchmark]
-        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_NoFastPath_WithPrefetch_Sequential()
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Layout_NoFastPath_WithPrefetch_Sequential()
         {
-            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_NoFastPath_WithPrefetch(source.Ptr, modified.Ptr, size);
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Layout_NoFastPath_WithPrefetch(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse4_Layout_NoFastPath_WithPrefetch_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse4_Layout_NoFastPath_WithPrefetch(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_Avx_NonTemporal_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_Avx_NonTemporal(source, modified, size);
+        }
+
+        [Benchmark]
+        public void ComputeCacheAware_SingleBody_Avx_Temporal_Sequential()
+        {
+            original.ComputeCacheAware_SingleBody_Avx_Temporal(source, modified, size);
         }
 
 
-        //[Benchmark]
-        //public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse4_Layout_NoFastPath_WithPrefetch_Sequential()
-        //{
-        //    original.ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse4_Layout_NoFastPath_WithPrefetch(source.Ptr, modified.Ptr, size);
-        //}
+        [Benchmark]
+        public void Numerics64_Sequential()
+        {
+            _numerics.ComputeDiff2(source, modified, size);
+        }
 
-        //[Benchmark]
-        //public void Numerics64_Sequential()
-        //{
-        //    _numerics.ComputeDiff2(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void Avx_Sequential()
-        //{
-        //    _avx.ComputeDiff(source.Ptr, modified.Ptr, size);
-        //}
-
-        //[Benchmark]
-        //public void Sse_Sequential()
-        //{
-        //    _sse.ComputeDiff(source.Ptr, modified.Ptr, size);
-        //}
 
         public class NumericsDiff
         {
@@ -448,232 +525,894 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             }
         }
 
-//        public class SseDiff
-//        {
-//            public byte* Output;
-//            public long OutputSize;
-//            public bool IsDiff { get; private set; }
-
-//            public void ComputeDiff(void* originalBuffer, void* modifiedBuffer, int size)
-//            {
-//                Debug.Assert(size % 4096 == 0);
-//                Debug.Assert(size % sizeof(long) == 0);
-
-//                var len = size;
-//                IsDiff = true;
-
-//                long start = 0;
-//                OutputSize = 0;
-//                bool allZeros = true;
-
-//                // This stops the JIT from accesing originalBuffer directly, as we know
-//                // it is not mutable, this lowers the number of generated instructions
-//                byte* originalPtr = (byte*)originalBuffer;
-//                byte* modifiedPtr = (byte*)modifiedBuffer;
-
-//                var zero = Sse2.SetZeroVector128<byte>();
-//                for (long i = 0; i < len; i += 16, originalPtr += 16, modifiedPtr += 16)
-//                {
-//                    var o0 = Sse2.LoadVector128(originalPtr);
-//                    var m0 = Sse2.LoadVector128(modifiedPtr);
-
-//                    if (allZeros)
-//                        allZeros &= Sse41.TestZ(m0, zero);
-
-//                    if (!Sse41.TestZ(o0, m0))
-//                        continue;
-
-//                    if (start == i)
-//                    {
-//                        start = i + 16;
-//                        continue;
-//                    }
-
-//                    long count = (i - start) * sizeof(long);
-
-//                    if (allZeros)
-//                    {
-//                        WriteDiffAllZeroes(start * sizeof(long), count);
-//                    }
-//                    else
-//                    {
-//                        WriteDiffNonZeroes(start * sizeof(long), count, (byte*)modifiedBuffer);
-//                        allZeros = true;
-//                    }
-
-//                    start = i + 16;
-//                }
-
-//                if (start == len)
-//                    return;
-
-//                long length = (len - start) * sizeof(long);
-
-//                if (allZeros)
-//                {
-//                    WriteDiffAllZeroes(start * sizeof(long), length);
-//                }
-//                else
-//                {
-//                    WriteDiffNonZeroes(start * sizeof(long), length, (byte*)modifiedBuffer);
-//                }
-
-//            }
-
-//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//            private void WriteDiffNonZeroes(long start, long count, byte* modified)
-//            {
-//                Debug.Assert(count > 0);
-//                Debug.Assert((OutputSize % sizeof(long)) == 0);
-
-//                long outputSize = OutputSize;
-//                long* outputPtr = (long*)Output + outputSize / sizeof(long);
-//                outputPtr[0] = start;
-//                outputPtr[1] = count;
-//                outputSize += sizeof(long) * 2;
-
-//                Memory.Copy(Output + outputSize, modified + start, count);
-//                OutputSize = outputSize + count;
-//            }
-
-//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//            private void WriteDiffAllZeroes(long start, long count)
-//            {
-//                Debug.Assert(count > 0);
-//                Debug.Assert((OutputSize % sizeof(long)) == 0);
-
-//                long* outputPtr = (long*)Output + (OutputSize / sizeof(long));
-//                outputPtr[0] = start;
-//                outputPtr[1] = -count;
-
-//                OutputSize += sizeof(long) * 2;
-//            }
-
-//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//            private void CopyFullBuffer(byte* modified, int size)
-//            {
-//                // too big, no saving, just use the full modification
-//                OutputSize = size;
-//                Memory.Copy(Output, modified, size);
-//                IsDiff = false;
-//            }
-//        }
-
-//        public class AvxDiff
-//        {
-//            public byte* Output;
-//            public long OutputSize;
-//            public bool IsDiff { get; private set; }
-
-//            public void ComputeDiff(void* originalBuffer, void* modifiedBuffer, int size)
-//            {
-//                Debug.Assert(size % 4096 == 0);
-//                Debug.Assert(size % sizeof(long) == 0);
-
-//                var len = size;
-//                IsDiff = true;
-
-//                long start = 0;
-//                OutputSize = 0;
-//                bool allZeros = true;
-
-//                // This stops the JIT from accesing originalBuffer directly, as we know
-//                // it is not mutable, this lowers the number of generated instructions
-//                byte* originalPtr = (byte*)originalBuffer;
-//                byte* modifiedPtr = (byte*)modifiedBuffer;
-
-//                var zero = Avx.SetZeroVector256<byte>();
-//                for (long i = 0; i < len; i += 32, originalPtr += 32, modifiedPtr += 32)
-//                {
-//                    var o0 = Avx.LoadVector256(originalPtr);
-//                    var m0 = Avx.LoadVector256(modifiedPtr);
-
-//                    if (allZeros)
-//                        allZeros &= Avx.TestZ(m0, zero);
-
-//                    if (!Avx.TestZ(o0, m0))
-//                        continue;
-
-//                    if (start == i)
-//                    {
-//                        start = i + 32;
-//                        continue;
-//                    }
-
-//                    long count = (i - start) * sizeof(long);
-
-//                    if (allZeros)
-//                    {
-//                        WriteDiffAllZeroes(start * sizeof(long), count);
-//                    }
-//                    else
-//                    {
-//                        WriteDiffNonZeroes(start * sizeof(long), count, (byte*)modifiedBuffer);
-//                        allZeros = true;
-//                    }
-
-//                    start = i + 32;
-//                }
-
-//                if (start == len)
-//                    return;
-
-//                long length = (len - start) * sizeof(long);
-
-//                if (allZeros)
-//                {
-//                    WriteDiffAllZeroes(start * sizeof(long), length);
-//                }
-//                else
-//                {
-//                    WriteDiffNonZeroes(start * sizeof(long), length, (byte*)modifiedBuffer);
-//                }
-//            }
-
-//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//            private void WriteDiffNonZeroes(long start, long count, byte* modified)
-//            {
-//                Debug.Assert(count > 0);
-//                Debug.Assert((OutputSize % sizeof(long)) == 0);
-
-//                long outputSize = OutputSize;
-//                long* outputPtr = (long*)Output + outputSize / sizeof(long);
-//                outputPtr[0] = start;
-//                outputPtr[1] = count;
-//                outputSize += sizeof(long) * 2;
-
-//                Memory.Copy(Output + outputSize, modified + start, count);
-//                OutputSize = outputSize + count;
-//            }
-
-//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//            private void WriteDiffAllZeroes(long start, long count)
-//            {
-//                Debug.Assert(count > 0);
-//                Debug.Assert((OutputSize % sizeof(long)) == 0);
-
-//                long* outputPtr = (long*)Output + (OutputSize / sizeof(long));
-//                outputPtr[0] = start;
-//                outputPtr[1] = -count;
-
-//                OutputSize += sizeof(long) * 2;
-//            }
-
-//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//            private void CopyFullBuffer(byte* modified, int size)
-//            {
-//                // too big, no saving, just use the full modification
-//                OutputSize = size;
-//                Memory.Copy(Output, modified, size);
-//                IsDiff = false;
-//            }
-//        }        
-
         public unsafe class ScalarDiff
         {
             public byte* Output;
             public long OutputSize;
             public bool IsDiff { get; private set; }
+
+            public void ComputeNaive_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 1, originalPtr += 1, modifiedPtr += 1)
+                {
+                    byte m = modifiedPtr[0];
+                    byte o = originalPtr[0];
+
+                    if (m != o)
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        *(writePtr + writePtrOffset) = m;
+                        writePtrOffset++;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeNaive_8Bytes_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 8, originalPtr += 8, modifiedPtr += 8)
+                {
+                    long m = *(long*)modifiedPtr;
+                    long o = *(long*)originalPtr;
+
+                    if (m != o)
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        *(long*)(writePtr + writePtrOffset) = m;
+                        writePtrOffset += 8;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeNaive_16Bytes_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 16, originalPtr += 16, modifiedPtr += 16)
+                {
+                    Vector128<byte> m = Sse2.LoadVector128(modifiedPtr);
+                    Vector128<byte> o = Sse2.LoadVector128(originalPtr);
+
+                    o = Sse2.Xor(o, m);
+                    if (!Sse41.TestZ(o, o))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        Sse2.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 16;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeNaive_32Bytes_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 32, originalPtr += 32, modifiedPtr += 32)
+                {
+                    Vector256<byte> m = Avx.LoadVector256(modifiedPtr);
+                    Vector256<byte> o = Avx.LoadVector256(originalPtr);
+
+                    o = Avx2.Xor(o, m);
+                    if (!Avx.TestZ(o, o))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeNaive_32Bytes_WithPrefetch_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 32, originalPtr += 32, modifiedPtr += 32)
+                {
+                    Sse.Prefetch0(originalPtr + 2048);
+                    Sse.Prefetch0(modifiedPtr + 2048);
+
+                    Vector256<byte> m = Avx.LoadVector256(modifiedPtr);
+                    Vector256<byte> o = Avx.LoadVector256(originalPtr);
+
+                    o = Avx2.Xor(o, m);
+                    if (!Avx.TestZ(o, o))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Indirect_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* ptr = (byte*)originalBuffer;
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 32, ptr += 32)
+                {
+                    Sse.Prefetch0(ptr + 1024);
+                    Sse.Prefetch0(ptr + offset + 1024);
+
+                    Vector256<byte> o = Avx.LoadVector256(ptr);
+                    Vector256<byte> m = Avx.LoadVector256(ptr + offset);
+
+                    o = Avx2.Xor(o, m);
+                    if (!Avx.TestZ(o, o))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Alt_Indirect_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* ptr = (byte*)originalBuffer;
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                bool started = false;
+
+                for (long i = 0; i < size; i += 32, ptr += 32)
+                {
+                    Vector256<byte> m = Avx.LoadVector256(ptr + offset);
+                    Vector256<byte> o = Avx.LoadVector256(ptr);
+
+                    o = Avx2.Xor(o, m);
+                    bool areEqual = Avx.TestZ(o, o);
+
+                    Sse.Prefetch0(ptr + 1024);
+                    Sse.Prefetch0(ptr + offset + 1024);
+
+                    if (!areEqual)
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Indirect_WholeBlock_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                bool started = false;
+                for (byte* end = originalPtr + size; originalPtr < end; originalPtr += 32, modifiedPtr += 32)
+                {
+                    Top:                    
+
+                    Vector256<byte> m = Avx.LoadVector256(modifiedPtr);
+                    Vector256<byte> o = Avx.LoadVector256(originalPtr);
+                    
+                    // Fast-Path
+                    o = Avx2.Xor(o, m);
+                    if (!Avx.TestZ(o, o))
+                    {
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+
+                        if (!started)
+                            goto StartBlock;
+                    }
+                    else if (started)
+                        goto CloseBlock;
+
+                                        Sse.Prefetch0(originalPtr + 1024);
+                    Sse.Prefetch0(modifiedPtr + 1024);
+
+                    originalPtr += 32;
+                    modifiedPtr += 32;
+
+                    if (originalPtr >= end)
+                        break; // Early break. 
+
+                    goto Top;
+
+                    CloseBlock:
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                    // We advance the write pointer to the start of the next.
+                    writePtr += writePtrOffset;
+
+                    // We reset the write pointer but not before actually substracting the written amount 
+                    // from the available space.
+                    writePtrOffset = 16;
+
+                    started = false;
+                    continue;
+
+                    StartBlock:
+                    // Write the start index of the run based from the start of the page we are diffing.
+                    *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
+                    started = true;
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* ptr = (byte*)originalBuffer;
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                bool started = false;
+
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    Sse.Prefetch0(ptr + 1024);
+                    Sse.Prefetch0(ptr + offset + 1024);
+
+                    Vector256<byte> m = Avx.LoadVector256(ptr + offset);
+                    Vector256<byte> o = Avx.LoadVector256(ptr);
+
+                    o = Avx2.Xor(o, m);
+                    if (!Avx.TestZ(o, o))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer;
+                            started = true;
+                        }
+
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our byte is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* ptr = (byte*)originalBuffer;
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                bool started = false;
+
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    Vector256<byte> m = Avx.LoadVector256(ptr + offset);
+                    Vector256<byte> o = Avx.LoadVector256(ptr);
+
+                    o = Avx2.Xor(o, m);
+                    if (Avx.TestZ(o, o))
+                    {
+                        if (started) // our byte is untouched here. 
+                            goto CloseBlock;
+                    }
+                    else
+                    {
+                        if (started == false)
+                            goto StartBlock;
+
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+
+                    Sse.Prefetch0(ptr + offset + 1024);
+                    Sse.Prefetch0(ptr + 1024);
+                    continue;
+
+                    StartBlock:
+                    // Write the start index of the run based from the start of the page we are diffing.
+                    *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer;
+                    started = true;
+                    continue;
+
+                    CloseBlock:
+
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                    // We advance the write pointer to the start of the next.
+                    writePtr += writePtrOffset;
+
+                    // We reset the write pointer but not before actually substracting the written amount 
+                    // from the available space.
+                    writePtrOffset = 16;
+
+                    started = false;
+                    continue;
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* ptr = (byte*)originalBuffer;
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                bool started = false;
+
+                byte* end = ptr + size;
+                do
+                {
+                    Vector256<byte> m = Avx.LoadVector256(ptr + offset);
+                    Vector256<byte> o = Avx.LoadVector256(ptr);                    
+
+                    Sse.Prefetch0(ptr + offset + 1024);
+                    Sse.Prefetch0(ptr + 1024);
+
+                    ptr += 32;
+
+                    o = Avx2.Xor(o, m);
+                    if (Avx.TestZ(o, o))
+                    {
+                        if (started)
+                            goto CloseBlock;
+
+                        continue;
+                    }
+
+                    if (started == false)
+                        goto StartBlock;
+
+                    Avx.Store((writePtr + writePtrOffset), m);
+                    writePtrOffset += 32;
+                    continue;
+
+                    CloseBlock:
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                    // We advance the write pointer to the start of the next.
+                    writePtr += writePtrOffset;
+
+                    // We reset the write pointer but not before actually substracting the written amount 
+                    // from the available space.
+                    writePtrOffset = 16;
+
+                    started = false;
+                    continue;
+
+                    StartBlock:
+                    // Write the start index of the run based from the start of the page we are diffing.
+                    *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer - 32;
+                    started = true;
+                }
+                while (ptr < end);
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_NonTemporal_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+                OutputSize = 0;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* ptr = (byte*)originalBuffer;
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                bool started = false;
+
+                byte* end = ptr + size;
+                do
+                {
+                    Vector256<byte> m = Avx.LoadAlignedVector256(ptr + offset);
+                    Vector256<byte> o = Avx.LoadAlignedVector256(ptr);
+
+                    ptr += 32;
+
+                    Sse.Prefetch0(ptr + offset + 1024);
+                    Sse.Prefetch0(ptr + 1024);
+
+                    o = Avx2.Xor(o, m);
+                    if (!Avx.TestZ(o, o))
+                    {
+                        if (started == false)
+                            goto StartBlock;
+
+                        //Sse2.StoreAlignedNonTemporal((writePtr + writePtrOffset), Avx.ExtractVector128(m, 0));
+                        //Sse2.StoreAlignedNonTemporal((writePtr + writePtrOffset), Avx.ExtractVector128(m, 1));
+                        Avx.Store((writePtr + writePtrOffset), m);
+                        writePtrOffset += 32;
+                    }
+                    else
+                    {
+                        if (started) // our byte is untouched here. 
+                            goto CloseBlock;
+                    }
+
+                    continue;
+
+                    CloseBlock:
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+
+                    // We advance the write pointer to the start of the next.
+                    writePtr += writePtrOffset;
+
+                    // We reset the write pointer but not before actually substracting the written amount 
+                    // from the available space.
+                    writePtrOffset = 16;
+
+                    started = false;
+                    continue;
+
+                    StartBlock:
+                    // Write the start index of the run based from the start of the page we are diffing.
+                    *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer - 32;
+                    started = true;
+                }
+                while (ptr < end);
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    *(long*)(writePtr + 8) = writePtrOffset - 16;
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeNaive_CopyBlock_Diff(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+                Debug.Assert(size % sizeof(long) == 0);
+
+                IsDiff = true;
+
+                long start = 0;
+                OutputSize = 0;
+
+                // This stops the JIT from accesing originalBuffer directly, as we know
+                // it is not mutable, this lowers the number of generated instructions
+                byte* originalPtr = (byte*)originalBuffer;
+                byte* modifiedPtr = (byte*)modifiedBuffer;
+
+                for (long i = 0; i < size; i += 1, originalPtr += 1, modifiedPtr += 1)
+                {
+                    byte m = modifiedPtr[0];
+                    byte o = originalPtr[0];
+
+                    if (o != m)
+                        continue;
+
+                    if (start == i)
+                    {
+                        start = i + 1;
+                        continue;
+                    }
+
+                    long count = (i - start);
+
+                    WriteDiffNonZeroes(start, count, (byte*)modifiedBuffer);
+
+                    start = i + 1;
+                }
+
+                if (start == size)
+                    return;
+
+                long length = size - start;
+
+                WriteDiffNonZeroes(start, length, (byte*)modifiedBuffer);
+            }
 
             public void ComputeDiff(void* originalBuffer, void* modifiedBuffer, int size)
             {
@@ -794,18 +1533,34 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void WriteDiffNonZeroesByte(long start, long count, byte* modified)
+            {
+                Debug.Assert(count > 0);
+                Debug.Assert((OutputSize % sizeof(long)) == 0);
+
+                long outputSize = OutputSize;
+                long* outputPtr = (long*)(Output + outputSize);
+                outputPtr[0] = start;
+                outputPtr[1] = count;
+                outputSize += sizeof(long) * 2;
+
+                Memory.Copy(Output + outputSize, modified + start, count);
+                OutputSize = outputSize + count;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void WriteDiffNonZeroes(long start, long count, byte* modified)
             {
                 Debug.Assert(count > 0);
                 Debug.Assert((OutputSize % sizeof(long)) == 0);
 
                 long outputSize = OutputSize;
-                long* outputPtr = (long*)( Output + outputSize );
+                long* outputPtr = (long*)(Output + outputSize);
                 outputPtr[0] = start;
                 outputPtr[1] = count;
                 outputSize += sizeof(long) * 2;
 
-                Memory.Copy(Output + outputSize, modified + start, count);
+                Unsafe.CopyBlockUnaligned(Output + outputSize, modified + start, (uint)count);
                 OutputSize = outputSize + count;
             }
 
@@ -1990,7 +2745,7 @@ Return:
                 this.IsDiff = true;
             }
 
-            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse(void* originalBuffer, void* modifiedBuffer, int size)
+            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics(void* originalBuffer, void* modifiedBuffer, int size)
             {
                 Debug.Assert(size % 4096 == 0);
 
@@ -2091,7 +2846,7 @@ Return:
                 Sse.Prefetch2(ptr + offset + 4096 + 2048);
 
                 // For each block of 32 bytes in size (that is 4 ulong values per block)
-                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                for (byte* end = ptr + size; ptr < end; ptr += 16)
                 {
                     Sse.Prefetch0(ptr + 512);
                     Sse.Prefetch0(ptr + offset + 512);
@@ -2099,7 +2854,90 @@ Return:
                     var o0 = Sse2.LoadVector128(ptr);
                     var m0 = Sse2.LoadVector128(ptr + offset);
 
-                    if (Sse41.TestZ(o0, m0))
+                    if (Sse41.TestC(o0, m0))
+                    {
+                        if (!started)
+                            continue;
+
+                        goto CloseBlock;
+                    }
+
+                    // We are opening a block.
+                    if (started == false)
+                    {
+                        // Write the start index of the run based from the start of the page we are diffing.
+                        rangePtr->Start = ptr - (byte*)originalBuffer;
+                        started = true;
+                    }
+                    continue;
+
+                    CloseBlock:
+
+                    // We write the actual size of the stored data.
+                    rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
+                    // We prepare for the next range. 
+                    rangePtr--;
+
+                    started = false;
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    rangePtr->Count = (long)ptr - rangePtr->Start;
+                }
+                else
+                {
+                    rangePtr++;
+                }
+
+                byte* writePtr = Output;
+                for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
+                {
+                    *((Range*)writePtr) = *rangePtr;
+                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+
+                    writePtr += rangePtr->Count + 16;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Layout_NoFastPath_WithPrefetch(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+
+                byte* ptr = (byte*)originalBuffer;
+
+                // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+                //       hardware instructions without needed an extra register.             
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                // In here we will write the temporary ranges that we are going to copy. 
+                Range* rangePtr = (Range*)(Output + size - sizeof(Range));
+                bool started = false;
+
+                Sse.Prefetch2(ptr);
+                Sse.Prefetch2(ptr + 2048);
+                Sse.Prefetch2(ptr + 4096);
+                Sse.Prefetch2(ptr + 4096 + 2048);
+                Sse.Prefetch2(ptr + offset);
+                Sse.Prefetch2(ptr + offset + 2048);
+                Sse.Prefetch2(ptr + offset + 4096);
+                Sse.Prefetch2(ptr + offset + 4096 + 2048);
+
+                // For each block of 32 bytes in size (that is 4 ulong values per block)
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    Sse.Prefetch0(ptr + 512);
+                    Sse.Prefetch0(ptr + offset + 512);
+
+                    var o0 = Unsafe.Read<Vector<ulong>>(ptr);
+                    var m0 = Unsafe.Read<Vector<ulong>>(ptr + offset);
+
+                    if (o0.Equals(m0))
                     {
                         if (!started)
                             continue;
@@ -2149,7 +2987,7 @@ Return:
                 this.IsDiff = true;
             }
 
-            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout_NoFastPath_WithPrefetch(void* originalBuffer, void* modifiedBuffer, int size)
+            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_WithPrefetch(void* originalBuffer, void* modifiedBuffer, int size)
             {
                 Debug.Assert(size % 4096 == 0);
 
@@ -2167,7 +3005,7 @@ Return:
                 Sse.Prefetch2(ptr + 2048);
                 Sse.Prefetch2(ptr + 4096);
                 Sse.Prefetch2(ptr + 4096 + 2048);
-                Sse.Prefetch2(ptr + offset );
+                Sse.Prefetch2(ptr + offset);
                 Sse.Prefetch2(ptr + offset + 2048);
                 Sse.Prefetch2(ptr + offset + 4096);
                 Sse.Prefetch2(ptr + offset + 4096 + 2048);
@@ -2178,10 +3016,157 @@ Return:
                     Sse.Prefetch0(ptr + 512);
                     Sse.Prefetch0(ptr + offset + 512);
 
-                    var o0 = Unsafe.Read<Vector<ulong>>(ptr);
-                    var m0 = Unsafe.Read<Vector<ulong>>(ptr + offset);
+                    var o0 = Avx.LoadVector256(ptr);
+                    var m0 = Avx.LoadVector256(ptr + offset);
 
-                    if (o0.Equals(m0))
+                    if (Avx.TestC(o0, m0))
+                    {
+                        if (!started)
+                            continue;
+
+                        goto CloseBlock;
+                    }
+
+                    // We are opening a block.
+                    if (started == false)
+                    {
+                        // Write the start index of the run based from the start of the page we are diffing.
+                        rangePtr->Start = ptr - (byte*)originalBuffer;
+                        started = true;
+                    }
+                    continue;
+
+                    CloseBlock:
+                    // We write the actual size of the stored data.
+                    rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
+                    // We prepare for the next range. 
+                    rangePtr--;
+
+                    started = false;
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    rangePtr->Count = (long)ptr - rangePtr->Start;
+                }
+                else
+                {
+                    rangePtr++;
+                }
+
+                byte* writePtr = Output;
+                for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
+                {
+                    *((Range*)writePtr) = *rangePtr;
+                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+
+                    writePtr += rangePtr->Count + 16;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_NonTemporalRead(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert((long)originalBuffer % 32 == 0);
+                Debug.Assert((long)modifiedBuffer % 32 == 0);
+                Debug.Assert(size % 4096 == 0);
+
+                byte* ptr = (byte*)originalBuffer;
+
+                // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+                //       hardware instructions without needed an extra register.             
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                // In here we will write the temporary ranges that we are going to copy. 
+                Range* rangePtr = (Range*)(Output + size - sizeof(Range));
+                bool started = false;
+
+                // For each block of 32 bytes in size (that is 4 ulong values per block)
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    var o0 = Avx2.LoadAlignedVector256NonTemporal(ptr);
+                    var m0 = Avx2.LoadAlignedVector256NonTemporal(ptr + offset);
+
+                    if (Avx.TestC(o0, m0))
+                    {
+                        if (!started)
+                            continue;
+
+                        goto CloseBlock;
+                    }
+
+                    // We are opening a block.
+                    if (started == false)
+                    {
+                        // Write the start index of the run based from the start of the page we are diffing.
+                        rangePtr->Start = ptr - (byte*)originalBuffer;
+                        started = true;
+                    }
+                    continue;
+
+                    CloseBlock:
+                    // We write the actual size of the stored data.
+                    rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
+                    // We prepare for the next range. 
+                    rangePtr--;
+
+                    started = false;
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    rangePtr->Count = (long)ptr - rangePtr->Start;
+                }
+                else
+                {
+                    rangePtr++;
+                }
+
+                byte* writePtr = Output;
+                for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
+                {
+                    *((Range*)writePtr) = *rangePtr;
+                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+
+                    writePtr += rangePtr->Count + 16;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
+
+            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Avx_Layout_NoFastPath_WithPrefetch_NonTemporalRead(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert((long)originalBuffer % 32 == 0);
+                Debug.Assert((long)modifiedBuffer % 32 == 0);
+                Debug.Assert(size % 4096 == 0);
+
+                byte* ptr = (byte*)originalBuffer;
+
+                // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+                //       hardware instructions without needed an extra register.             
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                // In here we will write the temporary ranges that we are going to copy. 
+                Range* rangePtr = (Range*)(Output + size - sizeof(Range));
+                bool started = false;
+
+                // For each block of 32 bytes in size (that is 4 ulong values per block)
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    Sse.PrefetchNonTemporal(ptr + 512);
+                    Sse.PrefetchNonTemporal(ptr + offset + 512);
+
+                    var o0 = Avx2.LoadAlignedVector256NonTemporal(ptr);
+                    var m0 = Avx2.LoadAlignedVector256NonTemporal(ptr + offset);
+
+                    if (Avx.TestC(o0, m0))
                     {
                         if (!started)
                             continue;
@@ -2301,7 +3286,7 @@ Return:
                 this.IsDiff = true;
             }
 
-            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Sse_Layout(void* originalBuffer, void* modifiedBuffer, int size)
+            public void ComputeCacheAware_SingleBody_InvertedBuffer_WithBranch_Numerics_Layout(void* originalBuffer, void* modifiedBuffer, int size)
             {
                 Debug.Assert(size % 4096 == 0);
 
@@ -2519,7 +3504,7 @@ Return:
                 this.IsDiff = true;
             }
 
-            public void ComputeCacheAware_SingleBody_NoInnerLoop(void* originalBuffer, void* modifiedBuffer, int size)
+            public void ComputeCacheAware_SingleBody_NoInnerLoop_Numerics(void* originalBuffer, void* modifiedBuffer, int size)
             {
                 Debug.Assert(size % 4096 == 0);
 
@@ -2593,12 +3578,139 @@ Return:
                 this.OutputSize = writePtr - Output;
                 this.IsDiff = true;
             }
+
+            public void ComputeCacheAware_SingleBody_Avx_NonTemporal(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+
+                byte* ptr = (byte*)originalBuffer;
+
+                // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+                //       hardware instructions without needed an extra register.             
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                bool started = false;
+
+                // For each block of 32 bytes in size (that is 4 ulong values per block)
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    var o = Avx.LoadVector256(ptr);
+                    var m = Avx.LoadVector256(ptr + offset);
+
+                    if (!Avx.TestC(o, m))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            Sse2.StoreNonTemporal((long*)(writePtr + 0), ptr - (byte*)originalBuffer);
+                            started = true;
+                        }
+
+                        // Execute a write on the current offset pointer.    
+                        byte* auxWritePtr = writePtr + writePtrOffset;
+                        Sse2.StoreNonTemporal((long*)(auxWritePtr + 0), *(long*)(ptr + offset + 0));
+                        Sse2.StoreNonTemporal((long*)(auxWritePtr + 16), *(long*)(ptr + offset + 16));
+
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our block is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }            
+
+            public void ComputeCacheAware_SingleBody_Avx_Temporal(void* originalBuffer, void* modifiedBuffer, int size)
+            {
+                Debug.Assert(size % 4096 == 0);
+
+                byte* ptr = (byte*)originalBuffer;
+
+                // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+                //       hardware instructions without needed an extra register.             
+                long offset = (byte*)modifiedBuffer - (byte*)originalBuffer;
+
+                byte* writePtr = Output;
+                long writePtrOffset = 16;
+
+                bool started = false;
+
+                // For each block of 32 bytes in size (that is 4 ulong values per block)
+                for (byte* end = ptr + size; ptr < end; ptr += 32)
+                {
+                    var o = Avx.LoadVector256(ptr);
+                    var m = Avx.LoadVector256(ptr + offset);
+
+                    if (!Avx.TestC(o, m))
+                    {
+                        if (started == false)
+                        {
+                            // Write the start index of the run based from the start of the page we are diffing.
+                            Sse2.StoreNonTemporal((long*)(writePtr + 0), ptr - (byte*)originalBuffer);
+                            started = true;
+                        }
+
+                        // Execute a write on the current offset pointer.    
+                        Avx.Store(writePtr + writePtrOffset, m);
+                        writePtrOffset += 32;
+                    }
+                    else if (started) // our block is untouched here. 
+                    {
+                        // We write the actual size of the stored data.
+                        Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+
+                        // We advance the write pointer to the start of the next.
+                        writePtr += writePtrOffset;
+
+                        // We reset the write pointer but not before actually substracting the written amount 
+                        // from the available space.
+                        writePtrOffset = 16;
+
+                        started = false;
+                    }
+                }
+
+                // If the block hasnt been touched, nothing to do here unless we have an open pointer. 
+                if (started)
+                {
+                    // We write the actual size of the stored data.
+                    Sse2.StoreNonTemporal((long*)(writePtr + 8), writePtrOffset - 16);
+                    writePtr += writePtrOffset;
+                }
+
+                this.OutputSize = writePtr - Output;
+                this.IsDiff = true;
+            }
         }
 
-        [Benchmark]
+        [Benchmark(Baseline = true)]
         public void Original_Sequential()
         {
-            original.ComputeDiff(source.Ptr, modified.Ptr, size);
+            original.ComputeDiff(source, modified, size);
         }
     }
 }

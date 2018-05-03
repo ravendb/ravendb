@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
-using System.Text;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
@@ -15,10 +13,8 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Impl;
 
 namespace Micro.Benchmark.Benchmarks.Hardware
 {

@@ -147,29 +147,29 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         }
 
 
-        //[Benchmark(Baseline = true)]
-        //public int Original_NoCacheMisses()
-        //{
-        //    return CompareOriginal(source.Ptr, destination.Ptr, KeySize);
-        //}
+        [Benchmark(Baseline = true)]
+        public int Original_NoCacheMisses()
+        {
+            return CompareOriginal(source.Ptr, destination.Ptr, KeySize);
+        }
 
-        //[Benchmark]
-        //public int ScalarXor_NoCacheMisses()
-        //{
-        //    return CompareScalarAltDeBrujain(source.Ptr, destination.Ptr, KeySize);
-        //}
+        [Benchmark]
+        public int ScalarXor_NoCacheMisses()
+        {
+            return CompareScalarAltDeBrujain(source.Ptr, destination.Ptr, KeySize);
+        }
 
-        //[Benchmark]
-        //public int ScalarXorPopCount_NoCacheMisses()
-        //{
-        //    return CompareScalarAltPopCount(source.Ptr, destination.Ptr, KeySize);
-        //}
+        [Benchmark]
+        public int ScalarXorPopCount_NoCacheMisses()
+        {
+            return CompareScalarAltPopCount(source.Ptr, destination.Ptr, KeySize);
+        }
 
-        //[Benchmark]
-        //public int ScalarCmpXorPopCount_NoCacheMisses()
-        //{
-        //    return CompareScalarCmpAltPopCount(source.Ptr, destination.Ptr, KeySize);
-        //}
+        [Benchmark]
+        public int ScalarCmpXorPopCount_NoCacheMisses()
+        {
+            return CompareScalarCmpAltPopCount(source.Ptr, destination.Ptr, KeySize);
+        }
 
         [Benchmark]
         public int ScalarCmpXorPopCount_Prefetch_NoCacheMisses()
@@ -467,15 +467,15 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return *bpx - *(bpx + offset);
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarAlt2()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarAlt2(source.Ptr + index, destination.Ptr + index, KeySize);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarAlt2()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarAlt2(source.Ptr + index, destination.Ptr + index, KeySize);
 
-        //    return r;
-        //}
+            return r;
+        }
 
         private static int CompareScalarAlt2(void* p1, void* p2, int size)
         {
@@ -533,15 +533,15 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return 0;
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int ScalarAlt3()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareScalarAlt3(source.Ptr + index, destination.Ptr + index, KeySize);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int ScalarAlt3()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareScalarAlt3(source.Ptr + index, destination.Ptr + index, KeySize);
 
-        //    return r;
-        //}
+            return r;
+        }
 
         private static int CompareScalarAlt3(void* p1, void* p2, int size)
         {
@@ -655,25 +655,25 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return 0;
         }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int Numerics32()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareNumerics(source.Ptr + index, destination.Ptr + index, KeySize);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int Numerics32()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareNumerics(source.Ptr + index, destination.Ptr + index, KeySize);
 
-        //    return r;
-        //}
+            return r;
+        }
 
-        //[Benchmark(OperationsPerInvoke = Operations)]
-        //public int NumericsAlt32()
-        //{
-        //    int r = 0;
-        //    foreach (int index in randomLocation)
-        //        r += CompareNumericsAlt(source.Ptr + index, destination.Ptr + index, KeySize);
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public int NumericsAlt32()
+        {
+            int r = 0;
+            foreach (int index in randomLocation)
+                r += CompareNumericsAlt(source.Ptr + index, destination.Ptr + index, KeySize);
 
-        //    return r;
-        //}
+            return r;
+        }
 
         private static int CompareNumericsAlt(void* p1, void* p2, int size)
         {
@@ -719,64 +719,64 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             return 0;           
         }
 
-        //private static int CompareNumerics(void* p1, void* p2, int size)
-        //{
-        //    byte* bpx = (byte*)p1, bpy = (byte*)p2;
+        private static int CompareNumerics(void* p1, void* p2, int size)
+        {
+            byte* bpx = (byte*)p1, bpy = (byte*)p2;
 
-        //    // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
-        //    // If you know you will be comparing big memory chunks do not use the inline version. 
-        //    int l = size / VectorBytes; // This should translate into a shift operation.
-        //    size -= l * VectorBytes; // This should translate into a shift operation.
+            // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
+            // If you know you will be comparing big memory chunks do not use the inline version. 
+            int l = size / VectorBytes; // This should translate into a shift operation.
+            size -= l * VectorBytes; // This should translate into a shift operation.
 
-        //    while (l > 0)
-        //    {
-        //        var vx = Unsafe.Read<Vector<byte>>(bpx);
-        //        var vy = Unsafe.Read<Vector<byte>>(bpy);
+            while (l > 0)
+            {
+                var vx = Unsafe.Read<Vector<byte>>(bpx);
+                var vy = Unsafe.Read<Vector<byte>>(bpy);
 
-        //        var xor = Vector.Xor(vx, vy);
-        //        if (xor == Vector<byte>.Zero)
-        //            break;
+                var xor = Vector.Xor(vx, vy);
+                if (xor == Vector<byte>.Zero)
+                    break;
 
-        //        l--;
-        //        bpx += VectorBytes;
-        //        bpy += VectorBytes;
-        //    }
+                l--;
+                bpx += VectorBytes;
+                bpy += VectorBytes;
+            }
 
-            
-        //    if (size <= 8)
-        //        goto Last;
 
-        //    if (size > 8 && ((long*)bpx)[0] != ((long*)bpy)[0])
-        //        goto Last;
+            if (size <= 8)
+                goto Last;
 
-        //    if (size > 16 && ((long*)bpx)[1] != ((long*)bpy)[1])
-        //        goto Last;
+            if (size > 8 && ((long*)bpx)[0] != ((long*)bpy)[0])
+                goto Last;
 
-        //    if (size > 24 && ((long*)bpx)[2] != ((long*)bpy)[2])
-        //        goto Last;
+            if (size > 16 && ((long*)bpx)[1] != ((long*)bpy)[1])
+                goto Last;
 
-        //    if (size == 32 && ((long*)bpx)[3] != ((long*)bpy)[3])
-        //        goto Last;
+            if (size > 24 && ((long*)bpx)[2] != ((long*)bpy)[2])
+                goto Last;
 
-        //    return 0;
+            if (size == 32 && ((long*)bpx)[3] != ((long*)bpy)[3])
+                goto Last;
 
-        //    Last:
+            return 0;
 
-        //    size %= 8; // This should translate to a AND operation.
-        //    int last = 0;
+        Last:
 
-        //    while (size > 0)
-        //    {
-        //        int r = bpx[last] - bpy[last];
-        //        if (r != 0)
-        //            return r;
+            size %= 8; // This should translate to a AND operation.
+            int last = 0;
 
-        //        size--;
-        //        last++;
-        //    }
+            while (size > 0)
+            {
+                int r = bpx[last] - bpy[last];
+                if (r != 0)
+                    return r;
 
-        //    return 0;
-        //}
+                size--;
+                last++;
+            }
+
+            return 0;
+        }
 
     }
 }

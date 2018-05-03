@@ -23,30 +23,7 @@ namespace Micro.Benchmark
             Console.WriteLine($"{nameof(Avx)} support: {Avx.IsSupported}");
             Console.WriteLine($"{nameof(Avx2)} support: {Avx2.IsSupported}");
 
-
-            //var tests = new PageLocatorTests();
-            //foreach (var cacheSize in PageLocatorTests.CacheSize)
-            //{
-            //    tests.TestGetReadonly(cacheSize);
-            //}
-
-            var p = new DiffNonZeroes();
-            //p.KeySize = 15;
-            p.Setup();
-            //p.NumericsAlt32();
-
-            for (int i = 0; i < 5000; i++)
-                p.Original_Sequential();
-
-            //for (int i = 0; i < 4000; i++)
-            //    p.Original_Sequential();
-
-            //for (int i = 0; i < 4000; i++)
-            //    p.Numerics32_Sequential();
-
-            //BenchmarkRunner.Run<DiffNonZeroes>();
-
-            // BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
+            BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
         }
     }
 }
