@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -53,7 +52,7 @@ namespace SlowTests.Client.Counters
                     long? val = null;
                     for (int i = 0; i < 100; i++)
                     {
-                        val = store.Operations.Send(new GetCounterValueOperation("users/1", "likes"));
+                        val = store.Counters.Get("users/1", "likes");
                         if (val == 30)
                             break;
                         Thread.Sleep(50);

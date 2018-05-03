@@ -1,10 +1,7 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Http;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -47,7 +44,7 @@ namespace SlowTests.Client.Counters
                     Assert.True(((object[])counters).Contains("votes"));
                 }
 
-                store.Operations.Send(new DeleteCounterOperation("users/1-A", "likes"));
+                store.Counters.Delete("users/1-A", "likes");
 
                 using (var session = store.OpenSession())
                 {
@@ -59,7 +56,7 @@ namespace SlowTests.Client.Counters
                     Assert.True(((object[])counters).Contains("votes"));
                 }
 
-                store.Operations.Send(new DeleteCounterOperation("users/1-A", "votes"));
+                store.Counters.Delete("users/1-A", "votes");
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
@@ -94,13 +91,13 @@ namespace SlowTests.Client.Counters
 
                 EnsureReplicating(storeA, storeB);
 
-                var val = await storeB.Operations.SendAsync(new GetCounterValueOperation("users/1-A", "likes"));
+                var val = await storeB.Counters.GetAsync("users/1-A", "likes");
                 Assert.Equal(26, val);
 
-                val = await storeB.Operations.SendAsync(new GetCounterValueOperation("users/1-A", "dislikes"));
+                val = await storeB.Counters.GetAsync("users/1-A", "dislikes");
                 Assert.Equal(13, val);
 
-                val = await storeB.Operations.SendAsync(new GetCounterValueOperation("users/1-A", "cats"));
+                val = await storeB.Counters.GetAsync("users/1-A", "cats");
                 Assert.Equal(11, val);
 
                 using (var session = storeB.OpenAsyncSession())
