@@ -50,13 +50,22 @@ namespace Raven.Server.Documents.Indexes.Static
             });
             _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
             _engine.Execute(Code);
+
+            if (definition.AdditionalSources != null)
+            {
+                foreach (var script in definition.AdditionalSources.Values)
+                {
+                    _engine.Execute(script);
+                }
+            }
+
             foreach (var map in definition.Maps)
             {
                 _engine.Execute(map);
             }
 
             if (definition.Reduce != null)
-                _engine.Execute(definition.Reduce);
+                _engine.Execute(definition.Reduce);            
 
             var definitionsObj = _engine.GetValue(GlobalDefinitions);
             if(definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
