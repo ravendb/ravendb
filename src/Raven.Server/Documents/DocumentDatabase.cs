@@ -37,6 +37,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -52,6 +53,56 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
 {
+    public class WaitForClusterTransactionToFinish
+    {
+        private TaskCompletionSource<object> _indexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ConcurrentDictionary<long, object> _results = new ConcurrentDictionary<long, object>();
+        private long _lastIndex;
+
+        public WaitForClusterTransactionToFinish(long initialIndex)
+        {
+            _lastIndex = initialIndex;
+        }
+
+        public void SetResult(long index, object result)
+        {
+            if (_results.TryAdd(index, result) == false)
+                return;
+
+            ClusterStateMachine.InterlockedExchangeMax(ref _lastIndex, index);
+            var old = Interlocked.Exchange(ref _indexChanged, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            old.SetResult(null);
+        }
+
+        public async Task<object> WaitForResult(long index)
+        {
+            while (true)
+            {
+                var tcs = _indexChanged;
+                if (_results.TryGetValue(index, out var value))
+                    return value;
+                await tcs.Task;
+            }
+        }
+
+        public async Task WaitForCompletion(long index)
+        {
+            while (true)
+            {
+                var tcs = _indexChanged;
+                if (_lastIndex >= index)
+                    return;
+                await tcs.Task;
+            }
+        }
+
+        public void SetException(Exception e)
+        {
+            var old = Interlocked.Exchange(ref _indexChanged, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            old.SetException(e);
+        }
+    } 
+
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
@@ -70,6 +121,8 @@ namespace Raven.Server.Documents
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
+
+        public readonly WaitForClusterTransactionToFinish ClusterTransactionWaiter;
 
         public void ResetIdleTime()
         {
@@ -103,6 +156,8 @@ namespace Raven.Server.Documents
                         if (databaseRecord.Encrypted == false && MasterKey != null)
                             throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                     }
+
+                    ClusterTransactionWaiter = new WaitForClusterTransactionToFinish(_serverStore.Engine.GetLastCommitIndex(ctx));
                 }
 
                 QueryMetadataCache = new QueryMetadataCache();

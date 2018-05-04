@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
@@ -241,14 +242,25 @@ namespace Raven.Server.Utils
                 .ToString();
         }
 
-        public static long GetEtagByNodeTag(string changeVector, string nodeTag)
+        public static long GetEtagById(string changeVector, string id)
         {
-            var index = changeVector.IndexOf(nodeTag + ":", StringComparison.Ordinal);
-            var offset = nodeTag.Length + 1;
+            var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
             if (index == -1)
                 return 0;
-            var etag = changeVector.IndexOf('-', index);
-            return long.Parse(changeVector.Substring(index + offset, etag - index - offset));
+
+            var bytes = Encoding.UTF8.GetBytes(changeVector);
+            var end = index - 1;
+            var start = -1;
+            for (var i = end; i >= 0; i--)
+            {
+                if (bytes[i] == ':')
+                {
+                    start = i + 1;
+                    break;
+                }
+            }
+
+            return long.Parse(changeVector.Substring(start, end - start + 1));
         }
     }
 }

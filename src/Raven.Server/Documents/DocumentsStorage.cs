@@ -1023,18 +1023,19 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector, string changeVectorElement = null)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (var cv = context.GetLazyString(expectedChangeVector))
             {
-                return Delete(context, lowerId, id, cv);
+                return Delete(context, lowerId, id, cv, changeVectorElement: changeVectorElement);
             }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
             LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
-            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, DocumentFlags documentFlags = DocumentFlags.None)
+            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
+            DocumentFlags documentFlags = DocumentFlags.None, string changeVectorElement = null)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -1286,7 +1287,8 @@ namespace Raven.Server.Documents
             string docChangeVector,
             long lastModifiedTicks,
             string changeVector,
-            DocumentFlags flags)
+            DocumentFlags flags,
+            string changeVectorElement = null)
         {
             var newEtag = GenerateNextEtag();
 
@@ -1300,6 +1302,8 @@ namespace Raven.Server.Documents
 
                 if (string.IsNullOrEmpty(changeVector))
                     ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
+
+                changeVector = ChangeVectorUtils.MergeVectors(changeVectorElement, changeVector);
 
                 context.LastDatabaseChangeVector = changeVector;
             }
@@ -1360,9 +1364,9 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string id,
             string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
-            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, string changeVectorElement = null)
         {
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags, changeVectorElement);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)

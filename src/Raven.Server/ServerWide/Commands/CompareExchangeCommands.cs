@@ -31,6 +31,20 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
 
+        public unsafe bool Validate(TransactionOperationContext context, Table items, long index)
+        {
+            var dbKey = Key.ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            {
+                if (items.ReadByKey(keySlice, out var reader))
+                {
+                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    return Index == itemIndex;
+                }
+            }
+            return true;
+        }
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);
@@ -125,7 +139,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             var dbKey = Key.ToLowerInvariant();
             Value = Value.Clone(context);
-            long itemIndex;
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
@@ -135,7 +148,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
                     if (Index == itemIndex)
                     {
                         items.Update(reader.Id, tvb);
@@ -153,7 +166,7 @@ namespace Raven.Server.ServerWide.Commands
             }
             return (index, Value);
         }
-
+        
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);

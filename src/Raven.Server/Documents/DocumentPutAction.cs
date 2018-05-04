@@ -37,7 +37,8 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             string changeVector = null,
             DocumentFlags flags = DocumentFlags.None,
-            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, 
+            string changeVectorElement = null)
         {
             if (context.Transaction == null)
             {
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents
                     // null - means, don't care, don't check
                     // "" / empty - means, must be new
                     // anything else - must match exactly
+
                     if (expectedChangeVector != null) 
                     {
                         var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -117,7 +119,7 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrEmpty(result.ChangeVector))
                     ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
 
-                changeVector = result.ChangeVector;
+                changeVector = ChangeVectorUtils.MergeVectors(changeVectorElement, result.ChangeVector);
                 nonPersistentFlags |= result.NonPersistentFlags;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 {

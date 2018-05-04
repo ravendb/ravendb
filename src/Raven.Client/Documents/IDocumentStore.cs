@@ -168,6 +168,8 @@ namespace Raven.Client.Documents
 
         OperationExecutor Operations { get; }
 
+        long? LastTransactionIndex { get; set; }
+
         CountersOperationExecutor Counters { get; }
 
         DatabaseSmuggler Smuggler { get; }

@@ -651,6 +651,12 @@ namespace Raven.Server.Documents.Handlers
 
                     return CommandType.Counters;
 
+                case 18:
+                    return CommandType.CompareExchangePUT;
+
+                case 20:
+                    return CommandType.CompareExchangeDELETE;
+
                 default:
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;

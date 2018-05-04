@@ -64,6 +64,20 @@ namespace Raven.Server.Utils
 
             List<bool> supporeted = new List<bool>();
 
+            if (value is DynamicJsonValue djv)
+            {
+                foreach (var item in djv.Properties)
+                    supporeted.Add(IsSupportedType(item.Value));
+                return supporeted.All(v => v);
+            }
+
+            if (value is DynamicJsonArray dja)
+            {
+                foreach (var item in dja.Items)
+                    supporeted.Add(IsSupportedType(item));
+                return supporeted.All(v => v);
+            }
+
             if (value is IDictionary dictionary)
             {
                 foreach (var key in dictionary.Keys)

@@ -27,14 +27,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecutor requestExecutor, Guid id)
-            : base(dbName, documentStore, requestExecutor, id)
+        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecutor requestExecutor, Guid id, TransactionMode optionsTransactionMode)
+            : base(dbName, documentStore, requestExecutor, id, optionsTransactionMode)
         {
             GenerateDocumentIdsOnStore = false;
             Attachments = new DocumentSessionAttachmentsAsync(this);
             Revisions = new DocumentSessionRevisionsAsync(this);
-            Counters = new DocumentSessionCountersAsync(this);
-        }
+Counters = new DocumentSessionCountersAsync(this);        }
 
         public async Task<bool> ExistsAsync(string id)
         {
@@ -105,6 +104,8 @@ namespace Raven.Client.Documents.Session
 
         public IRevisionsSessionOperationsAsync Revisions { get; }
 
+        public IClusterTransactionOperationAsync ClusterTransaction { get; }
+
         /// <summary>
         /// Begins the async save changes operation
         /// </summary>
@@ -124,7 +125,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-                saveChangesOperation.SetResult(command.Result);
+                saveChangesOperation.SetResult(command.Result, command.ReturnTransactionIndex);
             }
         }
     }

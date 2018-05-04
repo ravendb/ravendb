@@ -50,6 +50,9 @@ namespace Raven.Client.Documents.Session
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
         protected internal readonly SessionInfo SessionInfo;
+
+        public readonly TransactionMode TransactionMode;
+
         private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
         private JsonSerializer _jsonSerializer;
@@ -63,6 +66,9 @@ namespace Raven.Client.Documents.Session
         /// The entities waiting to be deleted
         /// </summary>
         protected internal readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+
+        protected internal Dictionary<string, (object Item, long Index)> StoreCompareExchange;
+        protected internal Dictionary<string, long> DeleteCompareExchange;
 
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
@@ -188,11 +194,11 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
         /// </summary>
-        protected InMemoryDocumentSessionOperations(
-            string databaseName,
+        protected InMemoryDocumentSessionOperations(string databaseName,
             DocumentStoreBase documentStore,
             RequestExecutor requestExecutor,
-            Guid id)
+            Guid id, 
+            TransactionMode optionsTransactionMode)
         {
             Id = id;
             DatabaseName = databaseName;
@@ -203,7 +209,8 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false);
+            SessionInfo = new SessionInfo(_clientSessionId, false, DocumentStore.LastTransactionIndex);
+            TransactionMode = optionsTransactionMode;
         }
 
         /// <summary>
@@ -725,12 +732,16 @@ more responsive application.
 
         internal SaveChangesData PrepareForSaveChanges()
         {
+            ValidateClusterTransaction();
+
             var result = new SaveChangesData(this);
             DeferredCommands.Clear();
             DeferredCommandsDictionary.Clear();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
+
+            PrepareCompareExchangeEntities(result);
 
             if(DeferredCommands.Count > 0)
             {
@@ -747,6 +758,50 @@ more responsive application.
             }
 
             return result;
+        }
+
+        private void ValidateClusterTransaction()
+        {
+            if(TransactionMode != TransactionMode.ClusterWide)
+                return;
+
+            if (_saveChangesOptions == null)
+                _saveChangesOptions = new BatchOptions();
+
+            var options = new ClusterBatchOptions()
+            {
+            };
+
+            _saveChangesOptions.AddOrUpdate(options);
+        }
+
+        private void PrepareCompareExchangeEntities(SaveChangesData result)
+        {
+            if (TransactionMode != TransactionMode.ClusterWide)
+                return;
+
+            var prefix = DatabaseName + "/";
+
+            if (StoreCompareExchange != null)
+            {
+                foreach (var entity in StoreCompareExchange)
+                {
+                    var tuple = new Dictionary<string, object>
+                    {
+                        ["Object"] = entity.Value.Item
+                    };
+                    var blittable = EntityToBlittable.ConvertEntityToBlittable(tuple, Conventions, Context);
+                    result.SessionCommands.Add(new PutCompareExchangeCommandData(prefix + entity.Key, blittable, entity.Value.Index));
+                }
+            }
+
+            if (DeleteCompareExchange != null)
+            {
+                foreach (var item in DeleteCompareExchange)
+                {
+                    result.SessionCommands.Add(new DeleteCompareExchangeCommandData(prefix + item.Key, item.Value));
+                }
+            }
         }
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
@@ -959,11 +1014,17 @@ more responsive application.
             var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
-            _saveChangesOptions.WaitForReplicas = true;
-            _saveChangesOptions.Majority = majority;
-            _saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
-            _saveChangesOptions.WaitForReplicasTimeout = realTimeout;
-            _saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
+
+            var replicationOptions = new ReplicationBatchOptions
+            {
+                WaitForReplicas = true,
+                Majority = majority,
+                NumberOfReplicasToWaitFor = replicas,
+                WaitForReplicasTimeout = realTimeout,
+                ThrowOnTimeoutInWaitForReplicas = throwOnTimeout
+            };
+
+            _saveChangesOptions.AddOrUpdate(replicationOptions);
         }
 
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false,
@@ -972,10 +1033,16 @@ more responsive application.
             var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
-            _saveChangesOptions.WaitForIndexes = true;
-            _saveChangesOptions.WaitForIndexesTimeout = realTimeout;
-            _saveChangesOptions.ThrowOnTimeoutInWaitForIndexes = throwOnTimeout;
-            _saveChangesOptions.WaitForSpecificIndexes = indexes;
+
+            var indexOptions = new IndexBatchOptions
+            {
+                WaitForIndexes = true,
+                WaitForIndexesTimeout = realTimeout,
+                ThrowOnTimeoutInWaitForIndexes = throwOnTimeout,
+                WaitForSpecificIndexes = indexes
+            };
+
+            _saveChangesOptions.AddOrUpdate(indexOptions);
         }
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)

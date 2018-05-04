@@ -56,15 +56,19 @@ namespace Raven.Client.Documents.Session
         public IRevisionsSessionOperations Revisions { get; }
 
         /// <summary>
+        /// Access to cluster wide transaction operations
+        /// </summary>
+        public IClusterTransactionOperation ClusterTransaction { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecutor requestExecutor)
-            : base(dbName, documentStore, requestExecutor, id)
+        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecutor requestExecutor, TransactionMode optionsTransactionMode)
+            : base(dbName, documentStore, requestExecutor, id, optionsTransactionMode)
         {
             Attachments = new DocumentSessionAttachments(this);
             Revisions = new DocumentSessionRevisions(this);
-            Counters = new DocumentSessionCounters(this);
-        }
+Counters = new DocumentSessionCounters(this);        }
 
         /// <summary>
         /// Saves all the changes to the Raven server.
@@ -79,7 +83,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-                saveChangesOperation.SetResult(command.Result);
+                saveChangesOperation.SetResult(command.Result, command.ReturnTransactionIndex);
             }
         }
 

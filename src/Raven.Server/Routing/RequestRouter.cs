@@ -13,6 +13,7 @@ using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Util;
 using Raven.Server.Utils;
@@ -102,7 +103,13 @@ namespace Raven.Server.Routing
             if (reqCtx.Database != null)
             {
                 using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
+                {
+                    if (reqCtx.HttpContext.Response.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value) && long.TryParse(value, out var index))
+                    {
+                        await reqCtx.Database.ClusterTransactionWaiter.WaitForCompletion(index);
+                    }
                     await handler(reqCtx);
+                }
             }
             else
             {

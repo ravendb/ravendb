@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -87,6 +89,20 @@ namespace Raven.Client.Documents.Commands.Batches
             return request;
         }
 
+        public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        {
+            if (response.Headers.TryGetValues("TransactionIndex", out var value))
+            {
+                if (long.TryParse(value.FirstOrDefault(), out var index))
+                {
+                    ReturnTransactionIndex = index;
+                }
+            }
+            return base.ProcessResponse(context, cache, response, url);
+        }
+
+        public long ReturnTransactionIndex { get; private set; }
+
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
@@ -108,30 +124,35 @@ namespace Raven.Client.Documents.Commands.Batches
 
             sb.AppendLine("?");
 
-            if (_options.WaitForReplicas)
+            if (_options.TryGetValue<ReplicationBatchOptions>(out var replicationOptions))
             {
-                sb.Append("&waitForReplicasTimeout=").Append(_options.WaitForReplicasTimeout);
+                sb.Append("&waitForReplicasTimeout=").Append(replicationOptions.WaitForReplicasTimeout);
 
-                if (_options.ThrowOnTimeoutInWaitForReplicas)
+                if (replicationOptions.ThrowOnTimeoutInWaitForReplicas)
                     sb.Append("&throwOnTimeoutInWaitForReplicas=true");
 
                 sb.Append("&numberOfReplicasToWaitFor=");
-                sb.Append(_options.Majority
+                sb.Append(replicationOptions.Majority
                     ? "majority"
-                    : _options.NumberOfReplicasToWaitFor.ToString());
+                    : replicationOptions.NumberOfReplicasToWaitFor.ToString());
             }
 
-            if (_options.WaitForIndexes)
+            if (_options.TryGetValue<IndexBatchOptions>(out var indexOptions))
             {
-                sb.Append("&waitForIndexesTimeout=").Append(_options.WaitForIndexesTimeout);
-                sb.Append("&waitForIndexThrow=").Append(_options.ThrowOnTimeoutInWaitForIndexes.ToString());
-                if (_options.WaitForSpecificIndexes != null)
+                sb.Append("&waitForIndexesTimeout=").Append(indexOptions.WaitForIndexesTimeout);
+                sb.Append("&waitForIndexThrow=").Append(indexOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
+                if (indexOptions.WaitForSpecificIndexes != null)
                 {
-                    foreach (var specificIndex in _options.WaitForSpecificIndexes)
+                    foreach (var specificIndex in indexOptions.WaitForSpecificIndexes)
                     {
                         sb.Append("&waitForSpecificIndex=").Append(specificIndex);
                     }
                 }
+            }
+
+            if (_options.TryGetValue<ClusterBatchOptions>(out var clusterBatchOptions))
+            {
+                sb.Append("&clusterTransaction=true");
             }
         }
 

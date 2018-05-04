@@ -6,7 +6,6 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -26,6 +25,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -58,24 +58,29 @@ namespace Raven.Server.ServerWide
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
         private static readonly TableSchema ItemsSchema;
-
         private static readonly TableSchema CompareExchangeSchema;
+        public static readonly TableSchema TransactionCommandsSchema;
+        public static readonly Slice CommandByDatabaseAndIndex;
+
         public enum UniqueItems
         {
             Key,
             Index,
             Value
         }
-
+        
         private static readonly Slice Items;
         private static readonly Slice CompareExchange;
         public static readonly Slice Identities;
+        public static readonly Slice TransactionCommands;
 
         static ClusterStateMachine()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
             Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CompareExchange);
             Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
+            Slice.From(StorageEnvironment.LabelsContext, "TransactionCommands", out TransactionCommands);
+            Slice.From(StorageEnvironment.LabelsContext, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
 
             ItemsSchema = new TableSchema();
 
@@ -93,11 +98,18 @@ namespace Raven.Server.ServerWide
                 StartIndex = 0,
                 Count = 1
             });
+
+            TransactionCommandsSchema = new TableSchema();
+            TransactionCommandsSchema.DefineIndex(new TableSchema.SchemaIndexDef()
+            {
+                Name = CommandByDatabaseAndIndex,
+                StartIndex = 0,
+                Count = 2, // Database, Index
+            });
         }
 
-        public event EventHandler<(string DatabaseName, long Index, string Type)> DatabaseChanged;
 
-        public event EventHandler<(string DatabaseName, long Index, string Type)> DatabaseValueChanged;
+        public event EventHandler<(string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType ChangeType)> DatabaseChanged;
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
 
@@ -117,6 +129,10 @@ namespace Raven.Server.ServerWide
                 string errorMessage;
                 switch (type)
                 {
+                    case nameof(ClusterTransactionCommand):
+                        ExecuteClusterTransaction(context, cmd, index, out var success);
+                        leader?.SetStateOf(index, success);
+                        break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray commands) == false)
                         {
@@ -274,6 +290,24 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, out bool success)
+        {
+            success = false;
+            var clusterTansaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
+            var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+
+            if (clusterTansaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems))
+            {
+                success = true;
+                clusterTansaction.SaveCommandsBatch(context, index);
+                NotifyDatabaseAboutChanged(context, clusterTansaction.Database, index, nameof(ClusterTransactionCommand),
+                    DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions);
+                return;
+            }
+
+            OnTransactionDispose(context, index);
+        }
+
         private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsOperationsEnabled)
@@ -396,7 +430,7 @@ namespace Raven.Server.ServerWide
                         if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
-                            NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
+                            NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                             continue;
                         }
                     }
@@ -412,7 +446,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, lowerKey, key, updated);
                 }
 
-                NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
+                NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
 
@@ -477,7 +511,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseValueChanged(context, updateCommand?.DatabaseName, index, type);
+                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
             }
         }
 
@@ -507,7 +541,7 @@ namespace Raven.Server.ServerWide
                 if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
                 {
                     items.DeleteByKey(lowerKey);
-                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+                    NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                     return;
                 }
                 
@@ -516,7 +550,7 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                 {
                     DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
-                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+                    NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                     return;
                 }
 
@@ -525,7 +559,7 @@ namespace Raven.Server.ServerWide
                 UpdateValue(index, items, lowerKey, key, updated);
             }
 
-            NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+            NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
         }
 
         private void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
@@ -535,6 +569,12 @@ namespace Raven.Server.ServerWide
 
             // delete all values linked to database record - for subscription, etl etc.
             CleanupDatabaseRelatedValues(context, items, databaseName);
+
+            var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
+            using (Slice.From(context.Allocator, databaseName, out var loweredKey))
+            {
+                transactionsCommands.DeleteByKey(loweredKey);
+            }
         }
 
         private void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string databaseName)
@@ -603,7 +643,8 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand));
+                NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
 
@@ -791,7 +832,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index, string type)
+        private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
@@ -800,27 +841,7 @@ namespace Raven.Server.ServerWide
                     {
                         try
                         {
-                            DatabaseChanged?.Invoke(this, (databaseName, index, type));
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                        }
-                        catch (Exception e)
-                        {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                        }
-                    }, null);
-            };
-        }
-
-        private void NotifyDatabaseValueChanged(TransactionOperationContext context, string databaseName, long index, string type)
-        {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
-            {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
-                    TaskExecutor.Execute(_ =>
-                    {
-                        try
-                        {
-                            DatabaseValueChanged?.Invoke(this, (databaseName, index, type));
+                            DatabaseChanged?.Invoke(this, (databaseName, index, type, change));
                             _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
                         }
                         catch (Exception e)
@@ -897,7 +918,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, databaseName, index, type);
+                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
 
@@ -913,6 +934,7 @@ namespace Raven.Server.ServerWide
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
+            TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
         }
@@ -1040,7 +1062,24 @@ namespace Raven.Server.ServerWide
                 return (-1, null);
             }
         }
-        
+
+        public IEnumerable<long> GetCompareExchangeIndexes(TransactionOperationContext context, string[] keys)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+            foreach (var key in keys)
+            {
+                var dbKey = key.ToLowerInvariant();
+                using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+                {
+                    if (items.ReadByKey(keySlice, out var reader))
+                    {
+                        yield return ReadCompareExchangeIndex(reader);
+                    }
+                    yield return -1;
+                }
+            }
+        }
+
         public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context, 
             string dbName, string prefix, int start = 0, int pageSize = 1024)
         {
@@ -1391,7 +1430,7 @@ namespace Raven.Server.ServerWide
                     TaskExecutor.Execute(_ =>
                     {
                         foreach (var db in listOfDatabaseName)
-                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
+                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                     }, null);
                 }
 
@@ -1411,6 +1450,19 @@ namespace Raven.Server.ServerWide
             AsyncHelpers.RunSync(() => serverStore.LicenseManager.CalculateLicenseLimits());
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+        }
+
+        public static bool InterlockedExchangeMax(ref long location, long newValue)
+        {
+            long initialValue;
+            do
+            {
+                initialValue = location;
+                if (initialValue >= newValue)
+                    return false;
+            }
+            while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
+            return true;
         }
     }
 
@@ -1519,23 +1571,10 @@ namespace Raven.Server.ServerWide
                     Interlocked.Decrement(ref _numberOfErrors);
                 }
             }
-            InterlockedExchangeMax(ref LastModifiedIndex, index);
+            ClusterStateMachine.InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
         }
-
-        private static bool InterlockedExchangeMax(ref long location, long newValue)
-        {
-            long initialValue;
-            do
-            {
-                initialValue = location;
-                if (initialValue >= newValue)
-                    return false;
-            }
-            while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
-            return true;
-        }
-    }
+     }
 
     public class RecentLogIndexNotification
     {

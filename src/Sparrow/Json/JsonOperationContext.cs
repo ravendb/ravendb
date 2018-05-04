@@ -553,6 +553,25 @@ namespace Sparrow.Json
             return ReadObjectInternal(builder, documentId, mode, modifier);
         }
 
+        public BlittableJsonReaderArray ReadArray(DynamicJsonArray builder, string documentId,
+            BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None, IBlittableDocumentModifier modifier = null)
+        {
+            _jsonParserState.Reset();
+            _objectJsonParser.Reset(builder);
+            _documentBuilder.Renew(documentId, mode);
+            CachedProperties.NewDocument();
+            _documentBuilder._modifier = modifier;
+            _documentBuilder.ReadArrayDocument();
+            if (_documentBuilder.Read() == false)
+                throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
+            _documentBuilder.FinalizeDocument();
+
+            _objectJsonParser.Reset(null);
+
+            var reader = _documentBuilder.CreateArrayReader(true);
+            return reader;
+        }
+
         public BlittableJsonReaderObject ReadObject(BlittableJsonReaderObject obj, string documentId,
             BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {

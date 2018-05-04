@@ -73,7 +73,7 @@ namespace SlowTests.Client.Attachments
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
                         var task = session.RequestExecutor.ExecuteAsync(currentNode, currentIndex, session.Context, command);
                         await task;
-                        saveChangesOperation.SetResult(command.Result);
+                        saveChangesOperation.SetResult(command.Result, command.ReturnTransactionIndex);
                     }
                 }
                 using (var session = store.OpenSession())

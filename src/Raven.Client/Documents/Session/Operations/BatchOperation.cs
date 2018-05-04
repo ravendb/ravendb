@@ -34,8 +34,10 @@ namespace Raven.Client.Documents.Session.Operations
             return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
         }
 
-        public void SetResult(BlittableArrayResult result)
+        public void SetResult(BlittableArrayResult result, long? clusterIndex)
         {
+            _session.DocumentStore.LastTransactionIndex = clusterIndex;
+
             if (result.Results == null) //precaution
             {
                 ThrowOnNullResults();
