@@ -78,6 +78,30 @@
                     </div>
                 </div>
             </div>
+
+            <br/>
+            <div class="export-list" data-bind="visible: uploadItems().length">
+                <div data-bind="foreach: uploadItems">
+                    <div class="export-item">
+                        <div class="name">
+                            <h3 data-bind="text: name"></h3>
+                        </div>
+                        <div class="progress-overall" style="width: 600px">
+                            <div class="flex-horizontal" data-bind="with: uploadProgress">
+                                <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
+                                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+                            </div>
+                            <div class="progress" data-bind="with: uploadProgress">
+                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                    <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="clearfix" data-bind="visible: !operationFailed()">
                 <div class="pull-right margin-top">
                     <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
