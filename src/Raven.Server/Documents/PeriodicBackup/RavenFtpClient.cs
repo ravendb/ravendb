@@ -31,8 +31,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const int DefaultFtpPort = 21;
 
         public RavenFtpClient(string url, int? port, string userName, string password, string certificateAsBase64,
-            string certificateFileName, UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null)
-            : base(uploadProgress, cancellationToken)
+            string certificateFileName, Progress progress = null, CancellationToken? cancellationToken = null)
+            : base(progress, cancellationToken)
         {
             _url = url;
             _port = port;
@@ -61,8 +61,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             await TestConnection();
 
-            UploadProgress?.SetTotal(stream.Length);
-            UploadProgress?.ChangeState(UploadState.PendingUpload);
+            Progress?.UploadProgress.SetTotal(stream.Length);
+            Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
 
             var url = await CreateNestedFoldersIfNeeded(folderName);
             url += $"/{fileName}";
@@ -75,17 +75,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             while ((count = await stream.ReadAsync(readBuffer, 0, readBuffer.Length)) != 0)
             {
                 await requestStream.WriteAsync(readBuffer, 0, count);
-                UploadProgress?.UpdateUploaded(count);
+                Progress?.UploadProgress.UpdateUploaded(count);
             }
 
             requestStream.Flush();
             requestStream.Close();
 
-            UploadProgress?.ChangeState(UploadState.PendingResponse);
+            Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
             var response = await request.GetResponseAsync();
             response.Dispose();
 
-            UploadProgress?.ChangeState(UploadState.Done);
+            Progress?.UploadProgress.ChangeState(UploadState.Done);
         }
 
         private async Task <string> CreateNestedFoldersIfNeeded(string folderName)

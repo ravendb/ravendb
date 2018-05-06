@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -17,12 +18,14 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         private readonly List<HttpClient> _clients = new List<HttpClient>();
         protected readonly CancellationToken CancellationToken;
-        protected readonly UploadProgress UploadProgress;
+        protected readonly Progress Progress;
         protected const int MaxRetriesForMultiPartUpload = 5;
 
-        protected RavenStorageClient(UploadProgress uploadProgress, CancellationToken? cancellationToken)
+        protected RavenStorageClient(Progress progress, CancellationToken? cancellationToken)
         {
-            UploadProgress = uploadProgress;
+            Debug.Assert(progress == null || (progress.UploadProgress != null && progress.OnUploadProgress != null));
+
+            Progress = progress;
             CancellationToken = cancellationToken ?? CancellationToken.None;
         }
 

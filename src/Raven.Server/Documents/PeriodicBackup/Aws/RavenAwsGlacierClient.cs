@@ -28,8 +28,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private readonly string _vaultName;
 
         public RavenAwsGlacierClient(string awsAccessKey, string awsSecretKey, string awsRegionName,
-            string vaultName, UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null)
-            : base(awsAccessKey, awsSecretKey, awsRegionName, uploadProgress, cancellationToken)
+            string vaultName, Progress progress = null, CancellationToken? cancellationToken = null)
+            : base(awsAccessKey, awsSecretKey, awsRegionName, progress, cancellationToken)
         {
             _vaultName = vaultName;
         }
@@ -51,10 +51,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
             var payloadTreeHash = RavenAwsHelper.CalculatePayloadTreeHash(stream);
 
-            UploadProgress?.SetTotal(stream.Length);
+            Progress?.UploadProgress.SetTotal(stream.Length);
 
             // stream is disposed by the HttpClient
-            var content = new ProgressableStreamContent(stream, UploadProgress)
+            var content = new ProgressableStreamContent(stream, Progress)
             {
                 Headers =
                 {
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
             var response = await client.PostAsync(url, content, CancellationToken);
-            UploadProgress?.ChangeState(UploadState.Done);
+            Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
@@ -88,8 +88,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 throw new InvalidOperationException(@"Can't upload more than 40TB to Amazon Glacier, " +
                                                     $"current upload size: {new Size(streamLength).HumaneSize}");
 
-            UploadProgress?.SetTotal(streamLength);
-            UploadProgress?.ChangeType(UploadType.Chunked);
+            Progress?.UploadProgress.SetTotal(streamLength);
+            Progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
             // using a chunked upload we can upload up to 10,000 chunks, 4GB max each
             // we limit every chunk to a minimum of 128MB
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
             finally
             {
-                UploadProgress?.ChangeState(UploadState.Done);
+                Progress?.UploadProgress.ChangeState(UploadState.Done);
             }
         }
 
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 var payloadTreeHash = RavenAwsHelper.CalculatePayloadTreeHash(subStream);
 
                 // stream is disposed by the HttpClient
-                var content = new ProgressableStreamContent(subStream, UploadProgress)
+                var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
                     {
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
 
                 // revert the uploaded count before retry
-                UploadProgress?.UpdateUploaded(-content.Uploaded);
+                Progress?.UploadProgress.UpdateUploaded(-content.Uploaded);
             }
 
             // wait for one second before trying again to send the request

@@ -38,8 +38,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
 
         public RavenAzureClient(string accountName, string accountKey, string containerName,
-            UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null, bool isTest = false)
-            : base(uploadProgress, cancellationToken)
+            Progress progress = null, CancellationToken? cancellationToken = null, bool isTest = false)
+            : base(progress, cancellationToken)
         {
             _accountName = accountName;
 
@@ -83,11 +83,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             var url = _serverUrlForContainer + "/" + key;
 
-            UploadProgress?.SetTotal(stream.Length);
+            Progress?.UploadProgress.SetTotal(stream.Length);
 
             var now = SystemTime.UtcNow;
             // stream is disposed by the HttpClient
-            var content = new ProgressableStreamContent(stream, UploadProgress)
+            var content = new ProgressableStreamContent(stream, Progress)
             {
                 Headers =
                 {
@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
 
             var response = await client.PutAsync(url, content, CancellationToken);
-            UploadProgress?.ChangeState(UploadState.Done);
+            Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -124,8 +124,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var baseUrl = _serverUrlForContainer + "/" + key;
             var client = GetClient(TimeSpan.FromDays(7));
 
-            UploadProgress?.SetTotal(streamLength);
-            UploadProgress?.ChangeType(UploadType.Chunked);
+            Progress?.UploadProgress.SetTotal(streamLength);
+            Progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
             try
             {
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
             finally
             {
-                UploadProgress?.ChangeState(UploadState.Done);
+                Progress?.UploadProgress.ChangeState(UploadState.Done);
             }
         }
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 var now = SystemTime.UtcNow;
                 // stream is disposed by the HttpClient
-                var content = new ProgressableStreamContent(subStream, UploadProgress)
+                var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
                     {
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 }
 
                 // revert the uploaded count before retry
-                UploadProgress?.UpdateUploaded(-content.Uploaded);
+                Progress?.UploadProgress.UpdateUploaded(-content.Uploaded);
             }
 
             // wait for one second before trying again to send the request

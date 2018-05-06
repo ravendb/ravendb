@@ -72,7 +72,17 @@ namespace Raven.Client.Documents.Operations.Backups
             UploadProgress = new UploadProgress();
         }
 
+        public bool Skipped { get; set; }
+
         public UploadProgress UploadProgress { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Skipped)] = Skipped;
+            json[nameof(UploadProgress)] = UploadProgress.ToJson();
+            return json;
+        }
     }
 
     public class UploadToS3 : CloudUploadStatus
@@ -105,13 +115,17 @@ namespace Raven.Client.Documents.Operations.Backups
 
         private readonly Stopwatch _sw;
 
+        public UploadType UploadType { get; set; }
+
+        public UploadState UploadState { get; private set; }
+
         public long UploadedInBytes { get; set; }
 
         public long TotalInBytes { get; set; }
 
-        public UploadState UploadState { get; private set; }
+        public double BytesPutsPerSec { get; set; }
 
-        public UploadType UploadType { get; set; }
+        public long UploadTimeInMs => _sw.ElapsedMilliseconds;
 
         public void ChangeState(UploadState newState)
         {
@@ -133,6 +147,19 @@ namespace Raven.Client.Documents.Operations.Backups
         public void ChangeType(UploadType newType)
         {
             UploadType = newType;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue(GetType())
+            {
+                [nameof(UploadType)] = UploadType,
+                [nameof(UploadState)] = UploadState,
+                [nameof(UploadedInBytes)] = UploadedInBytes,
+                [nameof(TotalInBytes)] = TotalInBytes,
+                [nameof(BytesPutsPerSec)] = BytesPutsPerSec,
+                [nameof(UploadTimeInMs)] = UploadTimeInMs
+            };
         }
     }
 

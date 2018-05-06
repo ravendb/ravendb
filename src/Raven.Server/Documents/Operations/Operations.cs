@@ -394,7 +394,10 @@ namespace Raven.Server.Documents.Operations
             CertificateGeneration,
             
             [Description("Migration from v3.x")]
-            MigrationFromLegacyData
+            MigrationFromLegacyData,
+
+            [Description("Database Backup")]
+            DatabaseBackup,
         }
     }
 }

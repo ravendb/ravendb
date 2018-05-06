@@ -69,7 +69,6 @@ namespace TypingsGenerator
 {
     public class Program
     {
-
         public const string TargetDirectory = "../../src/Raven.Studio/typings/server/";
         public static void Main(string[] args)
         {
@@ -282,6 +281,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(NextBackupOccurrence));
             scripter.AddType(typeof(OfflineMigrationConfiguration));
+            scripter.AddType(typeof(BackupProgress));
+            scripter.AddType(typeof(BackupDatabaseNowResult));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));
