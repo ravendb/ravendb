@@ -253,6 +253,7 @@ namespace Sparrow.Platform.Posix
                 switch (result)
                 {
                     case (int)Errno.EINVAL:
+                    case (int)Errno.EFBIG: // can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;
