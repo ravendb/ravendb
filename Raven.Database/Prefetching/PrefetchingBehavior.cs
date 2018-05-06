@@ -60,6 +60,7 @@ namespace Raven.Database.Prefetching
 		{
 			Task.WaitAll(futureIndexBatches.Values.Select(ObserveDiscardedTask).ToArray());
 			futureIndexBatches.Clear();
+            documentsToRemove.Clear();      
 		}
 
 		#endregion
