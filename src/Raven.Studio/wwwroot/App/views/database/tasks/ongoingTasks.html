@@ -271,10 +271,10 @@
                                         </ul>
                                     </div>
                                     <div>
-                                        <button class="btn" data-bind="click: backupNow, enable: isBackupNowEnabled(),
-                                             css: { 'btn-spinner': backupNowInProgress, 'btn-default': !neverBackedUp(), 'btn-warning': neverBackedUp }, 
+                                        <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(),
+                                             css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() }, 
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
-                                            <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Backup in progress' : 'Backup now'"></span>
+                                            <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
                                         </button>
                                         <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>
