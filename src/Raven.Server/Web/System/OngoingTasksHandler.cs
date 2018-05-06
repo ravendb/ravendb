@@ -31,6 +31,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Json;
 
 namespace Raven.Server.Web.System
 {
@@ -439,10 +440,24 @@ namespace Raven.Server.Web.System
             var isFullBackup = GetBoolValueQueryString("isFullBackup", required: false);
 
             var nodeTag = Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+            if (nodeTag == null)
+                throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
+
             if (nodeTag == ServerStore.NodeTag)
             {
-                Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
-                NoContentStatus();
+                var operationId = Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(BackupDatabaseNowResult.ResponsibleNode));
+                    writer.WriteString(ServerStore.NodeTag);
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(BackupDatabaseNowResult.OperationId));
+                    writer.WriteInteger(operationId);
+                    writer.WriteEndObject();
+                }
+
                 return Task.CompletedTask;
             }
 
