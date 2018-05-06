@@ -9,12 +9,13 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
-	using System.Linq;
+    using System;
+    using System.Linq;
 
 	public class Prefetcher
 	{
 		private readonly WorkContext workContext;
-		private List<PrefetchingBehavior> prefetchingBehaviors = new List<PrefetchingBehavior>();
+		private List<WeakReference> prefetchingBehaviors = new List<WeakReference>();
 
 		public Prefetcher(WorkContext workContext)
 		{
@@ -27,9 +28,9 @@ namespace Raven.Database.Prefetching
 			{
 				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext));
 
-				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
+				prefetchingBehaviors = new List<WeakReference>(prefetchingBehaviors.Where(x=>x.IsAlive))
 				{
-					newPrefetcher
+					new WeakReference(newPrefetcher)
 				};
 
 				return newPrefetcher;
@@ -38,23 +39,35 @@ namespace Raven.Database.Prefetching
 
 		public void AfterDelete(string key, Etag deletedEtag)
 		{
-			foreach (var behavior in prefetchingBehaviors)
+			foreach (var weakRef in prefetchingBehaviors)
 			{
-				behavior.AfterDelete(key, deletedEtag);
+                var behavior = (PrefetchingBehavior)weakRef.Target;
+                if (behavior == null)
+                    continue;
+                behavior.AfterDelete(key, deletedEtag);
 			}
 		}
 
 		public void AfterUpdate(string key, Etag etagBeforeUpdate)
 		{
-			foreach (var behavior in prefetchingBehaviors)
+			foreach (var weakRef in prefetchingBehaviors)
 			{
-				behavior.AfterUpdate(key, etagBeforeUpdate);
+                var behavior = (PrefetchingBehavior)weakRef.Target;
+                if (behavior == null)
+                    continue;
+                behavior.AfterUpdate(key, etagBeforeUpdate);
 			}
 		}
 
 		public int GetInMemoryIndexingQueueSize(PrefetchingUser user)
 		{
-			var value = prefetchingBehaviors.FirstOrDefault(x => x.PrefetchingUser == user);
+            var value = prefetchingBehaviors
+                .Select(x => x.Target)
+                .OfType<PrefetchingBehavior>()
+                .FirstOrDefault(x =>
+                {
+                    return x.PrefetchingUser == user;
+                });
 			if (value != null)
 				return value.InMemoryIndexingQueueSize;
 			return -1;
@@ -62,7 +75,13 @@ namespace Raven.Database.Prefetching
 
 		public void AfterStorageCommitBeforeWorkNotifications(PrefetchingUser user, JsonDocument[] documents)
 		{
-			foreach (var prefetcher in prefetchingBehaviors.Where(x => x.PrefetchingUser == user))
+			foreach (var prefetcher in prefetchingBehaviors
+                .Select(x => x.Target)
+                .OfType<PrefetchingBehavior>()
+                .Where(x =>
+                {
+                    return x.PrefetchingUser == user;
+                }))
 			{
 				prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
 			}
