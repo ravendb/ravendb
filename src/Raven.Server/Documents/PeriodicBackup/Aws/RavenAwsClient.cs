@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         protected string AwsRegion { get; set; }
 
         protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName,
-            UploadProgress uploadProgress, CancellationToken? cancellationToken = null)
-            : base(uploadProgress, cancellationToken)
+            Progress progress, CancellationToken? cancellationToken = null)
+            : base(progress, cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(awsRegionName))
                 throw new ArgumentException("AWS region cannot be null or empty!");

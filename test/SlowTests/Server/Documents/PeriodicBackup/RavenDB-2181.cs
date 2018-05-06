@@ -14,6 +14,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Exceptions.PeriodicBackup;
@@ -246,11 +247,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Guid.NewGuid().ToString() : 
                 $"{Guid.NewGuid()}/folder/testKey";
 
-            var uploadProgress = new UploadProgress();
+            var progress = new Progress();
             var maxUploadPutObjectInBytesSetter = ExpressionHelper.CreateFieldSetter<RavenAwsS3Client, int>("MaxUploadPutObjectSizeInBytes");
             var minOnePartUploadSizeLimitInBytesSetter = ExpressionHelper.CreateFieldSetter<RavenAwsS3Client, int>("MinOnePartUploadSizeLimitInBytes");
 
-            using (var client = new RavenAwsS3Client(AwsAccessKey, AwsSecretKey, region, bucketName, uploadProgress))
+            using (var client = new RavenAwsS3Client(AwsAccessKey, AwsSecretKey, region, bucketName, progress))
             {
                 maxUploadPutObjectInBytesSetter(client, 10 * 1024 * 1024); // 10MB
                 minOnePartUploadSizeLimitInBytesSetter(client, 7 * 1024 * 1024); // 7MB
@@ -296,10 +297,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(value1, @object.Metadata[property1]);
                     Assert.Equal(value2, @object.Metadata[property2]);
 
-                    Assert.Equal(UploadState.Done, uploadProgress.UploadState);
-                    Assert.Equal(uploadType, uploadProgress.UploadType);
-                    Assert.Equal(streamLength, uploadProgress.TotalInBytes);
-                    Assert.Equal(streamLength, uploadProgress.UploadedInBytes);
+                    Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
+                    Assert.Equal(uploadType, progress.UploadProgress.UploadType);
+                    Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
+                    Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
                 }
                 finally
                 {
@@ -390,11 +391,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
-            var uploadProgress = new UploadProgress();
+            var progress = new Progress();
             var maxUploadArchiveSizeInBytes = ExpressionHelper.CreateFieldSetter<RavenAwsGlacierClient, int>("MaxUploadArchiveSizeInBytes");
             var minOnePartUploadSizeLimitInBytes = ExpressionHelper.CreateFieldSetter<RavenAwsGlacierClient, int>("MinOnePartUploadSizeLimitInBytes");
 
-            using (var client = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region, vaultName, uploadProgress))
+            using (var client = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region, vaultName, progress))
             {
                 maxUploadArchiveSizeInBytes(client, 10 * 1024 * 1024); // 9MB
                 minOnePartUploadSizeLimitInBytes(client, minOnePartSizeInMB * 1024 * 1024);
@@ -417,10 +418,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(archiveId);
                 }
 
-                Assert.Equal(UploadState.Done, uploadProgress.UploadState);
-                Assert.Equal(uploadType, uploadProgress.UploadType);
-                Assert.Equal(streamLength, uploadProgress.TotalInBytes);
-                Assert.Equal(streamLength, uploadProgress.UploadedInBytes);
+                Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
+                Assert.Equal(uploadType, progress.UploadProgress.UploadType);
+                Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
+                Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
             }
         }
 

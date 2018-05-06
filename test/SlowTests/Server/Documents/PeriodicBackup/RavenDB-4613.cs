@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
 using Xunit;
@@ -140,8 +141,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Guid.NewGuid().ToString() :
                 $"{Guid.NewGuid()}/folder/testKey";
 
-            var uploadProgress = new UploadProgress();
-            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, uploadProgress, isTest: true))
+            var progress = new Progress();
+            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, progress, isTest: true))
             {
                 try
                 {
@@ -185,10 +186,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(value2, blob.Metadata[property2]);
                     Assert.Equal(value3, blob.Metadata[property3]);
 
-                    Assert.Equal(UploadState.Done, uploadProgress.UploadState);
-                    Assert.Equal(uploadType, uploadProgress.UploadType);
-                    Assert.Equal(streamLength, uploadProgress.TotalInBytes);
-                    Assert.Equal(streamLength, uploadProgress.UploadedInBytes);
+                    Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
+                    Assert.Equal(uploadType, progress.UploadProgress.UploadType);
+                    Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
+                    Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
                 }
                 finally
                 {

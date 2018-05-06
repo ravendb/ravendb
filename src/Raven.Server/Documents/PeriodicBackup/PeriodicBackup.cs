@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -9,9 +10,13 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         private Timer _backupTimer;
         private readonly SemaphoreSlim _updateTimerSemaphore = new SemaphoreSlim(1);
-        private readonly SemaphoreSlim _updateBackupTaskSemaphore = new SemaphoreSlim(1);
+        public readonly SemaphoreSlim UpdateBackupTaskSemaphore = new SemaphoreSlim(1);
 
         public Task RunningTask { get; set; }
+
+        public long? RunningBackupTaskId { get; set; }
+
+        public OperationCancelToken CancelToken { get; set; }
 
         public DateTime StartTime { get; set; }
 
@@ -29,6 +34,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 _backupTimer?.Dispose();
                 _backupTimer = null;
+
+                try
+                {
+                    CancelToken?.Cancel();
+                }
+                catch {}
             }
             finally
             {
@@ -51,21 +62,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             finally
             {
                 _updateTimerSemaphore.Release();
-            }
-        }
-
-        public void UpdateBackupTask(Action action)
-        {
-            if (_updateBackupTaskSemaphore.Wait(0) == false)
-                return;
-
-            try
-            {
-                action();
-            }
-            finally
-            {
-                _updateBackupTaskSemaphore.Release();
             }
         }
 

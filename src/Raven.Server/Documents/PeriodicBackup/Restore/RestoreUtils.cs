@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             if (DateTime.TryParseExact(
                     fileName,
-                    PeriodicBackupRunner.DateTimeFormat,
+                    BackupTask.DateTimeFormat,
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
                     out DateTime result) == false)
