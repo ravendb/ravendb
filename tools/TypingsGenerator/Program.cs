@@ -24,6 +24,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -359,6 +360,12 @@ namespace TypingsGenerator
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
             scripter.AddType(typeof(MemoryStatsHandler.MemoryInfo));
+            
+            // counters
+            scripter.AddType(typeof(CounterBatch));
+            scripter.AddType(typeof(CountersDetail));
+            scripter.AddType(typeof(CounterDetail));
+            scripter.AddType(typeof(CounterOperationType));
 
             return scripter;
         }

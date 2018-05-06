@@ -2,7 +2,7 @@
 
 import generalUtils = require("common/generalUtils");
 
-type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision";
+type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters";
 
 class documentMetadata {
     collection: string;
@@ -18,6 +18,8 @@ class documentMetadata {
     lastModifiedInterval: KnockoutComputed<string>;
 
     attachments = ko.observableArray<documentAttachmentDto>();
+    counters = ko.observableArray<documentCounterDto>();
+    
     changeVector = ko.observable<string>();
 
     constructor(dto?: documentMetadataDto) {
@@ -50,6 +52,8 @@ class documentMetadata {
             this.lastModified(dto['@last-modified']);
 
             this.attachments(dto['@attachments']);
+            
+            this.counters(dto['@counters']);
 
             this.changeVector(dto['@change-vector']);
             
@@ -62,6 +66,7 @@ class documentMetadata {
                     property.toUpperCase() !== 'Temp-Index-Score'.toUpperCase() &&
                     property.toUpperCase() !== '@last-modified'.toUpperCase() &&
                     property.toUpperCase() !== '@attachments'.toUpperCase() &&
+                    property.toUpperCase() !== '@counters'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase() &&
                     property.toUpperCase() !=='@change-vector'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
@@ -86,6 +91,7 @@ class documentMetadata {
             'Temp-Index-Score': this.tempIndexScore,
             '@last-modified': this.lastModified(),
             '@attachments': this.attachments(),
+            '@counters': this.counters(),
             '@change-vector': this.changeVector()
     };
 
@@ -99,7 +105,7 @@ class documentMetadata {
     static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null, isClonedDocument: boolean = false) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
-        const metaPropsToRemove = ["@id", "@change-vector", "@last-modified", "@attachments"];
+        const metaPropsToRemove = ["@id", "@change-vector", "@last-modified", "@attachments", "@counters"];
 
         if (isClonedDocument) {
             metaPropsToRemove.push("@flags");

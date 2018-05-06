@@ -1,0 +1,76 @@
+<div class="modal-dialog" id="destinationModal" role="document">
+    <form data-bind="submit: updateCounter" autocomplete="off">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+                <h2 class="modal-title" id="myModalLabel">
+                    <i class="icon-new-counter"></i>
+                    <span data-bind="if: createNewCounter()">Set New Counter</span>
+                    <span data-bind="if: !createNewCounter()">Update Counter</span>
+                </h2>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <div class="padding padding-sm text-center">
+                        <div class="form-group row">
+                           <div class="col-md-4">
+                              <label for="counterNameInput" class="control-label">Counter Name<i data-bind="visible: createNewCounter()" class="required"></i></label>
+                           </div>
+                           <div class="col-md-8">
+                              <input type="text" id="counterNameInput" data-bind="textInput: counterName, disable: !createNewCounter()" placeholder="Enter counter name" class="form-control">
+                           </div>
+                        </div>
+                        <div class="form-group row" data-bind="visible: !createNewCounter()">
+                            <div class="col-md-4">
+                                <label for="counterTotalValue" class="control-label">Counter Value</label>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" id="counterTotalValue" data-bind="textInput: totalValue().toLocaleString()" class="form-control" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-4">
+                                <label for="counterTotalInput" class="control-label">Set Value<i data-bind="visible: true" class="required"></i></label>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" id="counterTotalInput" data-bind="textInput: newTotalValue" placeholder="Enter new counter value" class="form-control" autofocus>
+                            </div>
+                        </div>
+                        <div class="form-group row" data-bind="visible: !createNewCounter()">
+                            <div class="col-md-4">
+                                <label class="control-label">Value per Node:</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div data-bind="foreach: counterValuesPerNode">
+                                <div class="row">
+                                    <div class="col-md-offset-1 col-md-1">
+                                        <label data-bind="text: $data.nodeTag"></label>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label data-bind="text: $data.nodeId"></label>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label data-bind="text: $data.nodeCounterValue.toLocaleString()"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="padding text-right">
+                    <button data-dismiss="modal" aria-label="Close" class="btn btn-default">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.update(), css: { 'btn-spinner': $root.spinners.update }">
+                        <i class="icon-save"></i>
+                        <span data-bind="if: !createNewCounter()">Update</span>
+                        <span data-bind="if: createNewCounter()">Create</span>
+                    </button> 
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

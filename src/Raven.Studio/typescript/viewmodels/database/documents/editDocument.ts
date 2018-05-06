@@ -43,6 +43,7 @@ class editDocument extends viewModelBase {
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     attachmentsCount: KnockoutComputed<number>;
+    countersCount: KnockoutComputed<number>;
     rawJsonUrl: KnockoutComputed<string>;
     isDeleteRevision: KnockoutComputed<boolean>;
 
@@ -233,7 +234,16 @@ class editDocument extends viewModelBase {
 
             return doc.__metadata.attachments().length;
         });
+       
+        this.countersCount = ko.pureComputed(() => {
+            const doc = this.document();
+            if (!doc || !doc.__metadata || !doc.__metadata.counters()) {
+                return 0;
+            }
 
+            return doc.__metadata.counters().length;
+        });
+        
         this.rawJsonUrl = ko.pureComputed(() => {
             const newDocMode = this.isCreatingNewDocument();
             if (newDocMode) {
@@ -371,7 +381,9 @@ class editDocument extends viewModelBase {
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute? A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
+        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); 
+        // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute?
+        // A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
     }
 
     private focusOnEditor() {
