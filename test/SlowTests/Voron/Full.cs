@@ -61,7 +61,7 @@ namespace SlowTests.Voron
             {
                 var voronDataDir = new VoronPathSetting(DataDir);
 
-                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), infoNotify: msg => sw.WriteLine(msg));
+                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), infoNotify: info => sw.WriteLine(info.Message));
 
                 BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
                 sw.WriteLine();

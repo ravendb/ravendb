@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -12,14 +13,14 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const int DefaultBufferSize = 4096;
 
         private readonly Stream _content;
-        private readonly UploadProgress _uploadProgress;
+        private readonly Progress _progress;
 
         public long Uploaded;
 
-        public ProgressableStreamContent(Stream content, UploadProgress uploadProgress)
+        public ProgressableStreamContent(Stream content, Progress progress)
         {
             _content = content ?? throw new ArgumentNullException("content");
-            _uploadProgress = uploadProgress;
+            _progress = progress;
         }
 
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var buffer = new byte[DefaultBufferSize];
 
-                _uploadProgress?.ChangeState(UploadState.PendingUpload);
+                _progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
 
                 using (_content)
                 {
@@ -38,16 +39,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (length <= 0)
                             break;
 
-                        _uploadProgress?.UpdateUploaded(length);
-                        Uploaded += length;
-
                         await stream.WriteAsync(buffer, 0, length);
 
-                        _uploadProgress?.ChangeState(UploadState.Uploading);
+                        Uploaded += length;
+
+                        _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                        _progress?.UploadProgress.UpdateUploaded(length);
+                        _progress?.OnUploadProgress();
                     }
                 }
 
-                _uploadProgress?.ChangeState(UploadState.PendingResponse);
+                _progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
             });
         }
 
