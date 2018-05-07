@@ -63,7 +63,9 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string GetText(IndexQueryServerSide parent)
         {
-            return FieldValue;
+            return string.IsNullOrEmpty(FieldValueWithoutAlias) 
+                ? FieldValue 
+                : FieldValueWithoutAlias;
         }
     }
 }
