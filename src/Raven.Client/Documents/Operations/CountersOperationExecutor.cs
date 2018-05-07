@@ -33,9 +33,9 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => BatchAsync(counterBatch));
         }
 
-        public async Task<CountersDetail> BatchAsync(CounterBatch counterBatch)
+        public Task<CountersDetail> BatchAsync(CounterBatch counterBatch)
         {
-            return await _operations.SendAsync(new CounterBatchOperation(counterBatch)).ConfigureAwait(false);
+            return _operations.SendAsync(new CounterBatchOperation(counterBatch));
         }
 
         public CountersDetail Increment(string docId, string name, long delta = 1)
@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => IncrementAsync(docId, name, delta));
         }
 
-        public async Task<CountersDetail> IncrementAsync(string docId, string name, long delta = 1)
+        public Task<CountersDetail> IncrementAsync(string docId, string name, long delta = 1)
         {
             var counterBatch = new CounterBatch
             {
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations
                 }
             };
 
-            return await _operations.SendAsync(new CounterBatchOperation(counterBatch)).ConfigureAwait(false);
+            return _operations.SendAsync(new CounterBatchOperation(counterBatch));
         }
 
         public long? Get(string docId, string counterName)
@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Operations
             AsyncHelpers.RunSync(() => DeleteAsync(docId, counter));
         }
 
-        public async Task DeleteAsync(string docId, string counter)
+        public Task DeleteAsync(string docId, string counter)
         {
             var counterBatch = new CounterBatch
             {
@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Operations
                 }
             };
 
-            await _operations.SendAsync(new CounterBatchOperation(counterBatch)).ConfigureAwait(false);
+             return _operations.SendAsync(new CounterBatchOperation(counterBatch));
         }
     }
 }
