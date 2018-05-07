@@ -21,9 +21,6 @@ namespace Tryouts
         {
             using (var tests = new CountersCrudSingleNode())
             {
-
-                tests.MultiGetCounters();
-
                 tests.IncrementCounter();
                 tests.DeleteCounter();
                 tests.GetCounterValue();
