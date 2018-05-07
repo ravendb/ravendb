@@ -45,6 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly PeriodicBackupStatus _previousBackupStatus;
         private readonly bool _isFullBackup;
         private readonly bool _backupToLocalFolder;
+        private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
         private readonly Logger _logger;
         private readonly CancellationToken _databaseShutdownCancellationToken;
@@ -58,6 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackup periodicBackup,
             bool isFullBackup,
             bool backupToLocalFolder,
+            long operationId,
             PathSetting tempBackupPath,
             Logger logger,
             CancellationToken databaseShutdownCancellationToken)
@@ -70,6 +72,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _previousBackupStatus = periodicBackup.BackupStatus;
             _isFullBackup = isFullBackup;
             _backupToLocalFolder = backupToLocalFolder;
+            _operationId = operationId;
             _tempBackupPath = tempBackupPath;
             _logger = logger;
             _databaseShutdownCancellationToken = databaseShutdownCancellationToken;
@@ -94,7 +97,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 LastIncrementalBackup = _previousBackupStatus.LastIncrementalBackup,
                 LastFullBackupInternal = _previousBackupStatus.LastFullBackupInternal,
                 LastIncrementalBackupInternal = _previousBackupStatus.LastIncrementalBackupInternal,
-                IsFull = _isFullBackup
+                IsFull = _isFullBackup,
+                LocalBackup = _previousBackupStatus.LocalBackup,
+                LastOperationId = _previousBackupStatus.LastOperationId
             };
 
             try
@@ -106,31 +111,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     if (runningBackupStatus.LocalBackup == null)
                         runningBackupStatus.LocalBackup = new LocalBackup();
-
-                    string folderName;
-                    PathSetting backupDirectory;
-                    if (_isFullBackup)
-                    {
-                        var counter = 0;
-                        do
-                        {
-                            var prefix = counter++ == 0 ? string.Empty : $"-{counter++:D2}";
-                            folderName = $"{now}{prefix}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{_configuration.BackupType.ToString().ToLower()}";
-                            backupDirectory = _backupToLocalFolder ? new PathSetting(_configuration.LocalSettings.FolderPath).Combine(folderName) : _tempBackupPath;
-                        } while (_backupToLocalFolder && DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile));
-
-                        if (Directory.Exists(backupDirectory.FullPath) == false)
-                            Directory.CreateDirectory(backupDirectory.FullPath);
-                    }
-                    else
-                    {
-                        folderName = _previousBackupStatus.FolderName;
-                        backupDirectory = _backupToLocalFolder ? new PathSetting(_previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
-                    }
-
-                    runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
-                    runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
-                    runningBackupStatus.IsFull = _isFullBackup;
 
                     if (_logger.IsInfoEnabled)
                     {
@@ -145,11 +125,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (currentLastEtag == _previousBackupStatus.LastEtag)
                         {
                             var message = "Skipping incremental backup because " +
-                                          $"last etag ({currentLastEtag}) hasn't changed since last backup";
+                                          $"last etag ({currentLastEtag:#,#;;0}) hasn't changed since last backup";
 
                             if (_logger.IsInfoEnabled)
                                 _logger.Info(message);
 
+                            UpdateOperationId(runningBackupStatus);
                             runningBackupStatus.LastIncrementalBackup = _startTime;
                             DatabaseSmuggler.EnsureProcessed(_backupResult);
                             AddInfo(message, onProgress);
@@ -158,9 +139,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
+                    GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
                     var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                     var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, out string backupFilePath);
                     var lastEtag = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, context, tx, onProgress);
+
+                    runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
+                    runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
+                    runningBackupStatus.IsFull = _isFullBackup;
 
                     try
                     {
@@ -180,6 +166,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
+                    UpdateOperationId(runningBackupStatus);
                     runningBackupStatus.LastEtag = lastEtag;
                     runningBackupStatus.FolderName = folderName;
                     if (_isFullBackup)
@@ -255,6 +242,28 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
                 }
+            }
+        }
+
+        private void GenerateFolderNameAndBackupDirectory(string now, out string folderName, out PathSetting backupDirectory)
+        {
+            if (_isFullBackup)
+            {
+                var counter = 0;
+                do
+                {
+                    var prefix = counter++ == 0 ? string.Empty : $"-{counter++:D2}";
+                    folderName = $"{now}{prefix}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{_configuration.BackupType.ToString().ToLower()}";
+                    backupDirectory = _backupToLocalFolder ? new PathSetting(_configuration.LocalSettings.FolderPath).Combine(folderName) : _tempBackupPath;
+                } while (_backupToLocalFolder && DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile));
+
+                if (Directory.Exists(backupDirectory.FullPath) == false)
+                    Directory.CreateDirectory(backupDirectory.FullPath);
+            }
+            else
+            {
+                folderName = _previousBackupStatus.FolderName;
+                backupDirectory = _backupToLocalFolder ? new PathSetting(_previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
             }
         }
 
@@ -753,6 +762,18 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
             return $"{(isFullBackup ? fullBackupText : "Incremental backup")} for db {_database.Name} at {SystemTime.UtcNow}";
+        }
+
+        private void UpdateOperationId(PeriodicBackupStatus runningBackupStatus)
+        {
+            runningBackupStatus.LastOperationId = _operationId;
+            if (_previousBackupStatus.LastOperationId == null ||
+                _previousBackupStatus.NodeTag != _serverStore.NodeTag)
+                return;
+
+            // dismiss the previous operation
+            var id = $"{NotificationType.OperationChanged}/{_previousBackupStatus.LastOperationId.Value}";
+            _database.NotificationCenter.Dismiss(id);
         }
 
         private async Task WriteStatus(PeriodicBackupStatus status, Action<IOperationProgress> onProgress)
