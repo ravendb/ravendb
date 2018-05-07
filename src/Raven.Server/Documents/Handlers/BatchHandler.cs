@@ -21,6 +21,7 @@ using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Raven.Server.Documents.Replication;
 using System.Runtime.ExceptionServices;
+using Raven.Client.Documents.Operations.Counters;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -309,6 +310,7 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 _disposables.Clear();
+                var counterBatch = new CounterBatch();
                 Reply = new DynamicJsonArray();
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
@@ -456,7 +458,31 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
+                        case CommandType.Counters:
+                            if (counterBatch.Documents == null)
+                                counterBatch.Documents = new List<DocumentCountersOperation>();
+                            counterBatch.Documents.Add(cmd.Counters);
+                            break;
                     }
+                }
+
+                if (counterBatch.Documents != null)
+                {
+                    var cmd = new CountersHandler.ExecuteCounterBatchCommand(Database, counterBatch);
+                    try
+                    {
+                        cmd.Execute(context);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        return 0;
+                    }
+
+                    Reply.Add(new DynamicJsonValue
+                    {
+                        [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.Counters),
+                        ["CountersDetail"] = cmd.CountersDetail.ToJson(),
+                    });
                 }
 
                 if (_documentsToUpdateAfterAttachmentChange != null)
