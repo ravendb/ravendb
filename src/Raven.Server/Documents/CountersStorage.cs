@@ -15,7 +15,6 @@ using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Operations.Counters;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -194,9 +193,9 @@ namespace Raven.Server.Documents
                 {
                     var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
 
-                    if (tombstoneTable.ReadByKey(counterKey, out var existingTombstone))
+                    if (tombstoneTable.ReadByKey(keyPerfix, out var existingTombstone))
                     {
-                        table.Delete(existingTombstone.Id);
+                        tombstoneTable.Delete(existingTombstone.Id);
                     }
                 }
 
