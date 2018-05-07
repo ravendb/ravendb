@@ -101,7 +101,6 @@ namespace Raven.Server.Documents.Operations
             long id,
             OperationCancelToken token = null)
         {
-
             var operationState = new OperationState
             {
                 Status = OperationStatus.InProgress
@@ -190,7 +189,7 @@ namespace Raven.Server.Documents.Operations
 
         private void RaiseNotifications(OperationStatusChange change, Operation operation)
         {
-            var operationChanged = OperationChanged.Create(_name,change.OperationId, operation.Description, change.State, operation.Killable);
+            var operationChanged = OperationChanged.Create(_name, change.OperationId, operation.Description, change.State, operation.Killable);
 
             operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 
@@ -278,7 +277,7 @@ namespace Raven.Server.Documents.Operations
 
             public void NotifyCenter(OperationChanged notification, Action<OperationChanged> addToNotificationCenter)
             {
-                if (!ShouldThrottleMessage(notification))
+                if (ShouldThrottleMessage(notification) == false)
                 {
                     addToNotificationCenter(notification);
                     return;
