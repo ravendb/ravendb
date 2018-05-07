@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -13,7 +14,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class BatchCommand : RavenCommand<BlittableArrayResult>, IDisposable
+    public class BatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly HashSet<Stream> _attachmentStreams;
@@ -62,6 +63,12 @@ namespace Raven.Client.Documents.Commands.Batches
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Commands", _commands);
+                        if (_options?.TransactionMode == TransactionMode.ClusterWide)
+                        {
+                            writer.WriteComma();
+                            writer.WritePropertyName("ClusterTx");
+                            writer.WriteBool(true);
+                        }
                         writer.WriteEndObject();
                     }
                 })
@@ -89,20 +96,6 @@ namespace Raven.Client.Documents.Commands.Batches
             return request;
         }
 
-        public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
-        {
-            if (response.Headers.TryGetValues("TransactionIndex", out var value))
-            {
-                if (long.TryParse(value.FirstOrDefault(), out var index))
-                {
-                    ReturnTransactionIndex = index;
-                }
-            }
-            return base.ProcessResponse(context, cache, response, url);
-        }
-
-        public long ReturnTransactionIndex { get; private set; }
-
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
@@ -114,7 +107,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 // we are still looking at this result, so we clone it to the side
                 response = response.Clone(context);
             }
-            Result = JsonDeserializationClient.BlittableArrayResult(response);
+            Result = JsonDeserializationClient.BatchCommandResult(response);
         }
 
         private void AppendOptions(StringBuilder sb)
@@ -148,11 +141,6 @@ namespace Raven.Client.Documents.Commands.Batches
                         sb.Append("&waitForSpecificIndex=").Append(specificIndex);
                     }
                 }
-            }
-
-            if (_options.TryGetValue<ClusterBatchOptions>(out var clusterBatchOptions))
-            {
-                sb.Append("&clusterTransaction=true");
             }
         }
 

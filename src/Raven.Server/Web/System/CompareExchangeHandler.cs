@@ -37,21 +37,19 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg/indexes", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCompareExchangeIndexes()
         {
-            var keys = GetStringValuesQueryString("keys");
+            var keys = GetStringValuesQueryString("key");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                    writer.WriteStartObject();
-
-                    writer.WriteArray(context, nameof(GetCompareExchangeIndexResult.Indexes), ServerStore.Cluster.GetCompareExchangeIndexes(context, keys),
-                        (textWriter, operationContext, item) =>
-                        {
-                            textWriter.WriteInteger(item);
-                        });
-
-                    writer.WriteEndObject();
+                writer.WriteStartObject();
+                foreach (var tuple in ServerStore.Cluster.GetCompareExchangeIndexes(context, keys))
+                {
+                    writer.WritePropertyName(tuple.Key);
+                    writer.WriteInteger(tuple.Index);
+                }
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;

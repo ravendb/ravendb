@@ -130,8 +130,11 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        ExecuteClusterTransaction(context, cmd, index, out var success);
-                        leader?.SetStateOf(index, success);
+                        var errors = ExecuteClusterTransaction(context, cmd, index);
+                        if (errors != null)
+                        {
+                            leader?.SetStateOf(index, errors);
+                        }
                         break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray commands) == false)
@@ -290,22 +293,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, out bool success)
+        private List<string> ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            success = false;
             var clusterTansaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
-            if (clusterTansaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems))
+            var error = clusterTansaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
+            if (error == null)
             {
-                success = true;
                 clusterTansaction.SaveCommandsBatch(context, index);
                 NotifyDatabaseAboutChanged(context, clusterTansaction.Database, index, nameof(ClusterTransactionCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions);
-                return;
+                return null;
             }
-
             OnTransactionDispose(context, index);
+            return error;
         }
 
         private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
@@ -573,7 +575,7 @@ namespace Raven.Server.ServerWide
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             using (Slice.From(context.Allocator, databaseName, out var loweredKey))
             {
-                transactionsCommands.DeleteByKey(loweredKey);
+                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex], loweredKey, true, long.MaxValue);
             }
         }
 
@@ -1063,7 +1065,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<long> GetCompareExchangeIndexes(TransactionOperationContext context, string[] keys)
+        public IEnumerable<(string Key, long Index)> GetCompareExchangeIndexes(TransactionOperationContext context, string[] keys)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             foreach (var key in keys)
@@ -1073,9 +1075,9 @@ namespace Raven.Server.ServerWide
                 {
                     if (items.ReadByKey(keySlice, out var reader))
                     {
-                        yield return ReadCompareExchangeIndex(reader);
+                        yield return (key, ReadCompareExchangeIndex(reader));
                     }
-                    yield return -1;
+                    yield return (key ,-1);
                 }
             }
         }

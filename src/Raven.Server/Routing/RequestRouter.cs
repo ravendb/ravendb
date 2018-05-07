@@ -106,7 +106,7 @@ namespace Raven.Server.Routing
                 {
                     if (reqCtx.HttpContext.Response.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value) && long.TryParse(value, out var index))
                     {
-                        await reqCtx.Database.ClusterTransactionWaiter.WaitForCompletion(index);
+                        await reqCtx.Database.ClusterTransactionWaiter.WaitForCompletion(index, reqCtx.HttpContext.RequestAborted);
                     }
                     await handler(reqCtx);
                 }

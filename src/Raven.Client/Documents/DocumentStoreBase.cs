@@ -141,11 +141,11 @@ namespace Raven.Client.Documents
         public long? LastTransactionIndex
         {
             get
-
             {
-                if (_lastTransactionIndex == 0)
+                var local = _lastTransactionIndex;
+                if (local == 0)
                     return null;
-                return _lastTransactionIndex;
+                return local;
             }
             set
             {

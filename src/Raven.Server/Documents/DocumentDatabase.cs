@@ -59,6 +59,8 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<long, object> _results = new ConcurrentDictionary<long, object>();
         private long _lastIndex;
 
+        public long LastCompletedIndex => _lastIndex;
+
         public WaitForClusterTransactionToFinish(long initialIndex)
         {
             _lastIndex = initialIndex;
@@ -74,25 +76,25 @@ namespace Raven.Server.Documents
             old.SetResult(null);
         }
 
-        public async Task<object> WaitForResult(long index)
+        public async Task<object> WaitForResult(long index, CancellationToken token = default)
         {
             while (true)
             {
                 var tcs = _indexChanged;
                 if (_results.TryGetValue(index, out var value))
                     return value;
-                await tcs.Task;
+                await tcs.Task.WithCancellation(token);
             }
         }
 
-        public async Task WaitForCompletion(long index)
+        public async Task WaitForCompletion(long index, CancellationToken token = default)
         {
             while (true)
             {
                 var tcs = _indexChanged;
                 if (_lastIndex >= index)
                     return;
-                await tcs.Task;
+                await tcs.Task.WithCancellation(token);
             }
         }
 

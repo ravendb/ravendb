@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Util;
@@ -8,17 +9,16 @@ namespace Raven.Client.Documents.Session
 {
     public abstract class ClusterSessionBase : AdvancedSessionExtentionBase
     {
-        protected Dictionary<string, long> TrackedKeys;
-        protected bool Marked;
-
         protected ClusterSessionBase(InMemoryDocumentSessionOperations session) : base(session)
         {
+            if (session.TransactionMode != TransactionMode.ClusterWide)
+            {
+                throw new InvalidOperationException($"This function is part of cluster transaction session, in order to use it you have to open the Session with '{nameof(TransactionMode.ClusterWide)}' option.");
+            }
         }
 
-        protected void CreateCompareExchangeValueInternal<T>(string key, T item)
+        public void CreateCompareExchangeValue<T>(string key, T item)
         {
-            EnsureClusterSession();
-
             if (Session.StoreCompareExchange == null)
                 Session.StoreCompareExchange = new Dictionary<string, (object Item, long Index)>();
 
@@ -26,47 +26,34 @@ namespace Raven.Client.Documents.Session
             Session.StoreCompareExchange.Add(key, (item, 0));
         }
 
-        protected async Task DeleteCompareExchangeValueAsyncInternal(string key, long? index = null)
+        public void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item)
         {
-            EnsureClusterSession();
-
             if (Session.DeleteCompareExchange == null)
                 Session.DeleteCompareExchange = new Dictionary<string, long>();
 
-            if (TrackedKeys == null)
-                TrackedKeys = new Dictionary<string, long>();
-
-            if (index != null)
-            {
-                if (Session.DeleteCompareExchange.ContainsKey(key) == false)
-                    Session.DeleteCompareExchange.Add(key, index.Value);
-                return;
-            }
-
-            if (TrackedKeys.TryGetValue(key, out var deletionIndex))
-            {
-                Session.DeleteCompareExchange[key] = deletionIndex;
-                return;
-            }
-
-            var result = await Session.Operations.SendAsync(new GetCompareExchangeIndexOperation(key)).ConfigureAwait(false);
-            Session.DeleteCompareExchange[key] = result.Indexes[0];
+            if (Session.DeleteCompareExchange.ContainsKey(item.Key) == false)
+                Session.DeleteCompareExchange.Add(item.Key, item.Index);
         }
 
-        protected void UpdateCompareExchangeValueInternal<T>(CompareExchangeValue<T> item)
+        public void DeleteCompareExchangeValue(string key, long index)
         {
-            EnsureClusterSession();
+            if (Session.DeleteCompareExchange == null)
+                Session.DeleteCompareExchange = new Dictionary<string, long>();
 
+            if (Session.DeleteCompareExchange.ContainsKey(key) == false)
+                Session.DeleteCompareExchange.Add(key, index);
+        }
+
+        public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
+        {
             Session.StoreCompareExchange[item.Key] = (item.Value, item.Index);
         }
 
-        protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key)
+        protected Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key)
         {
-            EnsureClusterSession();
-
             try
             {
-                return await Session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key)).ConfigureAwait(false);
+                return Session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key));
             }
             catch (Exception e)
             {
@@ -74,39 +61,35 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private void EnsureClusterSession()
+        protected Task<Dictionary<string, long>> GetCompareExchangeIndexesInternal(string[] keys)
         {
-            if (Marked)
-                return;
-
-            if (Session.TransactionMode != TransactionMode.ClusterWide)
-            {
-                throw new InvalidOperationException($"This function is part of cluster transaction session, in order to use it you have to create the Session with '{nameof(TransactionMode.ClusterWide)}'.");
-            }
-            Marked = true;
+            return Session.Operations.SendAsync(new GetCompareExchangeIndexOperation(keys));
         }
     }
 
-    public interface IClusterTransactionOperation
+    public interface IClusterTransactionOperationBase
     {
-        void DeleteCompareExchangeValue(string key, long? index = null);
+        void DeleteCompareExchangeValue(string key, long index);
 
-        CompareExchangeValue<T> GetCompareExchangeValue<T>(string key);
+        void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item);
 
         void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item);
 
         void CreateCompareExchangeValue<T>(string key, T value);
     }
 
-    public interface IClusterTransactionOperationAsync
+    public interface IClusterTransactionOperation : IClusterTransactionOperationBase
     {
-        Task DeleteCompareExchangeValueAsync(string key, long? index = null);
+        CompareExchangeValue<T> GetCompareExchangeValue<T>(string key);
 
+        Dictionary<string, long> GetCompareExchangeIndexes(string[] keys);
+    }
+
+    public interface IClusterTransactionOperationAsync : IClusterTransactionOperationBase
+    {
         Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key);
 
-        void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item);
-
-        void CreateCompareExchangeValue<T>(string key, T value);
+        Task<Dictionary<string, long>> GetCompareExchangeIndexes(string[] keys);
     }
 
     public class ClusterTransactionOperationAsync : ClusterSessionBase, IClusterTransactionOperationAsync
@@ -115,24 +98,14 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task DeleteCompareExchangeValueAsync(string key, long? index = null)
+        public Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key)
         {
-            await DeleteCompareExchangeValueAsyncInternal(key, index).ConfigureAwait(false);
+            return GetCompareExchangeValueAsyncInternal<T>(key);
         }
 
-        public async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key)
+        public Task<Dictionary<string, long>> GetCompareExchangeIndexes(string[] keys)
         {
-            return await GetCompareExchangeValueAsyncInternal<T>(key).ConfigureAwait(false);
-        }
-
-        public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
-        {
-            UpdateCompareExchangeValueInternal(item);
-        }
-
-        public void CreateCompareExchangeValue<T>(string key, T item)
-        {
-            CreateCompareExchangeValueInternal(key, item);
+            return GetCompareExchangeIndexesInternal(keys);
         }
     }
 
@@ -142,24 +115,14 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public void DeleteCompareExchangeValue(string key, long? index = null)
-        {
-            AsyncHelpers.RunSync(() => DeleteCompareExchangeValueAsyncInternal(key, index));
-        }
-
         public CompareExchangeValue<T> GetCompareExchangeValue<T>(string key)
         {
             return AsyncHelpers.RunSync(() => GetCompareExchangeValueAsyncInternal<T>(key));
         }
 
-        public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
+        public Dictionary<string, long> GetCompareExchangeIndexes(string[] keys)
         {
-            UpdateCompareExchangeValueInternal(item);
-        }
-
-        public void CreateCompareExchangeValue<T>(string key, T item)
-        {
-            CreateCompareExchangeValueInternal(key, item);
+            return AsyncHelpers.RunSync(() => GetCompareExchangeIndexesInternal(keys));
         }
     }
 

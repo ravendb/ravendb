@@ -27,14 +27,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecutor requestExecutor, Guid id, TransactionMode optionsTransactionMode)
-            : base(dbName, documentStore, requestExecutor, id, optionsTransactionMode)
+        public AsyncDocumentSession(DocumentStore documentStore, Guid id, SessionOptions options)
+            : base(documentStore, id, options)
         {
             GenerateDocumentIdsOnStore = false;
-            Attachments = new DocumentSessionAttachmentsAsync(this);
-            Revisions = new DocumentSessionRevisionsAsync(this);
-Counters = new DocumentSessionCountersAsync(this);        }
-
+Counters = new DocumentSessionCountersAsync(this); 
+        }
         public async Task<bool> ExistsAsync(string id)
         {
             if (id == null)
@@ -98,13 +96,14 @@ Counters = new DocumentSessionCountersAsync(this);        }
 
         public IAsyncLazySessionOperations Lazily => this;
 
-        public IAttachmentsSessionOperationsAsync Attachments { get; }
+        public IAttachmentsSessionOperationsAsync Attachments => _attachments.Value;
+        private readonly Lazy<IAttachmentsSessionOperationsAsync> _attachments;
 
-        public ICountersSessionOperationsAsync Counters { get; }
-
-        public IRevisionsSessionOperationsAsync Revisions { get; }
-
-        public IClusterTransactionOperationAsync ClusterTransaction { get; }
+        public IRevisionsSessionOperationsAsync Revisions => _revisions.Value;
+        private readonly Lazy<IRevisionsSessionOperationsAsync> _revisions;
+public ICountersSessionOperationsAsync Counters { get; }
+        private readonly Lazy<IClusterTransactionOperationAsync> _clusterTransaction;
+        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction.Value;
 
         /// <summary>
         /// Begins the async save changes operation
@@ -125,7 +124,7 @@ Counters = new DocumentSessionCountersAsync(this);        }
                     return;
 
                 await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-                saveChangesOperation.SetResult(command.Result, command.ReturnTransactionIndex);
+                saveChangesOperation.SetResult(command.Result);
             }
         }
     }

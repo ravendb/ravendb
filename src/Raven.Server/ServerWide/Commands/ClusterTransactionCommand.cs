@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide.Commands
                 {
                     [nameof(WaitForIndexesTimeout)] = WaitForIndexesTimeout,
                     [nameof(WaitForIndexThrow)] = WaitForIndexThrow,
-                    [nameof(SpecifiedIndexesQueryString)] = new DynamicJsonArray(SpecifiedIndexesQueryString),
+                    [nameof(SpecifiedIndexesQueryString)] = SpecifiedIndexesQueryString != null ? new DynamicJsonArray(SpecifiedIndexesQueryString) : null,
 
                     [nameof(WaitForReplicasTimeout)] = WaitForReplicasTimeout,
                     [nameof(NumberOfReplicas)] = NumberOfReplicas,
@@ -103,46 +103,51 @@ namespace Raven.Server.ServerWide.Commands
 
             foreach (var command in commandParsedCommands)
             {
-                if (command.Type == CommandType.PUT || command.Type == CommandType.DELETE)
+                switch (command.Type)
                 {
-                    DatabaseCommands.Add(new DocumentCommand
-                    {
-                        Type = command.Type,
-                        ChangeVector = command.ChangeVector,
-                        Document = command.Document,
-                        Id = command.Id
-                    });
-                    continue;
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                        DatabaseCommands.Add(new DocumentCommand
+                        {
+                            Type = command.Type,
+                            ChangeVector = command.ChangeVector,
+                            Document = command.Document,
+                            Id = command.Id
+                        });
+                        break;
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        ClusterCommands.Add(new CompareExchangeCommand
+                        {
+                            Key = command.Id,
+                            Type = command.Type,
+                            Index = long.Parse(command.ChangeVector),
+                            Item = command.Document
+                        });
+                        break;
+                    default:
+                        throw new ArgumentException($"The type '{command.Type}' is not supported in '{nameof(ClusterTransactionCommand)}.'");
                 }
-                if (command.Type == CommandType.CompareExchangePUT || command.Type == CommandType.CompareExchangeDELETE)
-                {
-                    ClusterCommands.Add(new CompareExchangeCommand
-                    {
-                        Key = command.Id,
-                        Type = command.Type,
-                        Index = long.Parse(command.ChangeVector),
-                        Item = command.Document
-                    });
-                    continue;
-                }
-                throw new ArgumentException($"The type '{command.Type}' is not supported in '{nameof(ClusterTransactionCommand)}.'");
             }
         }
 
-        public bool ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items)
+        public List<string> ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items)
         {
             if (ClusterCommands == null || ClusterCommands.Count == 0)
-                return true;
+                return null;
 
             var toExecute = new List<CompareExchangeCommandBase>(ClusterCommands.Count);
+            var errors = new List<string>();
             foreach (var clusterCommand in ClusterCommands)
             {
                 if (clusterCommand.Type == CommandType.CompareExchangePUT)
                 {
                     var put = new AddOrUpdateCompareExchangeCommand(clusterCommand.Key, clusterCommand.Item, clusterCommand.Index, context);
-                    if (put.Validate(context, items, index) == false)
+                    if (put.Validate(context, items, index, out var current) == false)
                     {
-                        return false;
+                        errors.Add(
+                            $"Concurrency check failed for putting the key '{clusterCommand.Key}'. Requested index: {clusterCommand.Index}, actual index: {current}");
+                        continue;
                     }
                     toExecute.Add(put);
                 }
@@ -150,12 +155,18 @@ namespace Raven.Server.ServerWide.Commands
                 if (clusterCommand.Type == CommandType.CompareExchangeDELETE)
                 {
                     var delete = new RemoveCompareExchangeCommand(clusterCommand.Key, clusterCommand.Index, context);
-                    if (delete.Validate(context, items, index) == false)
+                    if (delete.Validate(context, items, index, out var current) == false)
                     {
-                        return false;
+                        errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Key}'. Requested index: {clusterCommand.Index}, actual index: {current}");
+                        continue;
                     }
                     toExecute.Add(delete);
                 }
+            }
+
+            if (errors.Count > 0)
+            {
+                return errors;
             }
 
             foreach (var command in toExecute)
@@ -163,14 +174,17 @@ namespace Raven.Server.ServerWide.Commands
                 command.Execute(context, items, index);
             }
 
-            return true;
+            return null;
         }
 
         public unsafe void SaveCommandsBatch(TransactionOperationContext context, long index)
         {
+            if(SerializedDatabaseCommands == null)
+                return;
+
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commands = SerializedDatabaseCommands.Clone(context);
-            using (Slice.From(context.Allocator, Database + "/", out Slice databaseSlice))
+            using (Slice.From(context.Allocator, GetPrefix(Database), out Slice databaseSlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(databaseSlice.Content.Ptr, databaseSlice.Size);
@@ -191,7 +205,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var items = serverContext.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
 
-            using (Slice.From(serverContext.Allocator, database + "/", out var prefixSlice))
+            using (Slice.From(serverContext.Allocator, GetPrefix(database), out var prefixSlice))
             {
                 var reader = items.SeekOneForwardFrom(ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex], prefixSlice);
                 if (reader == null)
@@ -201,25 +215,42 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
+        public const byte Separator = 30;
+
+        private static byte[] GetPrefix(string database, long? index = null)
+        {
+            var databaseBytes = Encoding.UTF8.GetBytes(database);
+            var size = databaseBytes.Length + 1;
+            byte[] indexBytes = null;
+            if (index.HasValue)
+            {
+                indexBytes = BitConverter.GetBytes(Bits.SwapBytes(index.Value));
+                size += indexBytes.Length;
+            }
+            var prefix = new byte[size];
+
+            databaseBytes.CopyTo(databaseBytes, 0);
+            prefix[databaseBytes.Length] = Separator;
+            indexBytes?.CopyTo(prefix, databaseBytes.Length + 1);
+            return prefix;
+        }
+
         public static (BlittableJsonReaderArray Commands, ClusterTransactionOptions Options) ReadCommandsBatch(TransactionOperationContext context, string database, long index)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-
-            var databaseBytes = Encoding.UTF8.GetBytes(database + "/");
-            var indexBytes = BitConverter.GetBytes(Bits.SwapBytes(index));
-            
-            var prefix = new byte[databaseBytes.Length + sizeof(long)];
-            databaseBytes.CopyTo(prefix, 0);
-            indexBytes.CopyTo(prefix, databaseBytes.Length);
-
-            using (Slice.From(context.Allocator, prefix, out Slice prefixSlice))
+            using (Slice.From(context.Allocator, GetPrefix(database, index), out Slice prefixSlice))
             {
-                var commandsBluk = items.SeekForwardFrom(ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex],
-                    prefixSlice, 0).Single();
+                var commandsBulk = items.SeekForwardFrom(ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex],
+                    prefixSlice, 0);
 
-                var reader = commandsBluk.Result.Reader;
-                return ReadCommands(context, reader);
+                foreach (var command in commandsBulk)
+                {
+                    var reader = command.Result.Reader;
+                    return ReadCommands(context, reader);
+                }
             }
+
+            return (null, null);
         }
 
         private static unsafe (BlittableJsonReaderArray Commands, ClusterTransactionOptions Options) ReadCommands(TransactionOperationContext context, TableValueReader reader)

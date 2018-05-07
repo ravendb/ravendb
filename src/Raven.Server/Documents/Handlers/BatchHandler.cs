@@ -20,9 +20,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using System.Runtime.ExceptionServices;
-
-using Raven.Client.Documents.Operations.Counters;using Raven.Server.Json;
-using Raven.Server.ServerWide.Commands;
+using Raven.Client.Json;
+using Raven.Server.Json;using Raven.Client.Documents.Operations.Counters;using Raven.Server.Json;using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 namespace Raven.Server.Documents.Handlers
 {
@@ -34,21 +33,20 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var command = new MergedBatchCommand(Database))
             {
+                var isClusterTransaction = false;
                 var contentType = HttpContext.Request.ContentType;
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, RequestBodyStream(), Database, ServerStore);
+                    isClusterTransaction = await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                     contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await ParseMultipart(context, command);
+                    isClusterTransaction = await ParseMultipart(context, command);
                 }
                 else
                     ThrowNotSupportedType(contentType);
-
-                var isClusterTransaction = GetBoolValueQueryString("clusterTransaction", required: false);
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
@@ -58,25 +56,26 @@ namespace Raven.Server.Documents.Handlers
                 var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
                 var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
 
-                if (isClusterTransaction.HasValue && isClusterTransaction.Value)
+                if (isClusterTransaction)
                 {
                     var options = new ClusterTransactionCommand.ClusterTransactionOptions
                     {
                         WaitForIndexesTimeout = waitForIndexesTimeout,
                         WaitForIndexThrow = waitForIndexThrow,
-                        SpecifiedIndexesQueryString = specifiedIndexesQueryString.ToList(),
+                        SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
 
                         WaitForReplicasTimeout = waitForReplicasTimeout,
                         NumberOfReplicas = numberOfReplicasStr,
                         ThrowOnTimeoutInWaitForReplicas = throwOnTimeoutInWaitForReplicas
                     };
-                    var reply = await HandleClusterTransaction(ContextPool, command, options);
+                    var result = await HandleClusterTransaction(ContextPool, command, options);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["Results"] = reply
+                            [nameof(BatchCommandResult.Results)] = result.Reply,
+                            [nameof(BatchCommandResult.TransactionIndex)] = result.Index
                         });
                     }
                     return;
@@ -112,25 +111,33 @@ namespace Raven.Server.Documents.Handlers
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Results"] = command.Reply
+                        [nameof(BatchCommandResult.Results)] = command.Reply
                     });
                 }
             }
         }
 
-        private async Task<DynamicJsonArray> HandleClusterTransaction(DocumentsContextPool pool, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
+        public class ClusterTransactionCompletionResult
+        {
+            public Task ReplicationTask;
+            public Task IndexTask;
+            public bool Skipped;
+            public DynamicJsonArray Array;
+        }
+
+        private async Task<(DynamicJsonArray Reply, long Index)> HandleClusterTransaction(DocumentsContextPool pool, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
             var clusterTransactionCommand =
                 new ClusterTransactionCommand(Database.Name, command.ParsedCommands, options);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
-            if ((bool)result.Result == false)
+            if (result.Result is List<string> errors)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                throw new ConcurrencyException("Failed to perform compare exchange on {...}.");
+                throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
             }
 
-            var reply = ((DynamicJsonArray Array, bool Skipped, Task ReplicationTask, Task IndexTask)) await Database.ClusterTransactionWaiter.WaitForResult(result.Index);
+            var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResult(result.Index, HttpContext.RequestAborted);
             if (reply.Skipped)
             {
                 using (pool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -199,8 +206,7 @@ namespace Raven.Server.Documents.Handlers
                 await reply.ReplicationTask;
             }
 
-            HttpContext.Response.Headers.Add("TransactionIndex", result.Index.ToString());
-            return reply.Array;
+            return (reply.Array , result.Index);
         }
 
         private static void ThrowNotSupportedType(string contentType)
@@ -208,12 +214,13 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
         }
 
-        private async Task ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
+        private async Task<bool> ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
         {
             var boundary = MultipartRequestHelper.GetBoundary(
                 MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                 MultipartRequestHelper.MultipartBoundaryLengthLimit);
             var reader = new MultipartReader(boundary, RequestBodyStream());
+            var isClusterTransaction = false;
             for (var i = 0; i < int.MaxValue; i++)
             {
                 var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
@@ -223,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
                 var bodyStream = GetBodyStream(section);
                 if (i == 0)
                 {
-                    command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, bodyStream, Database, ServerStore);
+                    isClusterTransaction |= await BatchRequestParser.BuildCommandsAsync(context, command, bodyStream, Database, ServerStore);
                     continue;
                 }
 
@@ -241,6 +248,7 @@ namespace Raven.Server.Documents.Handlers
                 attachmentStream.Stream.Flush();
                 command.AttachmentStreams.Enqueue(attachmentStream);
             }
+            return isClusterTransaction;
         }
 
         public static async Task WaitForReplicationAsync(DocumentDatabase database, TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)

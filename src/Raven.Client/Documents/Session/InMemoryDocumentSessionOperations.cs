@@ -194,23 +194,22 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
         /// </summary>
-        protected InMemoryDocumentSessionOperations(string databaseName,
+        protected InMemoryDocumentSessionOperations(
             DocumentStoreBase documentStore,
-            RequestExecutor requestExecutor,
-            Guid id, 
-            TransactionMode optionsTransactionMode)
+            Guid id,
+            SessionOptions options)
         {
             Id = id;
-            DatabaseName = databaseName;
+            DatabaseName = options.Database ?? documentStore.Database;
             _documentStore = documentStore;
-            _requestExecutor = requestExecutor;
-            _releaseOperationContext = requestExecutor.ContextPool.AllocateOperationContext(out _context);
+            _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
+            _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
             SessionInfo = new SessionInfo(_clientSessionId, false, DocumentStore.LastTransactionIndex);
-            TransactionMode = optionsTransactionMode;
+            TransactionMode = options.TransactionMode;
         }
 
         /// <summary>
@@ -768,11 +767,7 @@ more responsive application.
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
 
-            var options = new ClusterBatchOptions()
-            {
-            };
-
-            _saveChangesOptions.AddOrUpdate(options);
+            _saveChangesOptions.TransactionMode = TransactionMode.ClusterWide;
         }
 
         private void PrepareCompareExchangeEntities(SaveChangesData result)

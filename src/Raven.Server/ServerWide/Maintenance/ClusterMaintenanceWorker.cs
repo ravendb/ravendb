@@ -54,6 +54,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         var dbs = CollectDatabaseInformation(ctx);
                         var djv = new DynamicJsonValue();
+
                         foreach (var tuple in dbs)
                         {
                             djv[tuple.name] = tuple.report;
@@ -161,6 +162,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                         report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                        report.LastAppliedClusterTransaction = dbInstance.ClusterTransactionWaiter.LastCompletedIndex;
+
                         foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
                         {
                             var node = outgoing.GetNode();

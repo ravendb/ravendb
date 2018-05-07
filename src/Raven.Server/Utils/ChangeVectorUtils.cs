@@ -42,6 +42,7 @@ namespace Raven.Server.Utils
             for (int i = 0; i < remote.Length; i++)
             {
                 bool found = false;
+
                 for (int j = 0; j < local.Length; j++)
                 {
                     if (remote[i].DbId == local[j].DbId)
@@ -78,6 +79,89 @@ namespace Raven.Server.Utils
 
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
+
+        public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, string priority)
+        {
+            if (remoteAsString == localAsString)
+                return ConflictStatus.AlreadyMerged;
+
+            if (string.IsNullOrEmpty(remoteAsString))
+                return ConflictStatus.AlreadyMerged;
+
+            if (string.IsNullOrEmpty(localAsString))
+                return ConflictStatus.Update;
+
+            var local = localAsString.ToChangeVector();
+            var remote = remoteAsString.ToChangeVector();
+
+            //any missing entries from a change vector are assumed to have zero value
+            var localHasLargerEntries = false;
+            var remoteHasLargerEntries = false;
+
+            int numOfMatches = 0;
+            var hasPriorityRemote = false;
+            var hasPriorityLocal = false;
+            for (int i = 0; i < remote.Length; i++)
+            {
+                bool found = false;
+                var isPriority = remote[i].DbId == priority;
+
+                if (isPriority)
+                    hasPriorityRemote = true;
+
+                for (int j = 0; j < local.Length; j++)
+                {
+                    if (local[j].DbId == priority)
+                        hasPriorityLocal = true;
+
+                    if (remote[i].DbId == local[j].DbId)
+                    {
+                        found = true;
+                        numOfMatches++;
+
+                        if (remote[i].Etag > local[j].Etag)
+                        {
+                            if (isPriority)
+                                return ConflictStatus.Update;
+
+                            remoteHasLargerEntries = true;
+                        }
+                        else if (remote[i].Etag < local[j].Etag)
+                        {
+                            if (isPriority)
+                                return ConflictStatus.AlreadyMerged;
+
+                            localHasLargerEntries = true;
+                        }
+                        break;
+                    }
+                }
+                if (found == false)
+                {
+                    if (isPriority)
+                        return ConflictStatus.Update;
+
+                    remoteHasLargerEntries = true;
+                }
+            }
+
+            if (hasPriorityLocal && hasPriorityRemote == false)
+                return ConflictStatus.AlreadyMerged;
+
+            if (numOfMatches < local.Length)
+            {
+                localHasLargerEntries = true;
+            }
+
+            if (remoteHasLargerEntries && localHasLargerEntries)
+                return ConflictStatus.Conflict;
+
+            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
+
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
+        }
+
 
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
 
@@ -248,17 +332,8 @@ namespace Raven.Server.Utils
             if (index == -1)
                 return 0;
 
-            var bytes = Encoding.UTF8.GetBytes(changeVector);
             var end = index - 1;
-            var start = -1;
-            for (var i = end; i >= 0; i--)
-            {
-                if (bytes[i] == ':')
-                {
-                    start = i + 1;
-                    break;
-                }
-            }
+            var start = changeVector.LastIndexOf(":", end, StringComparison.Ordinal) + 1;
 
             return long.Parse(changeVector.Substring(start, end - start + 1));
         }

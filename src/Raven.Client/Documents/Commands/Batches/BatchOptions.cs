@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
@@ -38,6 +39,7 @@ namespace Raven.Client.Documents.Commands.Batches
     public class BatchOptions : UniqueTypeSet<IBatchOptions>
     {
         public TimeSpan? RequestTimeout { get; set; }
+        public TransactionMode TransactionMode { get; set; }
     }
 
     public interface IBatchOptions

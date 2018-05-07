@@ -815,7 +815,7 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, out string conflictingVector)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, string priority, out string conflictingVector)
         {
             //tombstones also can be a conflict entry
             conflictingVector = null;

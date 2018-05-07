@@ -51,6 +51,36 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
+        public async Task SessionCompareExchangeCommands()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var user1 = new User()
+                {
+                    Name = "Karmel"
+                };
+                var user3 = new User()
+                {
+                    Name = "Indych"
+                };
+
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/grisha", user1);
+                await session.SaveChangesAsync();
+
+                var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
+                Assert.Equal(user1.Name, user.Name);
+
+                //session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<>()
+            }
+        }
+
+        [Fact]
         public void ThrowOnUnsupportedOperations()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +106,7 @@ namespace SlowTests.Cluster
                 Assert.Throws<InvalidOperationException>(() => session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1));
                 Assert.Throws<InvalidOperationException>(() =>
                     session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<string>("test", 0, "test")));
-                await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.Advanced.ClusterTransaction.DeleteCompareExchangeValueAsync("usernames/ayende"));
+                Assert.Throws<InvalidOperationException>(() => session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("usernames/ayende", 0));
                 await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende"));
             }
         }

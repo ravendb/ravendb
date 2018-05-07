@@ -31,15 +31,16 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
 
-        public unsafe bool Validate(TransactionOperationContext context, Table items, long index)
+        public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
         {
             var dbKey = Key.ToLowerInvariant();
+            currentIndex = -1;
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
-                    return Index == itemIndex;
+                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    return Index == currentIndex;
                 }
             }
             return true;

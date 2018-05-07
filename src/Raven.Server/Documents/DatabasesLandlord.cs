@@ -50,10 +50,10 @@ namespace Raven.Server.Documents
 
         public void ClusterOnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, ClusterDatabaseChangeType ChangeType) t)
         {
-            HandleClusterDatabaseChanged(t);
+            HandleClusterDatabaseChanged(t.DatabaseName, t.Index, t.Type, t.ChangeType);
         }
 
-        private void HandleClusterDatabaseChanged((string DatabaseName, long Index, string Type, ClusterDatabaseChangeType ChangeType) t)
+        private void HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
             _disposing.EnterReadLock();
             try
@@ -64,15 +64,15 @@ namespace Raven.Server.Documents
                 // response to changed database.
                 // if disabled, unload
 
-                var record = _serverStore.LoadDatabaseRecord(t.DatabaseName, out long _);
+                var record = _serverStore.LoadDatabaseRecord(databaseName, out long _);
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _).Dispose();
+                    DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _).Dispose();
                     return;
                 }
 
-                if (ShouldDeleteDatabase(t.DatabaseName, record)) 
+                if (ShouldDeleteDatabase(databaseName, record)) 
                     return;
 
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
@@ -80,61 +80,61 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _).Dispose();
+                    DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _).Dispose();
                     return;
                 }
 
-                if (DatabasesCache.TryGetValue(t.DatabaseName, out var task) == false)
+                if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
                 {
                     // if the database isn't loaded, but it is relevant for this node, we need to create
                     // it. This is important so things like replication will start pumping, and that 
                     // configuration changes such as running periodic backup will get a chance to run, which
                     // they wouldn't unless the database is loaded / will have a request on it.          
-                    task = TryGetOrCreateResourceStore(t.DatabaseName);
+                    task = TryGetOrCreateResourceStore(databaseName);
                 }
 
                 if (task.IsCanceled || task.IsFaulted)
                     return;
 
-                switch (t.ChangeType)
+                switch (changeType)
                 {
                     case ClusterDatabaseChangeType.RecordChanged:
                         if (task.IsCompleted)
                         {
-                            NotifyDatabaseAboutStateChange(t.DatabaseName, task, t.Index);
+                            NotifyDatabaseAboutStateChange(databaseName, task, index);
                             return;
                         }
                         task.ContinueWith(done =>
                         {
-                            NotifyDatabaseAboutStateChange(t.DatabaseName, done, t.Index);
+                            NotifyDatabaseAboutStateChange(databaseName, done, index);
                         });
                         break;
                     case ClusterDatabaseChangeType.ValueChanged:
                         if (task.IsCompleted)
                         {
-                            NotifyDatabaseAboutValueChange(t.DatabaseName, task, t.Index);
+                            NotifyDatabaseAboutValueChange(databaseName, task, index);
                             return;
                         }
 
                         task.ContinueWith(done =>
                         {
-                            NotifyDatabaseAboutValueChange(t.DatabaseName, done, t.Index);
+                            NotifyDatabaseAboutValueChange(databaseName, done, index);
                         });
                         break;
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                         if (task.IsCompleted)
                         {
-                            NotifyPendingClusterTransaction(t.DatabaseName, task, t.Index);
+                            NotifyPendingClusterTransaction(databaseName, task, index);
                             return;
                         }
 
                         task.ContinueWith(done =>
                         {
-                            NotifyPendingClusterTransaction(t.DatabaseName, done, t.Index);
+                            NotifyPendingClusterTransaction(databaseName, done, index);
                         });
                         break;
                     default:
-                        ThrowUnknownClusterDatabaseChangeType(t.ChangeType);
+                        ThrowUnknownClusterDatabaseChangeType(changeType);
                         break;
                 }
 
@@ -142,10 +142,10 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                var title = $"Failed to digest change of type '{t.ChangeType}' for database '{t.DatabaseName}'";
+                var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}'";
                 if (_logger.IsInfoEnabled)
                     _logger.Info(title, e);
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(t.DatabaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
             finally
@@ -156,22 +156,25 @@ namespace Raven.Server.Documents
 
         private void NotifyPendingClusterTransaction(string databaseName, Task<DocumentDatabase> task, long index)
         {
+            DocumentDatabase database;
+            try
+            {
+                database = task.Result;
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to load database '{databaseName}'", e);
+                }
+                return;
+            }
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var database = task.Result;
                 var rtnCtx = _serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext);
-                BatchHandler.ClusterTransactionMergedCommand mergedCommands;
-                try
-                {
-                    mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, serverContext, index);
-                }
-                catch (Exception e)
-                {
-                    rtnCtx.Dispose();
-                    database.ClusterTransactionWaiter.SetException(e);
-                    throw;
-                }
+                var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, serverContext, index);
 
                 database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>
                 {
@@ -198,19 +201,21 @@ namespace Raven.Server.Documents
                                 }
                             }
 
-                            database.ClusterTransactionWaiter.SetResult(index, (mergedCommands.Reply, mergedCommands.Skipped, replicationTask, indexTask));
+                            var result = new BatchHandler.ClusterTransactionCompletionResult
+                            {
+                                Array = mergedCommands.Reply,
+                                Skipped = mergedCommands.Skipped,
+                                IndexTask = indexTask,
+                                ReplicationTask = replicationTask
+                            };
+
+                            database.ClusterTransactionWaiter.SetResult(index, result);
                             return;
                         }
 
-                        if (t.Exception != null)
-                        {
-                            database.ClusterTransactionWaiter.SetException(t.Exception.GetBaseException());
-                            return;
-                        }
-
-                        database.ClusterTransactionWaiter.SetException(new Exception());
+                        database.ClusterTransactionWaiter.SetException(t.Exception);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         database.ClusterTransactionWaiter.SetException(e);
                     }

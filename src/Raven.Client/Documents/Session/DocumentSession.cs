@@ -46,30 +46,26 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Access the attachments operations
         /// </summary>
-        public IAttachmentsSessionOperations Attachments { get; }
-
-        public ICountersSessionOperations Counters { get; }
-
-        /// <summary>
+ private readonly Lazy<IAttachmentsSessionOperations> _attachments;public ICountersSessionOperations Counters { get; }        /// <summary>
         /// Access the revisions operations
         /// </summary>
-        public IRevisionsSessionOperations Revisions { get; }
+        public IRevisionsSessionOperations Revisions => _revisions.Value;
+        private readonly Lazy<IRevisionsSessionOperations> _revisions;
 
         /// <summary>
         /// Access to cluster wide transaction operations
         /// </summary>
-        public IClusterTransactionOperation ClusterTransaction { get; }
+        public IClusterTransactionOperation ClusterTransaction => _clusterTransaction.Value;
+        private readonly Lazy<IClusterTransactionOperation> _clusterTransaction;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecutor requestExecutor, TransactionMode optionsTransactionMode)
-            : base(dbName, documentStore, requestExecutor, id, optionsTransactionMode)
+        public DocumentSession(DocumentStore documentStore, Guid id, SessionOptions options)
+            : base(documentStore, id, options)
         {
-            Attachments = new DocumentSessionAttachments(this);
-            Revisions = new DocumentSessionRevisions(this);
-Counters = new DocumentSessionCounters(this);        }
-
+ounters = new DocumentSessionCounters(this);
+        }
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
@@ -83,7 +79,7 @@ Counters = new DocumentSessionCounters(this);        }
                     return;
 
                 RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-                saveChangesOperation.SetResult(command.Result, command.ReturnTransactionIndex);
+                saveChangesOperation.SetResult(command.Result);
             }
         }
 
