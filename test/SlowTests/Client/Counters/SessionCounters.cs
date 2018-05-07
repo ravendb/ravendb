@@ -1,5 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -140,6 +142,44 @@ namespace SlowTests.Client.Counters
                     Assert.Equal(500, dic["downloads"]);
 
                     var val = await session.Advanced.Counters.GetAsync("users/2-A", "votes");
+                    Assert.Equal(1000, val);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionGetCountersWithNonDefaultDatabase()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("newDatabase")));
+
+                using (var session = store.OpenSession("newDatabase"))
+                {
+                    session.Store(new User { Name = "Aviv1" }, "users/1-A");
+                    session.Store(new User { Name = "Aviv2" }, "users/2-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession("newDatabase"))
+                {   
+                    session.Advanced.Counters.Increment("users/1-A", "likes", 100);
+                    session.Advanced.Counters.Increment("users/1-A", "downloads", 500);
+                    session.Advanced.Counters.Increment("users/2-A", "votes", 1000);
+
+                    session.SaveChanges();
+                }
+
+
+                using (var session = store.OpenSession("newDatabase"))
+                {
+                    var dic = session.Advanced.Counters.Get("users/1-A");
+
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(500, dic["downloads"]);
+
+                    var val = session.Advanced.Counters.Get("users/2-A", "votes");
                     Assert.Equal(1000, val);
                 }
             }
