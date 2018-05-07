@@ -331,6 +331,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     periodicBackup,
                     isFullBackup,
                     backupToLocalFolder,
+                    operationId,
                     _tempBackupPath,
                     _logger,
                     _cancellationToken.Token);
@@ -338,6 +339,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 periodicBackup.RunningBackupTaskId = operationId;
                 periodicBackup.CancelToken = backupTask.TaskCancelToken;
                 var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'";
+
                 var task = _database.Operations.AddOperation(
                     null,
                     backupTaskName,
