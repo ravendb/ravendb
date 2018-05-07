@@ -19,34 +19,6 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var tests = new CountersCrudSingleNode())
-            {
-
-                tests.MultiGetCounters();
-
-                tests.IncrementCounter();
-                tests.DeleteCounter();
-                tests.GetCounterValue();
-
-            }
-
-            using (var tests = new CountersCrudMultipuleNodes())
-            {
-
-                tests.IncrementCounter().Wait();
-
-            }
-
-            using (var tests = new CountersInMetadata())
-            {
-
-                tests.ConflictsInMetadata().Wait();
-                tests.IncrementAndDeleteShouldChangeDocumentMetadata();
-
-
-                Console.WriteLine("all good");
-                Console.ReadKey();
-            }
         }
     }
 }
