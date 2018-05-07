@@ -269,7 +269,7 @@ class indexes extends viewModelBase {
         
         if (shell.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
-            return;
+            return $.Deferred().fail();
         }
         
         return new getIndexesProgressCommand(this.activeDatabase())

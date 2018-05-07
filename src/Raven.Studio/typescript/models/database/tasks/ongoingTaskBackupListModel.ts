@@ -11,6 +11,7 @@ import generalUtils = require("common/generalUtils");
 import timeHelpers = require("common/timeHelpers");
 import notificationCenter = require("common/notifications/notificationCenter");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import shell = require("viewmodels/shell");
 
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
@@ -194,6 +195,11 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     }
 
     refreshBackupInfo() {
+        if (shell.showConnectionLost()) {
+            // looks like we don't have connection to server, skip index progress update 
+            return $.Deferred().fail();
+        }
+
         return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
             .execute()
             .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => this.update(result));
