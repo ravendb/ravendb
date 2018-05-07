@@ -319,5 +319,35 @@ namespace SlowTests.Client.Counters
             }
         }
 
+        [Fact]
+        public void DeleteCreateWithSameNameDeleteAgain()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+
+                    session.SaveChanges();
+                }
+
+                store.Counters.Increment("users/1-A", "likes", 10);
+                var val = store.Counters.Get("users/1-A", "likes");
+                Assert.Equal(10, val);
+
+                store.Counters.Delete("users/1-A", "likes");
+                val = store.Counters.Get("users/1-A", "likes");
+                Assert.Null(val);
+
+                store.Counters.Increment("users/1-A", "likes", 20);
+                val = store.Counters.Get("users/1-A", "likes");
+                Assert.Equal(20, val);
+
+                store.Counters.Delete("users/1-A", "likes"); 
+                val = store.Counters.Get("users/1-A", "likes");
+                Assert.Null(val);
+            }
+        }
+
     }
 }

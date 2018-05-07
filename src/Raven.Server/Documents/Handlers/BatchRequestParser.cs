@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
@@ -39,9 +40,16 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
 
             #endregion
+
+            #region Counter
+
+            public DocumentCountersOperation Counters;
+
+            #endregion
+
         }
 
-    
+
         private static readonly CommandData[] Empty = new CommandData[0];
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
 
@@ -391,6 +399,12 @@ namespace Raven.Server.Documents.Handlers
                             await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         }
                         break;
+                    case CommandPropertyName.Counters:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
+                        commandData.Counters = DocumentCountersOperation.Parse(counterOps);
+                        break;
                 }
             }
 
@@ -409,6 +423,10 @@ namespace Raven.Server.Documents.Handlers
                     break;
                 case CommandType.AttachmentPUT:
                     if (commandData.Name == null)
+                        ThrowMissingNameProperty();
+                    break;
+                case CommandType.Counters:
+                    if (commandData.Counters == null)
                         ThrowMissingNameProperty();
                     break;
             }
@@ -516,6 +534,12 @@ namespace Raven.Server.Documents.Handlers
 
             #endregion
 
+            #region Counter
+
+            Counters
+
+            #endregion
+
             // other properties are ignore (for legacy support)
         }
 
@@ -531,6 +555,8 @@ namespace Raven.Server.Documents.Handlers
                     return CommandPropertyName.Id;
 
                 case 8:
+                    if (*(long*)state.StringBuffer == 8318823012450529091)
+                        return CommandPropertyName.Counters;
                     if (*(long*)state.StringBuffer != 8389754676633104196)
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Document;
@@ -572,7 +598,6 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer == 7302135340735752259 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
                         return CommandPropertyName.ChangeVector;
-
                     return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
@@ -620,6 +645,11 @@ namespace Raven.Server.Documents.Handlers
                         ThrowInvalidProperty(state, ctx);
 
                     return CommandType.AttachmentDELETE;
+                case 8:
+                    if (*(long*)state.StringBuffer != 8318823012450529091)
+                        ThrowInvalidProperty(state, ctx);
+
+                    return CommandType.Counters;
 
                 default:
                     ThrowInvalidProperty(state, ctx);

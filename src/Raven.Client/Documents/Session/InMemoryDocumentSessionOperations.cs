@@ -20,7 +20,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -228,6 +227,26 @@ namespace Raven.Client.Documents.Session
             documentInfo.MetadataInstance = metadata;
             return metadata;
         }
+
+        /// <summary>
+        /// Gets all counter names for the specified entity.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="instance">The instance.</param>
+        /// <returns></returns>
+        public List<string> GetCountersFor<T>(T instance)
+        {
+            if (instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
+            var documentInfo = GetDocumentInfo(instance);
+
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
+                return counters.Select(x=>x.ToString()).ToList();
+
+            return null;
+        }
+
 
         /// <summary>
         /// Gets the Change Vector for the specified entity.
@@ -815,7 +834,7 @@ more responsive application.
                 if (EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachment, null), out ICommandData command))
+                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentOrCounters, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
                 var onOnBeforeStore = OnBeforeStore;
@@ -1043,8 +1062,9 @@ more responsive application.
             DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
             DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
             if (command.Type != CommandType.AttachmentPUT && 
-                command.Type != CommandType.AttachmentDELETE)
-                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachment, null)] = command;
+                command.Type != CommandType.AttachmentDELETE &&
+                command.Type != CommandType.Counters)
+                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentOrCounters, null)] = command;
         }
 
         public void AssertNotDisposed()
