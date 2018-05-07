@@ -22,7 +22,7 @@ namespace Tryouts
             using (var tests = new CountersCrudSingleNode())
             {
 
-                tests.MultiGetCounters();
+                //tests.MultiGetCounters();
 
                 tests.IncrementCounter();
                 tests.DeleteCounter();

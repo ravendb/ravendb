@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Session
             tokens.AddLast(whereToken);
         }
 
-        protected void Spatial(string fieldName, string shapeWkt, SpatialRelation relation, double distErrorPercent)
+        protected void Spatial(string fieldName, string shapeWkt, SpatialRelation relation, SpatialUnits? units, double distErrorPercent)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
 
-            var wktToken = ShapeToken.Wkt(AddQueryParameter(shapeWkt));
+            var wktToken = ShapeToken.Wkt(AddQueryParameter(shapeWkt), units);
             WhereOperator whereOperator;
 
             switch (relation)

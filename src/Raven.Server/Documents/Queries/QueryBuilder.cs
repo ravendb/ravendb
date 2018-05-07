@@ -740,7 +740,7 @@ namespace Raven.Server.Documents.Queries
 
             SpatialUnits? spatialUnits = null;
             if (expression.Arguments.Count == 2)
-                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
+                spatialUnits = GetSpatialUnits(query, expression.Arguments[1] as ValueExpression, metadata, parameters, fieldName);
 
             return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
         }
