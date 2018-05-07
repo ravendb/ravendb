@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
 
         public Dictionary<string, long> Get(string documentId)
         {
-            return DocumentStore.Counters.Get(documentId, new string[0]);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).Get(documentId, new string[0]);
         }
 
         public Dictionary<string, long> Get(object entity)
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
 
         public long? Get(string documentId, string counter)
         {
-            return DocumentStore.Counters.Get(documentId, counter);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).Get(documentId, counter);
         }
 
         public long? Get(object entity, string counter)
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Session
 
         public Dictionary<string, long> Get(string documentId, IEnumerable<string> counters)
         {
-            return DocumentStore.Counters.Get(documentId, counters);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).Get(documentId, counters);
         }
 
         Dictionary<string, long> ICountersSessionOperations.Get(object entity, IEnumerable<string> counters)

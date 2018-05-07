@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
 
         public Task<Dictionary<string, long>> GetAsync(string documentId)
         {
-            return DocumentStore.Counters.GetAsync(documentId, new string[0]);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, new string[0]);
         }
 
         public Task<Dictionary<string, long>> GetAsync(object entity)
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
 
         public Task<long?> GetAsync(string documentId, string counter)
         {
-            return DocumentStore.Counters.GetAsync(documentId, counter);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counter);
         }
 
         public Task<long?> GetAsync(object entity, string counter)
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
 
         public Task<Dictionary<string, long>> GetAsync(string documentId, IEnumerable<string> counters)
         {
-            return DocumentStore.Counters.GetAsync(documentId, counters);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counters);
         }
 
         public Task<Dictionary<string, long>> GetAsync(object entity, IEnumerable<string> counters)
