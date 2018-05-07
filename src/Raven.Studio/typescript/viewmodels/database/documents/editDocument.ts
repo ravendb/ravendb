@@ -486,7 +486,10 @@ class editDocument extends viewModelBase {
         }
 
         // 4. Clear data..
-        this.document().__metadata.attachments([]); 
+        this.document().__metadata.clearFlags();
+        
+        // todo - clear revisions tab upon Clone as well
+        
         this.connectedDocuments.gridController().reset(true);
         this.metadata().changeVector(undefined);
 

@@ -22,7 +22,7 @@ class setCounterCommand extends commandBase {
                             Delta: this.deltaValue
                         }]
                 }]
-        };
+        } as Raven.Client.Documents.Operations.Counters.CounterBatch;
 
         const url = endpoints.databases.counters.counters;
 

@@ -18,7 +18,7 @@ class documentMetadata {
     lastModifiedInterval: KnockoutComputed<string>;
 
     attachments = ko.observableArray<documentAttachmentDto>();
-    counters = ko.observableArray<documentCounterDto>();
+    counters = ko.observableArray<string>();
     
     changeVector = ko.observable<string>();
 
@@ -120,6 +120,12 @@ class documentMetadata {
             }
         }
         return metaDto;
+    }
+    
+    clearFlags() {
+        this.flags = "";
+        this.counters([]);
+        this.attachments([]);
     }
 }
 

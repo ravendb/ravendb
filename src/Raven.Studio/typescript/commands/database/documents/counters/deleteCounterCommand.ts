@@ -8,7 +8,7 @@ class deleteCounterCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Documents.Operations.Counters.CountersDetail> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.Counters.CounterBatch> {
 
         const payload = {
             ReplyWithAllNodesValues: true,
@@ -21,11 +21,11 @@ class deleteCounterCommand extends commandBase {
                             CounterName: this.counterName
                         }]
                 }]
-        };
+        }  as Raven.Client.Documents.Operations.Counters.CounterBatch; 
 
         const url = endpoints.databases.counters.counters;
 
-        return this.post<Raven.Client.Documents.Operations.Counters.CountersDetail>(url, JSON.stringify(payload), this.db, {dataType: undefined})
+        return this.post<Raven.Client.Documents.Operations.Counters.CountersDetail>(url, JSON.stringify(payload), this.db)
             .done(() => {
                 this.reportSuccess("Counter deleted successfully: " + this.counterName);
             })

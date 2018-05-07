@@ -24,22 +24,9 @@ import starredDocumentsStorage = require("common/storage/starredDocumentsStorage
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import downloader = require("common/downloader");
 import viewHelpers = require("common/helpers/view/viewHelpers");
-import messagePublisher = require("common/messagePublisher");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent";
-
-// interface nodeCounterValue {
-//     node: string;
-//     nodeCounterValue: number;
-// }
-//
-// interface counterItem {
-//     documentId: string;
-//     counterName: string;
-//     totalCounterValue: number;
-//     counterValuesPerNode: Array<nodeCounterValue>; 
-// }
 
 interface attachmentItem {
     documentId: string;
@@ -167,20 +154,22 @@ class connectedDocuments {
         ];
 
         this.countersColumns = [
-            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "160px"),
-            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Coutner total value", "100px"),
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "160px", 
+                { title: () => "Counter name" }),
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Counter total value", "100px", 
+                { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() }),
             new actionColumn<counterItem>(this.gridController() as virtualGridController<any>, 
                  x => this.setCounter(x),
                 "Edit",
                 `<i class="icon-edit"></i>`,
                 "35px",
-                { title: () => 'Edit counter', extraClass: () => 'file-edit' }),  // ???
+                { title: () => 'Edit counter' }),  
             new actionColumn<counterItem>(this.gridController() as virtualGridController<any>, 
                  x => this.deleteCounter(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
-                { title: () => 'Delete counter', extraClass: () => 'file-trash' }),
+                { title: () => 'Delete counter' }),
         ];
     }
 
@@ -282,7 +271,8 @@ class connectedDocuments {
         for (var nodeDetails in counter.CounterValues){
             valuesPerNode.unshift({
                 nodeTag: nodeDetails[0],
-                nodeId: _.split(nodeDetails,':')[1],
+                nodeFullId: _.split(nodeDetails,':')[1],
+                nodeShortId: _.split(nodeDetails,'-')[0],
                 nodeCounterValue: counter.CounterValues[nodeDetails]
             })
         }

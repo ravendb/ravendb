@@ -71,7 +71,7 @@ interface documentMetadataDto {
     '@flags'?: string;
     '@attachments'?: Array<documentAttachmentDto>;
     '@change-vector'?: string;
-    '@counters'?: Array<documentCounterDto>; // todo - not sure about adding this.. ???
+    '@counters'?: Array<string>;
 }
 
 interface updateDatabaseConfigurationsResult {
@@ -80,7 +80,8 @@ interface updateDatabaseConfigurationsResult {
 
 interface nodeCounterValue {
     nodeTag: string;
-    nodeId: string;
+    nodeFullId: string;
+    nodeShortId: string;
     nodeCounterValue: number;
 }
 
@@ -89,10 +90,6 @@ interface counterItem {
     counterName: string;
     totalCounterValue: number;
     counterValuesPerNode: Array<nodeCounterValue>;
-}
-
-interface documentCounterDto {   
-    Name: string;
 }
 
 interface documentAttachmentDto {

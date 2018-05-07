@@ -1,12 +1,10 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database")
 import setCounterCommand = require("commands/database/documents/counters/setCounterCommand");
-
+import eventsCollector = require("common/eventsCollector");
 
 class setCounterDialog extends dialogViewModelBase {
-    
-    // todo.. add validation on input..
-    
+   
     result = $.Deferred<void>();
 
     createNewCounter = ko.observable<boolean>();
@@ -20,11 +18,12 @@ class setCounterDialog extends dialogViewModelBase {
     spinners = {
         update: ko.observable<boolean>(false)
     };    
-    
-    compositionComplete() {
-        super.compositionComplete();
-    }
-    
+
+    validationGroup = ko.validatedObservable({
+        counterName: this.counterName,
+        newTotalValue: this.newTotalValue
+    });
+
     constructor(counter: counterItem, private documentId: string,  private db: database) {
         super();
         
@@ -35,20 +34,37 @@ class setCounterDialog extends dialogViewModelBase {
         this.totalValue(currentValue); 
         
         this.counterValuesPerNode(counter.counterValuesPerNode);
+     
+        this.initValidation();
     }
 
     updateCounter() {
-        this.spinners.update(true);
+        if (this.isValid(this.validationGroup)) {
+            eventsCollector.default.reportEvent("counter", "update");
 
-        const counterDeltaValue = this.newTotalValue() - this.totalValue();
+            this.spinners.update(true);
 
-        new setCounterCommand(this.counterName(), counterDeltaValue, this.documentId, this.db)
-            .execute()
-            .done(() => this.result.resolve())
-            .always(() => {
-                this.spinners.update(false);
-                this.close();
-            })
+            const counterDeltaValue = this.newTotalValue() - this.totalValue();
+
+            new setCounterCommand(this.counterName(), counterDeltaValue, this.documentId, this.db)
+                .execute()
+                .done(() => this.result.resolve())
+                .always(() => {
+                    this.spinners.update(false);
+                    this.close();
+                })
+        }
+    }
+    
+    private initValidation() {
+        this.counterName.extend({
+           required: true
+        });
+        
+        this.newTotalValue.extend({
+            required: true, 
+            number: true
+        });
     }
 }
 
