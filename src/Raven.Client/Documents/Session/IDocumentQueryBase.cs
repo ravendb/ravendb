@@ -409,11 +409,33 @@ namespace Raven.Client.Documents.Session
         ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
         ///     have a relation rel with the given shapeWkt will be returned
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
+        /// <param name="shapeWkt">WKT formatted shape</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="units">Units to be used</param>
+        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt, SpatialRelation relation, SpatialUnits units, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
+        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
+        ///     have a relation rel with the given shapeWkt will be returned
+        /// </summary>
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="shapeWkt">WKT formatted shape</param>
         /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
         /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
         TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
+        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
+        ///     have a relation rel with the given shapeWkt will be returned
+        /// </summary>
+        /// <param name="fieldName">Spatial field name.</param>
+        /// <param name="shapeWkt">WKT formatted shape</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="units">Units to be used</param>
+        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, SpatialUnits units, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.
