@@ -5,8 +5,10 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Server.Documents.Patch;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -180,11 +182,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return jsValue.AsNumber();
             if (jsValue.IsDate())
                 return jsValue.AsDate();
-            if (jsValue.IsObject())
+            if (jsValue is ObjectWrapper ow)
             {
-                return jsValue.AsObject();
+                var target = ow.Target;
+                switch (target)
+                {
+                    case LazyStringValue lsv:
+                        return lsv;
+                    case LazyCompressedStringValue lcsv:
+                        return lcsv;
+                    case LazyNumberValue lnv:
+                        return lnv; //should be already blittable supported type.
+                }
+                ThrowInvalidObject(jsValue);
             }
-            if (jsValue.IsArray())
+            else if (jsValue.IsArray())
             {
                 var arr = jsValue.AsArray();
                 var array = new object[arr.GetLength()];
@@ -199,7 +211,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 return array;
             }
+            else if (jsValue.IsObject())
+            {
+                return jsValue.AsObject();
+            }
 
+
+            ThrowInvalidObject(jsValue);
+            return null;
+        }
+
+        private static void ThrowInvalidObject(JsValue jsValue)
+        {
             throw new NotSupportedException($"Was requested to extract the value out of a JsValue object but could not figure its type, value={jsValue}");
         }
     }
