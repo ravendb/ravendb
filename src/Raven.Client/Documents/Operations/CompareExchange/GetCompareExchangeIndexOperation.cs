@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         public GetCompareExchangeIndexOperation(string[] keys)
         {
-            if (keys != null && keys.Length > 0)
+            if (keys == null || keys.Length == 0)
                 throw new ArgumentNullException(nameof(keys), "The keys argument must have value");
             _keys = keys;
         }

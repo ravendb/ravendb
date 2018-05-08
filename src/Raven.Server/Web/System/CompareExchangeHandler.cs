@@ -44,8 +44,13 @@ namespace Raven.Server.Web.System
             using (context.OpenReadTransaction())
             {
                 writer.WriteStartObject();
-                foreach (var tuple in ServerStore.Cluster.GetCompareExchangeIndexes(context, keys))
+                var first = true;
+                foreach (var tuple in ServerStore.Cluster.GetCompareExchangeIndexes(context, Database.Name, keys))
                 {
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+
                     writer.WritePropertyName(tuple.Key);
                     writer.WriteInteger(tuple.Index);
                 }

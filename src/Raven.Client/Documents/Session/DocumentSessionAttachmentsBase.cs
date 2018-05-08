@@ -63,11 +63,6 @@ namespace Raven.Client.Documents.Session
 
         public void Store(object entity, string name, Stream stream, string contentType = null)
         {
-            if (Session.TransactionMode == TransactionMode.ClusterWide)
-            {
-                throw new NotSupportedException("This operation is not supported under cluster transaction");
-            }
-
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 

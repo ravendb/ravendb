@@ -1365,7 +1365,7 @@ namespace Voron.Data.Tables
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
-            Action<TableValueHolder> beforeDelete = null)
+            Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder,bool> shouldAbort = null)
         {
             AssertWritableTable();
 
@@ -1392,13 +1392,17 @@ namespace Voron.Data.Tables
                         if (fstIt.Seek(long.MinValue) == false)
                             break;
 
-                        if (beforeDelete != null)
+                        if (beforeDelete != null || shouldAbort != null)
                         {
                             var ptr = DirectRead(fstIt.CurrentKey, out int size);
                             if (tableValueHolder == null)
                                 tableValueHolder = new TableValueHolder();
                             tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
-                            beforeDelete(tableValueHolder);
+                            if (shouldAbort?.Invoke(tableValueHolder) == true)
+                            {
+                                return deleted;
+                            }
+                            beforeDelete?.Invoke(tableValueHolder);
                         }
 
                         Delete(fstIt.CurrentKey);

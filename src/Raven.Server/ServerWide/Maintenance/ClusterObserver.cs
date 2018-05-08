@@ -119,6 +119,7 @@ namespace Raven.Server.ServerWide.Maintenance
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
+                Dictionary<string, long> cleanupIndexes = null;
                 List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
@@ -165,6 +166,16 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             updateCommands.Add((cmd, updateReason));
                         }
+
+                        var cleanUpIndex = CleanUpDatabaseValues(database, databaseRecord, newStats);
+                        if (cleanUpIndex != null)
+                        {
+                            if (cleanupIndexes == null)
+                                cleanupIndexes = new Dictionary<string, long>();
+
+                            AddToDecisionLog(database, $"Should clean up values up to raft index {cleanUpIndex}.");
+                            cleanupIndexes.Add(database, cleanUpIndex.Value);
+                        }
                     }
                 }
 
@@ -199,7 +210,46 @@ namespace Raven.Server.ServerWide.Maintenance
                         await Delete(command);
                     }
                 }
+
+                if (cleanupIndexes != null)
+                {
+                    var cmd = new ClusterCleanUpCommand
+                    {
+                        ClusterTransactionsCleanup = cleanupIndexes
+                    };
+
+                    if (_engine.LeaderTag != _server.NodeTag)
+                    {
+                        throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
+                    }
+
+                    await _engine.PutAsync(cmd);
+                }
             }
+        }
+
+        private long? CleanUpDatabaseValues(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
+        {
+            
+            if (record.Topology.Count != stats.Count)
+                return null;
+
+            long currentIndex = long.MaxValue;
+            foreach (var node in record.Topology.AllNodes)
+            {
+                if (stats.TryGetValue(node, out var nodeReport) == false)
+                    return null;
+
+                if (nodeReport.Report.TryGetValue(database, out var report) == false)
+                    return null;
+
+                currentIndex = Math.Min(currentIndex, report.AppliedClusterTransactionIndex);
+            }
+
+            if (currentIndex <= record.TrunctedClusterTransactionIndex)
+                return null;
+
+            return currentIndex;
         }
 
         private void AddToDecisionLog(string database, string updateReason)

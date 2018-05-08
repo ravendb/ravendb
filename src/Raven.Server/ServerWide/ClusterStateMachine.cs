@@ -136,6 +136,9 @@ namespace Raven.Server.ServerWide
                             leader?.SetStateOf(index, errors);
                         }
                         break;
+                    case nameof(ClusterCleanUpCommand):
+                        ClusterStateCleanUp(context, cmd, index);
+                        break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
                         if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray commands) == false)
                         {
@@ -291,6 +294,56 @@ namespace Raven.Server.ServerWide
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
             }
+        }
+
+        private unsafe void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        {
+            var affectedDatabases = new Dictionary<string, DatabaseRecord>();
+            var cleanCommand = (ClusterCleanUpCommand)JsonDeserializationCluster.Commands[nameof(ClusterCleanUpCommand)](cmd);
+            foreach (var tuple in cleanCommand.ClusterTransactionsCleanup)
+            {
+                var database = tuple.Key;
+                var upToIndex = tuple.Value;
+
+                var items = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
+                using (Slice.From(context.Allocator, ClusterTransactionCommand.GetPrefix(database), out Slice prefixSlice))
+                {
+                    var deleted = items.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex],
+                        prefixSlice, true, long.MaxValue,
+                        shouldAbort: (tvb) =>
+                        {
+                            var value = *(long*)tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.RaftIndex, out var _);
+                            var currentIndex = Bits.SwapBytes(value);
+
+                            return currentIndex > upToIndex;
+                        });
+
+                    if (deleted > 0)
+                    {
+                        var record = ReadDatabase(context, database);
+                        if (record != null)
+                        {
+                            record.TrunctedClusterTransactionIndex = upToIndex;
+                            affectedDatabases[database] = record;
+                        }
+                    }
+                }
+            }
+            foreach (var tuple in affectedDatabases)
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var dbKey = "db/" + tuple.Key;
+                using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(tuple.Value, DocumentConventions.Default, context);
+                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                }
+                NotifyDatabaseAboutChanged(context, tuple.Key, index, nameof(ClusterStateCleanUp),
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+            }
+
+            OnTransactionDispose(context, index);
         }
 
         private List<string> ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -1065,19 +1118,23 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Key, long Index)> GetCompareExchangeIndexes(TransactionOperationContext context, string[] keys)
+        public IEnumerable<(string Key, long Index)> GetCompareExchangeIndexes(TransactionOperationContext context, string databaseName, string[] keys)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+            var prefix = databaseName + "/";
             foreach (var key in keys)
             {
-                var dbKey = key.ToLowerInvariant();
+                var dbKey = (prefix + key).ToLowerInvariant();
                 using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
                 {
                     if (items.ReadByKey(keySlice, out var reader))
                     {
                         yield return (key, ReadCompareExchangeIndex(reader));
                     }
-                    yield return (key ,-1);
+                    else
+                    {
+                        yield return (key ,-1);
+                    }
                 }
             }
         }

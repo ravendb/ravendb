@@ -51,9 +51,10 @@ namespace Raven.Client.Documents.Session
         protected bool GenerateDocumentIdsOnStore = true;
         protected internal readonly SessionInfo SessionInfo;
 
+        private BatchOptions _saveChangesOptions;
+
         public readonly TransactionMode TransactionMode;
 
-        private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
         private JsonSerializer _jsonSerializer;
 
@@ -731,8 +732,6 @@ more responsive application.
 
         internal SaveChangesData PrepareForSaveChanges()
         {
-            ValidateClusterTransaction();
-
             var result = new SaveChangesData(this);
             DeferredCommands.Clear();
             DeferredCommandsDictionary.Clear();
@@ -755,19 +754,29 @@ more responsive application.
                 DeferredCommands.Clear();
                 DeferredCommandsDictionary.Clear();
             }
-
+            
             return result;
         }
 
-        private void ValidateClusterTransaction()
+        internal void ValidateClusterTransaction(SaveChangesData result)
         {
-            if(TransactionMode != TransactionMode.ClusterWide)
+            if (TransactionMode != TransactionMode.ClusterWide)
                 return;
 
-            if (_saveChangesOptions == null)
-                _saveChangesOptions = new BatchOptions();
+            foreach (var command in result.SessionCommands)
+            {
+                switch (command.Type)
+                {
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                    case CommandType.CompareExchangeDELETE:
+                    case CommandType.CompareExchangePUT:
+                        break;
+                    default:
+                        throw new NotSupportedException($"The command '{command.Type}' is not supported in a cluster session.");
 
-            _saveChangesOptions.TransactionMode = TransactionMode.ClusterWide;
+                }
+            }
         }
 
         private void PrepareCompareExchangeEntities(SaveChangesData result)
@@ -1019,7 +1028,7 @@ more responsive application.
                 ThrowOnTimeoutInWaitForReplicas = throwOnTimeout
             };
 
-            _saveChangesOptions.AddOrUpdate(replicationOptions);
+            _saveChangesOptions.ReplicationOptions = replicationOptions;
         }
 
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false,
@@ -1037,7 +1046,7 @@ more responsive application.
                 WaitForSpecificIndexes = indexes
             };
 
-            _saveChangesOptions.AddOrUpdate(indexOptions);
+            _saveChangesOptions.IndexOptions = indexOptions;
         }
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)

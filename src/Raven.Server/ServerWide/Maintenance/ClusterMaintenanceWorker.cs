@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -162,7 +163,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                         report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                        report.LastAppliedClusterTransaction = dbInstance.ClusterTransactionWaiter.LastCompletedIndex;
+                        report.AppliedClusterTransactionIndex = dbInstance.ClusterTransactionWaiter.LastCompletedIndex;
 
                         foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
                         {

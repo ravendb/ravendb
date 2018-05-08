@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -16,6 +14,24 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
+    public class ClusterCleanUpCommand : CommandBase
+    {
+        public Dictionary<string, long> ClusterTransactionsCleanup;
+
+        public ClusterCleanUpCommand()
+        {
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var djv = base.ToJson(context);
+
+            djv[nameof(ClusterTransactionsCleanup)] = DynamicJsonValue.Convert(ClusterTransactionsCleanup);
+
+            return djv;
+        }
+    }
+
     public class ClusterTransactionCommand : CommandBase
     {
         public string Database;
@@ -64,10 +80,6 @@ namespace Raven.Server.ServerWide.Commands
             public bool WaitForIndexThrow;
             public List<string> SpecifiedIndexesQueryString;
 
-            public TimeSpan? WaitForReplicasTimeout;
-            public string NumberOfReplicas;
-            public bool ThrowOnTimeoutInWaitForReplicas;
-
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
@@ -75,10 +87,6 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(WaitForIndexesTimeout)] = WaitForIndexesTimeout,
                     [nameof(WaitForIndexThrow)] = WaitForIndexThrow,
                     [nameof(SpecifiedIndexesQueryString)] = SpecifiedIndexesQueryString != null ? new DynamicJsonArray(SpecifiedIndexesQueryString) : null,
-
-                    [nameof(WaitForReplicasTimeout)] = WaitForReplicasTimeout,
-                    [nameof(NumberOfReplicas)] = NumberOfReplicas,
-                    [nameof(ThrowOnTimeoutInWaitForReplicas)] = ThrowOnTimeoutInWaitForReplicas,
                 };
             }
         }
@@ -121,7 +129,7 @@ namespace Raven.Server.ServerWide.Commands
                         {
                             Key = command.Id,
                             Type = command.Type,
-                            Index = long.Parse(command.ChangeVector),
+                            Index = command.Index,
                             Item = command.Document
                         });
                         break;
@@ -217,7 +225,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public const byte Separator = 30;
 
-        private static byte[] GetPrefix(string database, long? index = null)
+        public static byte[] GetPrefix(string database, long? index = null)
         {
             var databaseBytes = Encoding.UTF8.GetBytes(database);
             var size = databaseBytes.Length + 1;
@@ -267,6 +275,21 @@ namespace Raven.Server.ServerWide.Commands
                 options = JsonDeserializationServer.ClusterTransactionOptions(blittableOptions);
             }
             return (array, options);
+        }
+
+        public override object FromRemote(object remoteResult)
+        {
+            var rc = new List<string>();
+            if (remoteResult is BlittableJsonReaderArray array)
+            {
+                foreach (var o in array)
+                {
+                    rc.Add(o.ToString());
+                }
+
+                return rc;
+            }
+            return base.FromRemote(remoteResult);
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Util;
@@ -22,12 +21,22 @@ namespace Raven.Client.Documents.Session
             if (Session.StoreCompareExchange == null)
                 Session.StoreCompareExchange = new Dictionary<string, (object Item, long Index)>();
 
-            // new entity
+            EnsureNotDeleted(key);
+
             Session.StoreCompareExchange.Add(key, (item, 0));
+        }
+
+        public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
+        {
+            EnsureNotDeleted(item.Key);
+
+            Session.StoreCompareExchange[item.Key] = (item.Value, item.Index);
         }
 
         public void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item)
         {
+            EnsureNotStored(item.Key);
+
             if (Session.DeleteCompareExchange == null)
                 Session.DeleteCompareExchange = new Dictionary<string, long>();
 
@@ -37,16 +46,13 @@ namespace Raven.Client.Documents.Session
 
         public void DeleteCompareExchangeValue(string key, long index)
         {
+            EnsureNotStored(key);
+
             if (Session.DeleteCompareExchange == null)
                 Session.DeleteCompareExchange = new Dictionary<string, long>();
-
+            
             if (Session.DeleteCompareExchange.ContainsKey(key) == false)
                 Session.DeleteCompareExchange.Add(key, index);
-        }
-
-        public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
-        {
-            Session.StoreCompareExchange[item.Key] = (item.Value, item.Index);
         }
 
         protected Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key)
@@ -64,6 +70,22 @@ namespace Raven.Client.Documents.Session
         protected Task<Dictionary<string, long>> GetCompareExchangeIndexesInternal(string[] keys)
         {
             return Session.Operations.SendAsync(new GetCompareExchangeIndexOperation(keys));
+        }
+
+        protected void EnsureNotDeleted(string key)
+        {
+            if (Session.DeleteCompareExchange?.ContainsKey(key) == true)
+            {
+                throw new ArgumentException($"The key '{key}' already exists in the deletion requests.");
+            }
+        }
+
+        protected void EnsureNotStored(string key)
+        {
+            if (Session.StoreCompareExchange?.ContainsKey(key) == true)
+            {
+                throw new ArgumentException($"The key '{key}' already exists in the store requests.");
+            }
         }
     }
 
@@ -89,7 +111,7 @@ namespace Raven.Client.Documents.Session
     {
         Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key);
 
-        Task<Dictionary<string, long>> GetCompareExchangeIndexes(string[] keys);
+        Task<Dictionary<string, long>> GetCompareExchangeIndexesAsync(string[] keys);
     }
 
     public class ClusterTransactionOperationAsync : ClusterSessionBase, IClusterTransactionOperationAsync
@@ -103,7 +125,7 @@ namespace Raven.Client.Documents.Session
             return GetCompareExchangeValueAsyncInternal<T>(key);
         }
 
-        public Task<Dictionary<string, long>> GetCompareExchangeIndexes(string[] keys)
+        public Task<Dictionary<string, long>> GetCompareExchangeIndexesAsync(string[] keys)
         {
             return GetCompareExchangeIndexesInternal(keys);
         }

@@ -21,7 +21,8 @@ using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Json;
-using Raven.Server.Json;using Raven.Client.Documents.Operations.Counters;using Raven.Server.Json;using Raven.Server.ServerWide.Commands;
+using Raven.Server.Json;using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 namespace Raven.Server.Documents.Handlers
 {
@@ -33,17 +34,16 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var command = new MergedBatchCommand(Database))
             {
-                var isClusterTransaction = false;
                 var contentType = HttpContext.Request.ContentType;
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    isClusterTransaction = await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
+                    await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                     contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    isClusterTransaction = await ParseMultipart(context, command);
+                    await ParseMultipart(context, command);
                 }
                 else
                     ThrowNotSupportedType(contentType);
@@ -51,22 +51,14 @@ namespace Raven.Server.Documents.Handlers
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
                 var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
-
-                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
-                var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
-
-                if (isClusterTransaction)
+               
+                if (command.IsClusterTransaction)
                 {
                     var options = new ClusterTransactionCommand.ClusterTransactionOptions
                     {
                         WaitForIndexesTimeout = waitForIndexesTimeout,
                         WaitForIndexThrow = waitForIndexThrow,
                         SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
-
-                        WaitForReplicasTimeout = waitForReplicasTimeout,
-                        NumberOfReplicas = numberOfReplicasStr,
-                        ThrowOnTimeoutInWaitForReplicas = throwOnTimeoutInWaitForReplicas
                     };
                     var result = await HandleClusterTransaction(ContextPool, command, options);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -95,8 +87,12 @@ namespace Raven.Server.Documents.Handlers
                     throw;
                 }
 
+                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
                 if (waitForReplicasTimeout != null)
                 {
+                    var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
+                    var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
+
                     await WaitForReplicationAsync(Database, waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas, command.LastChangeVector);
                 }
 
@@ -119,7 +115,6 @@ namespace Raven.Server.Documents.Handlers
 
         public class ClusterTransactionCompletionResult
         {
-            public Task ReplicationTask;
             public Task IndexTask;
             public bool Skipped;
             public DynamicJsonArray Array;
@@ -130,7 +125,6 @@ namespace Raven.Server.Documents.Handlers
             var clusterTransactionCommand =
                 new ClusterTransactionCommand(Database.Name, command.ParsedCommands, options);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-
             if (result.Result is List<string> errors)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
@@ -201,11 +195,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 await reply.IndexTask;
             }
-            if (reply.ReplicationTask != null)
-            {
-                await reply.ReplicationTask;
-            }
-
+           
             return (reply.Array , result.Index);
         }
 
@@ -214,13 +204,12 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
         }
 
-        private async Task<bool> ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
+        private async Task ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
         {
             var boundary = MultipartRequestHelper.GetBoundary(
                 MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                 MultipartRequestHelper.MultipartBoundaryLengthLimit);
             var reader = new MultipartReader(boundary, RequestBodyStream());
-            var isClusterTransaction = false;
             for (var i = 0; i < int.MaxValue; i++)
             {
                 var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
@@ -230,7 +219,7 @@ namespace Raven.Server.Documents.Handlers
                 var bodyStream = GetBodyStream(section);
                 if (i == 0)
                 {
-                    isClusterTransaction |= await BatchRequestParser.BuildCommandsAsync(context, command, bodyStream, Database, ServerStore);
+                    await BatchRequestParser.BuildCommandsAsync(context, command, bodyStream, Database, ServerStore);
                     continue;
                 }
 
@@ -248,7 +237,6 @@ namespace Raven.Server.Documents.Handlers
                 attachmentStream.Stream.Flush();
                 command.AttachmentStreams.Enqueue(attachmentStream);
             }
-            return isClusterTransaction;
         }
 
         public static async Task WaitForReplicationAsync(DocumentDatabase database, TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
@@ -505,9 +493,20 @@ namespace Raven.Server.Documents.Handlers
                                     AddDeleteResult(deleteResult, cmd.Id);
                                     break;
                                 default:
-                                    break;
+                                    throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
                             }
                         }
+                    }
+
+                    if (context.LastDatabaseChangeVector == null)
+                    {
+                        context.LastDatabaseChangeVector = global;
+                    }
+
+                    var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", clusterId, _index, context.LastDatabaseChangeVector);
+                    if (result.IsValid)
+                    {
+                        context.LastDatabaseChangeVector = result.ChangeVector;
                     }
                 }
 
@@ -524,6 +523,18 @@ namespace Raven.Server.Documents.Handlers
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             public ExceptionDispatchInfo ExceptionDispatchInfo;
+
+            private bool _isClusterTransaction;
+            public bool IsClusterTransaction
+            {
+                set
+                {
+                    if(_isClusterTransaction)
+                        return;
+                    _isClusterTransaction = value;
+                }
+                get => _isClusterTransaction;
+            }
 
             public MergedBatchCommand(DocumentDatabase database) : base(database)
             {
@@ -565,6 +576,9 @@ namespace Raven.Server.Documents.Handlers
             
             public override int Execute(DocumentsOperationContext context)
             {
+                if (IsClusterTransaction)
+                    return 0;// should never happened
+
                 _disposables.Clear();
 var counterBatch = new CounterBatch();                for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {

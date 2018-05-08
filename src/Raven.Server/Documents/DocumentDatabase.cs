@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -37,7 +38,6 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -58,8 +58,8 @@ namespace Raven.Server.Documents
         private TaskCompletionSource<object> _indexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly ConcurrentDictionary<long, object> _results = new ConcurrentDictionary<long, object>();
         private long _lastIndex;
-
         public long LastCompletedIndex => _lastIndex;
+        private long _lastCleanedIndex;
 
         public WaitForClusterTransactionToFinish(long initialIndex)
         {
@@ -72,6 +72,7 @@ namespace Raven.Server.Documents
                 return;
 
             ClusterStateMachine.InterlockedExchangeMax(ref _lastIndex, index);
+
             var old = Interlocked.Exchange(ref _indexChanged, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             old.SetResult(null);
         }
@@ -80,6 +81,7 @@ namespace Raven.Server.Documents
         {
             while (true)
             {
+                token.ThrowIfCancellationRequested();
                 var tcs = _indexChanged;
                 if (_results.TryGetValue(index, out var value))
                     return value;
@@ -91,8 +93,9 @@ namespace Raven.Server.Documents
         {
             while (true)
             {
+                token.ThrowIfCancellationRequested();
                 var tcs = _indexChanged;
-                if (_lastIndex >= index)
+                if (Interlocked.Read(ref _lastIndex) >= index)
                     return;
                 await tcs.Task.WithCancellation(token);
             }
@@ -102,6 +105,18 @@ namespace Raven.Server.Documents
         {
             var old = Interlocked.Exchange(ref _indexChanged, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             old.SetException(e);
+        }
+
+        public void CleanUp(long recordTrunctedClusterIndex)
+        {
+            if (ClusterStateMachine.InterlockedExchangeMax(ref _lastCleanedIndex, recordTrunctedClusterIndex))
+            { 
+                foreach (var index in _results.Keys)
+                {
+                    if (index <= recordTrunctedClusterIndex)
+                        _results.TryRemove(index, out var _);
+                }
+            }
         }
     } 
 
@@ -777,6 +792,8 @@ namespace Raven.Server.Documents
 
                 ClientConfiguration = record.Client;
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
+
+                ClusterTransactionWaiter.CleanUp(record.TrunctedClusterTransactionIndex);
 
                 NotifyFeaturesAboutStateChange(record, index);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);

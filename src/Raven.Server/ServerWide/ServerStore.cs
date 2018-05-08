@@ -225,6 +225,10 @@ namespace Raven.Server.ServerWide
                                     {
                                         if (notification == null)
                                             break;
+
+                                        if (notification.TryGet("Id",out string id) && id != nameof(ClusterTopologyChanged))
+                                            continue;
+
                                         var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
                                         if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
                                         {

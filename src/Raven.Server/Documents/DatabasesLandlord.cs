@@ -184,21 +184,11 @@ namespace Raven.Server.Documents
                         {
                             var options = mergedCommands.Options;
                             Task indexTask = null;
-                            Task replicationTask = null;
-                            if (options != null)
+                            if (options?.WaitForIndexesTimeout != null)
                             {
-                                if (options.WaitForReplicasTimeout != null)
-                                {
-                                    replicationTask = BatchHandler.WaitForReplicationAsync(database, options.WaitForReplicasTimeout.Value, options.NumberOfReplicas,
-                                        options.ThrowOnTimeoutInWaitForReplicas, mergedCommands.LastChangeVector);
-                                }
-
-                                if (options.WaitForIndexesTimeout != null)
-                                {
-                                    indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
-                                        options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                                        mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                                }
+                                indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
+                                    options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                                    mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
                             }
 
                             var result = new BatchHandler.ClusterTransactionCompletionResult
@@ -206,7 +196,6 @@ namespace Raven.Server.Documents
                                 Array = mergedCommands.Reply,
                                 Skipped = mergedCommands.Skipped,
                                 IndexTask = indexTask,
-                                ReplicationTask = replicationTask
                             };
 
                             database.ClusterTransactionWaiter.SetResult(index, result);

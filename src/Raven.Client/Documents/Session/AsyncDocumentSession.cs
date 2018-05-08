@@ -13,7 +13,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Session
 {
@@ -31,8 +30,8 @@ namespace Raven.Client.Documents.Session
             : base(documentStore, id, options)
         {
             GenerateDocumentIdsOnStore = false;
-Counters = new DocumentSessionCountersAsync(this); 
         }
+    
         public async Task<bool> ExistsAsync(string id)
         {
             if (id == null)
@@ -96,14 +95,17 @@ Counters = new DocumentSessionCountersAsync(this);
 
         public IAsyncLazySessionOperations Lazily => this;
 
-        public IAttachmentsSessionOperationsAsync Attachments => _attachments.Value;
-        private readonly Lazy<IAttachmentsSessionOperationsAsync> _attachments;
+        public IAttachmentsSessionOperationsAsync Attachments => _attachments ?? (_attachments = new DocumentSessionAttachmentsAsync(this));
+        private IAttachmentsSessionOperationsAsync _attachments;
 
-        public IRevisionsSessionOperationsAsync Revisions => _revisions.Value;
-        private readonly Lazy<IRevisionsSessionOperationsAsync> _revisions;
-public ICountersSessionOperationsAsync Counters { get; }
-        private readonly Lazy<IClusterTransactionOperationAsync> _clusterTransaction;
-        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction.Value;
+        public IRevisionsSessionOperationsAsync Revisions => _revisions ?? (_revisions = new DocumentSessionRevisionsAsync(this));
+        private IRevisionsSessionOperationsAsync _revisions;
+
+        public ICountersSessionOperationsAsync Counters => _counters ?? (_counters = new DocumentSessionCountersAsync(this));
+        private ICountersSessionOperationsAsync _counters;
+
+        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperationAsync(this));
+        private IClusterTransactionOperationAsync _clusterTransaction;
 
         /// <summary>
         /// Begins the async save changes operation

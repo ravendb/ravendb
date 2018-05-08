@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -19,8 +17,9 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly HashSet<Stream> _attachmentStreams;
         private readonly BatchOptions _options;
+        private readonly TransactionMode _mode;
 
-        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
+        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));
@@ -48,6 +47,7 @@ namespace Raven.Client.Documents.Commands.Batches
             }
 
             _options = options;
+            _mode = mode;
 
             Timeout = options?.RequestTimeout;
         }
@@ -63,11 +63,11 @@ namespace Raven.Client.Documents.Commands.Batches
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Commands", _commands);
-                        if (_options?.TransactionMode == TransactionMode.ClusterWide)
+                        if (_mode == TransactionMode.ClusterWide)
                         {
                             writer.WriteComma();
-                            writer.WritePropertyName("ClusterTx");
-                            writer.WriteBool(true);
+                            writer.WritePropertyName(nameof(TransactionMode));
+                            writer.WriteString(TransactionMode.ClusterWide.ToString());
                         }
                         writer.WriteEndObject();
                     }
@@ -117,7 +117,8 @@ namespace Raven.Client.Documents.Commands.Batches
 
             sb.AppendLine("?");
 
-            if (_options.TryGetValue<ReplicationBatchOptions>(out var replicationOptions))
+            var replicationOptions = _options.ReplicationOptions;
+            if (replicationOptions != null)
             {
                 sb.Append("&waitForReplicasTimeout=").Append(replicationOptions.WaitForReplicasTimeout);
 
@@ -130,7 +131,8 @@ namespace Raven.Client.Documents.Commands.Batches
                     : replicationOptions.NumberOfReplicasToWaitFor.ToString());
             }
 
-            if (_options.TryGetValue<IndexBatchOptions>(out var indexOptions))
+            var indexOptions = _options.IndexOptions;
+            if (indexOptions != null)
             {
                 sb.Append("&waitForIndexesTimeout=").Append(indexOptions.WaitForIndexesTimeout);
                 sb.Append("&waitForIndexThrow=").Append(indexOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
