@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
             {
                 WriteCounterTombstoneToServer(context, item);
-                stats.RecordCounterOutput();
+                stats.RecordCounterTombstoneOutput();
                 return;
             }
 

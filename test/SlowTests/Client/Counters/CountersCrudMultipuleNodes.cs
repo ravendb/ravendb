@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,8 +58,65 @@ namespace SlowTests.Client.Counters
                             break;
                         Thread.Sleep(50);
                     }
-                    Assert.Equal(30, val);
 
+                    Assert.Equal(30, val);
+                }
+            }
+            finally
+            {
+                foreach (var item in stores)
+                {
+                    item.Dispose();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task DeleteCounter()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            var dbName = GetDatabaseName();
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+
+            var stores = db.Servers.Select(s => new DocumentStore
+                {
+                    Database = dbName,
+                    Urls = new[] { s.WebUrl },
+                    Conventions = new DocumentConventions
+                    {
+                        DisableTopologyUpdates = true
+                    }
+                }.Initialize())
+                .ToList();
+
+            try
+            {
+                using (var s = stores[0].OpenSession())
+                {
+                    s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    s.Store(new User { Name = "Aviv" }, "users/1");
+                    s.Advanced.Counters.Increment("users/1", "likes", 30);
+                    s.SaveChanges();
+                }
+
+                long? val;
+                foreach (var store in stores)
+                {
+                    val = store.Counters.Get("users/1", "likes");
+                    Assert.Equal(30, val);
+                }
+
+                using (var s = stores[0].OpenSession())
+                {
+                    s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    s.Advanced.Counters.Delete("users/1", "likes");
+                    s.SaveChanges();
+                }
+
+                foreach (var store in stores)
+                {
+                    val = store.Counters.Get("users/1", "likes");
+                    Assert.Null(val);
                 }
             }
             finally

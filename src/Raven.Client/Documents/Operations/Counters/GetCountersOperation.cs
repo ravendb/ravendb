@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
                     .Append("/counters?")
-                    .Append("doc=")
+                    .Append("docId=")
                     .Append(Uri.EscapeDataString(_docId));
 
                 if (_returnFullResults)
