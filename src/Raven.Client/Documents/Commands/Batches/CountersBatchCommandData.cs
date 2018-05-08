@@ -34,13 +34,33 @@ namespace Raven.Client.Documents.Commands.Batches
         public DocumentCountersOperation Counters { get;  }
         public CommandType Type { get; } = CommandType.Counters;
 
+        public bool HasDelete(string counterName)
+        {
+            return HasOperationOfType(CounterOperationType.Delete, counterName);
+        }
+
+        public bool HasIncrement(string counterName)
+        {
+            return HasOperationOfType(CounterOperationType.Increment, counterName);
+        }
+
+        private bool HasOperationOfType(CounterOperationType type, string counterName)
+        {
+            foreach (var op in Counters.Operations)
+            {
+                if (op.CounterName != counterName)
+                    continue;
+                if (op.Type == type)
+                    return true;
+            }
+
+            return false;
+        }
+
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DynamicJsonValue
             {
-                [nameof(Id)] = Id,
-                [nameof(Name)] = Name,
-                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Counters)] = Counters.ToJson(),
                 [nameof(Type)] = Type.ToString()
             };

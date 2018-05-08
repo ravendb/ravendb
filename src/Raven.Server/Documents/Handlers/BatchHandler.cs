@@ -310,7 +310,6 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 _disposables.Clear();
-                var counterBatch = new CounterBatch();
                 Reply = new DynamicJsonArray();
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
@@ -459,30 +458,27 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
                         case CommandType.Counters:
-                            if (counterBatch.Documents == null)
-                                counterBatch.Documents = new List<DocumentCountersOperation>();
-                            counterBatch.Documents.Add(cmd.Counters);
+                            var counterBatchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database, new CounterBatch
+                            {
+                                Documents = new List<DocumentCountersOperation> { cmd.Counters }
+                            });
+                            try
+                            {
+                                counterBatchCmd.Execute(context);
+                            }
+                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
+                            {
+                                return 0;
+                            }
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.Counters),
+                                [nameof(CountersDetail)] = counterBatchCmd.CountersDetail.ToJson(),
+                            });
                             break;
                     }
-                }
-
-                if (counterBatch.Documents != null)
-                {
-                    var cmd = new CountersHandler.ExecuteCounterBatchCommand(Database, counterBatch);
-                    try
-                    {
-                        cmd.Execute(context);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        return 0;
-                    }
-
-                    Reply.Add(new DynamicJsonValue
-                    {
-                        [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.Counters),
-                        ["CountersDetail"] = cmd.CountersDetail.ToJson(),
-                    });
                 }
 
                 if (_documentsToUpdateAfterAttachmentChange != null)
