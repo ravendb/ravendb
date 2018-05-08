@@ -33,6 +33,7 @@ namespace Raven.Client.Documents.Session
             GenerateDocumentIdsOnStore = false;
             Attachments = new DocumentSessionAttachmentsAsync(this);
             Revisions = new DocumentSessionRevisionsAsync(this);
+            Counters = new DocumentSessionCountersAsync(this);
         }
 
         public async Task<bool> ExistsAsync(string id)
@@ -99,6 +100,8 @@ namespace Raven.Client.Documents.Session
         public IAsyncLazySessionOperations Lazily => this;
 
         public IAttachmentsSessionOperationsAsync Attachments { get; }
+
+        public ICountersSessionOperationsAsync Counters { get; }
 
         public IRevisionsSessionOperationsAsync Revisions { get; }
 

@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value, query.Query.QueryParameters);
                 var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value, query.Query.QueryParameters);
 
-                var fieldName = ((FieldExpression)bee.Source).FieldValue;
+                var fieldName = ((FieldExpression)bee.Source).GetText(null);
 
                 if (hValue.Type != lValue.Type)
                     ThrowDifferentTypesOfRangeValues(query, hValue.Type, lValue.Type, fieldName);
@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.Queries.Facets
         private static string ExtractFieldName(BinaryExpression be, FacetQuery query)
         {
             if (be.Left is FieldExpression lfe)
-                return lfe.FieldValue;
+                return lfe.GetText(null);
 
             if (be.Left is ValueExpression lve)
                 return lve.Token;

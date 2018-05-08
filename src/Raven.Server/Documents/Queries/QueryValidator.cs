@@ -22,13 +22,21 @@ namespace Raven.Server.Documents.Queries
 
         public static void ValidateWkt(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
         {
-            if (arguments.Count != 1)
-                throw new InvalidQueryException("Method 'wkt()' expects one argument to be provided", queryText, parameters);
+            if (arguments.Count == 0 || arguments.Count > 2)
+                throw new InvalidQueryException("Method 'wkt()' expects one or two argument to be provided", queryText, parameters);
 
             var valueToken = arguments[0] as ValueExpression;
 
             if (valueToken == null)
                 throw new InvalidQueryException($"Method 'wkt()' expects value token as an argument, got {arguments[0]} type", queryText, parameters);
+
+            if (arguments.Count == 2)
+            {
+                valueToken = arguments[1] as ValueExpression;
+
+                if (valueToken == null)
+                    throw new InvalidQueryException($"Method 'wkt()' expects value token as an argument, got {arguments[1]} type", queryText, parameters);
+            }
         }
 
         public static void ValidatePoint(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)

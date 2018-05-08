@@ -23,9 +23,15 @@ namespace Raven.Client.Documents.Session.Tokens
             return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Miles)}')");
         }
 
-        public static ShapeToken Wkt(string shapeWktParameterName)
+        public static ShapeToken Wkt(string shapeWktParameterName, SpatialUnits? units)
         {
-            return new ShapeToken($"spatial.wkt(${shapeWktParameterName})");
+            if (units.HasValue == false)
+                return new ShapeToken($"spatial.wkt(${shapeWktParameterName})");
+
+            if (units == SpatialUnits.Kilometers)
+                return new ShapeToken($"spatial.wkt(${shapeWktParameterName}, '{nameof(SpatialUnits.Kilometers)}')");
+
+            return new ShapeToken($"spatial.wkt(${shapeWktParameterName}, '{nameof(SpatialUnits.Miles)}')");
         }
 
         public override void WriteTo(StringBuilder writer)

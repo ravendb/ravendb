@@ -19,11 +19,10 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
+
             using (var tests = new CountersCrudSingleNode())
             {
-                tests.IncrementCounter();
-                tests.DeleteCounter();
-                tests.GetCounterValue();
+
 
             }
 
@@ -44,6 +43,7 @@ namespace Tryouts
                 Console.WriteLine("all good");
                 Console.ReadKey();
             }
+
         }
     }
 }
