@@ -197,7 +197,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     refreshBackupInfo() {
         if (shell.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
-            return $.Deferred().fail();
+            return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();
         }
 
         return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
