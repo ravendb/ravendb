@@ -32,6 +32,9 @@ namespace Raven.Server.Documents
 
         public static readonly string CountersTombstones = "Counters.Tombstones";
 
+        private string _lastChangeVector;
+        public string LastChangeVector => _lastChangeVector;
+
         private static readonly TableSchema CountersSchema = new TableSchema()
         {
             TableType = (byte)TableType.Counters
@@ -140,9 +143,9 @@ namespace Raven.Server.Documents
                     {
                         var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
 
-                        if (tombstoneTable.ReadByKey(counterKey, out var existingTombstone))
+                        if (tombstoneTable.ReadByKey(keyPerfix, out var existingTombstone))
                         {
-                            table.Delete(existingTombstone.Id);
+                            tombstoneTable.Delete(existingTombstone.Id);
                         }
                     }
 
@@ -164,7 +167,7 @@ namespace Raven.Server.Documents
                         ChangeVector = changeVector,
                         Id = documentId,
                         CounterName = name,
-                        Type = DocumentChangeTypes.Counter,
+                        Type = DocumentChangeTypes.Counter
                     });
                 }
             }
@@ -216,12 +219,14 @@ namespace Raven.Server.Documents
                     table.Set(tvb);
                 }
 
+                _lastChangeVector = result.ChangeVector;
+
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     ChangeVector = result.ChangeVector,
                     Id = documentId,
                     CounterName = name,
-                    Type = DocumentChangeTypes.Counter,
+                    Type = DocumentChangeTypes.Counter
                 });
             }
         }
@@ -429,8 +434,9 @@ namespace Raven.Server.Documents
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long deletedEtag, long lastModifiedTicks)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
-
+            var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+            using (Slice.From(context.Allocator, newChangeVector, out var cv))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
@@ -440,10 +446,12 @@ namespace Raven.Server.Documents
                 tvb.Add((byte)DocumentTombstone.TombstoneType.Counter);
                 tvb.Add(null, 0); // doc data
                 tvb.Add((int)DocumentFlags.None);
-                tvb.Add(null, 0); // change vector
+                tvb.Add(cv.Content.Ptr, cv.Size); // change vector
                 tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);
             }
+
+            _lastChangeVector =  newChangeVector;
         }
 
         public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)

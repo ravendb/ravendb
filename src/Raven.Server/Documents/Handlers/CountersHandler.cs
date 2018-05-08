@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly CounterBatch _counterBatch;
             public bool HasWrites;
             public CountersDetail CountersDetail;
+            public string LastChangeVector;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
@@ -130,6 +131,8 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
                 }
+
+                LastChangeVector = _database.DocumentsStorage.CountersStorage.LastChangeVector;
 
                 return CountersDetail.Counters.Count;
             }

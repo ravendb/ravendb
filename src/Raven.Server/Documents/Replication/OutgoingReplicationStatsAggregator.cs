@@ -150,6 +150,11 @@ namespace Raven.Server.Documents.Replication
             _stats.CounterOutputCount++;
         }
 
+        public void RecordCounterTombstoneOutput()
+        {
+            _stats.CounterTombstoneOutputCount++;
+        }
+
         public void RecordLastEtag(long etag)
         {
             _stats.LastEtag = etag;
@@ -197,6 +202,7 @@ namespace Raven.Server.Documents.Replication
         public int AttachmentTombstoneOutputCount;
         public int RevisionTombstoneOutputCount;
         public int DocumentTombstoneOutputCount;
+        public int CounterTombstoneOutputCount;
 
         public int DocumentOutputCount;
         public Size DocumentOutputSize;

@@ -1019,6 +1019,10 @@ namespace Raven.Server.Documents
             {
                 result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
+            else if (result.Type == DocumentTombstone.TombstoneType.Counter)
+            {
+                result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
+            }
 
             return result;
         }
