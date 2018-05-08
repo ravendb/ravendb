@@ -6,6 +6,7 @@ using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Raven.Server.Documents.Patch;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -88,7 +89,15 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             jsItem = null;
             if (!(item is DynamicBlittableJson dbj))
+            {
+                //This is the case for map-reduce
+                if(item is BlittableJsonReaderObject bjr)
+                {
+                    jsItem = new BlittableObjectInstance(engine, null, bjr, DynamicNullObject.Null, null);
+                    return true;
+                }
                 return false;
+            }
             var id = dbj.GetId();
             if (isMapReduce == false && id == DynamicNullObject.Null)
                 return false;
