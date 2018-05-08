@@ -152,16 +152,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupBykeyComparer(this));
         }
 
-        private PropertyDescriptor[] _lastUsedArray;
         private JsValue ConstructValues(List<BlittableJsonReaderObject> values)
         {
-            PropertyDescriptor[] items;
-            if (_lastUsedArray != null && _lastUsedArray.Length == values.Count)
-                items = _lastUsedArray;
-            else
-            {
-                items = _lastUsedArray = new PropertyDescriptor[values.Count];
-            }
+            var items  = new PropertyDescriptor[values.Count];
             for (int j = 0; j < values.Count; j++)
             {
                 var val = values[j];
