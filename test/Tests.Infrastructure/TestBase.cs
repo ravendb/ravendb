@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -129,9 +130,31 @@ namespace FastTests
                 if (_selfSignedCertFileName != null)
                     return _selfSignedCertFileName;
 
-                var certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
-                var tempFileName = Path.GetTempFileName();
-                File.WriteAllBytes(tempFileName, certBytes);
+                byte[] certBytes;
+                try
+                {
+                    certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
+                }
+                catch (Exception e)
+                {
+                    throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'.", e);
+                }
+
+                string tempFileName = null;
+                try
+                {
+                    tempFileName = Path.GetTempFileName();
+                    File.WriteAllBytes(tempFileName, certBytes);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
+                                                        $"tempFileName = {tempFileName}" +
+                                                        $"certBytes.Length = {certBytes.Length}" +
+                                                        $"MachineName = {Environment.MachineName}.", e);
+
+                }
+
                 _selfSignedCertFileName = tempFileName;
                 return tempFileName;
             }
