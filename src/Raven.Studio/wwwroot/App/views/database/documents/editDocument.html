@@ -170,7 +170,7 @@
                 </div>
                 <div class="flex-window-head" data-bind="visible: isCountersActive">
                     <div class="padding padding-xs margin-top margin-top-sm">
-                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: $root.connectedDocuments.setCounter, visible: isCountersActive">
+                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: $root.connectedDocuments.setCounter, visible: isCountersActive() && !$root.isClone()">
                             <i class="icon-new-counter"></i>
                             <span>Add Counter</span>
                         </button>
@@ -201,7 +201,7 @@
         <div class="input-group file-input">
             <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
             <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary btn-block" data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
-                <i class="icon-attachment"></i> <span>Add attachment</span>
+                <i class="icon-attachment"></i> <span>Add Attachment</span>
             </label>
         </div>
     </div>

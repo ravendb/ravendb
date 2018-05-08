@@ -48,6 +48,7 @@ class editDocument extends viewModelBase {
     isDeleteRevision: KnockoutComputed<boolean>;
 
     isCreatingNewDocument = ko.observable(false);
+    isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
     userIdHasFocus = ko.observable<boolean>(false);   
@@ -466,6 +467,7 @@ class editDocument extends viewModelBase {
     createClone() {
         // 1. Show current document as a new document..
         this.isCreatingNewDocument(true);
+        this.isClone(true);
 
         this.syncChangeNotification();
         
@@ -486,9 +488,8 @@ class editDocument extends viewModelBase {
         }
 
         // 4. Clear data..
-        this.document().__metadata.clearFlags();
-        
-        // todo - clear revisions tab upon Clone as well
+        this.document().__metadata.clearFlags();      
+        this.connectedDocuments.revisionsCount(0);
         
         this.connectedDocuments.gridController().reset(true);
         this.metadata().changeVector(undefined);
@@ -500,6 +501,7 @@ class editDocument extends viewModelBase {
         if (this.isValid(this.globalValidationGroup)) {
             eventsCollector.default.reportEvent("document", "save");
             this.saveInternal(this.userSpecifiedId());
+            this.isClone(false);
         }
     }
 
