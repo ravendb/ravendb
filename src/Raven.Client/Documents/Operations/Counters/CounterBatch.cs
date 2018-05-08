@@ -21,10 +21,10 @@ namespace Raven.Client.Documents.Operations.Counters
         public static DocumentCountersOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet("DocumentId", out string docId) == false || docId == null)
-                throw new InvalidDataException("Missing 'DocumentId' property on 'Counters'");
+                ThrowMissingDocumentId();
 
             if (input.TryGet("Operations", out BlittableJsonReaderArray operations) == false || operations == null)
-                throw new InvalidDataException("Missing 'Operations' property on 'Counters'");
+                ThrowMissingCounterOperations();
 
             var result = new DocumentCountersOperation
             {
@@ -35,12 +35,30 @@ namespace Raven.Client.Documents.Operations.Counters
             foreach (var op in operations)
             {
                 if (!(op is BlittableJsonReaderObject bjro))
-                    continue;
+                {
+                    ThrowNotBlittableJsonReaderObjectOperation(op);
+                    return null; //never hit
+                }
 
                 result.Operations.Add(CounterOperation.Parse(bjro));
             }
 
             return result;
+        }
+
+        private static void ThrowNotBlittableJsonReaderObjectOperation(object op)
+        {
+            throw new InvalidDataException($"input.Operations should contain items of type BlittableJsonReaderObject only, but got {op.GetType()}");
+        }
+
+        private static void ThrowMissingCounterOperations()
+        {
+            throw new InvalidDataException("Missing 'Operations' property on 'Counters'");
+        }
+
+        private static void ThrowMissingDocumentId()
+        {
+            throw new InvalidDataException("Missing 'DocumentId' property on 'Counters'");
         }
 
         public DynamicJsonValue ToJson()
@@ -70,18 +88,16 @@ namespace Raven.Client.Documents.Operations.Counters
         public static CounterOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet("CounterName", out string name) == false || name == null)
-                throw new InvalidDataException("Missing 'CounterName' property");
+                ThrowMissingCounterName();
 
             if (input.TryGet("Type", out string type) == false || type == null)
-                throw new InvalidDataException($"Missing 'Type' property in Counter '{name}'");
+                ThrowMissingCounterOperationType(name);
 
-            var typeValue = Enum.Parse(typeof(CounterOperationType), type);
-            if (!(typeValue is CounterOperationType counterOperationType))
-                throw new InvalidDataException($"Unknown 'CounterOperationType' '{type}' in Counter '{name}'");
+            var counterOperationType = (CounterOperationType)Enum.Parse(typeof(CounterOperationType), type);
 
             long? delta = null;
             if (counterOperationType == CounterOperationType.Increment && input.TryGet("Delta", out delta) == false)
-                throw new InvalidDataException($"Missing 'Delta' property in Counter '{name}' of Type {counterOperationType}  ");
+                ThrowMissingDeltaProperty(name);
 
             var counterOperation = new CounterOperation
             {
@@ -93,6 +109,21 @@ namespace Raven.Client.Documents.Operations.Counters
                 counterOperation.Delta = delta.Value;
 
             return counterOperation;
+        }
+
+        private static void ThrowMissingDeltaProperty(string name)
+        {
+            throw new InvalidDataException($"Missing 'Delta' property in Counter '{name}' of Type {CounterOperationType.Increment} ");
+        }
+
+        private static void ThrowMissingCounterOperationType(string name)
+        {
+            throw new InvalidDataException($"Missing 'Type' property in Counter '{name}'");
+        }
+
+        private static void ThrowMissingCounterName()
+        {
+            throw new InvalidDataException("Missing 'CounterName' property");
         }
 
         public DynamicJsonValue ToJson()

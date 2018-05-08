@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async counters session operations
     /// </summary>
-    public interface ICountersSessionOperationsAsync
+    public interface ICountersSessionOperationsAsync : ICountersSessionOperationsBase
     {
         /// <summary>
         /// Returns all the counters for a specific document.
@@ -49,30 +49,5 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         Task<Dictionary<string, long>> GetAsync(object entity, IEnumerable<string> counters);
 
-        /// <summary>
-        /// Increments by delta the value of a counter, by document id and counter name 
-        /// </summary>
-        void Increment(string documentId, string counter, long delta = 1);
-
-        /// <summary>
-        /// Increments by delta the value of a counter, by entity and counter name 
-        /// </summary>
-        void Increment(object entity, string counter, long delta = 1);
-
-        /// <summary>
-        /// Marks the specified document's counter for deletion. The counter will be deleted when
-        /// <see cref="IDocumentSession.SaveChanges" /> is called.
-        /// </summary>
-        /// <param name="documentId">the document which holds the counter</param>
-        /// <param name="counter">the counter name</param>
-        void Delete(string documentId, string counter);
-
-        /// <summary>
-        /// Marks the specified document's counter for deletion. The counter will be deleted when
-        /// <see cref="IDocumentSession.SaveChanges" /> is called.
-        /// </summary>
-        /// <param name="entity">instance of entity of the document which holds the counter</param>
-        /// <param name="counter">the counter name</param>
-        void Delete(object entity, string counter);
     }
 }

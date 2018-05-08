@@ -834,7 +834,7 @@ more responsive application.
                 if (EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentOrCounters, null), out ICommandData command))
+                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientModifyDocumentCommand, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
                 var onOnBeforeStore = OnBeforeStore;
@@ -1064,7 +1064,7 @@ more responsive application.
             if (command.Type != CommandType.AttachmentPUT && 
                 command.Type != CommandType.AttachmentDELETE &&
                 command.Type != CommandType.Counters)
-                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentOrCounters, null)] = command;
+                DeferredCommandsDictionary[(command.Id, CommandType.ClientModifyDocumentCommand, null)] = command;
         }
 
         public void AssertNotDisposed()

@@ -32,9 +32,19 @@ namespace Raven.Client.Documents.Session
                 Delta = delta
             };
 
+            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
+                DeletedEntities.Contains(documentInfo.Entity))
+                ThrowDocumentAlreadyDeletedInSession(documentId, counter);
+
             if (DeferredCommandsDictionary.TryGetValue((documentId, CommandType.Counters, null), out var command))
             {
-                ((CountersBatchCommandData)command).Counters.Operations.Add(counterOp);
+                var countersBatchCommandData = (CountersBatchCommandData)command;
+                if (countersBatchCommandData.HasDelete(counter))
+                {
+                    ThrowIncrementCounterAfterDeleteAttempt(documentId, counter);
+                }
+
+                countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
@@ -63,19 +73,28 @@ namespace Raven.Client.Documents.Session
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
                 return; // no-op
-/*
 
-            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.CounterOperation, null)))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
-*/
-
-            Defer(new CountersBatchCommandData(documentId, new CounterOperation
+            var counterOp = new CounterOperation
             {
                 Type = CounterOperationType.Delete,
                 CounterName = counter
-            }));
-        }
+            };
 
+            if (DeferredCommandsDictionary.TryGetValue((documentId, CommandType.Counters, null), out var command))
+            {
+                var countersBatchCommandData = (CountersBatchCommandData)command;
+                if (countersBatchCommandData.HasIncrement(counter))
+                {
+                    ThrowDeleteCounterAfterIncrementAttempt(documentId, counter);
+                }
+
+                countersBatchCommandData.Counters.Operations.Add(counterOp);
+            }
+            else
+            {
+                Defer(new CountersBatchCommandData(documentId, counterOp));
+            }
+        }
 
         public void Delete(object entity, string counter)
         {
@@ -87,8 +106,25 @@ namespace Raven.Client.Documents.Session
 
         protected void ThrowEntityNotInSession(object entity)
         {
-            throw new ArgumentException(entity + " is not associated with the session, cannot add counter to it. " +
-                                        "Use documentId instead or track the entity in the session.", nameof(entity));
+            throw new ArgumentException("entity is not associated with the session, cannot add counter to it. " +
+                                        "Use documentId instead or track the entity in the session.");
+        }
+
+        private static void ThrowIncrementCounterAfterDeleteAttempt(string documentId, string counter)
+        {
+            throw new InvalidOperationException(
+                $"Can't increment counter {counter} of document {documentId}, there is a deferred command registered to delete a counter with the same name.");
+        }
+
+        private static void ThrowDeleteCounterAfterIncrementAttempt(string documentId, string counter)
+        {
+            throw new InvalidOperationException(
+                $"Can't delete counter {counter} of document {documentId}, there is a deferred command registered to increment a counter with the same name.");
+        }
+
+        private static void ThrowDocumentAlreadyDeletedInSession(string documentId, string counter)
+        {
+            throw new InvalidOperationException($"Can't increment counter {counter} of document {documentId}, the document was already deleted in this session.");
         }
 
     }

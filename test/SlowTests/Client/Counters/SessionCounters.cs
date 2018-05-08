@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -301,6 +302,41 @@ namespace SlowTests.Client.Counters
                     Assert.Equal(100, val);
                 }
             }
+        }
+
+        [Fact]
+        public void ShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+                    session.Advanced.Counters.Increment(user, "likes", 100);
+                    session.SaveChanges();
+
+                    Assert.Equal(100, session.Advanced.Counters.Get(user, "likes"));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Counters.Increment("users/1-A", "likes", 50);
+                    Assert.Throws<InvalidOperationException>(() => session.Advanced.Counters.Delete("users/1-A", "likes"));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Counters.Delete("users/1-A", "likes");
+                    Assert.Throws<InvalidOperationException>(() => session.Advanced.Counters.Increment("users/1-A", "likes", 50));
+                }
+            }
+
         }
     }
 }
