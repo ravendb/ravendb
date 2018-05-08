@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
 
                         using (closeServerTransaction)
-                            documentQuery = QueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, parameters, analyzer, factories);
+                            documentQuery = QueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index.Definition, parameters, analyzer, factories);
                     }
                     finally
                     {
