@@ -241,22 +241,6 @@ namespace Raven.Server.ServerWide
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
-
-                        Task.Run(() =>
-                        {
-                            try
-                            {
-                                // we do this in an async manner because on some machines it pops up a UI and we need to ensure
-                                // that it isn't blocking the state machine
-                                CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(Convert.FromBase64String(cert.Certificate)));
-                            }
-                            catch (Exception e)
-                            {
-                                if(_parent.Log.IsOperationsEnabled)
-                                    _parent.Log.Operations($"Failed to register {cert.Name} in the operating system", e);
-                            }
-                        });
-
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
