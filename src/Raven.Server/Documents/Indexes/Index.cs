@@ -1381,7 +1381,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField))
+                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField,_unmanagedBuffersPool))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 

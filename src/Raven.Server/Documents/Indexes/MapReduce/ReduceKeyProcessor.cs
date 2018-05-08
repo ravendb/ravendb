@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             _numberOfReduceFields = numberOfReduceFields;
             _buffersPool = buffersPool;
+            _bufferPos = 0;
 
             if (numberOfReduceFields == 1)
             {
@@ -34,8 +35,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 // numberOfReduceFields could be zero when we have 'group bankTotal by 1'
                 _mode = Mode.MultipleValues;
-                _bufferPos = 0;
             }
+        }
+
+        public void SetMode(Mode mode)
+        {
+            _mode = mode;
         }
 
         public int ProcessedFields => _processedFields;
@@ -308,10 +313,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _bufferPos += size;
         }
 
-        enum Mode
+        public enum Mode
         {
             SingleValue,
             MultipleValues
+        }
+        public struct Buffer
+        {
+            public byte* Address;
+            public int Size;
+        }
+
+        public Buffer GetBuffer()
+        {
+            return new Buffer
+            {
+                Address = _buffer.Address,
+                Size = _bufferPos
+            };
         }
 
         public void ReleaseBuffer()

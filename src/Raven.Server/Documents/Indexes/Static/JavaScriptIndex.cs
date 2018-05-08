@@ -203,18 +203,6 @@ var globalDefinition =
     reduce: null
 }
 
-function groupItemsByKey(data, item, lambda) {
-
-    var key = lambda(item);
-    var current = data[key];
-    if(!current)
-    {
-        current = { key: key, values: [] };
-        data[key] = current;
-    }
-    current.values.push(item);
-}
-
 function map(name, lambda) {
 
     var map = {
@@ -228,7 +216,10 @@ function map(name, lambda) {
 function groupBy(lambda) {
     var reduce = globalDefinition.reduce = { };
     reduce.key = lambda;
-    reduce.aggregate = function(reduceFunction){reduce.aggregateBy = reduceFunction;}
+ 
+    reduce.aggregate = function(reduceFunction){
+        reduce.aggregateBy = reduceFunction;
+    }
     return reduce;
 }";
 
