@@ -15,6 +15,7 @@ class deleteAttachmentCommand extends commandBase {
         };
         const url = endpoints.databases.attachment.attachments + this.urlEncodeArgs(args);
         return this.del<void>(url, null, this.db)
+            .done(() => this.reportSuccess("Attachment was deleted."))
             .fail((response: JQueryXHR) => this.reportError("Failed to delete attachment: " + this.attachmentName, response.responseText, response.statusText));
     }
 }

@@ -43,10 +43,12 @@ class editDocument extends viewModelBase {
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     attachmentsCount: KnockoutComputed<number>;
+    countersCount: KnockoutComputed<number>;
     rawJsonUrl: KnockoutComputed<string>;
     isDeleteRevision: KnockoutComputed<boolean>;
 
     isCreatingNewDocument = ko.observable(false);
+    isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
     userIdHasFocus = ko.observable<boolean>(false);   
@@ -233,7 +235,16 @@ class editDocument extends viewModelBase {
 
             return doc.__metadata.attachments().length;
         });
+       
+        this.countersCount = ko.pureComputed(() => {
+            const doc = this.document();
+            if (!doc || !doc.__metadata || !doc.__metadata.counters()) {
+                return 0;
+            }
 
+            return doc.__metadata.counters().length;
+        });
+        
         this.rawJsonUrl = ko.pureComputed(() => {
             const newDocMode = this.isCreatingNewDocument();
             if (newDocMode) {
@@ -371,7 +382,9 @@ class editDocument extends viewModelBase {
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute? A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
+        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); 
+        // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute?
+        // A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
     }
 
     private focusOnEditor() {
@@ -454,6 +467,7 @@ class editDocument extends viewModelBase {
     createClone() {
         // 1. Show current document as a new document..
         this.isCreatingNewDocument(true);
+        this.isClone(true);
 
         this.syncChangeNotification();
         
@@ -474,7 +488,9 @@ class editDocument extends viewModelBase {
         }
 
         // 4. Clear data..
-        this.document().__metadata.attachments([]); 
+        this.document().__metadata.clearFlags();      
+        this.connectedDocuments.revisionsCount(0);
+        
         this.connectedDocuments.gridController().reset(true);
         this.metadata().changeVector(undefined);
 
@@ -485,6 +501,7 @@ class editDocument extends viewModelBase {
         if (this.isValid(this.globalValidationGroup)) {
             eventsCollector.default.reportEvent("document", "save");
             this.saveInternal(this.userSpecifiedId());
+            this.isClone(false);
         }
     }
 
