@@ -105,6 +105,10 @@ namespace Raven.Server.Documents
                         {
                             flags |= DocumentFlags.HasAttachments;
                         }
+                        if ((oldFlags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+                        {
+                            flags |= DocumentFlags.HasCounters;
+                        }
                     }
                 }
 

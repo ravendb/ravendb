@@ -71,12 +71,27 @@ interface documentMetadataDto {
     '@flags'?: string;
     '@attachments'?: Array<documentAttachmentDto>;
     '@change-vector'?: string;
-
+    '@counters'?: Array<string>;
 }
 
 interface updateDatabaseConfigurationsResult {
     RaftCommandIndex: number;
 }
+
+interface nodeCounterValue {
+    nodeTag: string;
+    nodeFullId: string;
+    nodeShortId: string;
+    nodeCounterValue: number;
+}
+
+interface counterItem {
+    documentId: string;
+    counterName: string;
+    totalCounterValue: number;
+    counterValuesPerNode: Array<nodeCounterValue>;
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;

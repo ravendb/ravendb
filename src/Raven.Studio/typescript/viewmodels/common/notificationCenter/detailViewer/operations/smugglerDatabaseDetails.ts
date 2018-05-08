@@ -3,6 +3,8 @@ import operation = require("common/notifications/models/operation");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
+import generalUtils = require("common/generalUtils");
+import progress = require("common/helpers/database/progress");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending";
 
@@ -20,21 +22,28 @@ type smugglerListItem = {
     processingSpeedText: string;
 }
 
+type uploadListItem = {
+    name: string;
+    uploadProgress: progress;
+}
+
 type attachmentsListItem = {
     readCount: string;
     erroredCount: string;
 }
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
+    private sizeFormatter = generalUtils.formatBytesToSize;
 
     static extractingDataStageName = "Extracting data";
     
     detailsVisible = ko.observable<boolean>(false);
-    tail = ko.observable<boolean>(false);
+    tail = ko.observable<boolean>(true);
     lastDocsCount = 0;
     lastProcessingSpeedText = "Processing";
 
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
+    uploadItems: KnockoutComputed<Array<uploadListItem>>;
     messages: KnockoutComputed<Array<string>>;
     messagesJoined: KnockoutComputed<string>;
     previousProgressMessages: string[];
@@ -56,16 +65,24 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.Documents.Smuggler.SmugglerProgressBase;
-
             if (!status) {
                 return [];
             }
 
             const result = [] as Array<smugglerListItem>;
+            if ("SnapshotBackup" in status) {
+                const backupCount = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).SnapshotBackup;
+
+                // skip it this case means it is not backup progress object or it is backup of non-binary data
+                if (!backupCount.Skipped) {
+                    result.push(this.mapToExportListItem("Backed up files", backupCount));
+                }
+            }
+
             if ("SnapshotRestore" in status) {
                 const restoreCounts = (status as Raven.Server.Documents.PeriodicBackup.Restore.RestoreProgress).SnapshotRestore;
                 
-                // skip it this case means it is not backup progress object or it is restore of non-binary data 
+                // skip it this case means it is not restore progress object or it is restore of non-binary data 
                 if (!restoreCounts.Skipped) {
                     result.push(this.mapToExportListItem("Preparing restore", restoreCounts));
                 }
@@ -116,6 +133,48 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return result;
         });
 
+        this.uploadItems = ko.pureComputed(() => {
+            if (this.op.taskType() !== "DatabaseBackup") {
+                return [];
+            }
+
+            if (this.op.status() === "Faulted") {
+                return [];
+            }
+
+            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.Documents.Smuggler.SmugglerProgressBase;
+            if (!status) {
+                return [];
+            }
+
+            const result = [] as Array<uploadListItem>;
+            if ("S3Backup" in status) {
+                const s3BackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).S3Backup;
+                const backupStatus = s3BackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+                this.addToUploadItems("S3", result, backupStatus);
+            }
+
+            if ("AzureBackup" in status) {
+                const azureBackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).AzureBackup;
+                const backupStatus = azureBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+                this.addToUploadItems("Azure", result, backupStatus);
+            }
+
+            if ("GlacierBackup" in status) {
+                const glacierBackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).GlacierBackup;
+                const backupStatus = glacierBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+                this.addToUploadItems("Glacier", result, backupStatus);
+            }
+
+            if ("FtpBackup" in status) {
+                const ftpBackupStatus = (status as Raven.Server.Documents.PeriodicBackup.BackupProgress).FtpBackup;
+                const backupStatus = ftpBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+                this.addToUploadItems("FTP", result, backupStatus);
+            }
+
+            return result;
+        });
+         
         this.messages = ko.pureComputed(() => {
             if (this.operationFailed()) {
                 const errors = this.errorMessages();
@@ -156,6 +215,26 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (this.operationFailed()) {
             this.detailsVisible(true);
         }
+    }
+
+    private addToUploadItems(backupType: string, items: Array<uploadListItem>,
+        backupStatus: Raven.Client.Documents.Operations.Backups.CloudUploadStatus) {
+
+        if (backupStatus.Skipped) {
+            return;
+        }
+
+        const uploadedInBytes = backupStatus.UploadProgress.UploadedInBytes;
+        const uploadProgress = new progress(
+            uploadedInBytes,
+            backupStatus.UploadProgress.TotalInBytes,
+            (number: number) => this.sizeFormatter(number),
+            backupStatus.UploadProgress.BytesPutsPerSec);
+
+        items.push({
+            name: `Upload to ${backupType}`,
+            uploadProgress: uploadProgress
+        } as uploadListItem);
     }
 
     private scrollDown() {
@@ -222,7 +301,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             notification.taskType() === "DatabaseMigration" ||
             notification.taskType() === "DatabaseRestore" ||
             notification.taskType() === "MigrationFromLegacyData" ||
-            notification.taskType() === "CollectionImportFromCsv"
+            notification.taskType() === "CollectionImportFromCsv" ||
+            notification.taskType() === "DatabaseBackup"
         );
     }
 

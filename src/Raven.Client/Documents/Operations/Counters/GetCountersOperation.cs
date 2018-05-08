@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 pathBuilder.Append("/databases/")
                     .Append(node.Database)
                     .Append("/counters?")
-                    .Append("doc=")
+                    .Append("docId=")
                     .Append(Uri.EscapeDataString(_docId));
 
                 if (_returnFullResults)
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 {
                     if (_counters.Length > 1)
                     {
-                        PrepareRequestWithMultipleIds(pathBuilder, request, ctx, ctx);
+                        PrepareRequestWithMultipleCounters(pathBuilder, request, ctx);
                     }
                     else
                     {
@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 Result = JsonDeserializationClient.CountersDetail(response);
             }
 
-            private void PrepareRequestWithMultipleIds(StringBuilder pathBuilder, HttpRequestMessage request, JsonOperationContext ctx, JsonOperationContext context)
+            private void PrepareRequestWithMultipleCounters(StringBuilder pathBuilder, HttpRequestMessage request, JsonOperationContext ctx)
             {
                 var uniqueNames = new HashSet<string>(_counters);
                 // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)

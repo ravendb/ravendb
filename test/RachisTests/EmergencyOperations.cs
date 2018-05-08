@@ -24,7 +24,7 @@ namespace RachisTests
             old = GetServerTopology(leader);
             new AdminJsConsole(leader,null).ApplyScript(new AdminJsScript
             (
-               @"server.ServerStore.SecedeFromCluster();"
+               @"server.ServerStore.Engine.HardResetToNewCluster();"
             ));
             await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = GetServerTopology(leader);
@@ -47,7 +47,7 @@ namespace RachisTests
             var follower = Servers.First(x => x.ServerStore.CurrentRachisState == RachisState.Follower);
             ClusterTopology old, @new;
             old = GetServerTopology(follower);
-            new AdminJsConsole(follower, null).ApplyScript(new AdminJsScript(@"server.ServerStore.SecedeFromCluster();"));
+            new AdminJsConsole(follower, null).ApplyScript(new AdminJsScript(@"server.ServerStore.Engine.HardResetToNewCluster();"));
             await follower.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = GetServerTopology(follower);
             Assert.NotEqual(old.TopologyId, @new.TopologyId);            

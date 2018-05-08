@@ -1,4 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
@@ -12,6 +17,58 @@ namespace Raven.Client.Documents.Operations.Counters
     {
         public List<CounterOperation> Operations;
         public string DocumentId;
+        
+        public static DocumentCountersOperation Parse(BlittableJsonReaderObject input)
+        {
+            if (input.TryGet("DocumentId", out string docId) == false || docId == null)
+                ThrowMissingDocumentId();
+
+            if (input.TryGet("Operations", out BlittableJsonReaderArray operations) == false || operations == null)
+                ThrowMissingCounterOperations();
+
+            var result = new DocumentCountersOperation
+            {
+                DocumentId = docId,
+                Operations = new List<CounterOperation>()
+            };
+
+            foreach (var op in operations)
+            {
+                if (!(op is BlittableJsonReaderObject bjro))
+                {
+                    ThrowNotBlittableJsonReaderObjectOperation(op);
+                    return null; //never hit
+                }
+
+                result.Operations.Add(CounterOperation.Parse(bjro));
+            }
+
+            return result;
+        }
+
+        private static void ThrowNotBlittableJsonReaderObjectOperation(object op)
+        {
+            throw new InvalidDataException($"input.Operations should contain items of type BlittableJsonReaderObject only, but got {op.GetType()}");
+        }
+
+        private static void ThrowMissingCounterOperations()
+        {
+            throw new InvalidDataException("Missing 'Operations' property on 'Counters'");
+        }
+
+        private static void ThrowMissingDocumentId()
+        {
+            throw new InvalidDataException("Missing 'DocumentId' property on 'Counters'");
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DocumentId)] = DocumentId,
+                [nameof(Operations)] = Operations?.Select(x => x.ToJson())
+            };
+        }
     }
 
     public enum CounterOperationType
@@ -26,6 +83,57 @@ namespace Raven.Client.Documents.Operations.Counters
     {
         public CounterOperationType Type;
         public string CounterName;
-        public long Delta; 
+        public long Delta;
+
+        public static CounterOperation Parse(BlittableJsonReaderObject input)
+        {
+            if (input.TryGet("CounterName", out string name) == false || name == null)
+                ThrowMissingCounterName();
+
+            if (input.TryGet("Type", out string type) == false || type == null)
+                ThrowMissingCounterOperationType(name);
+
+            var counterOperationType = (CounterOperationType)Enum.Parse(typeof(CounterOperationType), type);
+
+            long? delta = null;
+            if (counterOperationType == CounterOperationType.Increment && input.TryGet("Delta", out delta) == false)
+                ThrowMissingDeltaProperty(name);
+
+            var counterOperation = new CounterOperation
+            {
+                Type = counterOperationType,
+                CounterName = name
+            };
+
+            if (delta != null)
+                counterOperation.Delta = delta.Value;
+
+            return counterOperation;
+        }
+
+        private static void ThrowMissingDeltaProperty(string name)
+        {
+            throw new InvalidDataException($"Missing 'Delta' property in Counter '{name}' of Type {CounterOperationType.Increment} ");
+        }
+
+        private static void ThrowMissingCounterOperationType(string name)
+        {
+            throw new InvalidDataException($"Missing 'Type' property in Counter '{name}'");
+        }
+
+        private static void ThrowMissingCounterName()
+        {
+            throw new InvalidDataException("Missing 'CounterName' property");
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Type)] = Type.ToString(),
+                [nameof(CounterName)] = CounterName,
+                [nameof(Delta)] = Delta
+            };
+        }
     }
 }

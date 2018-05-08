@@ -77,7 +77,7 @@ namespace SlowTests.Authentication
                 {
                     ["A"] = new SetupInfo.NodeInfo
                     {
-                        Port = 8080,
+                        Port = 0,
                         Addresses = new List<string>
                         {
                             "127.0.0.1"

@@ -47,7 +47,9 @@ namespace Raven.Client.Documents.Session
         /// Access the attachments operations
         /// </summary>
         public IAttachmentsSessionOperations Attachments { get; }
-        
+
+        public ICountersSessionOperations Counters { get; }
+
         /// <summary>
         /// Access the revisions operations
         /// </summary>
@@ -61,6 +63,7 @@ namespace Raven.Client.Documents.Session
         {
             Attachments = new DocumentSessionAttachments(this);
             Revisions = new DocumentSessionRevisions(this);
+            Counters = new DocumentSessionCounters(this);
         }
 
         /// <summary>

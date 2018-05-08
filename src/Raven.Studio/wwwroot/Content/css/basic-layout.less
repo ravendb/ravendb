@@ -1,4 +1,5 @@
 ﻿@menu-width: 280px;
+@right-panel-width: 400px;
 @menu-width-collapsed: 120px;
 @navbar-height: 70px;
 @navbar-height-xs: 51px;
@@ -860,9 +861,9 @@ body {
     -moz-transition: transform @menu-transition-ease;
     -ms-transition: transform @menu-transition-ease;
     -o-transition: transform @menu-transition-ease;
-    transition: transform @menu-transition-ease;
-    width: @menu-width;
-    flex-basis: @menu-width;
+    transition: transform @menu-transition-ease;    
+    width: @right-panel-width;
+    flex-basis: @right-panel-width;
     flex-shrink:0;
 
     @media (min-width: @screen-md) {

@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly CounterBatch _counterBatch;
             public bool HasWrites;
             public CountersDetail CountersDetail;
+            public string LastChangeVector;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
@@ -131,6 +132,8 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
+                LastChangeVector = _database.DocumentsStorage.CountersStorage.LastChangeVector;
+
                 return CountersDetail.Counters.Count;
             }
 
@@ -227,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
-            var docId = GetStringValuesQueryString("doc");
+            var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
             var counters = GetStringValuesQueryString("counter", required: false);
             var countersDetail = new CountersDetail();

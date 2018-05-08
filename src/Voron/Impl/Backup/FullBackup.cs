@@ -33,28 +33,26 @@ namespace Voron.Impl.Backup
 
         public void ToFile(StorageEnvironment env, VoronPathSetting backupPath,
             CompressionLevel compression = CompressionLevel.Optimal,
-            Action<string> infoNotify = null,
-            Action backupStarted = null)
+            Action<(string Message, int FilesCount)> infoNotify = null)
         {
-            infoNotify = infoNotify ?? (s => { });
+            infoNotify = infoNotify ?? (_ => { });
 
-            infoNotify("Voron backup db started");
+            infoNotify(("Voron backup db started", 0));
 
             using (var file = SafeFileStream.Create(backupPath.FullPath, FileMode.Create))
             {
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
-                    infoNotify("Voron backup started");
+                    infoNotify(("Voron backup started", 0));
                     var dataPager = env.Options.DataPager;
                     var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                    Backup(env, compression, infoNotify, backupStarted, dataPager, package, string.Empty,
-                        copier);
+                    Backup(env, compression, dataPager, package, string.Empty, copier, infoNotify);
 
                     file.Flush(true); // make sure that we fully flushed to disk
                 }
             }
 
-            infoNotify("Voron backup db finished");
+            infoNotify(("Voron backup db finished", 0));
         }
         /// <summary>
         /// Do a full backup of a set of environments. Note that the order of the environments matter!
@@ -62,36 +60,38 @@ namespace Voron.Impl.Backup
         public void ToFile(IEnumerable<StorageEnvironmentInformation> envs,
             ZipArchive archive,
             CompressionLevel compression = CompressionLevel.Optimal,
-            Action<string> infoNotify = null,
-            Action backupStarted = null)
+            Action<(string Message, int FilesCount)> infoNotify = null,
+            CancellationToken cancellationToken = default)
         {
-            infoNotify = infoNotify ?? (s => { });
-
-            infoNotify("Voron backup db started");
+            infoNotify = infoNotify ?? (_ => { });
+            infoNotify(("Voron backup db started", 0));
 
             foreach (var e in envs)
             {
-                infoNotify("Voron backup " + e.Name + "started");
+                infoNotify(($"Voron backup {e.Name} started", 0));
                 var basePath = Path.Combine(e.Folder, e.Name);
 
                 var env = e.Env;
                 var dataPager = env.Options.DataPager;
                 var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                Backup(env, compression, infoNotify, backupStarted, dataPager, archive, basePath, copier);
+                Backup(env, compression, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
             }
 
-            infoNotify("Voron backup db finished");
+            infoNotify(("Voron backup db finished", 0));
         }
 
         private static void Backup(
-            StorageEnvironment env, CompressionLevel compression, Action<string> infoNotify,
-            Action backupStarted, AbstractPager dataPager, ZipArchive package, string basePath, DataCopier copier)
+            StorageEnvironment env, CompressionLevel compression, AbstractPager dataPager, 
+            ZipArchive package, string basePath, DataCopier copier, 
+            Action<(string Message, int FilesCount)> infoNotify,
+            CancellationToken cancellationToken = default)
         {
             var usedJournals = new List<JournalFile>();
             long lastWrittenLogPage = -1;
             long lastWrittenLogFile = -1;
             LowLevelTransaction txr = null;
             var backupSuccess = false;
+
             try
             {
                 long allocatedPages;
@@ -103,7 +103,7 @@ namespace Voron.Impl.Backup
                     allocatedPages = dataPager.NumberOfAllocatedPages;
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
-                    infoNotify("Voron copy headers for " + basePath);
+                    infoNotify(($"Voron copy headers for {basePath}", 2));
                     VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options, basePath);
 
                     // journal files snapshot
@@ -114,6 +114,8 @@ namespace Voron.Impl.Backup
                         journalNum <= journalInfo.CurrentJournal;
                         journalNum++)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         var journalFile = files.FirstOrDefault(x => x.Number == journalNum);
                         // first check journal files currently being in use
                         if (journalFile == null)
@@ -140,8 +142,6 @@ namespace Voron.Impl.Backup
                     // txw.Commit(); intentionally not committing
                 }
 
-                backupStarted?.Invoke();
-
                 // data file backup
                 var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compression);
                 Debug.Assert(dataPart != null);
@@ -151,8 +151,9 @@ namespace Voron.Impl.Backup
                     using (var dataStream = dataPart.Open())
                     {
                         // now can copy everything else
-                        copier.ToStream(dataPager, 0, allocatedPages, dataStream);
+                        copier.ToStream(dataPager, 0, allocatedPages, dataStream, message => infoNotify((message, 0)), cancellationToken);
                     }
+                    infoNotify(("Voron copy data file", 1));
                 }
 
                 try
@@ -160,6 +161,8 @@ namespace Voron.Impl.Backup
                     long lastBackedupJournal = 0;
                     foreach (var journalFile in usedJournals)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         var entryName = StorageEnvironmentOptions.JournalName(journalFile.Number);
                         var journalPart = package.CreateEntry(Path.Combine(basePath, entryName), compression);
 
@@ -171,9 +174,9 @@ namespace Voron.Impl.Backup
 
                         using (var stream = journalPart.Open())
                         {
-                            copier.ToStream(env, journalFile, 0, pagesToCopy, stream);
-                            infoNotify(string.Format("Voron copy journal file {0}", entryName));
+                            copier.ToStream(env, journalFile, 0, pagesToCopy, stream, message => infoNotify((message, 0)), cancellationToken);
                         }
+                        infoNotify(($"Voron copy journal file {entryName}", 1));
 
                         lastBackedupJournal = journalFile.Number;
                     }

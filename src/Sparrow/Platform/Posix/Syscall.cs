@@ -186,22 +186,22 @@ namespace Sparrow.Platform.Posix
         // pwrite(2)
         //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
+        public static extern IntPtr pwrite64(int fd, IntPtr buf, UIntPtr count, long offset);
 
         public static long pwrite(int fd, void* buf, ulong count, long offset)
         {
-            return (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
+            return (long)pwrite64(fd, (IntPtr)buf, (UIntPtr)count, offset);
         }
 
 
         // write(2)
         //    ssize_t write(int fd, const void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr write(int fd, IntPtr buf, UIntPtr count);
+        public static extern IntPtr write(int fd, IntPtr buf, ulong count);
 
         public static long write(int fd, void* buf, ulong count)
         {
-            return (long)write(fd, (IntPtr)buf, (UIntPtr)count);
+            return (long)write(fd, (IntPtr)buf, count);
         }
 
 
@@ -250,9 +250,11 @@ namespace Sparrow.Platform.Posix
                 result = (int)Errno.EINVAL;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) == false)
                     result = posix_fallocate64(fd, len, (size - len));
+
                 switch (result)
                 {
                     case (int)Errno.EINVAL:
+                    case (int)Errno.EFBIG: // can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;

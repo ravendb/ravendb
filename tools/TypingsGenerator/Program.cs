@@ -24,6 +24,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -68,7 +69,6 @@ namespace TypingsGenerator
 {
     public class Program
     {
-
         public const string TargetDirectory = "../../src/Raven.Studio/typings/server/";
         public static void Main(string[] args)
         {
@@ -281,6 +281,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(NextBackupOccurrence));
             scripter.AddType(typeof(OfflineMigrationConfiguration));
+            scripter.AddType(typeof(BackupProgress));
+            scripter.AddType(typeof(BackupDatabaseNowResult));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));
@@ -359,6 +361,12 @@ namespace TypingsGenerator
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
             scripter.AddType(typeof(MemoryStatsHandler.MemoryInfo));
+            
+            // counters
+            scripter.AddType(typeof(CounterBatch));
+            scripter.AddType(typeof(CountersDetail));
+            scripter.AddType(typeof(CounterDetail));
+            scripter.AddType(typeof(CounterOperationType));
 
             return scripter;
         }
