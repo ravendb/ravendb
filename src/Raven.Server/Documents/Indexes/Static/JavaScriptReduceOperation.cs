@@ -43,6 +43,9 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             JavaScriptReduceOperation _parent;
             ReduceKeyProcessor _xKey, _yKey;
+            private BlittableJsonReaderObject _lastUsedBlittable;
+            private BlittableJsonReaderObject _lastUsedBucket;
+
             public GroupBykeyComparer(JavaScriptReduceOperation parent)
             {
                 _parent = parent;
@@ -50,41 +53,62 @@ namespace Raven.Server.Documents.Indexes.Static
                 _yKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), CurrentIndexingScope.Current.UnmanagedBuffersPool);
                 _xKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _yKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
+                _lastUsedBlittable = null;
+                _lastUsedBucket = null;
             }
 
             public unsafe bool Equals(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
             {
-                _xKey.Reset();
-                _yKey.Reset();
+                var xCalCulated = ReferenceEquals(x, _lastUsedBucket);
+                //Only y is calculated, x is the value in the bucket
+                var yCalculated = ReferenceEquals(y, _lastUsedBlittable);
+                if(xCalCulated == false)
+                    _xKey.Reset();
+                if(yCalculated == false)
+                    _yKey.Reset();
+
                 foreach (var field in _parent._groupByFields)
                 {
-                    var xHasField = x.TryGet(field, out object xVal);
-                    var yHasField = y.TryGet(field, out object yVal);
-                    if (xHasField != yHasField)
-                        return false;
-                    _xKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, xVal);
-                    _yKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, yVal);
+                    bool xHasField = false;
+                    object xVal = null;
+                    if (xCalCulated == false)
+                        xHasField = x.TryGet(field, out xVal);
+                    object yVal = null;
+                    if (yCalculated == false && xCalCulated == false)
+                    {
+                        var yHasField = y.TryGet(field, out yVal);
+                        if (xHasField != yHasField)
+                            return false;
+                    }
+
+                    if (xCalCulated == false)
+                        _xKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, xVal);
+                    if (yCalculated == false)
+                        _yKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, yVal);
                 }
 
                 var xBuffer = _xKey.GetBuffer();
                 var yBuffer = _yKey.GetBuffer();
+                _lastUsedBucket = x;
                 if (xBuffer.Size != yBuffer.Size)
                     return false;
 
                 return Memory.Compare(xBuffer.Address, yBuffer.Address, xBuffer.Size) == 0;
 
-            }
+            }            
 
             public int GetHashCode(BlittableJsonReaderObject obj)
-            {
-                _xKey.Reset();
+            {                
+                _yKey.Reset();
                 foreach (var field in _parent._groupByFields)
                 {
                     var xHasField = obj.TryGet(field, out object xVal);
-                    _xKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, xVal);
+                    _yKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, xVal);
                 }
 
-                return (int)Hashing.Mix(_xKey.Hash);
+                _lastUsedBlittable = obj;
+
+                return (int)Hashing.Mix(_yKey.Hash);
             }
         }
 
@@ -128,10 +152,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupBykeyComparer(this));
         }
 
+        private PropertyDescriptor[] _lastUsedArray;
         private JsValue ConstructValues(List<BlittableJsonReaderObject> values)
         {
-            // TODO: cache the arrays?
-            var items = new PropertyDescriptor[values.Count];
+            PropertyDescriptor[] items;
+            if (_lastUsedArray != null && _lastUsedArray.Length == values.Count)
+                items = _lastUsedArray;
+            else
+            {
+                items = _lastUsedArray = new PropertyDescriptor[values.Count];
+            }
             for (int j = 0; j < values.Count; j++)
             {
                 var val = values[j];
@@ -155,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (index != -1)
                 {
                     BlittableJsonReaderObject.PropertyDetails prop = default;
-                    values[0].GetPropertyByIndex(index, ref prop, false);
+                    values[0].GetPropertyByIndex(index, ref prop, addObjectToCache: false);
                     result.Put("key", JsValue.FromObject(Engine, prop.Value), false);
                 }
             }
@@ -172,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (index != -1)
                     {
                         BlittableJsonReaderObject.PropertyDetails prop = default;
-                        values[0].GetPropertyByIndex(index, ref prop, false);
+                        values[0].GetPropertyByIndex(index, ref prop, addObjectToCache: false);
                         key.Put(_groupByFields[i], JsValue.FromObject(Engine, prop.Value), false);
                     }
                 }
