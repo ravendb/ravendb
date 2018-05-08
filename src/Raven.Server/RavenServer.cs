@@ -122,8 +122,6 @@ namespace Raven.Server
             try
             {
                 ServerStore.Initialize();
-
-                ServerStore.EnsureRegistrationOfCertificatesForTrustedIssuers(Certificate.Certificate);
             }
             catch (Exception e)
             {
@@ -1282,19 +1280,6 @@ namespace Raven.Server
             {
                 _httpsConnectionAdapter.SetCertificate(certificate);
                 ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
-
-                if (newCertHolder.CertificateForClients != null)
-                {
-                    try
-                    {
-                        CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(Convert.FromBase64String(newCertHolder.CertificateForClients)));
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Failed to register new certificate in the operating system", e);
-                    }
-                }
             }
         }
 
