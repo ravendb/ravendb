@@ -57,5 +57,17 @@ namespace Raven.Client.Documents.Session
             return GetAsync(document.Id, counters);
         }
 
+        public Task<Dictionary<string, long>> GetAsync(string documentId, params string[] counters)
+        {
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counters);
+        }
+
+        public Task<Dictionary<string, long>> GetAsync(object entity, params string[] counters)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            return GetAsync(document.Id, counters);
+        }
     }
 }

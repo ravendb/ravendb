@@ -55,5 +55,18 @@ namespace Raven.Client.Documents.Session
 
             return Get(document.Id, counters);
         }
+
+        public Dictionary<string, long> Get(string documentId, params string[] counters)
+        {
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).Get(documentId, counters);
+        }
+
+        public Dictionary<string, long> Get(object entity, params string[] counters)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            return Get(document.Id, counters);
+        }
     }
 }
