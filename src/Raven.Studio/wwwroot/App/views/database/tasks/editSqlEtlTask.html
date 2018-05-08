@@ -21,6 +21,22 @@
                                            placeholder="Enter a descriptive name for the SQL ETL task (optional)" data-bind="textInput: taskName">
                                 </div>
                             </div>
+                            <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="bg-info inline-block padding padding-xs small">
+                                        <i class="icon-info"></i>
+                                        Note: Database <strong data-bind="text: $root.activeDatabase().name"></strong> is encrypted
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                        <label  for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
+                                    </div>
+                                </div>
+                            </div>                            
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task">
