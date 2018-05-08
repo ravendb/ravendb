@@ -157,16 +157,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 switch (target)
                 {
                     case LazyStringValue lsv:                    
-                        return lsv.ToString();
+                        return lsv;
                     case LazyCompressedStringValue lcsv:
-                        return lcsv.ToString();
+                        return lcsv;
                     case LazyNumberValue lnv:
                         return lnv; //should be already blittable supported type.
                 }
                 ThrowInvalidObject(jsValue);
             }
             //Array is an object in Jint
-            if (jsValue.IsArray())
+            else if (jsValue.IsArray())
             {
                 var arr = jsValue.AsArray();
                 return EnumerateArray(arr);
