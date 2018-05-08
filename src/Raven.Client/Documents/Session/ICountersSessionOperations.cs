@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using Raven.Client.Documents.Operations.Counters;
 
 namespace Raven.Client.Documents.Session
 {
@@ -47,6 +46,20 @@ namespace Raven.Client.Documents.Session
         /// <param name="counters">counters names</param>
         /// </summary>
         Dictionary<string, long> Get(object entity, IEnumerable<string> counters);
+
+        /// <summary>
+        /// Returns CountersDetail on all the specified counters
+        /// <param name="documentId">the document which holds the counters</param>
+        /// <param name="counters">counters names</param>
+        /// </summary>
+        Dictionary<string, long> Get(string documentId, params string[] counters);
+
+        /// <summary>
+        /// Returns CountersDetail on all the specified counters
+        /// <param name="entity">instance of entity of the document which holds the counter</param>
+        /// <param name="counters">counters names</param>
+        /// </summary>
+        Dictionary<string, long> Get(object entity, params string[] counters);
 
     }
 }

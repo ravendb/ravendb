@@ -49,5 +49,19 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         Task<Dictionary<string, long>> GetAsync(object entity, IEnumerable<string> counters);
 
+        /// <summary>
+        /// Returns CountersDetail on all the specified counters
+        /// <param name="documentId">the document which holds the counters</param>
+        /// <param name="counters">counters names</param>
+        /// </summary>
+        Task<Dictionary<string, long>> GetAsync(string documentId, params string[] counters);
+
+        /// <summary>
+        /// Returns CountersDetail on all the specified counters
+        /// <param name="entity">instance of entity of the document which holds the counter</param>
+        /// <param name="counters">counters names</param>
+        /// </summary>
+        Task<Dictionary<string, long>> GetAsync(object entity, params string[] counters);
+
     }
 }

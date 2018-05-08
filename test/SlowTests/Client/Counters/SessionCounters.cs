@@ -113,8 +113,15 @@ namespace SlowTests.Client.Counters
                     Assert.Equal(1000, val);
                 }
 
+                using (var session = store.OpenSession())
+                {
+                    //test with Get(string docId, params string[] counters) overload
+                    var dic = session.Advanced.Counters.Get("users/1-A", "likes", "downloads");
 
-
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(500, dic["downloads"]);
+                }
             }
         }
 
@@ -144,6 +151,16 @@ namespace SlowTests.Client.Counters
 
                     var val = await session.Advanced.Counters.GetAsync("users/2-A", "votes");
                     Assert.Equal(1000, val);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //test with GetAsync(string docId, params string[] counters) overload
+                    var dic = await session.Advanced.Counters.GetAsync("users/1-A", "likes", "downloads");
+
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(500, dic["downloads"]);
                 }
             }
         }
