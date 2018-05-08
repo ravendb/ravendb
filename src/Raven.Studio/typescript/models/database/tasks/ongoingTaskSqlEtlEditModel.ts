@@ -6,6 +6,8 @@ import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskS
 class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
     
+    allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
+    
     parameterizedDeletes = ko.observable<boolean>(false);
     forceRecompileQuery = ko.observable<boolean>(false);
     tableQuotation = ko.observable<boolean>(false);
@@ -34,7 +36,8 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor,
             this.parameterizedDeletes,
             this.forceRecompileQuery,
-            this.tableQuotation
+            this.tableQuotation,
+            this.allowEtlOnNonEncryptedChannel
         ])
     }
     
@@ -94,7 +97,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             EtlType: "Sql",
             ConnectionStringName: this.connectionStringName(),
-            AllowEtlOnNonEncryptedChannel: false,
+            AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: false,                     
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined, 
             FactoryName: "System.Data.SqlClient",
