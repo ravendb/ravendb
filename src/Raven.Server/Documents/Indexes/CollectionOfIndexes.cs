@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfIndexes : IEnumerable<Index>
     {
-        private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(StringComparer.Ordinal);
         private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
 
         public void Add(Index index)
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void ReplaceIndex(string name, Index oldIndex, Index newIndex)
         {
-            Debug.Assert(oldIndex == null || string.Equals(name, oldIndex.Name, StringComparison.OrdinalIgnoreCase));
+            Debug.Assert(oldIndex == null || string.Equals(name, oldIndex.Name, StringComparison.Ordinal));
 
             _indexesByName.AddOrUpdate(name, newIndex, (key, oldValue) => newIndex);
             if (newIndex.Name != name)
