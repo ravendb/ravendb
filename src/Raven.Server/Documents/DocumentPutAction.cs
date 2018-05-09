@@ -11,9 +11,9 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Exceptions;
 using System.Linq;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions;
 using Sparrow;
 using static Raven.Server.Documents.DocumentsStorage;
 

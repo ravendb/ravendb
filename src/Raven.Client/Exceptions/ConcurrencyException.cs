@@ -46,5 +46,15 @@ namespace Raven.Client.Exceptions
         /// Actual Etag.
         /// </summary>
         public long ActualETag { get; set; }
+
+        /// <summary>
+        /// Expected Change Vector.
+        /// </summary>
+        public string ExpectedChangeVector { get; set; }
+
+        /// <summary>
+        /// Actual Change Vector.
+        /// </summary>
+        public string ActualChangeVector { get; set; }
     }
 }
