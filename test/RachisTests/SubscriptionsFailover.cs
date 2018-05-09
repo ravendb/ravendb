@@ -258,12 +258,15 @@ namespace RachisTests
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
         {
+
+            var uniqueRevisions = new HashSet<string>();
+            var uniqueDocs = new HashSet<string>();
+
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
 
             var defaultDatabase = "DistributedRevisionsSubscription";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
 
             using (var store = new DocumentStore
             {
@@ -326,9 +329,10 @@ namespace RachisTests
                             }
                             else if (x.Previous == null)
                             {
-
-                                docsCount++;
-                                revisionsCount++;
+                                if (uniqueDocs.Add(x.Current.Id))
+                                    docsCount++;
+                                if (uniqueRevisions.Add(x.Current.Name))
+                                    revisionsCount++;
                             }
                             else if (x.Current == null)
                             {
@@ -336,10 +340,10 @@ namespace RachisTests
                             }
                             else
                             {
-
                                 if (x.Current.Age > x.Previous.Age)
                                 {
-                                    revisionsCount++;
+                                    if (uniqueRevisions.Add(x.Current.Name))
+                                        revisionsCount++;
                                 }
                             }
 
@@ -356,23 +360,23 @@ namespace RachisTests
                 expectedRevisionsCount = nodesAmount + 2;
                 continueMre.Set();
 
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount}");
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (1st assert)");
                 ackSent.Reset(true);
 
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
                 continueMre.Set();
                 expectedRevisionsCount += 2;
+                
 
-
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount}");
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (2nd assert)");
                 ackSent.Reset(true);
                 continueMre.Set();
 
-
+                expectedRevisionsCount = (int)Math.Pow(nodesAmount, 2);
                 if (nodesAmount == 5)
                     await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
-                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
 
             }
         }
