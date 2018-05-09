@@ -18,10 +18,11 @@ using Raven.Server.Smuggler;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Exceptions;
 using Raven.Server.Documents.Replication;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions;
+using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -294,7 +295,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            private bool CanAvoidThrowingToMerger(ConcurrencyException e, int commandOffset)
+            private bool CanAvoidThrowingToMerger(Exception e, int commandOffset)
             {
                 // if a concurrency exception has been thrown, because the user passed a change vector,
                 // we need to check if we are on the very first command and can abort immediately without
@@ -466,7 +467,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 counterBatchCmd.Execute(context);
                             }
-                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
+                            catch (CounterDocumentMissingException e) when (CanAvoidThrowingToMerger(e, i))
                             {
                                 return 0;
                             }
