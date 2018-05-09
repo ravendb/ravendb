@@ -397,7 +397,9 @@ namespace Sparrow.LowMemory
                         continue; // we do not check swap file, only partitions
 
                     // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
-                    var disk = _regExRemoveNumbers.Replace(swaps[i].DeviceName, "").Replace("/dev/", "");
+                    var disk = swaps[i].DeviceName != null
+                        ? _regExRemoveNumbers.Replace(swaps[i].DeviceName, "").Replace("/dev/", "")
+                        : _regExRemoveNumbers.Replace("/dev/", "");
                     var filename = $"/sys/block/{disk}/queue/rotational";
                     var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
 
@@ -435,6 +437,7 @@ namespace Sparrow.LowMemory
             catch (Exception ex)
             {
                 Log.Info("Error while trying to determine if hdd swaps instead of ssd on linux, ignoring this check and assuming no hddswap", ex);
+                // ignore
                 return null;
             }
         }
