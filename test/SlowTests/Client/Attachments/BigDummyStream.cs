@@ -17,13 +17,12 @@ namespace SlowTests.Client.Attachments
         {
             for (int i = offset; i < count; i++)
             {
-                buffer[i] = (byte)Position;
-                if (Position++ > _size)
+                if (Position == _size)
                 {
-                    Position--;
                     return i - offset;
                 }
-
+                buffer[i] = (byte)(Position++);
+                
             }
             return count;
         }
@@ -32,12 +31,9 @@ namespace SlowTests.Client.Attachments
         {
             for (int i = offset; i < count; i++)
             {
-                Assert.Equal(buffer[i], (byte)Position);
-                if (Position++ > _size)
-                {
-                    Position--;
+                if (Position == _size)
                     return;
-                }
+                Assert.Equal(buffer[i], (byte)(Position++));
             }
         }
 
