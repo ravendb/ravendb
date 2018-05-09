@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                 {
                     handler.Execute(db.Name, new Exception("Catastrophic"), environmentId);
 
-                    failureStats = handler.GetStats(environmentId);
+                    handler.TryGetStats(environmentId, out failureStats);
 
                     Assert.True(failureStats.WillUnloadDatabase);
 
@@ -45,7 +45,7 @@ namespace SlowTests.Issues
 
                 handler.Execute(db.Name, new Exception("Catastrophic"), Guid.Empty);
 
-                failureStats = handler.GetStats(environmentId);
+                handler.TryGetStats(environmentId, out failureStats);
 
                 Assert.False(failureStats.WillUnloadDatabase);
 
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                 handler.Execute(db.Name, new Exception("Catastrophic"), environmentId);
 
-                failureStats = handler.GetStats(environmentId);
+                handler.TryGetStats(environmentId, out failureStats);
 
                 Assert.True(failureStats.WillUnloadDatabase);
                 Assert.True(failureStats.DatabaseUnloadTask.Wait(TimeSpan.FromSeconds(30)));
