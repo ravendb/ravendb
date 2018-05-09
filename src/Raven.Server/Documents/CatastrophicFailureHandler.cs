@@ -27,9 +27,12 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<CatastrophicFailureHandler>("Raven/Server");
         }
 
-        public FailureStats GetStats(Guid environmentId)
+        public bool TryGetStats(Guid environmentId, out FailureStats stats)
         {
-            return _errorsPerEnvironment[environmentId];
+            if (_errorsPerEnvironment.TryGetValue(environmentId, out stats))
+                return true;
+
+            return false;
         }
 
         public void Execute(string databaseName, Exception e, Guid environmentId)

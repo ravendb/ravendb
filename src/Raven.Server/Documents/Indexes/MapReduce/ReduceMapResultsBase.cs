@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
@@ -42,6 +43,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private IndexingStatsScope _nestedValuesReductionStatsInstance;
         private readonly TreeReductionStats _treeReductionStats = new TreeReductionStats();
         private readonly NestedValuesReductionStats _nestedValuesReductionStats = new NestedValuesReductionStats();
+        private readonly Func<bool> _isStaleBecauseOfRunningReduction = () => true;
 
         protected ReduceMapResultsBase(Index index, T indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
         {
@@ -186,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 _index.ErrorIndexIfCriticalException(e);
 
-                LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
+                HandleReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
         }
 
@@ -205,6 +207,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var page = new TreePage(null, Constants.Storage.PageSize);
 
             HashSet<long> compressedEmptyLeafs = null;
+
+            Dictionary<long, Exception> failedAggregatedLeafs = null;
 
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {
@@ -290,9 +294,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e) when (e is OperationCanceledException == false)
                     {
+                        if (failedAggregatedLeafs == null)
+                            failedAggregatedLeafs = new Dictionary<long, Exception>();
+
+                        failedAggregatedLeafs.Add(leafPage.PageNumber, e);
+
                         _index.ErrorIndexIfCriticalException(e);
 
-                        LogReductionError(e, reduceKeyHash, stats, updateStats: parentPage == -1, page: leafPage);
+                        HandleReductionError(e, reduceKeyHash, stats, updateStats: parentPage == -1, page: leafPage);
                     }
                 }
             }
@@ -329,7 +338,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         var parentPage = tree.GetParentPageOf(page);
 
-                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, compressedEmptyLeafs, token))
+                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, token))
                         {
                             if (parentPage == -1)
                             {
@@ -356,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         _index.ErrorIndexIfCriticalException(e);
 
-                        LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: page);
+                        HandleReductionError(e, reduceKeyHash, stats, updateStats: true, page: page);
                     }
                     finally
                     {
@@ -420,6 +429,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             TransactionOperationContext indexContext,
             HashSet<long> remainingBranchesToAggregate,
             HashSet<long> compressedEmptyLeafs,
+            Dictionary<long, Exception> failedAggregatedLeafs,
             CancellationToken token)
         {
             using (_treeReductionStats.BranchAggregation.Start())
@@ -432,7 +442,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (table.ReadByKey(childPageNumberSlice, out TableValueReader tvr) == false)
                         {
-                            if (TryAggregateChildPageOrThrow(pageNumber, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
+                            if (TryAggregateChildPageOrThrow(pageNumber, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, token))
                             {
                                 table.ReadByKey(childPageNumberSlice, out tvr);
                             }
@@ -497,6 +507,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private bool TryAggregateChildPageOrThrow(long pageNumber, Table table, TransactionOperationContext indexContext,
             HashSet<long> remainingBranchesToAggregate,
             HashSet<long> compressedEmptyLeafs,
+            Dictionary<long, Exception> failedAggregatatedLeafs,
             CancellationToken token)
         {
             if (remainingBranchesToAggregate.Contains(pageNumber))
@@ -509,7 +520,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     var page = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
                     var unaggregatedBranch = new TreePage(page.Pointer, Constants.Storage.PageSize);
 
-                    using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, token))
+                    using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs,
+                        failedAggregatatedLeafs, token))
                     {
                         StoreAggregationResult(unaggregatedBranch, table, result);
                     }
@@ -531,8 +543,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var relatedPage = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
             var relatedTreePage = new TreePage(relatedPage.Pointer, Constants.Storage.PageSize);
+            
+            var message = $"Couldn't find a pre-computed aggregation result for the existing page: {relatedTreePage}.";
 
-            throw new InvalidOperationException($"Couldn't find pre-computed results for existing page: {relatedTreePage}");
+            if (failedAggregatatedLeafs != null && failedAggregatatedLeafs.TryGetValue(pageNumber, out var exception))
+            {
+                message += $" The aggregation of this leaf (#{pageNumber}) has failed so the relevant result doesn't exist. " +
+                           "Check the inner exception for leaf aggregation error details";
+
+                throw new AggregationResultNotFoundException(message, exception);
+            }
+
+            throw new AggregationResultNotFoundException(message);
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);
@@ -562,7 +584,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
         }
 
-        private void LogReductionError(Exception error, LazyStringValue reduceKeyHash, IndexingStatsScope stats, bool updateStats, TreePage page,
+        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, IndexingStatsScope stats, bool updateStats, TreePage page,
             int numberOfNestedValues = -1)
         {
             var builder = new StringBuilder("Failed to execute reduce function on ");
@@ -585,20 +607,37 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             if (_logger.IsInfoEnabled)
                 _logger.Info(message, error);
-
+            
             if (updateStats)
             {
-                var errorCount = page?.NumberOfEntries ?? numberOfNestedValues;
+                var numberOfEntries = page?.NumberOfEntries ?? numberOfNestedValues;
 
-                Debug.Assert(errorCount != -1);
+                Debug.Assert(numberOfEntries != -1);
 
                 // we'll only want to record exceptions on some of these, to give the 
                 // user information about what is going on, otherwise we'll have to wait a lot if we 
                 // are processing a big batch, and this can be a perf killer. See: RavenDB-11038
-                var totalErrors = stats.RecordReduceErrors(errorCount);
-                if (totalErrors < 100)
+                
+                stats.RecordReduceErrors(numberOfEntries);
+                
+                if (stats.NumberOfKeptReduceErrors < IndexStorage.MaxNumberOfKeptErrors)
                 {
                     stats.AddReduceError(message + $" Exception: {error}");
+                }
+
+                var failureInfo = new IndexFailureInformation
+                {
+                    Name = _index.Name,
+                    MapErrors = stats.MapErrors,
+                    MapAttempts = stats.MapAttempts,
+                    ReduceErrors = stats.ReduceErrors,
+                    ReduceAttempts = stats.ReduceAttempts
+                };
+                
+                if (failureInfo.IsInvalidIndex(_isStaleBecauseOfRunningReduction))
+                {
+                    throw new ExcessiveNumberOfReduceErrorsException("Excessive number of errors during the reduce phase for the current batch. Failure info: " +
+                                                                     failureInfo.GetErrorMessage());
                 }
             }
         }
