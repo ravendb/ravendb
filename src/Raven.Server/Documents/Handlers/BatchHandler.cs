@@ -18,9 +18,9 @@ using Raven.Server.Smuggler;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Exceptions;
 using Raven.Server.Documents.Replication;
 using System.Runtime.ExceptionServices;
+using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
 {

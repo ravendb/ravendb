@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Jint.Native;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Patch
 {

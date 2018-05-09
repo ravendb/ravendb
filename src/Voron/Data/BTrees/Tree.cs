@@ -408,7 +408,7 @@ namespace Voron.Data.BTrees
 
         private static void ThrowConcurrencyException()
         {
-            throw new ConcurrencyException("Value already exists, but requested NewOnly");
+            throw new VoronErrorException("Value already exists, but requested NewOnly");
         }
 
         public struct DirectAddScope : IDisposable
