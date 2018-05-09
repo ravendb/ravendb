@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Commands.Batches
             {
                 [nameof(Id)] = Id,
                 [nameof(Index)] = Index,
-                [nameof(Type)] = Type.ToString(),
+                [nameof(Type)] = nameof(CommandType.CompareExchangeDELETE),
             };
         }
     }

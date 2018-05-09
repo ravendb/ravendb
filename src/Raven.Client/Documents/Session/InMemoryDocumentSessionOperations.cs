@@ -68,9 +68,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected internal readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
-        protected internal Dictionary<string, (object Item, long Index)> StoreCompareExchange;
-        protected internal Dictionary<string, long> DeleteCompareExchange;
-
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
@@ -209,7 +206,7 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false, DocumentStore.LastTransactionIndex);
+            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.LastTransactionIndex);
             TransactionMode = options.TransactionMode;
         }
 
@@ -741,7 +738,7 @@ more responsive application.
 
             PrepareCompareExchangeEntities(result);
 
-            if(DeferredCommands.Count > 0)
+            if (DeferredCommands.Count > 0)
             {
                 // this allow OnBeforeStore to call Defer during the call to include
                 // additional values during the same SaveChanges call
@@ -786,27 +783,35 @@ more responsive application.
 
             var prefix = DatabaseName + "/";
 
-            if (StoreCompareExchange != null)
+            ClusterTransactionSessionBase clusterTransactionSession = GetClusterSession();
+
+            if (clusterTransactionSession == null)
+                return;
+
+            if (clusterTransactionSession.StoreCompareExchange != null)
             {
-                foreach (var entity in StoreCompareExchange)
+                foreach (var item in clusterTransactionSession.StoreCompareExchange)
                 {
                     var tuple = new Dictionary<string, object>
                     {
-                        ["Object"] = entity.Value.Item
+                        ["Object"] = item.Value.Entity
                     };
                     var blittable = EntityToBlittable.ConvertEntityToBlittable(tuple, Conventions, Context);
-                    result.SessionCommands.Add(new PutCompareExchangeCommandData(prefix + entity.Key, blittable, entity.Value.Index));
+                    result.SessionCommands.Add(new PutCompareExchangeCommandData(prefix + item.Key, blittable, item.Value.Index));
                 }
             }
 
-            if (DeleteCompareExchange != null)
+            if (clusterTransactionSession.DeleteCompareExchange != null)
             {
-                foreach (var item in DeleteCompareExchange)
+                foreach (var item in clusterTransactionSession.DeleteCompareExchange)
                 {
                     result.SessionCommands.Add(new DeleteCompareExchangeCommandData(prefix + item.Key, item.Value));
                 }
             }
+            clusterTransactionSession.Clear();
         }
+
+        protected abstract ClusterTransactionSessionBase GetClusterSession();
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {

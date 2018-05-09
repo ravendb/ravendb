@@ -21,9 +21,14 @@ using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Json;
-using Raven.Server.Json;using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Json;
+using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions.Documents;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
+using Voron;
+
 namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
@@ -51,24 +56,20 @@ namespace Raven.Server.Documents.Handlers
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
                 var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
-               
+
                 if (command.IsClusterTransaction)
                 {
-                    var options = new ClusterTransactionCommand.ClusterTransactionOptions
+                    using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
-                        WaitForIndexesTimeout = waitForIndexesTimeout,
-                        WaitForIndexThrow = waitForIndexThrow,
-                        SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
-                    };
-                    var result = await HandleClusterTransaction(ContextPool, command, options);
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
+                        // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
+                        // Because in any case the user will get a raft index to wait upon on his next request.
+                        var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId)
                         {
-                            [nameof(BatchCommandResult.Results)] = result.Reply,
-                            [nameof(BatchCommandResult.TransactionIndex)] = result.Index
-                        });
+                            WaitForIndexesTimeout = waitForIndexesTimeout,
+                            WaitForIndexThrow = waitForIndexThrow,
+                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
+                        };
+                        await HandleClusterTransaction(context, command, options);
                     }
                     return;
                 }
@@ -116,87 +117,53 @@ namespace Raven.Server.Documents.Handlers
         public class ClusterTransactionCompletionResult
         {
             public Task IndexTask;
-            public bool Skipped;
             public DynamicJsonArray Array;
         }
 
-        private async Task<(DynamicJsonArray Reply, long Index)> HandleClusterTransaction(DocumentsContextPool pool, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
+        private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
-            var clusterTransactionCommand =
-                new ClusterTransactionCommand(Database.Name, command.ParsedCommands, options);
-            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, command.ParsedCommands, options);
+            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand); 
+
             if (result.Result is List<string> errors)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                 throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
             }
 
-            var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResult(result.Index, HttpContext.RequestAborted);
-            if (reply.Skipped)
+            // wait for the command to be applied on this node.
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index); 
+
+            var array = new DynamicJsonArray();
+            if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-                using (pool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
+                if (reply.IndexTask != null)
                 {
-                    foreach (var databaseCommands in clusterTransactionCommand.DatabaseCommands)
-                    {
-                        var tuple = Database.DocumentsStorage.GetDocumentOrTombstone(context, databaseCommands.Id, false);
-                        var document = tuple.Document;
-                        var tombstone = tuple.Tombstone;
-
-                        if (document != null)
-                        {
-                            var putReply = new DynamicJsonValue
-                            {
-                                ["Type"] = databaseCommands.Type,
-                                [Constants.Documents.Metadata.Id] = document.Id,
-                                [Constants.Documents.Metadata.Collection] = Database.DocumentsStorage.ExtractCollectionName(context, document.Data).Name,
-                                [Constants.Documents.Metadata.ChangeVector] = document.ChangeVector,
-                                [Constants.Documents.Metadata.LastModified] = document.LastModified
-                            };
-
-                            if (document.Flags != DocumentFlags.None)
-                                putReply[Constants.Documents.Metadata.Flags] = document.Flags;
-
-                            reply.Array.Add(putReply);
-                            continue;
-                        }
-
-                        if (tombstone != null)
-                        {
-                            reply.Array.Add(new DynamicJsonValue
-                            {
-                                [nameof(BatchRequestParser.CommandData.Id)] = databaseCommands.Id,
-                                [nameof(BatchRequestParser.CommandData.Type)] = databaseCommands.Type,
-                                ["Deleted"] = true
-                            });
-                            continue;
-                        }
-
-                        reply.Array.Add(new DynamicJsonValue
-                        {
-                            [nameof(BatchRequestParser.CommandData.Id)] = databaseCommands.Id,
-                            [nameof(BatchRequestParser.CommandData.Type)] = databaseCommands.Type,
-                            ["Deleted"] = false
-                        });
-                    }
+                    await reply.IndexTask;
                 }
+
+                array = reply.Array;
             }
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
             {
-                reply.Array.Add(new DynamicJsonValue
+                array.Add(new DynamicJsonValue
                 {
                     ["Type"] = clusterCommands.Type,
-                    ["Key"] = clusterCommands.Key,
+                    ["Key"] = clusterCommands.Id,
                     ["Index"] = result.Index
                 });
             }
 
-            if (reply.IndexTask != null)
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                await reply.IndexTask;
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(BatchCommandResult.Results)] = array,
+                    [nameof(BatchCommandResult.TransactionIndex)] = result.Index
+                });
             }
-           
-            return (reply.Array , result.Index);
         }
 
         private static void ThrowNotSupportedType(string contentType)
@@ -242,7 +209,7 @@ namespace Raven.Server.Documents.Handlers
         public static async Task WaitForReplicationAsync(DocumentDatabase database, TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
         {
             int numberOfReplicasToWaitFor;
-            
+
             if (numberOfReplicasStr == "majority")
             {
                 numberOfReplicasToWaitFor = database.ReplicationLoader.GetSizeOfMajority();
@@ -263,12 +230,12 @@ namespace Raven.Server.Documents.Handlers
                 var message = $"Could not verify that etag {lastChangeVector} was replicated " +
                               $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
                               $"So far, it only replicated to {replicatedPast}";
-                
+
                 throw new TimeoutException(message);
             }
         }
 
-        public static async Task WaitForIndexesAsync(DocumentsContextPool contextPool, DocumentDatabase database, TimeSpan timeout, 
+        public static async Task WaitForIndexesAsync(DocumentsContextPool contextPool, DocumentDatabase database, TimeSpan timeout,
             List<string> specifiedIndexesQueryString, bool throwOnTimeout,
             string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
         {
@@ -365,7 +332,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         indexesToCheck.Add(index);
                     }
-                        
+
                 }
             }
             return indexesToCheck;
@@ -409,108 +376,185 @@ namespace Raven.Server.Documents.Handlers
 
             protected void AddDeleteResult(DocumentsStorage.DeleteOperationResult? deleted, string id)
             {
+                var reply = new DynamicJsonValue
+                {
+                    [nameof(BatchRequestParser.CommandData.Id)] = id,
+                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
+                    ["Deleted"] = deleted != null
+                };
+
                 if (deleted != null)
                 {
                     LastTombstoneEtag = deleted.Value.Etag;
                     ModifiedCollections?.Add(deleted.Value.Collection.Name);
+                    reply[nameof(BatchRequestParser.CommandData.ChangeVector)] = deleted.Value.ChangeVector;
+                }
+
+                Reply.Add(reply);
+            }
+
+            protected void DeleteWithPrefix(DocumentsOperationContext context, string id)
+            {
+                var deleteResults = Database.DocumentsStorage.DeleteDocumentsStartingWith(context, id);
+
+                var deleted = deleteResults.Count > 0;
+                if (deleted)
+                {
+                    LastChangeVector = deleteResults[deleteResults.Count - 1].ChangeVector;
+                    for (var j = 0; j < deleteResults.Count; j++)
+                    {
+                        ModifiedCollections?.Add(deleteResults[j].Collection.Name);
+                    }
                 }
 
                 Reply.Add(new DynamicJsonValue
                 {
                     [nameof(BatchRequestParser.CommandData.Id)] = id,
                     [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
-                    ["Deleted"] = deleted != null
+                    ["Deleted"] = deleted
                 });
             }
         }
 
         public class ClusterTransactionMergedCommand : TranscationMergedCommand
         {
-            private readonly TransactionOperationContext _serverContext;
-            private readonly long _index;
-            public bool Skipped { get; private set; }
-            public ClusterTransactionCommand.ClusterTransactionOptions Options { get; private set; }
+            private readonly BlittableJsonReaderArray _commands;
+            private long _count;
+            public ClusterTransactionCommand.ClusterTransactionOptions Options { get; }
 
-            public ClusterTransactionMergedCommand(DocumentDatabase database, TransactionOperationContext serverContext, long index) : base(database)
+            public ClusterTransactionMergedCommand(DocumentDatabase database, ClusterTransactionCommand.SingleClusterDatabaseCommand command) : base(database)
             {
-                _serverContext = serverContext;
-                _index = index;
+                _commands = command.Commands;
+                _count = command.PreviousCount;
+                Options = command.Options;
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
                 var global = DocumentsStorage.GetDatabaseChangeVector(context);
                 var clusterId = Database.ServerStore.Engine.ClusterBase64Id;
-                var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, clusterId);
+                var current = ChangeVectorUtils.GetEtagById(global, clusterId);
 
-                // Check if we already have the documents of this cluster transaction.
-                if (currentRaftIndex >= _index)
+                if (Options.WaitForIndexesTimeout != null)
                 {
-                    Skipped = true;
-                    return 0;
+                    ModifiedCollections = new HashSet<string>();
                 }
 
-                using (_serverContext.OpenReadTransaction())
+                if (_commands != null)
                 {
-                    var first = Math.Max(ClusterTransactionCommand.ReadFirstIndex(_serverContext, Database.Name), currentRaftIndex + 1);
-
-                    for (var i = first; i <= _index; i++)
+                    foreach (BlittableJsonReaderObject blittableCommand in _commands)
                     {
-                        var changeVectorElement = $"RAFT:{i}-{clusterId}";
-                        var command = ClusterTransactionCommand.ReadCommandsBatch(_serverContext, Database.Name, i);
+                        _count++;
+                        var changeVector = $"RAFT:{_count}-{clusterId}";
+                        var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
-                        if (command.Commands == null)
+                        switch (cmd.Type)
                         {
-                            continue;
-                        }
-
-                        Options = command.Options;
-                        if (Options?.WaitForIndexesTimeout.HasValue == true)
-                        {
-                            // overwrite the existing one.
-                            ModifiedCollections = new HashSet<string>();
-                        }
-
-                        foreach (BlittableJsonReaderObject blittableCommand in command.Commands)
-                        {
-                            var docCommand = JsonDeserializationServer.DocumentCommand(blittableCommand);
-                            var cmd = new BatchRequestParser.CommandData
-                            {
-                                Id = docCommand.Id,
-                                Type = docCommand.Type,
-                                Document = docCommand.Document.Clone(context)
-                            };
-
-                            switch (cmd.Type)
-                            {
-                                case CommandType.PUT:
-                                    var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, changeVectorElement: changeVectorElement);
+                            case CommandType.PUT:
+                                if (current < _count)
+                                {
+                                    var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector, forceChangeVector: true);
                                     context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                     AddPutResult(putResult);
-                                    break;
-                                case CommandType.DELETE:
-                                    var deleteResult = Database.DocumentsStorage.Delete(context, cmd.Id, null, changeVectorElement: changeVectorElement);
-                                    AddDeleteResult(deleteResult, cmd.Id);
-                                    break;
-                                default:
-                                    throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
-                            }
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
+                                        var collection = GetCollection(context, item);
+                                        AddPutResult(new DocumentsStorage.PutOperationResults
+                                        {
+                                            ChangeVector = changeVector,
+                                            Id = cmd.Id,
+                                            Flags = item.Document?.Flags ?? item.Tombstone.Flags,
+                                            LastModified = item.Document?.LastModified ?? item.Tombstone.LastModified,
+                                            Collection = collection
+                                        });
+                                    }
+                                    catch (DocumentConflictException)
+                                    {
+                                        AddPutResult(new DocumentsStorage.PutOperationResults
+                                        {
+                                            ChangeVector = changeVector,
+                                            Id = cmd.Id,
+                                            Collection = GetFirstConflictCollection(context, cmd)
+                                        });
+                                    }
+                                }
+                                
+                                break;
+                            case CommandType.DELETE:
+                                if (current < _count)
+                                {
+                                    if (cmd.IdPrefixed == false)
+                                    {
+                                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                        {
+                                            var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: changeVector);
+                                            AddDeleteResult(deleteResult, cmd.Id);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        DeleteWithPrefix(context, cmd.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
+                                        var collection = GetCollection(context, item);
+                                        AddDeleteResult(new DocumentsStorage.DeleteOperationResult
+                                        {
+                                            ChangeVector = changeVector,
+                                            Collection = collection
+                                        }, cmd.Id);
+                                    }
+                                    catch (DocumentConflictException)
+                                    {
+                                        AddDeleteResult(new DocumentsStorage.DeleteOperationResult
+                                        {
+                                            ChangeVector = changeVector,
+                                            Collection = GetFirstConflictCollection(context, cmd)
+                                        }, cmd.Id);
+                                    }
+                                }
+                                break;
+                            default:
+                                throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
                         }
                     }
+                }
 
-                    if (context.LastDatabaseChangeVector == null)
-                    {
-                        context.LastDatabaseChangeVector = global;
-                    }
+                if (context.LastDatabaseChangeVector == null)
+                {
+                    context.LastDatabaseChangeVector = global;
+                }
 
-                    var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", clusterId, _index, context.LastDatabaseChangeVector);
-                    if (result.IsValid)
-                    {
-                        context.LastDatabaseChangeVector = result.ChangeVector;
-                    }
+                var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", clusterId, _count, context.LastDatabaseChangeVector);
+                if (result.IsValid)
+                {
+                    context.LastDatabaseChangeVector = result.ChangeVector;
                 }
 
                 return Reply.Count;
+            }
+
+            private CollectionName GetCollection(DocumentsOperationContext context, DocumentsStorage.DocumentOrTombstone item)
+            {
+                return item.Document != null
+                    ? Database.DocumentsStorage.ExtractCollectionName(context, item.Document.Data)
+                    : Database.DocumentsStorage.ExtractCollectionName(context, item.Tombstone.Collection);
+            }
+
+            private CollectionName GetFirstConflictCollection(DocumentsOperationContext context, ClusterTransactionCommand.ClusterTransactionDataCommand cmd)
+            {
+                var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, cmd.Id);
+                if (conflicts.Count == 0)
+                    return null;
+                return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
         }
 
@@ -519,7 +563,7 @@ namespace Raven.Server.Documents.Handlers
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
             public Queue<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
-          
+
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             public ExceptionDispatchInfo ExceptionDispatchInfo;
@@ -529,7 +573,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 set
                 {
-                    if(_isClusterTransaction)
+                    if (_isClusterTransaction)
                         return;
                     _isClusterTransaction = value;
                 }
@@ -573,14 +617,15 @@ namespace Raven.Server.Documents.Handlers
 
                 return false;
             }
-            
+
             public override int Execute(DocumentsOperationContext context)
             {
                 if (IsClusterTransaction)
                     return 0;// should never happened
 
                 _disposables.Clear();
-var counterBatch = new CounterBatch();                for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
+                var counterBatch = new CounterBatch();
+                for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
                     var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
 
@@ -644,20 +689,7 @@ var counterBatch = new CounterBatch();                for (int i = ParsedCommand
                             }
                             else
                             {
-                                var deleteResults = Database.DocumentsStorage.DeleteDocumentsStartingWith(context, cmd.Id);
-
-                                for (var j = 0; j < deleteResults.Count; j++)
-                                {
-                                    LastChangeVector = deleteResults[j].ChangeVector;
-                                    ModifiedCollections?.Add(deleteResults[j].Collection.Name);
-                                }
-
-                                Reply.Add(new DynamicJsonValue
-                                {
-                                    [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
-                                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
-                                    ["Deleted"] = deleteResults.Count > 0
-                                });
+                                DeleteWithPrefix(context, cmd.Id);
                             }
                             break;
                         case CommandType.AttachmentPUT:
@@ -738,7 +770,7 @@ var counterBatch = new CounterBatch();                for (int i = ParsedCommand
                 }
                 return Reply.Count;
             }
-            
+
             public void Dispose()
             {
                 if (ParsedCommands.Count == 0)
@@ -765,7 +797,7 @@ var counterBatch = new CounterBatch();                for (int i = ParsedCommand
                 public string Hash;
                 public Stream Stream;
             }
-            
+
         }
 
         private class WaitForIndexItem

@@ -15,7 +15,8 @@ namespace Raven.Server.Utils
     {
         Update,
         Conflict,
-        AlreadyMerged
+        AlreadyMerged,
+        ClusterConflict
     }
 
     public static class ChangeVectorUtils
@@ -80,7 +81,7 @@ namespace Raven.Server.Utils
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
 
-        public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, string priority)
+        public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, string priority, bool clusterAutoResolve = true)
         {
             if (remoteAsString == localAsString)
                 return ConflictStatus.AlreadyMerged;
@@ -121,7 +122,7 @@ namespace Raven.Server.Utils
 
                         if (remote[i].Etag > local[j].Etag)
                         {
-                            if (isPriority)
+                            if (isPriority && clusterAutoResolve)
                                 return ConflictStatus.Update;
 
                             remoteHasLargerEntries = true;
@@ -138,7 +139,7 @@ namespace Raven.Server.Utils
                 }
                 if (found == false)
                 {
-                    if (isPriority)
+                    if (isPriority && clusterAutoResolve)
                         return ConflictStatus.Update;
 
                     remoteHasLargerEntries = true;
@@ -328,6 +329,9 @@ namespace Raven.Server.Utils
 
         public static long GetEtagById(string changeVector, string id)
         {
+            if (changeVector == null)
+                return 0;
+
             var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
             if (index == -1)
                 return 0;

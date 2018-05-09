@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         /// Once TransactionMode set 'ClusterWide' it  will perform the SaveChanges as a transactional cluster wide operation.
-        /// Any document load / store / delete will be part of this session's cluster transaction.
+        /// Any document store or delete will be part of this session's cluster transaction.
         /// </summary>
         public TransactionMode TransactionMode { get; set; }
     }

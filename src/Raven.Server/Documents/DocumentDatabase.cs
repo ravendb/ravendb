@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -53,73 +52,6 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
 {
-    public class WaitForClusterTransactionToFinish
-    {
-        private TaskCompletionSource<object> _indexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly ConcurrentDictionary<long, object> _results = new ConcurrentDictionary<long, object>();
-        private long _lastIndex;
-        public long LastCompletedIndex => _lastIndex;
-        private long _lastCleanedIndex;
-
-        public WaitForClusterTransactionToFinish(long initialIndex)
-        {
-            _lastIndex = initialIndex;
-        }
-
-        public void SetResult(long index, object result)
-        {
-            if (_results.TryAdd(index, result) == false)
-                return;
-
-            ClusterStateMachine.InterlockedExchangeMax(ref _lastIndex, index);
-
-            var old = Interlocked.Exchange(ref _indexChanged, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
-            old.SetResult(null);
-        }
-
-        public async Task<object> WaitForResult(long index, CancellationToken token = default)
-        {
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
-                var tcs = _indexChanged;
-                if (_results.TryGetValue(index, out var value))
-                    return value;
-                await tcs.Task.WithCancellation(token);
-            }
-        }
-
-        public async Task WaitForCompletion(long index, CancellationToken token = default)
-        {
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
-                var tcs = _indexChanged;
-                if (Interlocked.Read(ref _lastIndex) >= index)
-                    return;
-                await tcs.Task.WithCancellation(token);
-            }
-        }
-
-        public void SetException(Exception e)
-        {
-            var old = Interlocked.Exchange(ref _indexChanged, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
-            old.SetException(e);
-        }
-
-        public void CleanUp(long recordTrunctedClusterIndex)
-        {
-            if (ClusterStateMachine.InterlockedExchangeMax(ref _lastCleanedIndex, recordTrunctedClusterIndex))
-            { 
-                foreach (var index in _results.Keys)
-                {
-                    if (index <= recordTrunctedClusterIndex)
-                        _results.TryRemove(index, out var _);
-                }
-            }
-        }
-    } 
-
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
@@ -139,7 +71,7 @@ namespace Raven.Server.Documents
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
 
-        public readonly WaitForClusterTransactionToFinish ClusterTransactionWaiter;
+        public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
         public void ResetIdleTime()
         {
@@ -173,10 +105,8 @@ namespace Raven.Server.Documents
                         if (databaseRecord.Encrypted == false && MasterKey != null)
                             throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                     }
-
-                    ClusterTransactionWaiter = new WaitForClusterTransactionToFinish(_serverStore.Engine.GetLastCommitIndex(ctx));
                 }
-
+                ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
@@ -792,8 +722,6 @@ namespace Raven.Server.Documents
 
                 ClientConfiguration = record.Client;
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
-
-                ClusterTransactionWaiter.CleanUp(record.TrunctedClusterTransactionIndex);
 
                 NotifyFeaturesAboutStateChange(record, index);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);

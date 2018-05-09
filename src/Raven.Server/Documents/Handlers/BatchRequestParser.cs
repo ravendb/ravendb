@@ -10,7 +10,9 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;using Raven.Client.Documents.Operations.Counters;using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -46,7 +48,6 @@ namespace Raven.Server.Documents.Handlers
             public DocumentCountersOperation Counters;
 
             #endregion
-
         }
 
 
@@ -186,7 +187,7 @@ namespace Raven.Server.Documents.Handlers
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
 
-                return GetStringPropertyValue(state) == TransactionMode.ClusterWide.ToString();
+                return GetStringPropertyValue(state) == nameof(TransactionMode.ClusterWide);
             }
 
             return false;
@@ -414,8 +415,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             ThrowUnexpectedToken(JsonParserToken.True, state);
                         }
-
-                        commandData.Index = GetLongFromStringBuffer(state);
+                        commandData.Index = state.Long;
 
                         break;
                     case CommandPropertyName.IdPrefixed:

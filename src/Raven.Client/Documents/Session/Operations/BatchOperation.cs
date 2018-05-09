@@ -38,8 +38,6 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void SetResult(BatchCommandResult result)
         {
-            _session.DocumentStore.LastTransactionIndex = result.TransactionIndex;
-
             if (result.Results == null) //precaution
             {
                 ThrowOnNullResults();

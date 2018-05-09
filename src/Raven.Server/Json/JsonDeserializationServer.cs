@@ -148,7 +148,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ClusterTopologyChanged> ClusterTopologyChanged = GenerateJsonDeserializationRoutine<ClusterTopologyChanged>();
 
-        public static readonly Func<BlittableJsonReaderObject, ClusterTransactionCommand.DocumentCommand> DocumentCommand = GenerateJsonDeserializationRoutine<ClusterTransactionCommand.DocumentCommand>();
+        public static readonly Func<BlittableJsonReaderObject, ClusterTransactionCommand.ClusterTransactionDataCommand> ClusterTransactionDataCommand = GenerateJsonDeserializationRoutine<ClusterTransactionCommand.ClusterTransactionDataCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, ClusterTransactionCommand.ClusterTransactionOptions> ClusterTransactionOptions = GenerateJsonDeserializationRoutine<ClusterTransactionCommand.ClusterTransactionOptions>();
 

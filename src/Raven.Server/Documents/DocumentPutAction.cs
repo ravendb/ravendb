@@ -38,7 +38,7 @@ namespace Raven.Server.Documents
             string changeVector = null,
             DocumentFlags flags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, 
-            string changeVectorElement = null)
+            bool forceChangeVector = false)
         {
             if (context.Transaction == null)
             {
@@ -116,10 +116,14 @@ namespace Raven.Server.Documents
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
-                if (string.IsNullOrEmpty(result.ChangeVector))
-                    ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
+                if (forceChangeVector == false)
+                {
+                    if (string.IsNullOrEmpty(result.ChangeVector))
+                        ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
 
-                changeVector = ChangeVectorUtils.MergeVectors(changeVectorElement, result.ChangeVector);
+                    changeVector = result.ChangeVector;
+                }
+
                 nonPersistentFlags |= result.NonPersistentFlags;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 {

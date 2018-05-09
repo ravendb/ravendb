@@ -873,7 +873,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate(false))

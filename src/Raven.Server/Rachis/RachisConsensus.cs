@@ -1601,8 +1601,10 @@ namespace Raven.Server.Rachis
                     UpdateNodeTag(ctx, "A");
                 }
 
+                var topologyId = Guid.NewGuid().ToString();
+
                 var topology = new ClusterTopology(
-                    Guid.NewGuid().ToString(),
+                    topologyId,
                     new Dictionary<string, string>
                     {
                         [_tag] = selfUrl
@@ -1613,6 +1615,8 @@ namespace Raven.Server.Rachis
                 );
 
                 SetTopology(null, ctx, topology);
+                _clusterId = topologyId;
+                SetClusterBase(topologyId);
 
                 SwitchToSingleLeader(ctx);
 

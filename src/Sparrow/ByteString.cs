@@ -325,6 +325,22 @@ namespace Sparrow
             return encoding.GetString(_pointer->Ptr, length);
         }
 
+        public void Truncate(int newSize)
+        {
+            EnsureIsNotBadPointer();
+
+            if(_pointer->Size < newSize || newSize < 0)
+                ThrowInvalidSize();
+
+            _pointer->Length = newSize;
+        }
+
+        private static void ThrowInvalidSize()
+        {
+            throw new ArgumentOutOfRangeException("newSize", "must be within the existing string limits");
+        }
+
+
         public string ToString(Encoding encoding)
         {
             if (!HasValue)

@@ -70,24 +70,26 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                if (Result == null)
-                {
-                    Result = new Dictionary<string, long>();
-                }
+                Result = new Dictionary<string, long>();
 
                 foreach (var propertyName in response.GetPropertyNames())
                 {
-                    if (response.TryGetMember(propertyName, out object val))
+                    if (response.TryGet(propertyName, out long val))
                     {
-                        Result.Add(propertyName, (long)val);
+                        Result[propertyName] = val;
                     }
                 }
 
                 if (Result.Values.Count != _keys.Length)
                 {
-                    throw new InvalidOperationException(
-                        $"The result of {nameof(GetCompareExchangeIndexOperation)} has {Result.Values.Count} entries, while the request has only {_keys.Length}.");
+                    ThrowInvalidCountOfItems();
                 }
+            }
+
+            private void ThrowInvalidCountOfItems()
+            {
+                throw new InvalidOperationException(
+                    $"The result of {nameof(GetCompareExchangeIndexOperation)} has {Result.Values.Count} entries, while the request has only {_keys.Length}.");
             }
         }
     }

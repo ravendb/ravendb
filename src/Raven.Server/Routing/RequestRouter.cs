@@ -104,10 +104,11 @@ namespace Raven.Server.Routing
             {
                 using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
                 {
-                    if (reqCtx.HttpContext.Response.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value) && long.TryParse(value, out var index))
+                    if (reqCtx.HttpContext.Response.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value) 
+                        && long.TryParse(value, out var index) 
+                        && index < reqCtx.Database.RachisLogIndexNotifications.LastModifiedIndex)
                     {
-                        reqCtx.HttpContext.RequestAborted.ThrowIfCancellationRequested();
-                        await reqCtx.Database.ClusterTransactionWaiter.WaitForCompletion(index, reqCtx.HttpContext.RequestAborted);
+                        await reqCtx.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, reqCtx.HttpContext.RequestAborted);
                     }
                     await handler(reqCtx);
                 }

@@ -73,6 +73,7 @@ namespace Raven.Server.ServerWide
         private static readonly Slice CompareExchange;
         public static readonly Slice Identities;
         public static readonly Slice TransactionCommands;
+        public static readonly Slice TransactionCommandsIndex;
 
         static ClusterStateMachine()
         {
@@ -81,6 +82,7 @@ namespace Raven.Server.ServerWide
             Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
             Slice.From(StorageEnvironment.LabelsContext, "TransactionCommands", out TransactionCommands);
             Slice.From(StorageEnvironment.LabelsContext, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
+            Slice.From(StorageEnvironment.LabelsContext, "TransactionCommandsIndex", out TransactionCommandsIndex);
 
             ItemsSchema = new TableSchema();
 
@@ -104,11 +106,10 @@ namespace Raven.Server.ServerWide
             {
                 Name = CommandByDatabaseAndIndex,
                 StartIndex = 0,
-                Count = 2, // Database, Index
+                Count = 3, // Database, Separator, Index
             });
         }
-
-
+       
         public event EventHandler<(string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType ChangeType)> DatabaseChanged;
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
@@ -136,7 +137,7 @@ namespace Raven.Server.ServerWide
                             leader?.SetStateOf(index, errors);
                         }
                         break;
-                    case nameof(ClusterCleanUpCommand):
+                    case nameof(CleanUpClusterStateCommand):
                         ClusterStateCleanUp(context, cmd, index);
                         break;
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
@@ -296,53 +297,30 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            var affectedDatabases = new Dictionary<string, DatabaseRecord>();
-            var cleanCommand = (ClusterCleanUpCommand)JsonDeserializationCluster.Commands[nameof(ClusterCleanUpCommand)](cmd);
-            foreach (var tuple in cleanCommand.ClusterTransactionsCleanup)
-            {
-                var database = tuple.Key;
-                var upToIndex = tuple.Value;
-
-                var items = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
-                using (Slice.From(context.Allocator, ClusterTransactionCommand.GetPrefix(database), out Slice prefixSlice))
-                {
-                    var deleted = items.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex],
-                        prefixSlice, true, long.MaxValue,
-                        shouldAbort: (tvb) =>
-                        {
-                            var value = *(long*)tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.RaftIndex, out var _);
-                            var currentIndex = Bits.SwapBytes(value);
-
-                            return currentIndex > upToIndex;
-                        });
-
-                    if (deleted > 0)
-                    {
-                        var record = ReadDatabase(context, database);
-                        if (record != null)
-                        {
-                            record.TrunctedClusterTransactionIndex = upToIndex;
-                            affectedDatabases[database] = record;
-                        }
-                    }
-                }
-            }
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var cleanCommand = (CleanUpClusterStateCommand)JsonDeserializationCluster.Commands[nameof(CleanUpClusterStateCommand)](cmd);
+            var affectedDatabases = cleanCommand.Clean(context, index);
             foreach (var tuple in affectedDatabases)
             {
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var database = tuple.Key;
+                var cleanIndex = tuple.Value;
+                var record = ReadDatabase(context, database);
+                if(record == null)
+                    continue;
+
+                record.TruncatedClusterTransactionIndex = cleanIndex;
+
                 var dbKey = "db/" + tuple.Key;
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(tuple.Value, DocumentConventions.Default, context);
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
-                NotifyDatabaseAboutChanged(context, tuple.Key, index, nameof(ClusterStateCleanUp),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                // we simply update the value without invoking the OnChange function
             }
-
             OnTransactionDispose(context, index);
         }
 
@@ -990,6 +968,7 @@ namespace Raven.Server.ServerWide
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
+            context.Transaction.InnerTransaction.CreateTree(TransactionCommandsIndex);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
         }
@@ -1543,6 +1522,25 @@ namespace Raven.Server.ServerWide
         public RachisLogIndexNotifications(CancellationToken token)
         {
             _notifiedListeners = new AsyncManualResetEvent(token);
+        }
+
+        public async Task WaitForIndexNotification(long index, CancellationToken token)
+        {
+            while (true)
+            {
+                // first get the task, then wait on it
+                var waitAsync = _notifiedListeners.WaitAsync(token);
+
+                if (index <= Interlocked.Read(ref LastModifiedIndex))
+                    break;
+
+                if (await waitAsync == false)
+                {
+                    var copy = Interlocked.Read(ref LastModifiedIndex);
+                    if (index <= copy)
+                        break;
+                }
+            }
         }
 
         public async Task WaitForIndexNotification(long index, TimeSpan timeout)

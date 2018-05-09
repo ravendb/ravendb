@@ -119,7 +119,7 @@ namespace Raven.Server.ServerWide.Maintenance
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
-                Dictionary<string, long> cleanupIndexes = null;
+                Dictionary<string, long> cleanUpState = null;
                 List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
@@ -167,14 +167,14 @@ namespace Raven.Server.ServerWide.Maintenance
                             updateCommands.Add((cmd, updateReason));
                         }
 
-                        var cleanUpIndex = CleanUpDatabaseValues(database, databaseRecord, newStats);
-                        if (cleanUpIndex != null)
+                        var cleanUp = CleanUpDatabaseValues(database, databaseRecord, newStats);
+                        if (cleanUp != null)
                         {
-                            if (cleanupIndexes == null)
-                                cleanupIndexes = new Dictionary<string, long>();
+                            if (cleanUpState == null)
+                                cleanUpState = new Dictionary<string, long>();
 
-                            AddToDecisionLog(database, $"Should clean up values up to raft index {cleanUpIndex}.");
-                            cleanupIndexes.Add(database, cleanUpIndex.Value);
+                            AddToDecisionLog(database, $"Should clean up values up to raft index {cleanUp}.");
+                            cleanUpState.Add(database, cleanUp.Value);
                         }
                     }
                 }
@@ -211,11 +211,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
-                if (cleanupIndexes != null)
+                if (cleanUpState != null)
                 {
-                    var cmd = new ClusterCleanUpCommand
+                    var cmd = new CleanUpClusterStateCommand
                     {
-                        ClusterTransactionsCleanup = cleanupIndexes
+                        ClusterTransactionsCleanup = cleanUpState
                     };
 
                     if (_engine.LeaderTag != _server.NodeTag)
@@ -230,7 +230,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private long? CleanUpDatabaseValues(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
         {
-            
             if (record.Topology.Count != stats.Count)
                 return null;
 
@@ -243,10 +242,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (nodeReport.Report.TryGetValue(database, out var report) == false)
                     return null;
 
-                currentIndex = Math.Min(currentIndex, report.AppliedClusterTransactionIndex);
+                var last = ChangeVectorUtils.GetEtagById(report.DatabaseChangeVector, _engine.ClusterBase64Id);
+                currentIndex = Math.Min(currentIndex, last);
             }
 
-            if (currentIndex <= record.TrunctedClusterTransactionIndex)
+            if (currentIndex <= record.TruncatedClusterTransactionIndex)
                 return null;
 
             return currentIndex;

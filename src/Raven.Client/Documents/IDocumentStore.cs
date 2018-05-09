@@ -167,9 +167,7 @@ namespace Raven.Client.Documents
         MaintenanceOperationExecutor Maintenance { get; }
 
         OperationExecutor Operations { get; }
-
-        long? LastTransactionIndex { get; set; }
-
+        
         CountersOperationExecutor Counters { get; }
 
         DatabaseSmuggler Smuggler { get; }

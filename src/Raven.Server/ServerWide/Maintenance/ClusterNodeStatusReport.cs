@@ -38,7 +38,6 @@ namespace Raven.Server.ServerWide.Maintenance
         public long LastTombstoneEtag;
         public long NumberOfConflicts;
         public long NumberOfDocuments;
-        public long AppliedClusterTransactionIndex; 
 
         public DatabaseStatus Status;
         public string Error;
@@ -51,7 +50,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(NodeName)] = NodeName,
                 [nameof(Status)] = Status,
                 [nameof(LastEtag)] = LastEtag,
-                [nameof(AppliedClusterTransactionIndex)] = AppliedClusterTransactionIndex,
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
                 [nameof(NumberOfDocuments)] = NumberOfDocuments,

@@ -65,7 +65,7 @@ namespace Raven.Client.ServerWide
 
         public ClientConfiguration Client;
 
-        public long TrunctedClusterTransactionIndex;
+        public long TruncatedClusterTransactionIndex;
 
         public void AddIndex(IndexDefinition definition)
         {

@@ -56,8 +56,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Access to cluster wide transaction operations
         /// </summary>
-        public IClusterTransactionOperation ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperation(this));
+        public IClusterTransactionOperation ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionTransactionOperation(this));
         private IClusterTransactionOperation _clusterTransaction;
+
+        protected override ClusterTransactionSessionBase GetClusterSession()
+        {
+            return (ClusterTransactionSessionBase)_clusterTransaction;
+        }
 
         public ICountersSessionOperations Counters => _counters ?? (_counters = new DocumentSessionCounters(this));
         private ICountersSessionOperations _counters;
@@ -82,6 +87,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                _documentStore.SetLastTransactionIndex(command.Result.TransactionIndex);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

@@ -560,7 +560,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exhcnage '{kvp.key}->{kvp.value}': {e.Message}");
+                        result.AddError($"Could not write compare exchange '{kvp.key}->{kvp.value}': {e.Message}");
                     }
                 }
             }

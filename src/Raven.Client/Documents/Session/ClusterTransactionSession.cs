@@ -6,75 +6,101 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
-    public abstract class ClusterSessionBase : AdvancedSessionExtentionBase
+    public abstract class ClusterTransactionSessionBase
     {
-        protected ClusterSessionBase(InMemoryDocumentSessionOperations session) : base(session)
+        private readonly InMemoryDocumentSessionOperations _session;
+
+        public class StoredCompareExchange
+        {
+            public readonly object Entity;
+            public readonly long Index;
+            
+            public StoredCompareExchange(long index, object entity)
+            {
+                Entity = entity;
+                Index = index;
+            }
+        }
+
+        private Dictionary<string, StoredCompareExchange> _storeCompareExchange;
+        public Dictionary<string, StoredCompareExchange> StoreCompareExchange => _storeCompareExchange;
+
+        private Dictionary<string, long> _deleteCompareExchange;
+        public Dictionary<string, long> DeleteCompareExchange => _deleteCompareExchange;
+
+        protected ClusterTransactionSessionBase(InMemoryDocumentSessionOperations session)
         {
             if (session.TransactionMode != TransactionMode.ClusterWide)
             {
                 throw new InvalidOperationException($"This function is part of cluster transaction session, in order to use it you have to open the Session with '{nameof(TransactionMode.ClusterWide)}' option.");
             }
+
+            _session = session;
         }
 
         public void CreateCompareExchangeValue<T>(string key, T item)
         {
-            if (Session.StoreCompareExchange == null)
-                Session.StoreCompareExchange = new Dictionary<string, (object Item, long Index)>();
+            if (_storeCompareExchange == null)
+                _storeCompareExchange = new Dictionary<string, StoredCompareExchange>();
 
             EnsureNotDeleted(key);
 
-            Session.StoreCompareExchange.Add(key, (item, 0));
+            _storeCompareExchange.Add(key, new StoredCompareExchange(0, item));
         }
 
         public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
         {
             EnsureNotDeleted(item.Key);
 
-            Session.StoreCompareExchange[item.Key] = (item.Value, item.Index);
+            if (_storeCompareExchange == null)
+                _storeCompareExchange = new Dictionary<string, StoredCompareExchange>();
+
+            _storeCompareExchange[item.Key] = new StoredCompareExchange(item.Index, item.Value);
         }
 
         public void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item)
         {
             EnsureNotStored(item.Key);
 
-            if (Session.DeleteCompareExchange == null)
-                Session.DeleteCompareExchange = new Dictionary<string, long>();
+            if (_deleteCompareExchange == null)
+                _deleteCompareExchange = new Dictionary<string, long>();
 
-            if (Session.DeleteCompareExchange.ContainsKey(item.Key) == false)
-                Session.DeleteCompareExchange.Add(item.Key, item.Index);
+            if (_deleteCompareExchange.ContainsKey(item.Key) == false)
+                _deleteCompareExchange.Add(item.Key, item.Index);
         }
 
         public void DeleteCompareExchangeValue(string key, long index)
         {
             EnsureNotStored(key);
 
-            if (Session.DeleteCompareExchange == null)
-                Session.DeleteCompareExchange = new Dictionary<string, long>();
+            if (_deleteCompareExchange == null)
+                _deleteCompareExchange = new Dictionary<string, long>();
             
-            if (Session.DeleteCompareExchange.ContainsKey(key) == false)
-                Session.DeleteCompareExchange.Add(key, index);
+            if (_deleteCompareExchange.ContainsKey(key) == false)
+                _deleteCompareExchange.Add(key, index);
+        }
+
+        public void Clear()
+        {
+            _deleteCompareExchange?.Clear();
+            _storeCompareExchange?.Clear();
+            _deleteCompareExchange = null;
+            _storeCompareExchange = null;
         }
 
         protected Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key)
         {
-            try
-            {
-                return Session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key));
-            }
-            catch (Exception e)
-            {
-                throw new ClusterTransactionException($"Failed to get the compare exchange value for '{key}'", e);
-            }
+            return _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key));
         }
 
         protected Task<Dictionary<string, long>> GetCompareExchangeIndexesInternal(string[] keys)
         {
-            return Session.Operations.SendAsync(new GetCompareExchangeIndexOperation(keys));
+            return _session.Operations.SendAsync(new GetCompareExchangeIndexOperation(keys));
         }
 
         protected void EnsureNotDeleted(string key)
         {
-            if (Session.DeleteCompareExchange?.ContainsKey(key) == true)
+            if (_deleteCompareExchange?.ContainsKey(key) == true)
             {
                 throw new ArgumentException($"The key '{key}' already exists in the deletion requests.");
             }
@@ -82,7 +108,7 @@ namespace Raven.Client.Documents.Session
 
         protected void EnsureNotStored(string key)
         {
-            if (Session.StoreCompareExchange?.ContainsKey(key) == true)
+            if (_storeCompareExchange?.ContainsKey(key) == true)
             {
                 throw new ArgumentException($"The key '{key}' already exists in the store requests.");
             }
@@ -114,9 +140,9 @@ namespace Raven.Client.Documents.Session
         Task<Dictionary<string, long>> GetCompareExchangeIndexesAsync(string[] keys);
     }
 
-    public class ClusterTransactionOperationAsync : ClusterSessionBase, IClusterTransactionOperationAsync
+    public class ClusterTransactionTransactionOperationAsync : ClusterTransactionSessionBase, IClusterTransactionOperationAsync
     {
-        public ClusterTransactionOperationAsync(InMemoryDocumentSessionOperations session) : base(session)
+        public ClusterTransactionTransactionOperationAsync(InMemoryDocumentSessionOperations session) : base(session)
         {
         }
 
@@ -131,9 +157,9 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class ClusterTransactionOperation : ClusterSessionBase, IClusterTransactionOperation
+    public class ClusterTransactionTransactionOperation : ClusterTransactionSessionBase, IClusterTransactionOperation
     {
-        public ClusterTransactionOperation(InMemoryDocumentSessionOperations session) : base(session)
+        public ClusterTransactionTransactionOperation(InMemoryDocumentSessionOperations session) : base(session)
         {
         }
 

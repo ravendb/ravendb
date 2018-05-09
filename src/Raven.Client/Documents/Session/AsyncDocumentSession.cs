@@ -104,8 +104,13 @@ namespace Raven.Client.Documents.Session
         public ICountersSessionOperationsAsync Counters => _counters ?? (_counters = new DocumentSessionCountersAsync(this));
         private ICountersSessionOperationsAsync _counters;
 
-        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperationAsync(this));
+        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionTransactionOperationAsync(this));
         private IClusterTransactionOperationAsync _clusterTransaction;
+
+        protected override ClusterTransactionSessionBase GetClusterSession()
+        {
+            return (ClusterTransactionSessionBase)_clusterTransaction;
+        }
 
         /// <summary>
         /// Begins the async save changes operation
@@ -126,6 +131,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                _documentStore.SetLastTransactionIndex(command.Result.TransactionIndex);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

@@ -19,6 +19,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -170,49 +171,66 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            try
             {
-                var rtnCtx = _serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext);
-                var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, serverContext, index);
-
-                database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
+                using (serverContext.OpenReadTransaction())
+                using (docContext.OpenReadTransaction())
                 {
-                    try
+                    var global = DocumentsStorage.GetDatabaseChangeVector(docContext);
+                    var clusterId = database.ServerStore.Engine.ClusterBase64Id;
+                    var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, clusterId);
+                    var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
+                    var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
+                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))
                     {
-                        if (t.IsCompletedSuccessfully)
+                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
+                        database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>
                         {
-                            var options = mergedCommands.Options;
-                            Task indexTask = null;
-                            if (options?.WaitForIndexesTimeout != null)
+                            try
                             {
-                                indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
-                                    options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                                    mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                                if (t.IsCompletedSuccessfully)
+                                {
+                                    var options = mergedCommands.Options;
+                                    Task indexTask = null;
+                                    if (options?.WaitForIndexesTimeout != null)
+                                    {
+                                        indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
+                                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                                    }
+
+                                    var result = new BatchHandler.ClusterTransactionCompletionResult
+                                    {
+                                        Array = mergedCommands.Reply,
+                                        IndexTask = indexTask,
+                                    };
+                                    database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
+                                    return;
+                                }
+
+                                database.ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
                             }
-
-                            var result = new BatchHandler.ClusterTransactionCompletionResult
+                            catch (Exception e)
                             {
-                                Array = mergedCommands.Reply,
-                                Skipped = mergedCommands.Skipped,
-                                IndexTask = indexTask,
-                            };
-
-                            database.ClusterTransactionWaiter.SetResult(index, result);
-                            return;
-                        }
-
-                        database.ClusterTransactionWaiter.SetException(t.Exception);
+                                // nothing we can do
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info($"Failed to notify about transaction completion for database '{databaseName}'.", e);
+                                }
+                            }
+                        });
                     }
-                    catch (Exception e)
-                    {
-                        database.ClusterTransactionWaiter.SetException(e);
-                    }
-                    finally
-                    {
-                        rtnCtx.Dispose();
-                    }
-                });
+                }
+            }
+            catch (Exception e)
+            {
+                // nothing we can do
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed enqueue cluster transaction command for database: '{databaseName}'", e);
+                }
             }
         }
 

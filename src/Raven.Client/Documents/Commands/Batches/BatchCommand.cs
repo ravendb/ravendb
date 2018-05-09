@@ -67,7 +67,7 @@ namespace Raven.Client.Documents.Commands.Batches
                         {
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TransactionMode));
-                            writer.WriteString(TransactionMode.ClusterWide.ToString());
+                            writer.WriteString(nameof(TransactionMode.ClusterWide));
                         }
                         writer.WriteEndObject();
                     }

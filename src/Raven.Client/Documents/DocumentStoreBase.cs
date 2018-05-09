@@ -147,22 +147,22 @@ namespace Raven.Client.Documents
                     return null;
                 return local;
             }
-            set
-            {
-                if(value.HasValue == false)
-                    return;
-
-                long initialValue;
-                do
-                {
-                    initialValue = _lastTransactionIndex;
-                    if (initialValue >= value)
-                        return;
-                }
-                while (Interlocked.CompareExchange(ref _lastTransactionIndex, value.Value, initialValue) != initialValue);
-            }
         }
 
+        public void SetLastTransactionIndex(long? index)
+        {
+            if (index.HasValue == false)
+                return;
+
+            long initialValue;
+            do
+            {
+                initialValue = _lastTransactionIndex;
+                if (initialValue >= index.Value)
+                    return;
+            }
+            while (Interlocked.CompareExchange(ref _lastTransactionIndex, index.Value, initialValue) != initialValue);
+        }
 
         protected void EnsureNotClosed()
         {
