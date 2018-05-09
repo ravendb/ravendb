@@ -33,7 +33,7 @@ namespace Raven.Server.Web.Studio
 
                     try
                     {
-                        var compiledIndex = IndexCompiler.Compile(indexDefinition);
+                        var compiledIndex = IndexCompilationCache.GenerateIndex(indexDefinition, Database.Configuration);
 
                         var outputFields = compiledIndex.OutputFields;
 

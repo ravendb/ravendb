@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration)
+        internal static StaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
             switch (definition.DetectStaticIndexType())
             {
