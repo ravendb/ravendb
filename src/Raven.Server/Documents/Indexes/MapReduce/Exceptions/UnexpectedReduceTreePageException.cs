@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Documents.Indexes.MapReduce
+namespace Raven.Server.Documents.Indexes.MapReduce.Exceptions
 {
     public class UnexpectedReduceTreePageException : Exception
     {
