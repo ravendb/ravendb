@@ -62,9 +62,9 @@ namespace Raven.Server.Documents.Handlers
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
-                                LoadDocument();                           
+                                LoadDocument();
 
-                                _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docOps.DocumentId,
+                                LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docOps.DocumentId,
                                     operation.CounterName, operation.Delta);
 
                                 GetCounterValue(context, _database, docOps.DocumentId, operation.CounterName, _counterBatch.ReplyWithAllNodesValues, CountersDetail);
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case CounterOperationType.Delete:
                                 LoadDocument();
-                                _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docOps.DocumentId,
+                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docOps.DocumentId,
                                     operation.CounterName);
                                 break;
                             case CounterOperationType.None:
@@ -131,8 +131,6 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
                 }
-
-                LastChangeVector = _database.DocumentsStorage.CountersStorage.LastChangeVector;
 
                 return CountersDetail.Counters.Count;
             }
