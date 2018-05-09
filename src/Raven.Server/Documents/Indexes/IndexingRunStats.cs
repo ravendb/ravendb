@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
@@ -30,6 +31,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int MaxNumberOfOutputsPerDocument;
 
+        public int NumberOfKeptReduceErrors;
+
         public override string ToString()
         {
             return $"Map - attempts: {MapAttempts}, successes: {MapSuccesses}, errors: {MapErrors} / " +
@@ -44,6 +47,8 @@ namespace Raven.Server.Documents.Indexes
         public void AddReduceError(string message)
         {
             AddError(null, message, "Reduce");
+
+            NumberOfKeptReduceErrors++;
         }
 
         public void AddCorruptionError(Exception exception)
@@ -74,6 +79,11 @@ namespace Raven.Server.Documents.Indexes
         public void AddMemoryError(OutOfMemoryException oome)
         {
             AddError(null, $"Memory exception occurred: {oome}", "Memory");
+        }
+
+        public void AddExcessiveNumberOfReduceErrors(ExcessiveNumberOfReduceErrorsException e)
+        {
+            AddError(null, $"Excessive number of reduce errors: {e}", "Reduce");
         }
 
         private void AddError(string key, string message, string action)
