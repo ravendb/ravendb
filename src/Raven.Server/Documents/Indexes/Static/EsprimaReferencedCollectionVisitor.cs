@@ -13,6 +13,11 @@ namespace Raven.Server.Documents.Indexes.Static
             if (callExpression.Callee is Identifier id 
                 && id.Name.Equals("load") )
             {
+                if(callExpression.Arguments?.Count != 2)
+                {
+                    throw new ArgumentException("load method is expecting two arguments, the first should be the document and the second should be the collection. e.g. load(u.Product,'Products') but was invoked with " +
+                        $"{callExpression.Arguments?.Count ?? 0} arguments.");
+                }
                 var collection = callExpression.Arguments[1];
                 if (collection is Literal l && l.Value is string s)
                 {
