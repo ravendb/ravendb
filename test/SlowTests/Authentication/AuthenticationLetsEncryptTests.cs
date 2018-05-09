@@ -9,6 +9,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +65,11 @@ namespace SlowTests.Authentication
                 email = command.Result.Email;
             }
 
+            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
+            tcpListener.Start();
+            var port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+            tcpListener.Stop();
+
             var setupInfo = new SetupInfo
             {
                 Domain = domain,
@@ -77,7 +84,7 @@ namespace SlowTests.Authentication
                 {
                     ["A"] = new SetupInfo.NodeInfo
                     {
-                        Port = 0,
+                        Port = port,
                         Addresses = new List<string>
                         {
                             "127.0.0.1"
