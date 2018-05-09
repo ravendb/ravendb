@@ -12,10 +12,10 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
 {
