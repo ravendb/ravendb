@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
@@ -19,7 +20,6 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Util;
 using static Raven.Server.Documents.DocumentsStorage;
-using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server.Documents
 {

@@ -22,7 +22,6 @@ using Raven.Server.Documents.Replication;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
-using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server.Documents.Handlers
 {

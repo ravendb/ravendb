@@ -1,6 +1,6 @@
 ﻿using System.Runtime.ExceptionServices;
+using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
-using Voron.Exceptions;
 
 namespace Raven.Server.Documents.TransactionCommands
 {

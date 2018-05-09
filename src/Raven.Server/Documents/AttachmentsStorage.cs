@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
@@ -19,7 +20,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
-using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server.Documents
 {
