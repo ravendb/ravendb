@@ -584,21 +584,20 @@ namespace Raven.Server.Documents.PeriodicBackup
                         long lastUploadedInBytes = 0;
                         var totalToUpload = new Sparrow.Size(uploadProgress.TotalInBytes, SizeUnit.Bytes).ToString();
                         var sw = Stopwatch.StartNew();
-                        var progress = new Progress
+                        var progress = new Progress(uploadProgress)
                         {
-                            UploadProgress = uploadProgress,
                             OnUploadProgress = () =>
                             {
-                                if (sw.ElapsedMilliseconds > 1000)
-                                {
-                                    var totalUploadedInBytes = uploadProgress.UploadedInBytes;
-                                    bytesPutsPerSec.MarkSingleThreaded(totalUploadedInBytes - lastUploadedInBytes);
-                                    lastUploadedInBytes = totalUploadedInBytes;
-                                    var uploaded = new Sparrow.Size(totalUploadedInBytes, SizeUnit.Bytes);
-                                    uploadProgress.BytesPutsPerSec = bytesPutsPerSec.MeanRate;
-                                    AddInfo($"Uploaded: {uploaded} / {totalToUpload}", onProgress);
-                                    sw.Restart();
-                                }
+                                if (sw.ElapsedMilliseconds <= 1000)
+                                    return;
+
+                                var totalUploadedInBytes = uploadProgress.UploadedInBytes;
+                                bytesPutsPerSec.MarkSingleThreaded(totalUploadedInBytes - lastUploadedInBytes);
+                                lastUploadedInBytes = totalUploadedInBytes;
+                                var uploaded = new Sparrow.Size(totalUploadedInBytes, SizeUnit.Bytes);
+                                uploadProgress.BytesPutsPerSec = bytesPutsPerSec.MeanRate;
+                                AddInfo($"Uploaded: {uploaded} / {totalToUpload}", onProgress);
+                                sw.Restart();
                             }
                         };
 
