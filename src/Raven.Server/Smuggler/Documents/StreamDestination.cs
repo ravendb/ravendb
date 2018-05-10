@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
@@ -402,6 +403,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
             private HashSet<string> _attachmentStreamsAlreadyExported;
+            private HashSet<string> _countersAlreadyExported;
 
             public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
                 : base(writer, propertyName)
@@ -415,10 +417,14 @@ namespace Raven.Server.Smuggler.Documents
                 if (item.Attachments != null)
                     throw new NotSupportedException();
 
+                if (item.Counters != null)
+                    throw new NotSupportedException();
+
                 var document = item.Document;
                 using (document.Data)
                 {
                     WriteUniqueAttachmentStreams(document, progress);
+                    WriteUniqueCounters(document, progress);
 
                     if (First == false)
                         Writer.WriteComma();
@@ -507,11 +513,76 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
+            private void WriteUniqueCounters(Document document, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                if ((document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters ||
+                    document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
+                    return;
+
+                if (_countersAlreadyExported == null)
+                    _countersAlreadyExported = new HashSet<string>();
+
+                foreach (var counterObject in counters)
+                {
+                    var counter = counterObject.ToString();
+                    if (_countersAlreadyExported.Add(counter))
+                    {
+                        var values = _source.GetCounterValues(document.Id, counter).ToList();
+                        WriteCounter(document.Id, counter, values);
+                        progress.Counters.ReadCount += values.Count;
+                    }
+                }
+            }
+
             public DocumentsOperationContext GetContextForNewDocument()
             {
                 _context.CachedProperties.NewDocument();
                 return _context;
             }
+
+            private void WriteCounter(string docId, string counter, IEnumerable<(string ChangeVector, long Value)> values)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+
+                Writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                Writer.WriteStartObject();
+
+                Writer.WritePropertyName(DocumentItem.ExportDocumentType.Key);
+                Writer.WriteString(DocumentItem.ExportDocumentType.Counter);
+
+                Writer.WriteEndObject();
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(DocumentItem.DocumentCounter.Name));
+                Writer.WriteString(counter);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(DocumentItem.DocumentCounter.Values));
+                Writer.WriteStartArray();
+                var first = true;
+                foreach (var (cv, val) in values)
+                {
+                    if (first == false)
+                        Writer.WriteComma();
+                    first = false;
+
+                    Writer.WriteStartObject();
+                    Writer.WritePropertyName("ChangeVector");
+                    Writer.WriteString(cv);
+                    Writer.WritePropertyName("Value");
+                    Writer.WriteDouble(val);
+                    Writer.WriteEndObject();
+                }
+                Writer.WriteEndArray();
+
+                Writer.WriteEndObject();
+            }
+
 
             private void WriteAttachmentStream(LazyStringValue hash, Stream stream, string tag)
             {
@@ -545,8 +616,9 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStream(stream);
             }
-        }        
-        
+
+        }
+
         private class StreamKeyValueActions<T> : StreamActionsBase, IKeyValueActions<T>
         {
             public StreamKeyValueActions(BlittableJsonTextWriter writer, string name)

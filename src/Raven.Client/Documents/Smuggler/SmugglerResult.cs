@@ -234,17 +234,20 @@ namespace Raven.Client.Documents.Smuggler
 
             public Counts Attachments { get; set; } = new Counts();
 
+            public Counts Counters { get; set; } = new Counts();
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(LastEtag)] = LastEtag;
                 json[nameof(Attachments)] = Attachments.ToJson();
+                json[nameof(Counters)] = Counters.ToJson();
                 return json;
             }
 
             public override string ToString()
             {
-                return $"{base.ToString()} Attachments: {Attachments}";
+                return $"{base.ToString()} Attachments: {Attachments}. Counters: {Counters}";
             }
         }
 

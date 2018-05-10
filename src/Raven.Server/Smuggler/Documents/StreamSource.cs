@@ -676,6 +676,7 @@ namespace Raven.Server.Smuggler.Documents
             try
             {
                 List<DocumentItem.AttachmentStream> attachments = null;
+                List<DocumentItem.DocumentCounter> counters = null;
                 while (true)
                 {
                     if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -719,6 +720,19 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (metadata != null &&
+                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out type) &&
+                        type == DocumentItem.ExportDocumentType.Counter)
+                    {
+                        if (counters == null)
+                            counters = new List<DocumentItem.DocumentCounter>();
+
+                        var counter = new DocumentItem.DocumentCounter();
+                        ProcessCounter(context, data, ref counter);
+                        counters.Add(counter);
+                        continue;
+                    }
+
                     if (legacyImport)
                     {
                         if (modifier.Id.Contains(HiLoHandler.RavenHiloIdPrefix))
@@ -747,9 +761,11 @@ namespace Raven.Server.Smuggler.Documents
                             NonPersistentFlags = modifier.NonPersistentFlags,
                             LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
                         },
-                        Attachments = attachments
+                        Attachments = attachments,
+                        Counters = counters
                     };
                     attachments = null;
+                    counters = null;
                 }
             }
             finally
@@ -1011,6 +1027,20 @@ namespace Raven.Server.Smuggler.Documents
             }
             attachment.Stream.Flush();
         }
+
+        public void ProcessCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.DocumentCounter counter)
+        {
+            if (data.TryGet(nameof(DocumentItem.DocumentCounter.Name), out LazyStringValue name) == false ||
+                data.TryGet(nameof(DocumentItem.DocumentCounter.Values), out BlittableJsonReaderArray values) == false)              
+                throw new ArgumentException($"Data of counter is not valid: {data}");
+
+            if (_writeBuffer == null)
+                _returnWriteBuffer = _context.GetManagedBuffer(out _writeBuffer);
+
+            counter.Name = name;
+            counter.Values = values;
+        }
+
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)
         {
