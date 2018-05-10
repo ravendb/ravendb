@@ -763,6 +763,21 @@ namespace Raven.Server.Documents
             }
         }
 
+        public (int ActualSize, int AllocatedSize)? GetDocumentMetrics(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            {
+                var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+                if (table.ReadByKey(lowerId, out var tvr) == false)
+                {
+                    return null;
+                }
+                var allocated = table.GetAllocatedSize(tvr.Id);
+
+                return (tvr.Size, allocated);
+            }
+        }
         public bool GetTableValueReaderForDocument(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict, out TableValueReader tvr)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);

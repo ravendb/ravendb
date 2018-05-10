@@ -197,6 +197,14 @@ namespace Voron.Data.RawData
 
         public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
         {
+            RawDataEntrySizes* sizes = GetRawDataEntrySizeFor(tx, id);
+
+            size = sizes->UsedSize;
+            return (byte*)sizes + sizeof(RawDataEntrySizes);
+        }
+
+        public static RawDataEntrySizes* GetRawDataEntrySizeFor(LowLevelTransaction tx, long id)
+        {
             var posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
             var pageHeader = PageHeaderFor(tx, pageNumberInSection);
@@ -220,8 +228,7 @@ namespace Voron.Data.RawData
                 VoronUnrecoverableErrorException.Raise(tx.Environment,
                     $"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
 
-            size = sizes->UsedSize;
-            return (byte*)pageHeader + posInPage + sizeof(RawDataEntrySizes);
+            return sizes;
         }
 
         public long GetSectionPageNumber(long id)
