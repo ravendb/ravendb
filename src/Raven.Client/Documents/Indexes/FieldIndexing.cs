@@ -55,8 +55,14 @@ namespace Raven.Client.Documents.Indexes
         Exact = 1 << 2,
 
         /// <summary>
+        /// Index the tokens produced by running the field's value through an Analyzer (same as Search),
+        /// store them in index and track term vector positions and offsets. This is mandatory when highlighting is used.
+        /// </summary>
+        Highlighting = 1 << 3,
+
+        /// <summary>
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>
-        Default = 1 << 3
+        Default = 1 << 4
     }
 }

@@ -33,6 +33,8 @@
 
         Array,
 
+        Highlight,
+
         Unknown,
     }
 }

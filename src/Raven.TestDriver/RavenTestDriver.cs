@@ -6,9 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-#if NETSTANDARD1_5
-using System.Runtime.Loader;
-#endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -128,20 +125,6 @@ namespace Raven.TestDriver
             var process = _globalServerProcess = RavenServerRunner<TServerLocator>.Run(new TServerLocator());
 
             ReportInfo($"Starting global server: { _globalServerProcess.Id }");
-
-#if NETSTANDARD1_3
-            AppDomain.CurrentDomain.ProcessExit += (s, args) =>
-            {
-                KillGlobalServerProcess();
-            };
-#endif
-
-#if NETSTANDARD1_5
-            AssemblyLoadContext.Default.Unloading += c =>
-            {
-                KillGlobalServerProcess();
-            };
-#endif
 
             string url = null;
             var output = process.StandardOutput;

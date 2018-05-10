@@ -6,6 +6,8 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Linq
@@ -25,5 +27,12 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
 
+        IRavenQueryable<T> Highlight(string fieldName, int fragmentLength, int fragmentCount, out Highlightings highlightings);
+
+        IRavenQueryable<T> Highlight(string fieldName, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings);
+
+        IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, out Highlightings highlightings);
+
+        IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings);
     }
 }

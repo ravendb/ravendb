@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Server.ServerWide;
 
@@ -29,6 +30,11 @@ namespace Raven.Server.Documents.Queries
             _token.Delay();
         }
 
+        public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
+        {
+            throw new NotImplementedException();
+        }
+
         public override void HandleException(Exception e)
         {
             StartResponseIfNeeded();
@@ -54,6 +60,7 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsExceptionHandling => true;
 
         public override bool SupportsInclude => false;
+        public override bool SupportsHighlighting => false;
 
         public void Flush()// intentionally not using Disposable here, because we need better error handling
         {

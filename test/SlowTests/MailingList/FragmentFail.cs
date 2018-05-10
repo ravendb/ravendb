@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Session;
 using Xunit;
 
@@ -56,7 +57,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void Fragment_Length_Should_Not_Be_More_Then_128()
         {
             using (var store = GetDocumentStore())
@@ -78,19 +79,17 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    /*
                     string q = "brickpile";
-                    FieldHighlightings h = null;
+                    Highlightings h = null;
                     var hits = session.Query<The_Search.Result, The_Search>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .Customize(x => x.Highlight("Query", 128, 1, out h))
+                        .Highlight(x => x.Query, 128, 1, out h)
                         .Search(x => x.Query, q)
                         .As<TheArticle>()
                         .ToList();
 
                     var fragment = h.GetFragments("articles/1").First();
                     Assert.True(fragment.Length < 128);
-                    */
                 }
             }
         }

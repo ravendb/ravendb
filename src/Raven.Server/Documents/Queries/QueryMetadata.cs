@@ -14,6 +14,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Facets;
+using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestions;
 using Sparrow;
@@ -76,7 +77,10 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCmpXchg { get; private set; }
 
+        public bool HasHighlightings { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
+
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
 
         public readonly string CollectionName;
@@ -98,6 +102,8 @@ namespace Raven.Server.Documents.Queries
         public OrderByField[] OrderBy;
 
         public SelectField[] SelectFields;
+
+        public HighlightingField[] Highlightings;
 
         public readonly ulong CacheKey;
 
@@ -125,13 +131,13 @@ namespace Raven.Server.Documents.Queries
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
-            if (operatorType == null && 
+            if (operatorType == null &&
                 // to support startsWith(id(), ...)
                 string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
                 operatorType = OperatorType.Equal;
 
-            if (search || exact || spatial != null || isNegated || 
-                operatorType != OperatorType.Equal )
+            if (search || exact || spatial != null || isNegated ||
+                operatorType != OperatorType.Equal)
             {
                 IsCollectionQuery = false;
             }
@@ -287,32 +293,89 @@ namespace Raven.Server.Documents.Queries
 
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
         {
-            HasIncludeOrLoad = true;
+            List<string> includes = null;
+            List<HighlightingField> highlightings = null;
 
-            var includes = new List<string>();
-            foreach (var include in Query.Include)
+            void AddInclude(QueryExpression include, string path)
             {
-                string path;
-
-                if (include is FieldExpression fe)
-                {
-                    path = fe.FieldValue;
-                }
-                else if (include is ValueExpression ve)
-                {
-                    path = ve.Token;
-                }
-                else
-                {
-                    throw new InvalidQueryException("Unable to figure out how to deal with include of type " + include.Type, QueryText, parameters);
-                }
-
                 var expressionPath = ParseExpressionPath(include, path, parameters);
+
+                if (includes == null)
+                    includes = new List<string>();
+
                 includes.Add(expressionPath.Path);
             }
-            Includes = includes.ToArray();
+
+            foreach (var include in Query.Include)
+            {
+                switch (include)
+                {
+                    case FieldExpression fe:
+                        HasIncludeOrLoad = true;
+
+                        AddInclude(include, fe.FieldValue);
+                        break;
+                    case ValueExpression ve:
+                        HasIncludeOrLoad = true;
+
+                        AddInclude(include, ve.Token);
+                        break;
+                    case MethodExpression me:
+                        var methodType = QueryMethod.GetMethodType(me.Name);
+                        switch (methodType)
+                        {
+                            case MethodType.Highlight:
+                                HasHighlightings = true;
+
+                                QueryValidator.ValidateHighlight(me.Arguments, QueryText, parameters);
+
+                                if (highlightings == null)
+                                    highlightings = new List<HighlightingField>();
+
+                                highlightings.Add(CreateHighlightingField(me, parameters));
+                                break;
+                            default:
+                                throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
+                        }
+                        break;
+                    default:
+                        throw new InvalidQueryException("Unable to figure out how to deal with include of type " + include.Type, QueryText, parameters);
+                }
+            }
+
+            if (HasIncludeOrLoad)
+                Includes = includes?.ToArray();
+
+            if (HasHighlightings)
+                Highlightings = highlightings?.ToArray();
         }
 
+        private HighlightingField CreateHighlightingField(MethodExpression expression, BlittableJsonReaderObject parameters)
+        {
+            var fieldName = ExtractFieldNameFromFirstArgument(expression.Arguments, expression.Name, parameters);
+
+            var result = new HighlightingField(fieldName);
+
+            for (var i = 1; i < expression.Arguments.Count; i++)
+            {
+                var ve = (ValueExpression)expression.Arguments[i];
+
+                switch (i)
+                {
+                    case 1:
+                        result.AddFragmentLength(ve.Token, ve.Value);
+                        break;
+                    case 2:
+                        result.AddFragmentCount(ve.Token, ve.Value);
+                        break;
+                    case 3:
+                        result.AddOptions(ve.Token, ve.Value);
+                        break;
+                }
+            }
+
+            return result;
+        }
 
         private void HandleSelectFunctionBody(BlittableJsonReaderObject parameters)
         {
@@ -946,7 +1009,7 @@ namespace Raven.Server.Documents.Queries
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
-            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) && 
+            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) &&
                 fe.Compound[0] != Query.From.Alias)
             {
                 if (fe.Compound.Count != 1)
@@ -1647,3 +1710,4 @@ namespace Raven.Server.Documents.Queries
         }
     }
 }
+

@@ -7,6 +7,24 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryValidator
     {
+        public static void ValidateHighlight(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
+        {
+            if (arguments.Count < 3 || arguments.Count > 4)
+                throw new InvalidQueryException("Method 'highlight()' expects three or four arguments to be provided", queryText, parameters);
+
+            for (var i = 0; i < arguments.Count; i++)
+            {
+                switch (arguments[i])
+                {
+                    case FieldExpression _:
+                    case ValueExpression _:
+                        break;
+                    default:
+                        throw new InvalidQueryException($"Method 'highlight()' expects field or value token as an argument at index {i}, got {arguments[0]} type", queryText, parameters);
+                }
+            }
+        }
+
         public static void ValidateCircle(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
         {
             if (arguments.Count < 3 || arguments.Count > 4)

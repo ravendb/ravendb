@@ -83,6 +83,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "array", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Array;
 
+            if (string.Equals(methodName, "highlight", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Highlight;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

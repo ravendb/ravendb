@@ -5,7 +5,7 @@
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>netstandard1.3;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <AssemblyName>Raven.TestDriver</AssemblyName>
     <PackageId>RavenDB.TestDriver</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
@@ -20,10 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-  </ItemGroup>
-
-  <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
-    <PackageReference Include="System.AppDomain" Version="2.0.11" />
   </ItemGroup>
 
   <ItemGroup>

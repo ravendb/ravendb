@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void WorkWithPostfixWildcard()
         {
             using (var store = GetDocumentStore())
@@ -64,15 +65,11 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-#if FEATURE_HIGHLIGHTING
                 using (var session = store.OpenSession())
                 {
-
-                    FieldHighlightings highlightings;
-
                     var result = session.Advanced.DocumentQuery<object, BlogPosts_ForSearch>()
                         .SelectFields<BlogPosts_ForSearch.Result>()
-                        .Highlight(f => f.SearchText, 128, 10, out highlightings)
+                        .Highlight(f => f.SearchText, 128, 10, out Highlightings highlightings)
                         .Search(f => f.SearchText, "lorem")
                         .ToList();
 
@@ -84,7 +81,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    FieldHighlightings highlightings;
+                    Highlightings highlightings;
 
                     var result = session.Advanced.DocumentQuery<object, BlogPosts_ForSearch>()
                         .SelectFields<BlogPosts_ForSearch.Result>()
@@ -95,7 +92,6 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(result);
                     Assert.NotEmpty(highlightings.GetFragments(result[0].Id)); //No highlightings
                 }
-#endif
             }
         }
     }

@@ -7,6 +7,7 @@
 using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries.Highlighting;
 
 namespace Raven.Client.Documents.Session
 {
@@ -54,27 +55,22 @@ namespace Raven.Client.Documents.Session
             (indexName, collectionName) = ProcessQueryParameters(type, indexName, collectionName, Conventions);
 
             var queryStatistics = new QueryStatistics();
-#if FEATURE_HIGHLIGHTING
-            var highlightings = new QueryHighlightings();
-#endif
+            var highlightings = new LinqQueryHighlightings();
+
             var ravenQueryProvider = new RavenQueryProvider<T>(
                 this,
                 indexName,
                 collectionName,
                 type,
                 queryStatistics,
-#if FEATURE_HIGHLIGHTING
                 highlightings,
-#endif
                 isMapReduce);
 
             var inspector = new RavenQueryInspector<T>();
             inspector.Init(
                 ravenQueryProvider,
                 queryStatistics,
-#if FEATURE_HIGHLIGHTING
                 highlightings,
-#endif
                 indexName,
                 collectionName,
                 null,

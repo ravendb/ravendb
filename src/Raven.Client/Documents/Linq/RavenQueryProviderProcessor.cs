@@ -18,6 +18,7 @@ using Lambda2Js;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
@@ -39,6 +40,7 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         protected readonly IDocumentQueryGenerator QueryGenerator;
         private readonly Action<QueryResult> _afterQueryExecuted;
+        private readonly LinqQueryHighlightings _highlightings;
         private bool _chainedWhere;
         private int _insideWhere;
         private bool _insideExact;
@@ -94,8 +96,16 @@ namespace Raven.Client.Documents.Linq
         /// <param name="fieldsToFetch">The fields to fetch in this query</param>
         /// <param name="isMapReduce"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
-        public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             string indexName, string collectionName, HashSet<FieldToFetch> fieldsToFetch, bool isMapReduce, Type originalType)
+        public RavenQueryProviderProcessor(
+            IDocumentQueryGenerator queryGenerator,
+            Action<IDocumentQueryCustomization> customizeQuery,
+            Action<QueryResult> afterQueryExecuted,
+            LinqQueryHighlightings highlightings,
+             string indexName,
+            string collectionName,
+            HashSet<FieldToFetch> fieldsToFetch,
+            bool isMapReduce,
+            Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
             _newExpressionType = typeof(T);
@@ -104,6 +114,7 @@ namespace Raven.Client.Documents.Linq
             _collectionName = collectionName;
             _isMapReduce = isMapReduce;
             _afterQueryExecuted = afterQueryExecuted;
+            _highlightings = highlightings;
             _customizeQuery = customizeQuery;
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
@@ -245,7 +256,7 @@ namespace Raven.Client.Documents.Linq
                                                 "All Binary Expressions inside a Where clause should be between a field and a constant value. " +
                                                 $"`{expression.Left}` and `{expression.Right}` are both fields.");
             }
-          
+
         }
 
         private void VisitAndAlso(BinaryExpression andAlso)
@@ -1711,7 +1722,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (!(newExpression.Arguments[index] is MemberExpression memberExpression))
                 {
                     throw new InvalidOperationException($"Illegal expression of type {newExpression.Arguments[index].GetType()} " +
-                                                        $"in GroupBy clause : {newExpression.Arguments[index]}." +  Environment.NewLine +
+                                                        $"in GroupBy clause : {newExpression.Arguments[index]}." + Environment.NewLine +
                                                         "You cannot do computation in group by dynamic query, " +
                                                         "you can group on properties / fields only.");
                 }
@@ -2674,6 +2685,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
 
+            if (_highlightings != null)
+            {
+                foreach (var highlighting in _highlightings.Highlightings)
+                    _documentQuery.Highlight(highlighting.FieldName, highlighting.FragmentLength, highlighting.FragmentCount, highlighting.Options, out _);
+            }
+
             try
             {
                 VisitExpression(expression);
@@ -2712,6 +2729,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 asyncDocumentQuery.AfterQueryExecuted(_afterQueryExecuted);
 
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
+
+            if (_highlightings != null)
+            {
+                foreach (var highlighting in _highlightings.Highlightings)
+                    _documentQuery.Highlight(highlighting.FieldName, highlighting.FragmentLength, highlighting.FragmentCount, highlighting.Options, out _);
+            }
+
             try
             {
                 VisitExpression(expression);

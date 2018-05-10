@@ -120,7 +120,19 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else if (Field(out var field))
                 {
-                    includes.Add(field);
+                    QueryExpression expr;
+                    if (Scanner.TryScan('('))
+                    {
+                        if (Method(field, out var method) == false)
+                            ThrowParseException("Expected method call in " + field);
+                        expr = method;
+                    }
+                    else
+                    {
+                        expr = field;
+                    }
+
+                    includes.Add(expr);
                 }
                 else
                 {

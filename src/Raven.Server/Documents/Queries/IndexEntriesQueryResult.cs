@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -12,6 +13,11 @@ namespace Raven.Server.Documents.Queries
             Results.Add(result);
         }
 
+        public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
+        {
+            throw new NotSupportedException();
+        }
+
         public override void HandleException(Exception e)
         {
             throw new NotSupportedException();
@@ -19,5 +25,6 @@ namespace Raven.Server.Documents.Queries
 
         public override bool SupportsExceptionHandling => false;
         public override bool SupportsInclude => false;
+        public override bool SupportsHighlighting => false;
     }
 }

@@ -14,11 +14,15 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void AddResult(T result);
 
+        public abstract void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings);
+
         public abstract void HandleException(Exception e);
 
         public abstract bool SupportsExceptionHandling { get; }
 
         public abstract bool SupportsInclude { get; }
+
+        public abstract bool SupportsHighlighting { get; }
 
         public bool NotModified { get; protected set; }
     }

@@ -6,12 +6,20 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryMappingItem
     {
-        private DynamicQueryMappingItem(QueryFieldName name, AggregationOperation aggregationOperation, GroupByArrayBehavior groupByArrayBehavior, bool isSpecifiedInWhere,
-            bool isFullTextSearch, bool isExactSearch, AutoSpatialOptions spatial)
+        private DynamicQueryMappingItem(
+            QueryFieldName name,
+            AggregationOperation aggregationOperation,
+            GroupByArrayBehavior groupByArrayBehavior,
+            bool isSpecifiedInWhere,
+            bool isFullTextSearch,
+            bool isExactSearch,
+            bool hasHighlighting,
+            AutoSpatialOptions spatial)
         {
             Name = name;
             AggregationOperation = aggregationOperation;
             GroupByArrayBehavior = groupByArrayBehavior;
+            HasHighlighting = hasHighlighting;
             IsSpecifiedInWhere = isSpecifiedInWhere;
             IsFullTextSearch = isFullTextSearch;
             IsExactSearch = isExactSearch;
@@ -24,38 +32,40 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public readonly bool IsExactSearch;
 
+        public bool HasHighlighting { get; set; }
+
         public readonly bool IsSpecifiedInWhere;
 
         public readonly AutoSpatialOptions Spatial;
 
         public AggregationOperation AggregationOperation { get; private set; }
 
-        public GroupByArrayBehavior GroupByArrayBehavior { get; private set; }
+        public GroupByArrayBehavior GroupByArrayBehavior { get; }
 
         public static DynamicQueryMappingItem Create(QueryFieldName name, AggregationOperation aggregation)
         {
-            return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, false, false, false, null);
+            return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, false, false, false, false, null);
         }
 
-        public static DynamicQueryMappingItem Create(QueryFieldName name, AggregationOperation aggregation, bool isFullTextSearch, bool isExactSearch, AutoSpatialOptions spatial)
+        public static DynamicQueryMappingItem Create(QueryFieldName name, AggregationOperation aggregation, bool isFullTextSearch, bool isExactSearch, bool hasHighlighting, AutoSpatialOptions spatial)
         {
-            return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, false, isFullTextSearch, isExactSearch, spatial);
+            return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, false, isFullTextSearch, isExactSearch, hasHighlighting, spatial);
         }
 
         public static DynamicQueryMappingItem Create(QueryFieldName name, AggregationOperation aggregation, Dictionary<QueryFieldName, WhereField> whereFields)
         {
             if (whereFields.TryGetValue(name, out var whereField))
-                return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, true, whereField.IsFullTextSearch, whereField.IsExactSearch, whereField.Spatial);
+                return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, true, whereField.IsFullTextSearch, whereField.IsExactSearch, false, whereField.Spatial);
 
-            return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, false, false, false, null);
+            return new DynamicQueryMappingItem(name, aggregation, GroupByArrayBehavior.NotApplicable, false, false, false, false, null);
         }
 
         public static DynamicQueryMappingItem CreateGroupBy(QueryFieldName name, GroupByArrayBehavior groupByArrayBehavior, Dictionary<QueryFieldName, WhereField> whereFields)
         {
             if (whereFields.TryGetValue(name, out var whereField))
-                return new DynamicQueryMappingItem(name, AggregationOperation.None, groupByArrayBehavior, true, whereField.IsFullTextSearch, whereField.IsExactSearch, whereField.Spatial);
+                return new DynamicQueryMappingItem(name, AggregationOperation.None, groupByArrayBehavior, true, whereField.IsFullTextSearch, whereField.IsExactSearch, false, whereField.Spatial);
 
-            return new DynamicQueryMappingItem(name, AggregationOperation.None, groupByArrayBehavior, false, false, false, null);
+            return new DynamicQueryMappingItem(name, AggregationOperation.None, groupByArrayBehavior, false, false, false, false, null);
         }
 
         public void SetAggregation(AggregationOperation aggregation)

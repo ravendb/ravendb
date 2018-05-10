@@ -159,6 +159,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
                     }
 
+                    if (field.HasHighlighting && indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting) == false)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following field does not have highlighting {indexField.Name}, while the query needs to do highlight() on it"));
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
+                    }
+
                     if (field.IsExactSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Exact) == false)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not exactable {indexField.Name}, while the query needs to perform exact() on it"));
