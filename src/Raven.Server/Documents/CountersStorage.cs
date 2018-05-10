@@ -418,15 +418,19 @@ namespace Raven.Server.Documents
             if (table.DeleteByPrimaryKeyPrefix(key, tvh =>
                 {
                     long etag = *(long*)tvh.Reader.Read((int)CountersTable.Etag, out var size);
-                    deletedEtag = Math.Max(etag, deletedEtag);
+                    deletedEtag = Math.Max(Bits.SwapBytes(etag), deletedEtag);
                     Debug.Assert(size == sizeof(long));
                 }) == false
                 && forceTombstone == false)
                 return null;
 
+            if (deletedEtag == -1)
+                deletedEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
             var newEtag = _documentsStorage.GenerateNextEtag();
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
+
             CreateTombstone(context, key, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
+
             return newChangeVector;
         }
 
@@ -438,7 +442,7 @@ namespace Raven.Server.Documents
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(deletedEtag); // etag that was deleted
+                tvb.Add(Bits.SwapBytes(deletedEtag)); // etag that was deleted
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)DocumentTombstone.TombstoneType.Counter);
                 tvb.Add(null, 0); // doc data

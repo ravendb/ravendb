@@ -1,17 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Client.Counters
 {
-    public class CountersCrudMultipuleNodes : ClusterTestBase
+    public class CountersCluster : ClusterTestBase
     {
         [Fact]
         public async Task IncrementCounter()
@@ -95,7 +96,10 @@ namespace SlowTests.Client.Counters
                 {
                     s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     s.Store(new User { Name = "Aviv" }, "users/1");
+                    s.Store(new User { Name = "Rotem" }, "users/2");
+
                     s.Advanced.Counters.Increment("users/1", "likes", 30);
+                    s.Advanced.Counters.Increment("users/2", "downloads", 100);
                     s.SaveChanges();
                 }
 
@@ -104,18 +108,36 @@ namespace SlowTests.Client.Counters
                 {
                     val = store.Counters.Get("users/1", "likes");
                     Assert.Equal(30, val);
+                    val = store.Counters.Get("users/2", "downloads");
+                    Assert.Equal(100, val);
                 }
 
                 using (var s = stores[0].OpenSession())
                 {
                     s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     s.Advanced.Counters.Delete("users/1", "likes");
+                    s.Advanced.Counters.Delete("users/2", "downloads");
                     s.SaveChanges();
+                }
+
+                foreach (var server in db.Servers)
+                {
+                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var tombstones = documentDatabase.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
+                        Assert.Equal(2, tombstones.Count);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[0].Type);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
+                    }
                 }
 
                 foreach (var store in stores)
                 {
                     val = store.Counters.Get("users/1", "likes");
+                    Assert.Null(val);
+                    val = store.Counters.Get("users/2", "downloads");
                     Assert.Null(val);
                 }
             }
@@ -127,5 +149,6 @@ namespace SlowTests.Client.Counters
                 }
             }
         }
+
     }
 }
