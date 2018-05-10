@@ -10,8 +10,32 @@ namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfIndexes : IEnumerable<Index>
     {
-        private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(StringComparer.Ordinal);
-        private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(IndexNameComparer.Instance);
+        private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = 
+            new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
+
+        private class IndexNameComparer : IEqualityComparer<string>
+        {
+            public static IndexNameComparer Instance = new IndexNameComparer();
+
+            public bool Equals(string x, string y)
+            {
+                if (x.StartsWith("Auto/"))
+                {
+                    return StringComparer.Ordinal.Equals(x, y);
+                }
+                return StringComparer.OrdinalIgnoreCase.Equals(x, y);
+            }
+
+            public int GetHashCode(string obj)
+            {
+                if (obj.StartsWith("Auto/"))
+                {
+                    return StringComparer.Ordinal.GetHashCode(obj);
+                }
+                return StringComparer.OrdinalIgnoreCase.GetHashCode(obj);
+            }
+        }
 
         public void Add(Index index)
         {
