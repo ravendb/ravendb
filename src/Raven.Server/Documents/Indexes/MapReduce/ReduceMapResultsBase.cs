@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 _index.ErrorIndexIfCriticalException(e);
 
-                HandleReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
+                HandleReductionError(e, reduceKeyHash, writer, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
         }
 
@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         _index.ErrorIndexIfCriticalException(e);
 
-                        HandleReductionError(e, reduceKeyHash, stats, updateStats: parentPage == -1, page: leafPage);
+                        HandleReductionError(e, reduceKeyHash, writer, stats, updateStats: parentPage == -1, page: leafPage);
                     }
                 }
             }
@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         _index.ErrorIndexIfCriticalException(e);
 
-                        HandleReductionError(e, reduceKeyHash, stats, updateStats: true, page: page);
+                        HandleReductionError(e, reduceKeyHash, writer, stats, updateStats: true, page: page);
                     }
                     finally
                     {
@@ -584,7 +584,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
         }
 
-        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, IndexingStatsScope stats, bool updateStats, TreePage page,
+        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, IndexWriteOperation writer, IndexingStatsScope stats, bool updateStats, TreePage page,
             int numberOfNestedValues = -1)
         {
             var builder = new StringBuilder("Failed to execute reduce function on ");
@@ -594,7 +594,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             else
                 builder.Append("nested values ");
 
-            builder.Append($"of '{_indexDefinition.Name}' index (reduce key hash: {reduceKeyHash}");
+            builder.Append($"of '{_indexDefinition.Name}' index. The relevant reduce result is going to be removed from the index ");
+            builder.Append($"as it would be incorrect due to encountered errors (reduce key hash: {reduceKeyHash}");
 
             var sampleItem = _aggregationBatch?.Items?.FirstOrDefault();
 
@@ -604,9 +605,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             builder.Append(")");
 
             var message = builder.ToString();
-
+            
             if (_logger.IsInfoEnabled)
                 _logger.Info(message, error);
+
+            try
+            {
+                writer.DeleteReduceResult(reduceKeyHash, stats);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete an index result from '${_indexDefinition.Name}' index on reduce error (reduce key hash: ${reduceKeyHash})", e);
+            }
             
             if (updateStats)
             {
@@ -619,11 +630,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 // are processing a big batch, and this can be a perf killer. See: RavenDB-11038
                 
                 stats.RecordReduceErrors(numberOfEntries);
-                
+
                 if (stats.NumberOfKeptReduceErrors < IndexStorage.MaxNumberOfKeptErrors)
-                {
                     stats.AddReduceError(message + $" Exception: {error}");
-                }
 
                 var failureInfo = new IndexFailureInformation
                 {
