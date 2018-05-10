@@ -133,7 +133,14 @@ namespace Raven.Server.Documents.Indexes.Static
                     Engine.ResetTimeoutTicks();
 
                     _oneItemArray[0] = ConstructValues(item);
-                    var jsItem = Reduce.Call(JsValue.Null, _oneItemArray).AsObject();
+                    JsValue jsItem = null;
+                    try
+                    {
+                        jsItem = Reduce.Call(JsValue.Null, _oneItemArray).AsObject();
+                    } catch (Exception e)
+                    {
+                        throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
+                    }
                     yield return jsItem;
                     _resolver.ExplodeArgsOn(null, null);
                 }
@@ -207,6 +214,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public ScriptFunctionInstance Reduce { get; }
         public ScriptFunctionInstance Key { get; }
+        public string ReduceString { get; internal set; }
 
         private string[] _groupByFields;
         private bool _singleField;

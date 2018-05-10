@@ -58,10 +58,11 @@ namespace Raven.Server.Documents.Indexes.Static
                     _engine.Execute(script);
                 }
             }
+            var mapList = definition.Maps.ToList();
 
-            foreach (var map in definition.Maps)
-            {
-                _engine.Execute(map);
+            for (var i =0; i < mapList.Count; i++)
+            { 
+                _engine.Execute(mapList[i]);
             }
 
             if (definition.Reduce != null)
@@ -104,7 +105,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     MapFunc = funcInstance,
                     IndexName = _definitions.Name,
-                    Configuration = configuration
+                    Configuration = configuration,
+                    MapString = mapList[i]
                 };
                 if (map.HasOwnProperty(MoreArgsProperty))
                 {
@@ -135,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var reduceAsObj = reduceObj.AsObject();
                 var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                 var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, _resolver);
+                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, _resolver) { ReduceString = definition.Reduce};
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
             }
