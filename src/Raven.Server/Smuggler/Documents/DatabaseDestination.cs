@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -143,6 +144,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (item.Attachments != null)
                     progress.Attachments.ReadCount += item.Attachments.Count;
+                if (item.Counters != null)
+                    progress.Counters.ReadCount += item.Counters.Sum(c => c.Values.Length);
                 _command.Add(item);
                 HandleBatchOfDocumentsIfNecessary();
             }
@@ -473,6 +476,10 @@ namespace Raven.Server.Smuggler.Documents
                                 case DocumentTombstone.TombstoneType.Revision:
                                     _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector, tombstone.LastModified.Ticks);
                                     break;
+                                case DocumentTombstone.TombstoneType.Counter:
+                                    _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key,
+                                        tombstone.LastModified.Ticks, forceTombstone: true);
+                                    break;
                             }
                         }
 
@@ -497,8 +504,22 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     var document = documentType.Document;
-
                     var id = document.Id;
+
+                    if (documentType.Counters != null)
+                    {
+                        foreach (var counter in documentType.Counters)
+                        {
+                            foreach (BlittableJsonReaderObject bjro in counter.Values)
+                            {
+                                if (bjro.TryGet(nameof(DocumentItem.DocumentCounterValues.ChangeVector), out string cv) == false || 
+                                    bjro.TryGet(nameof(DocumentItem.DocumentCounterValues.Value), out long val) == false)
+                                    throw new InvalidDataException("Invalid counter value : " + bjro);
+
+                                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, id, counter.Name, cv, val);
+                            }
+                        }
+                    }
 
                     if (IsRevision)
                     {

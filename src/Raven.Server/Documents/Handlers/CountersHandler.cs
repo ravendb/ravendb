@@ -1,12 +1,11 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="CounterHandler.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="CountersHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;

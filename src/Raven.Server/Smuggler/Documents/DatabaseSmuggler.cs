@@ -82,6 +82,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.DatabaseRecord);
             EnsureStepProcessed(result.Documents);
             EnsureStepProcessed(result.Documents.Attachments);
+            EnsureStepProcessed(result.Documents.Counters);
             EnsureStepProcessed(result.RevisionDocuments);
             EnsureStepProcessed(result.RevisionDocuments.Attachments);
             EnsureStepProcessed(result.Tombstones);
@@ -170,7 +171,10 @@ namespace Raven.Server.Smuggler.Documents
             counts.Processed = true;
 
             if (counts is SmugglerProgressBase.CountsWithLastEtag countsWithEtag)
+            {
                 countsWithEtag.Attachments.Processed = true;
+                countsWithEtag.Counters.Processed = true;
+            }
 
             result.AddInfo($"Finished processing {type}. {counts}");
             _onProgress.Invoke(result.Progress);

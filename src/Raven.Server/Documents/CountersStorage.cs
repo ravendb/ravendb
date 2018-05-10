@@ -473,5 +473,12 @@ namespace Raven.Server.Documents
             }
         }
 
+        public long GetNumberOfCounterEntries(DocumentsOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            return table.NumberOfEntries;
+        }
+
+
     }
 }
