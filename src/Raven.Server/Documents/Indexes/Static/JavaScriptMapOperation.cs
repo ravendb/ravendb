@@ -51,7 +51,13 @@ namespace Raven.Server.Documents.Indexes.Static
                         continue;
                     {
                         _oneItemArray[0] = jsItem;
-                        jsItem = MapFunc.Call(JsValue.Null, _oneItemArray);
+                        try
+                        {
+                            jsItem = MapFunc.Call(JsValue.Null, _oneItemArray);
+                        }catch (Exception e)
+                        {
+                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
+                        }
                         if (jsItem.IsArray())
                         {
                             var array = jsItem.AsArray();
@@ -178,6 +184,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public HashSet<CollectionName> ReferencedCollection { get; set; } = new HashSet<CollectionName>();
         public ArrayInstance MoreArguments { get; set; }
         public RavenConfiguration Configuration { get; set; }
+        public string MapString { get; internal set; }
 
         private bool CompareFields(ObjectExpression oe)
         {
