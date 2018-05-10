@@ -75,6 +75,8 @@ namespace Raven.Server.Web.System
                         else
                         {
                             result = JsonConvert.DeserializeObject<JObject>(responseString);
+                            if (((JObject)result).TryGetValue("Error", out var err))
+                                error = err.ToString();
                         }
                     }
                     catch (Exception e)
@@ -92,7 +94,8 @@ namespace Raven.Server.Web.System
                             {
                                 Message = GeneralDomainRegistrationServiceError,
                                 Response = result,
-                                Error = error
+                                Error = error,
+                                Type = typeof(RavenException).FullName
                             });
                             
                             streamWriter.Flush();
