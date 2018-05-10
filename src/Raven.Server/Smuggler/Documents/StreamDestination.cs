@@ -572,10 +572,15 @@ namespace Raven.Server.Smuggler.Documents
                     first = false;
 
                     Writer.WriteStartObject();
-                    Writer.WritePropertyName("ChangeVector");
+
+                    Writer.WritePropertyName(nameof(DocumentItem.DocumentCounterValues.ChangeVector));
                     Writer.WriteString(cv);
-                    Writer.WritePropertyName("Value");
+
+                    Writer.WriteComma();
+
+                    Writer.WritePropertyName(nameof(DocumentItem.DocumentCounterValues.Value));
                     Writer.WriteDouble(val);
+
                     Writer.WriteEndObject();
                 }
                 Writer.WriteEndArray();
