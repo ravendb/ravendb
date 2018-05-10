@@ -14,7 +14,8 @@ namespace Raven.Client.Documents.Commands.Batches
     public class BatchCommand : RavenCommand<BlittableArrayResult>, IDisposable
     {
         private readonly BlittableJsonReaderObject[] _commands;
-        private readonly HashSet<Stream> _attachmentStreams;
+        private readonly List<Stream> _attachmentStreams;
+        private readonly HashSet<Stream> _uniqueAttachmentStreams;
         private readonly BatchOptions _options;
 
         public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
@@ -35,12 +36,16 @@ namespace Raven.Client.Documents.Commands.Batches
                 if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {
                     if (_attachmentStreams == null)
-                        _attachmentStreams = new HashSet<Stream>();
+                    {
+                        _attachmentStreams = new List<Stream>();
+                        _uniqueAttachmentStreams = new HashSet<Stream>();
+                    }
 
                     var stream = putAttachmentCommandData.Stream;
                     PutAttachmentCommandHelper.ValidateStream(stream);
-                    if (_attachmentStreams.Add(stream) == false)
+                    if (_uniqueAttachmentStreams.Add(stream) == false)
                         PutAttachmentCommandHelper.ThrowStreamAlready();
+                    _attachmentStreams.Add(stream);
                 }
             }
 
