@@ -21,10 +21,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public Dictionary<string, DynamicQueryMappingItem> GroupByFields { get; private set; }
 
-#if FEATURE_HIGHLIGHTING
-        public string[] HighlightedFields { get; private set; }
-#endif
-
         public bool IsGroupBy { get; private set; }
 
         public List<Index> SupersededIndexes;
@@ -48,6 +44,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                         if (field.IsExactSearch)
                             indexField.Indexing |= AutoFieldIndexing.Exact;
+
+                        if (field.HasHighlighting)
+                            indexField.Indexing |= AutoFieldIndexing.Highlighting;
 
                         if (field.Spatial != null)
                             indexField.Spatial = new AutoSpatialOptions(field.Spatial);
@@ -76,6 +75,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     if (field.IsExactSearch)
                         indexField.Indexing |= AutoFieldIndexing.Exact;
+
+                    if (field.HasHighlighting)
+                        indexField.Indexing |= AutoFieldIndexing.Highlighting;
 
                     if (field.Spatial != null)
                         indexField.Spatial = new AutoSpatialOptions(field.Spatial);
@@ -132,6 +134,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         mappingFields[queryField.Name] = DynamicQueryMappingItem.Create(queryField.Name, queryField.AggregationOperation,
                             isFullTextSearch: queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
+                            hasHighlighting: queryField.HasHighlighting || indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
                             spatial: queryField.Spatial ?? indexField.Spatial);
                     }
                     else
@@ -139,6 +142,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(new QueryFieldName(indexField.Name, indexField.HasQuotedName), indexField.Aggregation,
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
+                            hasHighlighting: indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
                             spatial: indexField.Spatial));
                     }
                 }
@@ -201,6 +205,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
                             query.QueryParameters);
                     }
+                }
+            }
+
+            if (query.Metadata.HasHighlightings)
+            {
+                foreach (var highlighting in query.Metadata.Highlightings)
+                {
+                    var fieldName = highlighting.Field;
+                    if (mapFields.TryGetValue(fieldName, out var value))
+                        value.HasHighlighting = true;
+                    else
+                        mapFields[fieldName] = DynamicQueryMappingItem.Create(fieldName, AggregationOperation.None, isFullTextSearch: true, isExactSearch: false, hasHighlighting: true, spatial: null);
                 }
             }
 

@@ -2,10 +2,6 @@
 #define CURRENT
 #endif
 
-#if NETSTANDARD1_3
-#define LEGACY
-#endif
-
 using System.Collections.Generic;
 using Raven.Client.Documents.Session;
 

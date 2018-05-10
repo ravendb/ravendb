@@ -7,9 +7,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
@@ -25,7 +24,7 @@ namespace SlowTests.Tests.Querying
 
         private class EventsItem : ISearchable
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Title { get; set; }
             public string Slug { get; set; }
             public string Content { get; set; }
@@ -61,7 +60,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Theory(Skip = "RavenDB-6558")]
+        [Theory]
         [InlineData("session")]
         public void SearchWithHighlightes(string q)
         {
@@ -82,14 +81,17 @@ namespace SlowTests.Tests.Querying
 
                 using (var session = store.OpenSession())
                 {
-#if FEATURE_HIGHLIGHTING
-                    FieldHighlightings titleHighlighting, slugHighlighting, contentHighlighting;
+                    var options = new HighlightingOptions
+                    {
+                        PreTags = new[] { "<span style='background: yellow'>" },
+                        PostTags = new[] { "</span>" }
+                    };
+
                     var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
                         .WaitForNonStaleResults()
-                        .Highlight("Title", 128, 2, out titleHighlighting)
-                        .Highlight("Slug", 128, 2, out slugHighlighting)
-                        .Highlight("Content", 128, 2, out contentHighlighting)
-                        .SetHighlighterTags("<span style='background: yellow'>", "</span>")
+                        .Highlight("Title", 128, 2, options, out Highlightings titleHighlighting)
+                        .Highlight("Slug", 128, 2, options, out Highlightings slugHighlighting)
+                        .Highlight("Content", 128, 2, options, out Highlightings contentHighlighting)
                         .Search("Slug", q).Boost(15)
                         .Search("Title", q).Boost(12)
                         .Search("Content", q)
@@ -119,7 +121,6 @@ namespace SlowTests.Tests.Querying
 
                         orderedResults.Add(new SearchResults { Result = searchable, Highlights = highlights, Title = title });
                     }
-#endif
                 }
             }
         }

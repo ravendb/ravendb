@@ -1,18 +1,16 @@
-#if FEATURE_HIGHLIGHTING
-using System;
+﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Queries;
 
-namespace Raven.Client.Documents.Session
+namespace Raven.Client.Documents.Queries.Highlighting
 {
     /// <summary>
-    ///     Query highlights for the documents.
+    ///     Query highlightings for the documents.
     /// </summary>
-    public class FieldHighlightings
+    public class Highlightings
     {
-        private readonly Dictionary<string,string[]> _highlightings;
+        private readonly Dictionary<string, string[]> _highlightings;
 
-        public FieldHighlightings(string fieldName)
+        public Highlightings(string fieldName)
         {
             FieldName = fieldName;
             _highlightings = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
@@ -32,26 +30,21 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public string[] GetFragments(string key)
         {
-            string[] result;
-
-            if (!_highlightings.TryGetValue(key, out result))
+            if (_highlightings.TryGetValue(key, out var result) == false)
                 return new string[0];
 
             return result;
         }
 
-        internal void Update(QueryResult queryResult)
+        internal void Update(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {
             _highlightings.Clear();
 
-            if (queryResult.Highlightings == null)
+            if (highlightings == null || highlightings.TryGetValue(FieldName, out var result) == false)
                 return;
 
-            foreach (var entityFragments in queryResult.Highlightings)
-                foreach (var fieldFragments in entityFragments.Value)
-                    if (fieldFragments.Key == FieldName)
-                        _highlightings.Add(entityFragments.Key, fieldFragments.Value);
+            foreach (var kvp in result)
+                _highlightings.Add(kvp.Key, kvp.Value);
         }
     }
 }
-#endif

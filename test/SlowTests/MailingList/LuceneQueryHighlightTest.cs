@@ -1,6 +1,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Highlighting;
 using SlowTests.Utils.Analyzers;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace SlowTests.MailingList
     {
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
-        [Theory(Skip = "RavenDB-6558")]
+        [Theory]
         [InlineData(Q, "con cur", "con cu")]
         [InlineData(Q, "con ency", "con cy")]
         [InlineData(Q, "curr ency", "curr enc")]
@@ -35,8 +36,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-#if FEATURE_HIGHLIGHTING
-                    FieldHighlightings highlightings;
+                    Highlightings highlightings;
 
                     var goodResult = session.Advanced.DocumentQuery<Question, QuestionIndex>()
                         .WaitForNonStaleResults()
@@ -52,7 +52,6 @@ namespace SlowTests.MailingList
                         .Search(x => x.QuestionText, badSearchTerm)
                         .OrderByScore()
                         .FirstOrDefault();
-#endif
                 }
             }
         }

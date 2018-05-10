@@ -8,10 +8,6 @@
 #define CURRENT
 #endif
 
-#if NETSTANDARD1_3
-#define LEGACY
-#endif
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -84,9 +80,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.Include(path));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
             var expression = ConvertExpressionIfNecessary(source);
@@ -99,9 +92,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.AggregateBy(facet));
 #endif
 
             var query = new AggregationQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
@@ -140,9 +130,6 @@ namespace Raven.Client.Documents
 
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(AggregateUsing));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -199,9 +186,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.SuggestUsing(suggestion));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -927,9 +911,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.GroupByArrayValues(fieldSelector));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(TSource), typeof(TKey) });
             var expression = ConvertExpressionIfNecessary(source);
@@ -945,9 +926,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.GroupByArrayContent(fieldSelector));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(TSource), typeof(TKey) });
             var expression = ConvertExpressionIfNecessary(source);
@@ -962,9 +940,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.Where(predicate, exact));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -977,9 +952,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.Where(predicate, exact));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -999,9 +971,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.Spatial(fieldName, clause));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1019,9 +988,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.Spatial(field, clause));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1041,9 +1007,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(field, latitude, longitude));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1061,9 +1024,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(fieldName, latitude, longitude));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1083,9 +1043,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(field, shapeWkt));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1103,9 +1060,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(fieldName, shapeWkt));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1125,9 +1079,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(field, latitude, longitude));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1145,9 +1096,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(fieldName, latitude, longitude));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1167,9 +1115,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(field, shapeWkt));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1187,9 +1132,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(fieldName, shapeWkt));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1209,9 +1151,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderBy(path, ordering));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1229,9 +1168,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.OrderByDescending(path, ordering));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1251,9 +1187,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.ThenBy(path, ordering));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1272,9 +1205,6 @@ namespace Raven.Client.Documents
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.ThenByDescending(path, ordering));
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1287,9 +1217,6 @@ namespace Raven.Client.Documents
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMethodInfoOf(() => source.MoreLikeThis(default(MoreLikeThisBase)));
 #endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
@@ -1328,14 +1255,5 @@ namespace Raven.Client.Documents
         {
             return method.IsGenericMethodDefinition ? method.MakeGenericMethod(typeArguments) : method;
         }
-
-#if LEGACY
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static MethodInfo GetMethodInfoOf<T>(Expression<Func<T>> expression)
-        {
-            var body = (MethodCallExpression)expression.Body;
-            return body.Method;
-        }
-#endif
     }
 }

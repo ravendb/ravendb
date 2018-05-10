@@ -104,20 +104,6 @@ namespace Raven.Client.Documents.Queries
             _buffer.Dispose();
         }
 
-#if FEATURE_HIGHLIGHTING
-        public void Write(HighlightedField[] highlightedFields)
-        {
-            if (highlightedFields == null) return;
-            for (int i = 0; i < highlightedFields.Length; i++)
-            {
-                Write(highlightedFields[i].Field);
-                Write(highlightedFields[i].FragmentCount);
-                Write(highlightedFields[i].FragmentLength);
-                Write(highlightedFields[i].FragmentsField);
-            }
-        }
-#endif
-
         public void Write(Parameters qp)
         {
             if (qp == null)

@@ -4,8 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Queries.Highlighting;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -56,7 +59,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +79,7 @@ namespace SlowTests.Core.Indexing
                         Address2 = "The lazy dogs, Bob@hotmail.com 123432.",
                         Address3 = "The lazy dogs, Bob@hotmail.com 123432.",
                         Phone = 111222333
-                    });
+                    }, "companies/1");
                     session.SaveChanges();
                     WaitForIndexing(store);
 
@@ -114,8 +117,9 @@ namespace SlowTests.Core.Indexing
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
                         .Where(c => c.Desc == "bob")
                         .ToArray();
+                    Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
-                        .Where(c => c.Desc == "bob@hotmail.com")
+                        .Search(c => c.Desc, "bob@hotmail.com")
                         .ToArray();
                     Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
@@ -156,7 +160,7 @@ namespace SlowTests.Core.Indexing
                         .ToArray();
                     Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
-                        .Where(c => c.Address1 == "the lazy dogs")
+                        .Search(c => c.Address1, "the lazy dogs")
                         .ToArray();
                     Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
@@ -172,7 +176,7 @@ namespace SlowTests.Core.Indexing
                         .ToArray();
                     Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
-                        .Where(c => c.Address1 == "bob@hotmail.com")
+                        .Search(c => c.Address1, "bob@hotmail.com")
                         .ToArray();
                     Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
@@ -210,7 +214,7 @@ namespace SlowTests.Core.Indexing
                         .ToArray();
                     Assert.Equal(0, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
-                        .Where(c => c.Address2 == "Bob@hotmail.com")
+                        .Search(c => c.Address2, "Bob@hotmail.com")
                         .ToArray();
                     Assert.Equal(1, companies.Length);
                     companies = session.Query<Company, Companies_CustomAnalyzers>()
@@ -244,11 +248,6 @@ namespace SlowTests.Core.Indexing
                         .Where(c => c.Address3 == "Bob@hotmail.com")
                         .ToArray();
                     Assert.Equal(0, companies.Length);
-                    companies = session.Query<Company, Companies_CustomAnalyzers>()
-                        .Where(c => c.Address3 == "The lazy dogs, Bob@hotmail.com 123432.")
-                        .ToArray();
-                    Assert.Equal(1, companies.Length);
-
 
                     session.Store(new Company
                     {
@@ -258,25 +257,29 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                     WaitForIndexing(store);
 
-#if FEATURE_HIGHLIGHTING
-                    FieldHighlightings highlightings;
                     companies = session.Advanced.DocumentQuery<Company>("Companies/CustomAnalyzers")
-                        .Highlight("Name", 128, 1, out highlightings)
+                        .Highlight("Name", 128, 1, out Highlightings highlightings)
                         .Search("Name", "lazy")
                         .ToArray();
                     Assert.Equal(2, companies.Length);
 
+                    var expected = new Dictionary<string, string>
+                    {
+                        {
+                            "companies/1", 
+                            "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com 123432."
+                        },
+                        {
+                            "companies/2",
+                            "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com <b style=\"background:yellow\">lazy</b> 123432 <b style=\"background:yellow\">lazy</b> dogs."
+                        }
+                    };
+
                     var fragments = highlightings.GetFragments(companies[0].Id);
-                    Assert.Equal(
-                        "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com <b style=\"background:yellow\">lazy</b> 123432 <b style=\"background:yellow\">lazy</b> dogs.",
-                        fragments.First()
-                        );
+                    Assert.Equal(expected[companies[0].Id], fragments.First());
+
                     fragments = highlightings.GetFragments(companies[1].Id);
-                    Assert.Equal(
-                        "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com 123432.",
-                        fragments.First()
-                        );
-#endif
+                    Assert.Equal(expected[companies[1].Id], fragments.First());
                 }
             }
         }

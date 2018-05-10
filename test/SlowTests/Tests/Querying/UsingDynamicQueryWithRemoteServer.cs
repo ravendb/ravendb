@@ -8,11 +8,10 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
@@ -212,7 +211,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
         {
             using (var documentStore = GetDocumentStore())
@@ -245,17 +244,18 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
-#if FEATURE_HIGHLIGHTING
-                    FieldHighlightings titleHighlightings;
-                    FieldHighlightings categoryHighlightings;
+                    var options = new HighlightingOptions
+                    {
+                        PreTags = new[] { "*" },
+                        PostTags = new[] { "*" }
+                    };
 
                     var results =
                         s.Advanced.DocumentQuery<Blog>()
-                            .Highlight("Title", 18, 2, out titleHighlightings)
-                            .Highlight("Category", 18, 2, out categoryHighlightings)
-                            .SetHighlighterTags("*", "*")
-                            .WhereLucene("Title", "(target word)")
-                            .WhereLucene("Category", "rhinos")
+                            .Highlight("Title", 18, 2, options, out Highlightings titleHighlightings)
+                            .Highlight("Category", 18, 2, options, out Highlightings categoryHighlightings)
+                            .Search("Title", "target word")
+                            .Search("Category", "rhinos")
                             .WaitForNonStaleResults()
                             .ToArray();
 
@@ -265,12 +265,11 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
-#endif
                 }
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void CanPerformDynamicQueryWithHighlighting()
         {
             using (var documentStore = GetDocumentStore())
@@ -303,21 +302,13 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
-                    /*
-                    FieldHighlightings titleHighlightings = null;
-                    FieldHighlightings categoryHighlightings = null;
-
-                    var results =
-                        s.Query<Blog>()
-                            .Customize(
-                                c =>
-                                c.Highlight("Title", 18, 2, out titleHighlightings)
-                                    .Highlight("Category", 18, 2, out categoryHighlightings)
-                                    .SetHighlighterTags("*", "*")
-                                    .WaitForNonStaleResults())
-                            .Search(x => x.Category, "rhinos")
-                            .Search(x => x.Title, "target word")
-                            .ToArray();
+                    var results = s.Query<Blog>()
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .Highlight("Title", 18, 2, out Highlightings titleHighlightings)
+                        .Highlight("Category", 18, 2, out Highlightings categoryHighlightings)
+                        .Search(x => x.Category, "rhinos")
+                        .Search(x => x.Title, "target word")
+                        .ToArray();
 
                     Assert.Equal(3, results.Length);
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogOneId));
@@ -325,12 +316,11 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
-                    */
                 }
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
             using (var documentStore = GetDocumentStore())
@@ -376,21 +366,13 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
-                    /*
-                    FieldHighlightings titleHighlightings = null;
-                    FieldHighlightings categoryHighlightings = null;
-
-                    var results =
-                        s.Query<Blog>(indexName)
-                            .Customize(
-                                c =>
-                                c.Highlight("Title", 18, 2, out titleHighlightings)
-                                    .Highlight("Category", 18, 2, out categoryHighlightings)
-                                    .SetHighlighterTags("*", "*")
-                                    .WaitForNonStaleResults())
-                            .Search(x => x.Category, "rhinos")
-                            .Search(x => x.Title, "target word")
-                            .ToArray();
+                    var results = s.Query<Blog>(indexName)
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .Highlight("Title", 18, 2, out Highlightings titleHighlightings)
+                        .Highlight("Category", 18, 2, out Highlightings categoryHighlightings)
+                        .Search(x => x.Category, "rhinos")
+                        .Search(x => x.Title, "target word")
+                        .ToArray();
 
                     Assert.Equal(3, results.Length);
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogOneId));
@@ -398,12 +380,11 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
-                    */
                 }
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void ExecutesQueryWithHighlightingsAndProjections()
         {
             using (var documentStore = GetDocumentStore())
@@ -444,22 +425,27 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
-                    /*
-                    var results =
-                        s.Query<Blog>(indexName)
-                            .Customize(c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
-                            .Where(x => x.Title == "lorem" && x.Category == "ravens")
-                            .Select(x => new { x.Title, x.Category, TitleFragments = default(string[]) })
-                            .ToArray();
+                    var results = s.Query<Blog>(indexName)
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .Highlight("Title", 18, 2, new HighlightingOptions
+                        {
+                            GroupKey = "Category"
+                        }, out Highlightings highlightings)
+                        .Where(x => x.Title == "lorem" && x.Category == "ravens")
+                        .Select(x => new
+                        {
+                            x.Title,
+                            x.Category
+                        })
+                        .ToArray();
 
                     Assert.Equal(1, results.Length);
-                    Assert.NotEmpty(results.First().TitleFragments);
-                    */
+                    Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
                 }
             }
         }
 
-        [Fact(Skip = "RavenDB-6558")]
+        [Fact]
         public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
             using (var documentStore = GetDocumentStore())
@@ -508,17 +494,22 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
-                    /*
-                    var results =
-                        s.Query<Blog>(indexName)
-                            .Customize(c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
-                            .Where(x => x.Title == "lorem" && x.Category == "ravens")
-                            .Select(x => new { x.Title, x.Category, TitleFragments = default(string[]) })
-                            .ToArray();
+                    var results = s.Query<Blog>(indexName)
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .Highlight("Title", 18, 2, new HighlightingOptions
+                        {
+                            GroupKey = "Category"
+                        }, out Highlightings highlightings)
+                        .Where(x => x.Title == "lorem" && x.Category == "ravens")
+                        .Select(x => new
+                        {
+                            x.Title,
+                            x.Category
+                        })
+                        .ToArray();
 
                     Assert.Equal(1, results.Length);
-                    Assert.NotEmpty(results.First().TitleFragments);
-                    */
+                    Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
                 }
             }
         }

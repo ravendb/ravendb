@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Indexes
                                 return AutoMapReduceIndex.CreateNew(autoMapReduceDef, documentDatabase);
                         }
                     }
-                    
+
                     throw new IndexOpenException(
                         $"Could not read index type from storage in '{path}'. This indicates index data file corruption.",
                         e);
@@ -900,14 +900,14 @@ namespace Raven.Server.Documents.Indexes
 
                             _mre.Reset();
                         }
-                        
+
                         // this is called on every iteration because index priorities can be changed at runtime
                         ChangeIndexThreadPriorityIfNeeded();
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
 
-                        
+
 
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
                         LastIndexingTime = stats.StartTime;
@@ -1057,7 +1057,7 @@ namespace Raven.Server.Documents.Indexes
                                 _didWork = true;
                                 _firstBatchTimeout = null;
                             }
-                            
+
                             var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
                             batchCompletedAction?.Invoke((Name, didWork));
                         }
@@ -1337,7 +1337,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             // we exceeded the number of db unloads due to corruption error, let's error the index
-            
+
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
 
             try
@@ -1399,7 +1399,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField,_unmanagedBuffersPool))
+                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
@@ -1953,6 +1953,12 @@ namespace Raven.Server.Documents.Indexes
                 && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
+            if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
+            if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
             using (var marker = MarkQueryAsRunning(query, token))
             {
                 var queryDuration = Stopwatch.StartNew();
@@ -2003,7 +2009,7 @@ namespace Raven.Server.Documents.Indexes
                             var skippedResults = new Reference<int>();
 
                             var fieldsToFetch = new FieldsToFetch(query, Definition);
-                            IEnumerable<Document> documents;
+                            IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings)> documents;
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
                                 DocumentDatabase.DocumentsStorage, documentsContext,
@@ -2049,9 +2055,12 @@ namespace Raven.Server.Documents.Indexes
                                 foreach (var document in documents)
                                 {
                                     resultToFill.TotalResults = totalResults.Value;
-                                    resultToFill.AddResult(document);
+                                    resultToFill.AddResult(document.Result);
 
-                                    includeDocumentsCommand.Gather(document);
+                                    if (document.Highlightings != null)
+                                        resultToFill.AddHighlightings(document.Highlightings);
+
+                                    includeDocumentsCommand.Gather(document.Result);
                                 }
                             }
                             catch (Exception e)
@@ -2867,7 +2876,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations("Unable to complete compaction, index is not usable and may require reset of the index to recover", e);
-                    
+
                     throw;
                 }
                 finally
@@ -3040,7 +3049,7 @@ namespace Raven.Server.Documents.Indexes
 
             staticDef = null;
             autoDef = null;
-            
+
             return false;
         }
 

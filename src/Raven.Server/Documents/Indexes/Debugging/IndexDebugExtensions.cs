@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 if (result.Count != 1)
                     throw new InvalidOperationException("Cannot have multiple reduce results for a single reduce key");
 
-                return result[0].Data;
+                return result[0].Result.Data;
             }
         }
 
