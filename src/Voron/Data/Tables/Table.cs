@@ -191,6 +191,24 @@ namespace Voron.Data.Tables
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
         }
 
+        public int GetAllocatedSize(long id)
+        {
+            var posInPage = id % Constants.Storage.PageSize;
+            if (posInPage == 0) // large
+            {
+                var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
+
+                var allocated = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+
+                return allocated;
+            }
+
+            // here we rely on the fact that RawDataSmallSection can
+            // read any RawDataSmallSection piece of data, not just something that
+            // it exists in its own section, but anything from other sections as well
+            return RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id)->AllocatedSize;
+        }
+
         public long Update(long id, TableValueBuilder builder, bool forceUpdate = false)
         {
             AssertWritableTable();

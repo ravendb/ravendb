@@ -25,6 +25,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -53,6 +54,54 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 return Task.CompletedTask;
+            }
+        }
+
+
+        [RavenAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetDocSize()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var document = Database.DocumentsStorage.GetDocumentMetrics(context, id);
+                if(document == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Id");
+                    writer.WriteString(id);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("ActualSize");
+                    writer.WriteInteger(document.Value.ActualSize);
+                    writer.WriteComma();
+
+
+                    writer.WritePropertyName("HumaneActualSize");
+                    writer.WriteString(Sizes.Humane(document.Value.ActualSize));
+                    writer.WriteComma();
+
+
+                    writer.WritePropertyName("AllocatedSize");
+                    writer.WriteInteger(document.Value.AllocatedSize);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("HumaneAllocatedSize");
+                    writer.WriteString(Sizes.Humane(document.Value.AllocatedSize));
+
+                    writer.WriteEndObject();
+                }
+
+                return Task.CompletedTask;
+
             }
         }
 
