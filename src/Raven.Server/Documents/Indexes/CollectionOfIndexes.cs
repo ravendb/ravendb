@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes
 
         private class IndexNameComparer : IEqualityComparer<string>
         {
-            public static IndexNameComparer Instance = new IndexNameComparer();
+            public static readonly IndexNameComparer Instance = new IndexNameComparer();
 
             public bool Equals(string x, string y)
             {
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void ReplaceIndex(string name, Index oldIndex, Index newIndex)
         {
-            Debug.Assert(oldIndex == null || string.Equals(name, oldIndex.Name, StringComparison.Ordinal));
+            Debug.Assert(oldIndex == null || IndexNameComparer.Instance.Equals(name, oldIndex.Name));
 
             _indexesByName.AddOrUpdate(name, newIndex, (key, oldValue) => newIndex);
             if (newIndex.Name != name)
