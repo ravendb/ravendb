@@ -10,6 +10,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
@@ -345,6 +347,140 @@ namespace SlowTests.Smuggler
                     stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportCounters()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.Advanced.Counters.Increment("users/1", "likes", 100);
+                        session.Advanced.Counters.Increment("users/1", "dislikes", 200);
+                        session.Advanced.Counters.Increment("users/2", "downloads", 500);
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments); 
+                    Assert.Equal(3, stats.CountOfCounters);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var dic = await session.Advanced.Counters.GetAsync(user1);
+                        Assert.Equal(2, dic.Count);
+                        Assert.Equal(100, dic["likes"]);
+                        Assert.Equal(200, dic["dislikes"]);
+
+                        var val = await session.Advanced.Counters.GetAsync(user2, "downloads");
+                        Assert.Equal(500, val);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportCounterTombstones()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+                        await session.StoreAsync(new User { Name = "Name3" }, "users/3");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.Advanced.Counters.Increment("users/1", "likes", 100);
+                        session.Advanced.Counters.Increment("users/1", "dislikes", 200);
+                        session.Advanced.Counters.Increment("users/2", "downloads", 500);
+                        session.Advanced.Counters.Increment("users/2", "votes", 1000);
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.Delete("users/3");
+                        session.Advanced.Counters.Delete("users/1", "dislikes");
+                        session.Advanced.Counters.Delete("users/2", "votes");
+                        await session.SaveChangesAsync();
+                    }
+
+                    var db = await GetDocumentDatabaseInstanceFor(store1);
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var tombstones = db.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
+                        Assert.Equal(3, tombstones.Count);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Document, tombstones[0].Type);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[2].Type);
+                    }
+
+                    var exportOptions = new DatabaseSmugglerExportOptions();
+                    var importOptions = new DatabaseSmugglerImportOptions();
+                    exportOptions.OperateOnTypes |= DatabaseItemType.Tombstones;
+                    importOptions.OperateOnTypes |= DatabaseItemType.Tombstones;
+
+                    await store1.Smuggler.ExportAsync(exportOptions, file);
+                    await store2.Smuggler.ImportAsync(importOptions, file);
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfCounters);
+                    Assert.Equal(3, stats.CountOfTombstones);
+
+                    db = await GetDocumentDatabaseInstanceFor(store2);
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var tombstones = db.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
+                        Assert.Equal(3, tombstones.Count);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Document, tombstones[0].Type);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[2].Type);
+                    }
                 }
             }
             finally

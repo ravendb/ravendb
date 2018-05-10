@@ -428,6 +428,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    session.Advanced.Counters.Increment("users/1", "likes", 100);
                     await session.SaveChangesAsync();
                 }
 
@@ -454,6 +455,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
+                    session.Advanced.Counters.Increment("users/2", "downloads", 200);
+
                     await session.SaveChangesAsync();
                 }
 
@@ -478,6 +481,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
+
+                        var val = await session.Advanced.Counters.GetAsync("users/1", "likes");
+                        Assert.Equal(100, val);
+                        val = await session.Advanced.Counters.GetAsync("users/2", "downloads");
+                        Assert.Equal(200, val);
                     }
                 }
             }
@@ -506,6 +514,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         .Query<User>()
                         .Where(x => x.Age > 20)
                         .ToListAsync(); // create an index to backup
+
+                    session.Advanced.Counters.Increment("users/1", "likes", 100); //create a counter to backup
+                    await session.SaveChangesAsync();
                 }
 
                 var config = new PeriodicBackupConfiguration
@@ -532,6 +543,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
                     await session.StoreAsync(new User { Name = "ayende" }, "users/3");
+
+                    session.Advanced.Counters.Increment("users/2", "downloads", 200);
+
                     await session.SaveChangesAsync();
                 }
 
@@ -557,6 +571,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.NotNull(users["users/2"]);
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
+
+                        var val = await session.Advanced.Counters.GetAsync("users/1", "likes");
+                        Assert.Equal(100, val);
+                        val = await session.Advanced.Counters.GetAsync("users/2", "downloads");
+                        Assert.Equal(200, val);
+
                     }
 
                     var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
