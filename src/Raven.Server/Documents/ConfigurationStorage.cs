@@ -45,12 +45,12 @@ namespace Raven.Server.Documents
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-
-            Environment = LayoutUpdater.OpenEnvironment(options);
-
+            
             NotificationsStorage = new NotificationsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();
+
+            Environment = LayoutUpdater.OpenEnvironment(options);
 
             ContextPool = new TransactionContextPool(Environment);
         }

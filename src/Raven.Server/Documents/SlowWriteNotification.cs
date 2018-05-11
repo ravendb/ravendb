@@ -1,6 +1,4 @@
-﻿using System.IO;
-using Raven.Server.NotificationCenter.Notifications;
-using Voron.Debugging;
+﻿using Voron.Debugging;
 
 namespace Raven.Server.Documents
 {
@@ -21,13 +19,7 @@ namespace Raven.Server.Documents
 
             if (rateOfWritesInMbPerSec < 1)
             {
-                database.NotificationCenter.Add(PerformanceHint.Create(database.Name,
-                    $"An extremely slow write to disk.",
-                    $"We wrote {writtenDataInMb:N} MB in {seconds:N} seconds ({rateOfWritesInMbPerSec:N} MB/s) to: '{stats.JournalFilePath}'",
-                    PerformanceHintType.SlowIO,
-                    NotificationSeverity.Info,
-                    $"TxMerger/{Path.GetDirectoryName(stats.JournalFilePath)}"
-                ));
+                database.NotificationCenter.SlowWrites.Add(stats.JournalFilePath, writtenDataInMb, seconds);
             }
         }
     }
