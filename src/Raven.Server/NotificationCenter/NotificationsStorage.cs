@@ -28,7 +28,7 @@ namespace Raven.Server.NotificationCenter
 
         private TransactionContextPool _contextPool;
 
-        private readonly TableSchema _actionsSchema = new TableSchema();
+        internal readonly TableSchema _actionsSchema = new TableSchema();
 
         static NotificationsStorage()
         {
