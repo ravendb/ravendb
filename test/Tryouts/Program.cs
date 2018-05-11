@@ -16,34 +16,14 @@ namespace Tryouts
 {
     public static class Program
     {
+        /*
+        public static async Task Main(string[] args)
+        {
+        }
+        */
 
         public static void Main(string[] args)
         {
-
-            using (var tests = new CountersCrudSingleNode())
-            {
-
-
-            }
-
-            using (var tests = new CountersCrudMultipuleNodes())
-            {
-
-                tests.IncrementCounter().Wait();
-
-            }
-
-            using (var tests = new CountersInMetadata())
-            {
-
-                tests.ConflictsInMetadata().Wait();
-                tests.IncrementAndDeleteShouldChangeDocumentMetadata();
-
-
-                Console.WriteLine("all good");
-                Console.ReadKey();
-            }
-
         }
     }
 }
