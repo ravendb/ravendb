@@ -346,6 +346,39 @@ where exact(Name = 'arek')"));
             }
         }
 
+        [Fact]
+        public void Partial_match_when_highlighting_is_required()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where search(Name, 'arek')"));
+
+                var definition = mapping.CreateAutoIndexDefinition();
+                db.IndexStore.CreateIndex(definition).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where search(Name, 'arek')
+include highlight(Name, 18, 2)
+"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+
+                mapping.ExtendMappingBasedOn(definition);
+
+                definition = mapping.CreateAutoIndexDefinition();
+                db.IndexStore.CreateIndex(definition).Wait();
+
+                result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
+            }
+        }
+
         private void add_index(AutoMapIndexDefinition definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
