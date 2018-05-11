@@ -325,6 +325,9 @@ namespace Raven.Server.Documents.Queries
                         switch (methodType)
                         {
                             case MethodType.Highlight:
+                                if (IsGroupBy)
+                                    throw new InvalidQueryException("Dynamic group by queries cannot have highlighting.", QueryText, parameters);
+
                                 HasHighlightings = true;
 
                                 QueryValidator.ValidateHighlight(me.Arguments, QueryText, parameters);
