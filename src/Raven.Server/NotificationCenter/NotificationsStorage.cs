@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Util;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -69,6 +71,8 @@ namespace Raven.Server.NotificationCenter
 
                 tx.Commit();
             }
+
+            Cleanup();
         }
 
         public bool Store(Notification notification)
@@ -281,7 +285,7 @@ namespace Raven.Server.NotificationCenter
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                var item =  Get(id, context, tx);
+                var item = Get(id, context, tx);
                 if (item == null)
                     return null;
                 item.Json.TryGet("Database", out string db);
@@ -309,6 +313,42 @@ namespace Raven.Server.NotificationCenter
                     , tx);
 
                 tx.Commit();
+            }
+        }
+
+        private void Cleanup()
+        {
+            RemoveNewVersionAvailableAlertIfNecessary();
+        }
+
+        private void RemoveNewVersionAvailableAlertIfNecessary()
+        {
+            var buildNumber = ServerVersion.Build;
+
+            var id = AlertRaised.GetKey(AlertType.Server_NewVersionAvailable, null);
+            using (Read(id, out var ntv))
+            {
+                if (ntv == null)
+                    return;
+
+                var delete = true;
+
+                if (buildNumber != ServerVersion.DevBuildNumber)
+                {
+                    if (ntv.Json.TryGetMember(nameof(AlertRaised.Details), out var o)
+                        && o is BlittableJsonReaderObject detailsJson)
+                    {
+                        if (detailsJson.TryGetMember(nameof(NewVersionAvailableDetails.VersionInfo), out o)
+                            && o is BlittableJsonReaderObject newVersionDetailsJson)
+                        {
+                            var value = JsonDeserializationServer.LatestVersionCheckVersionInfo(newVersionDetailsJson);
+                            delete = value.BuildNumber <= buildNumber;
+                        }
+                    }
+                }
+
+                if (delete)
+                    Delete(id);
             }
         }
 
