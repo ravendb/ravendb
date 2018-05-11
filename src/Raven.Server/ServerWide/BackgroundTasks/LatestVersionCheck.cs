@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     return;
 
                 var stream = await ApiRavenDbClient.GetStreamAsync(
-                    $"/api/v2/versions/latest?channel=dev&build={buildNumber}");
+                    $"/api/v2/versions/latest?channel=patch&build={buildNumber}");
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
