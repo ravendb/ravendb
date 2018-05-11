@@ -4,13 +4,10 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -44,8 +41,6 @@ namespace Raven.Server.NotificationCenter
 
             if (database != null)
                 BackgroundWorkers.Add(new DatabaseStatsSender(database, this));
-
-            Cleanup();
 
             IsInitialized = true;
         }
@@ -163,42 +158,6 @@ namespace Raven.Server.NotificationCenter
             Paging?.Dispose();
 
             base.Dispose();
-        }
-
-        private void Cleanup()
-        {
-            RemoveNewVersionAvailableAlertIfNecessary();
-        }
-
-        private void RemoveNewVersionAvailableAlertIfNecessary()
-        {
-            var buildNumber = ServerVersion.Build;
-
-            var id = AlertRaised.GetKey(AlertType.Server_NewVersionAvailable, null);
-            using (_notificationsStorage.Read(id, out var ntv))
-            {
-                if (ntv == null)
-                    return;
-
-                var delete = true;
-
-                if (buildNumber != ServerVersion.DevBuildNumber)
-                {
-                    if (ntv.Json.TryGetMember(nameof(AlertRaised.Details), out var o)
-                        && o is BlittableJsonReaderObject detailsJson)
-                    {
-                        if (detailsJson.TryGetMember(nameof(NewVersionAvailableDetails.VersionInfo), out o)
-                            && o is BlittableJsonReaderObject newVersionDetailsJson)
-                        {
-                            var value = JsonDeserializationServer.LatestVersionCheckVersionInfo(newVersionDetailsJson);
-                            delete = value.BuildNumber <= buildNumber;
-                        }
-                    }
-                }
-
-                if (delete)
-                    _notificationsStorage.Delete(id);
-            }
         }
     }
 
