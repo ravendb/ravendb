@@ -10,9 +10,15 @@ class queryCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultWithIncludes<document>> {
+    execute(): JQueryPromise<pagedResultWithIncludesAndHighlights<document>> {
         const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
-            ({ items: results.Results.map(d => new document(d)), totalResultCount: results.TotalResults, additionalResultInfo: results, resultEtag: results.ResultEtag.toString(), includes: results.Includes }) as pagedResultWithIncludes<document>;
+            ({
+                items: results.Results.map(d => new document(d)), 
+                totalResultCount: results.TotalResults, 
+                additionalResultInfo: results, 
+                resultEtag: results.ResultEtag.toString(), 
+                highlightings: results.Highlightings,
+                includes: results.Includes }) as pagedResultWithIncludesAndHighlights<document>;
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
     }

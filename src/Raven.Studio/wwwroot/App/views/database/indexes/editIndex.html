@@ -302,6 +302,7 @@
     </div>
     <div class="indexing-options" data-bind="visible: !isSpatial()">
         <span class="item" data-bind="css: { active : hasSearch}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Search</span></span>
+        <span class="item" data-bind="css: { active : hasHighlighting}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Highlighting</span></span>
         <span class="item" data-bind="css: { active : hasExact}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Exact</span></span>
     </div>
     <div class="indexing-options" data-bind="visible: isSpatial">
@@ -390,19 +391,19 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                         </div>
                     </div>
 
-                    <!-- TODO
                     <div class="properties-item">
                         <span class="properties-label">Highlighting</span>
-
                         <div class="btn-group properties-value">
-                            <button type="button" class="btn set-size dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-expanded="false">
-                                <span>Default (No)</span> <span class="caret"></span>
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveHighlighting"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                            TODO
+                                <li><a href="#" data-bind="click: highlighting.bind(highlighting, null)"><span>Default</span></a></li>
+                                <li><a href="#" data-bind="click: highlighting.bind(highlighting, true)"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: highlighting.bind(highlighting, false)"><span>No</span></a></li>
                             </ul>
                         </div>
-                    </div> -->
+                    </div>
 
                     <div class="properties-item">
                         <span class="properties-label">Suggestions</span>

@@ -35,6 +35,17 @@ type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Dat
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
 
+type highlightItem = {
+    Key: string;
+    Fragment: string;
+}
+
+class highlightSection {
+    data = new Map<string, highlightItem[]>();
+    fieldName = ko.observable<string>();
+    totalCount = ko.observable<number>(0);
+}
+
 class query extends viewModelBase {
 
     static readonly recentQueryLimit = 6;
@@ -103,11 +114,13 @@ class query extends viewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
-    currentTab = ko.observable<queryResultTab>("results");
+    currentTab = ko.observable<queryResultTab | highlightSection>("results");
     includesCache = new Map<string, document>();
     totalResults: KnockoutComputed<number>;
     hasMoreUnboundedResults = ko.observable<boolean>(false);
     totalIncludes = ko.observable<number>(0);
+    
+    highlightsCache = ko.observableArray<highlightSection>([]);
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
@@ -160,7 +173,6 @@ class query extends viewModelBase {
 
     constructor() {
         super();
-        _.bindAll(this, ...["previewQuery", "removeQuery", "useQuery", "useQueryItem"] as Array<keyof this>);
 
         this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
         aceEditorBindingHandler.install();
@@ -169,7 +181,7 @@ class query extends viewModelBase {
         this.initObservables();
         this.initValidation();
 
-        this.bindToCurrentInstance("runRecentQuery");
+        this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", "goToHighlightsTab");
     }
 
     private initObservables() {
@@ -395,6 +407,10 @@ class query extends viewModelBase {
             enableInlinePreview: true
         });
 
+        const highlightingProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
+            enableInlinePreview: false
+        });
+
         if (!this.queryFetcher())
             this.queryFetcher(() => $.when({
                 items: [] as document[],
@@ -411,7 +427,11 @@ class query extends viewModelBase {
 
         this.columnsSelector.init(grid,
             (s, t, c) => this.effectiveFetcher()(s, t),
-            (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
+            (w, r) => {
+                return (this.currentTab() === "includes" || this.currentTab() === "results") 
+                    ? documentsProvider.findColumns(w, r) 
+                    : highlightingProvider.findColumns(w, r);
+            }, (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
         grid.headerVisible(true);
 
@@ -506,6 +526,7 @@ class query extends viewModelBase {
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
         this.includesCache.clear();
+        this.highlightsCache.removeAll();
         
         this.isEmptyFieldsResult(false);
         
@@ -530,7 +551,7 @@ class query extends viewModelBase {
             const resultsFetcher = (skip: number, take: number) => {
                 const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), !this.cacheEnabled());
                 
-                const resultsTask = $.Deferred<pagedResultWithIncludes<document>>();
+                const resultsTask = $.Deferred<pagedResultWithIncludesAndHighlights<document>>();
                 const queryForAllFields = this.criteria().showFields();
                                 
                 // Note: 
@@ -543,7 +564,7 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultWithIncludes<document>) => {
+                    .done((queryResults: pagedResultWithIncludesAndHighlights<document>) => {
                         this.hasMoreUnboundedResults(false);
                     
                         if (queryResults.totalResultCount === -1) {
@@ -587,10 +608,12 @@ class query extends viewModelBase {
                             });
                             this.isEmptyFieldsResult(true);
                             this.queryStats(queryResults.additionalResultInfo);
+                            this.onHighlightingsLoaded({});
                         } else {
                             resultsTask.resolve(queryResults);
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
+                            this.onHighlightingsLoaded(queryResults.highlightings);
                         }
                         this.saveLastQuery("");
                         this.saveRecentQuery();
@@ -738,6 +761,34 @@ class query extends viewModelBase {
         
         this.totalIncludes(this.includesCache.size);
     }
+    
+    private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>) {
+        _.forIn(highlightings, (value, fieldName) => {
+            let existingPerFieldCache = this.highlightsCache().find(x => x.fieldName() === fieldName);
+
+            if (!existingPerFieldCache) {
+                existingPerFieldCache = new highlightSection();
+                existingPerFieldCache.fieldName(fieldName);
+                this.highlightsCache.push(existingPerFieldCache);
+            }
+            
+            _.forIn(value, (fragments, key) => {
+               if (!existingPerFieldCache.data.has(key)) {
+                   existingPerFieldCache.data.set(key, [] as Array<highlightItem>);
+               } 
+               const existingFragments = existingPerFieldCache.data.get(key);
+               
+               fragments.forEach(fragment => {
+                   existingFragments.push({
+                       Key: key,
+                       Fragment: fragment
+                   });
+                   
+                   existingPerFieldCache.totalCount(existingPerFieldCache.totalCount() + 1);
+               });
+            });
+        });
+    }
 
     refresh() {
         this.gridController().reset(true);
@@ -829,6 +880,11 @@ class query extends viewModelBase {
         this.currentTab("results");
         this.effectiveFetcher = this.queryFetcher;
 
+        // since we merge records based on fragments
+        // remove all existing highlights when going back to 
+        // 'results' tab
+        this.highlightsCache.removeAll();
+        
         this.columnsSelector.reset();
         this.refresh();
     }
@@ -837,6 +893,21 @@ class query extends viewModelBase {
         this.currentTab("includes");
         this.effectiveFetcher = this.includesFetcher;
 
+        this.columnsSelector.reset();
+        this.refresh();
+    }
+
+    goToHighlightsTab(highlight: highlightSection) {
+        this.currentTab(highlight);
+
+        const itemsFlattened = _.flatMap(Array.from(highlight.data.values()), items => items);
+        
+        this.effectiveFetcher = ko.observable<fetcherType>(() => {
+            return $.when({
+                items: itemsFlattened.map(x => new document(x)),
+                totalResultCount: itemsFlattened.length
+            });
+        });
         this.columnsSelector.reset();
         this.refresh();
     }

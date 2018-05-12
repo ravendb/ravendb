@@ -156,6 +156,11 @@
                     data-bind="css: { active: currentTab() === 'includes' }, click: goToIncludesTab">
                 Includes &nbsp; <span class="label" data-bind="text: totalIncludes().toLocaleString(), css: { 'label-primary': totalIncludes(), 'label-default': !totalIncludes()}"></span>
             </button>
+            <!-- ko foreach: highlightsCache -->
+                <button type="button" class="btn btn-sm" data-bind="click: $root.goToHighlightsTab, css: { active: $parent.currentTab() === $data }">
+                    <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>
+                </button>
+            <!-- /ko -->
         </div>
     </div>
     <div class="hidden">
