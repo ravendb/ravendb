@@ -74,6 +74,9 @@ class indexFieldOptions {
     fullTextSearch = ko.observable<boolean>();
     effectiveFullTextSearch = this.effectiveComputed(x => x.fullTextSearch(), yesNoLabelProvider);
 
+    highlighting = ko.observable<boolean>();
+    effectiveHighlighting = this.effectiveComputed(x => x.highlighting(), yesNoLabelProvider);
+
     spatial = ko.observable<spatialOptions>();
 
     hasSpatialOptions = ko.observable<boolean>(false);
@@ -98,45 +101,94 @@ class indexFieldOptions {
         }
         if (this.indexing() === "Search" && !this.analyzer()) {
             this.fullTextSearch(true);
+            
+            if (this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets") {
+                this.highlighting(true);
+            }
         }
-
+        
         _.bindAll(this, "toggleAdvancedOptions");
 
         this.initValidation();
 
         // used to avoid circular updates
-        let fullTextChangeInProgress = false;
+        let computedFieldChangeInProgress = false;
         let indexingChangeInProgess = false;
 
         const onFullTextChanged = () => {
             if (!indexingChangeInProgess) {
                 const newValue = this.fullTextSearch();
-                fullTextChangeInProgress = true;
+                computedFieldChangeInProgress = true;
                 if (newValue) {
                     this.analyzer(null);
                     this.indexing("Search");
+                    this.highlighting(this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets"); // search value in implied in previous line
                 } else {
                     this.analyzer(null);
                     this.indexing("Default");
+                    this.highlighting(false);
                 }
-                fullTextChangeInProgress = false;
+                computedFieldChangeInProgress = false;
             }
         };
 
         this.fullTextSearch.subscribe(() => onFullTextChanged());
+        
+        const onHighlightingChanged = () => {
+            if (!indexingChangeInProgess) {
+                const newValue = this.highlighting();
 
+                computedFieldChangeInProgress = true;
+                if (newValue) {
+                    this.analyzer(null);
+                    this.indexing("Search");
+                    this.storage("Yes");
+                    this.termVector("WithPositionsAndOffsets");
+                    this.fullTextSearch(true);
+                } else {
+                    this.analyzer(null);
+                    this.indexing("Default");
+                    this.storage("No");
+                    this.termVector("No");
+                    this.fullTextSearch(false);
+                }
+
+                computedFieldChangeInProgress = false;
+                
+            }
+        };
+        
+        this.highlighting.subscribe(() => onHighlightingChanged());
+        
         this.indexing.subscribe(newIndexing => {
-            if (!fullTextChangeInProgress) {
+            if (!computedFieldChangeInProgress) {
                 indexingChangeInProgess = true;
-                this.fullTextSearch(newIndexing === "Search" && !this.fullTextSearch() && !this.analyzer());
+                this.fullTextSearch(newIndexing === "Search" && !this.analyzer());
+                this.highlighting(this.storage() === "Yes" && newIndexing === "Search" && this.termVector() === "WithPositionsAndOffsets");
                 indexingChangeInProgess = false;
             }
         });
 
         this.analyzer.subscribe(newAnalyzer => {
-            if (!fullTextChangeInProgress) {
+            if (!computedFieldChangeInProgress) {
                 indexingChangeInProgess = true;
-                this.fullTextSearch(!newAnalyzer && !this.fullTextSearch() && this.indexing() == "Search");
+                this.fullTextSearch(!newAnalyzer && this.indexing() == "Search");
+                indexingChangeInProgess = false;
+            }
+        });
+        
+        this.storage.subscribe(newStorage => {
+            if (!computedFieldChangeInProgress) {
+                indexingChangeInProgess = true;
+                this.highlighting(newStorage === "Yes" && this.indexing() === "Search" && this.termVector() === "WithPositionsAndOffsets");
+                indexingChangeInProgess = false;
+            }
+        });
+
+        this.termVector.subscribe(newTermVector => {
+            if (!computedFieldChangeInProgress) {
+                indexingChangeInProgess = true;
+                this.highlighting(this.storage() === "Yes" && this.indexing() === "Search" && newTermVector === "WithPositionsAndOffsets");
                 indexingChangeInProgess = false;
             }
         });
@@ -192,6 +244,7 @@ class indexFieldOptions {
             TermVector: "No"
         });
         field.fullTextSearch(false);
+        field.highlighting(false);
 
         return field;
     }

@@ -13,7 +13,6 @@ import document = require("models/database/documents/document");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
-import documentMetadata = require("models/database/documents/documentMetadata");
 
 type columnOptionsDto = {
     extraClass?: (item: document) => string;

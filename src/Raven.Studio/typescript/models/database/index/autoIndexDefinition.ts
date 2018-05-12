@@ -6,18 +6,30 @@ class autoIndexField {
     fieldName = ko.observable<string>();
     hasSearch = ko.observable<boolean>();
     hasExact = ko.observable<boolean>();
+    hasHighlighting = ko.observable<boolean>();
     isSpatial = ko.observable<boolean>();
     operation = ko.observable<string>();
 
     // fieldStr has form: <Name:Count,Operation:Count>
-    constructor(fieldStr: string, fields: Array<string>) {
+    constructor(fieldStr: string, fields: dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>) {
         
         const parsedString = this.parse(fieldStr);
         const fieldName = parsedString['Name'];
         this.fieldName(fieldName);
         this.isSpatial(autoIndexField.isSpatialField(fieldName));
-        this.hasSearch(_.includes(fields, autoIndexField.searchFieldName(fieldName)));
-        this.hasExact(_.includes(fields, autoIndexField.exactFieldName(fieldName)));
+        const fieldNames = Object.keys(fields);
+        
+        const searchFieldName = autoIndexField.searchFieldName(fieldName);
+        this.hasSearch(_.includes(fieldNames, searchFieldName));
+        this.hasExact(_.includes(fieldNames, autoIndexField.exactFieldName(fieldName)));
+        
+        let hasHighlighting = false;
+        if (_.includes(fieldNames, searchFieldName)) {
+            const fieldOptions = fields[searchFieldName];
+            hasHighlighting = fieldOptions.Storage === "Yes" && fieldOptions.TermVector === "WithPositionsAndOffsets" && fieldOptions.Indexing === "Search";
+        }
+        
+        this.hasHighlighting(hasHighlighting);
     }
     
     static isSpatialField(fieldName: string) {
@@ -55,7 +67,7 @@ class autoIndexField {
 
 class autoIndexMapField extends autoIndexField {
 
-    constructor(fieldStr: string, fields: Array<string>) {
+    constructor(fieldStr: string, fields: dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>) {
         super(fieldStr, fields);
 
         const parsedString = this.parse(fieldStr);
@@ -71,14 +83,13 @@ class autoIndexDefinition extends indexDefinition {
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
         super(dto);
         
-        const fields = Object.keys(dto.Fields);
-        this.parseMapFields(dto.Maps[0], fields);
+        this.parseMapFields(dto.Maps[0], dto.Fields);
         if (this.hasReduce()) {
-            this.parseReduceFields(dto.Reduce, fields);
+            this.parseReduceFields(dto.Reduce, dto.Fields);
         }
     }
 
-    private parseMapFields(mapStr: string, fieldNames: Array<string>) {
+    private parseMapFields(mapStr: string, fieldNames: dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>) {
         const firstColonIdx = mapStr.indexOf(":");
         const collection = mapStr.substr(0, firstColonIdx);
         let fields = mapStr.substring(firstColonIdx + 1);
@@ -91,7 +102,7 @@ class autoIndexDefinition extends indexDefinition {
         this.mapFields(fieldsList.map(x => new autoIndexMapField(x, fieldNames)));
     }
 
-    private parseReduceFields(reduceStr: string, fieldNames: Array<string>) {
+    private parseReduceFields(reduceStr: string, fieldNames: dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>) {
         const firstColonIdx = reduceStr.indexOf(":");
         let fields = reduceStr.substring(firstColonIdx + 1);
         // trim [ and ]
