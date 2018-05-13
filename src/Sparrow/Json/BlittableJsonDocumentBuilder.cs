@@ -574,6 +574,11 @@ namespace Sparrow.Json
         {
             return "Building json for " + _debugTag;
         }
+
+        public bool NeedResetPropertiesCache()
+        {
+            return _context.CachedProperties.PropertiesDiscovered > CachedProperties.CachedPropertiesSize;
+        }
     }
 
     public interface IBlittableDocumentModifier
