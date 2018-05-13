@@ -227,7 +227,9 @@ namespace SlowTests.Tests.Querying
                     var results = s.Advanced.DocumentQuery<Blog>()
                         .Highlight("Title", 18, 2, options, out Highlightings titleHighlightings)
                         .Highlight("Category", 18, 2, options, out Highlightings categoryHighlightings)
-                        .WhereLucene("Title", "(target word) or Category:rhinos")
+                        .WhereLucene("Title", "target word")
+                        .OrElse()
+                        .WhereLucene("Category", "rhinos")
                         .WaitForNonStaleResults()
                         .ToArray();
 
