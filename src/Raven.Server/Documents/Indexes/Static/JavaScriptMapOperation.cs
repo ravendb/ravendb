@@ -2,11 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
+using Jint.Runtime;
 using Jint.Runtime.Environments;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
@@ -35,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _engine = engine;
             _resolver = resolver;
-        }        
+        }
 
         public IEnumerable IndexingFunction(IEnumerable<object> items)
         {
@@ -54,7 +56,13 @@ namespace Raven.Server.Documents.Indexes.Static
                         try
                         {
                             jsItem = MapFunc.Call(JsValue.Null, _oneItemArray);
-                        }catch (Exception e)
+                        }catch (JavaScriptException jse)
+                        {                            
+                            var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                            if (success == false)
+                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);                            
+                            throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
+                        } catch (Exception e)
                         {
                             throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
                         }
