@@ -137,7 +137,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     try
                     {
                         jsItem = Reduce.Call(JsValue.Null, _oneItemArray).AsObject();
-                    } catch (Exception e)
+                    }
+                    catch (JavaScriptException jse)
+                    {
+                        var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(ReduceString, jse);
+                        if (success == false)
+                            throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", jse);
+                        throw new JavaScriptIndexFuncException($"Failed to execute reduce script, {message}", jse);
+                    }
+                    catch (Exception e)
                     {
                         throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
                     }
