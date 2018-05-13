@@ -200,7 +200,7 @@ namespace Voron.Data.Tables
 
                 var allocated = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
 
-                return allocated;
+                return allocated * Constants.Storage.PageSize;
             }
 
             // here we rely on the fact that RawDataSmallSection can
