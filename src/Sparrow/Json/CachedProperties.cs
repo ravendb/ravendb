@@ -114,6 +114,8 @@ namespace Sparrow.Json
         }
 
         private const int CachedSortsSize = 512;
+        public static int CachedPropertiesSize = 512;
+
         private readonly CachedSort[] _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
 
         private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
