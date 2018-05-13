@@ -138,8 +138,25 @@ namespace Sparrow.Json.Parsing
             if (state.CurrentTokenType != JsonParserToken.StartArray)
                 ThrowInvalidJson(peepingTomStream);
 
+            int docsCountOnCachedRenewSession = 0;
+            bool cachedItemsRenew = false;
             while (true)
             {
+                if (docsCountOnCachedRenewSession <= 16 * 1024)
+                {
+
+                    if (cachedItemsRenew)
+                    {
+                        context.CachedProperties = new CachedProperties(context);
+                        ++docsCountOnCachedRenewSession;
+                    }
+                }
+                else
+                {
+                    context.Renew();
+                    docsCountOnCachedRenewSession = 0;
+                }
+
                 if (Read(peepingTomStream, parser, state, buffer) == false)
                     ThrowInvalidJson(peepingTomStream);
 
@@ -148,6 +165,8 @@ namespace Sparrow.Json.Parsing
 
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                 {
+                    if (cachedItemsRenew == false)
+                        cachedItemsRenew = builder.NeedResetPropertiesCache();
                     ReadObject(builder, peepingTomStream, parser, buffer);
 
                     yield return builder.CreateReader();
