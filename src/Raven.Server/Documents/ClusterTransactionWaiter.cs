@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
         {
             if (_results.TryGetValue(id, out var task) == false)
             {
-                throw new Exception($"Task with the id '{id}' was not found.");
+                throw new InvalidOperationException($"Task with the id '{id}' was not found.");
             }
 
             return task.Task.WithCancellation(token);

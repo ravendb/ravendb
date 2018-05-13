@@ -605,9 +605,9 @@ namespace Raven.Server.ServerWide
             CleanupDatabaseRelatedValues(context, items, databaseName);
 
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
-            using (Slice.From(context.Allocator, databaseName, out var loweredKey))
+            using (ClusterTransactionCommand.GetPrefix(context, databaseName, out var prefixSlice))
             {
-                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex], loweredKey, true, long.MaxValue);
+                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex], prefixSlice, true, long.MaxValue);
             }
         }
 
@@ -1534,6 +1534,8 @@ namespace Raven.Server.ServerWide
 
                 if (index <= Interlocked.Read(ref LastModifiedIndex))
                     break;
+
+                token.ThrowIfCancellationRequested();
 
                 if (await waitAsync == false)
                 {

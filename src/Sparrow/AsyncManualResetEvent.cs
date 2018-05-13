@@ -31,9 +31,7 @@ namespace Sparrow
         {
             token.ThrowIfCancellationRequested();
             // for each wait we will create a new task, since the cancellation token is unique.
-#pragma warning disable RDB0008 // TaskCompletionSource must have TaskCreationOptions.RunContinuationsAsynchronously set
-            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.None);
-#pragma warning restore RDB0008 // TaskCompletionSource must have TaskCreationOptions.RunContinuationsAsynchronously set
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             _tcs.Task.ContinueWith((t) =>
             {
                 if (token.IsCancellationRequested)

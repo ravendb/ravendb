@@ -34,32 +34,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/cmpxchg/indexes", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetCompareExchangeIndexes()
-        {
-            var keys = GetStringValuesQueryString("key");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                writer.WriteStartObject();
-                var first = true;
-                foreach (var tuple in ServerStore.Cluster.GetCompareExchangeIndexes(context, Database.Name, keys))
-                {
-                    if(first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    writer.WritePropertyName(tuple.Key);
-                    writer.WriteInteger(tuple.Index);
-                }
-                writer.WriteEndObject();
-            }
-
-            return Task.CompletedTask;
-        }
-
         private void GetCompareExchangeValues(TransactionOperationContext context)
         {
             var sw = Stopwatch.StartNew();
@@ -148,8 +122,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
         public async Task PutCompareExchangeValue()
         {
-            var prefix = Database.Name + "/";
-            var key = prefix + GetStringQueryString("key");
+            var key = GetStringQueryString("key");
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -159,7 +132,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index, context);
+                var command = new AddOrUpdateCompareExchangeCommand(key, Database.Name, updateJson, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
@@ -181,8 +154,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task DeleteCompareExchangeValue()
         {
-            var prefix = Database.Name + "/";
-            var key = prefix + GetStringQueryString("key");
+            var key = GetStringQueryString("key");
 
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
@@ -191,7 +163,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var command = new RemoveCompareExchangeCommand(key, index, context);
+                var command = new RemoveCompareExchangeCommand(key, Database.Name, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);

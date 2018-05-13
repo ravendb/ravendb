@@ -65,12 +65,22 @@ namespace Raven.Server.Utils
 
             if (value is DynamicJsonValue djv)
             {
-                return djv.Properties.All(x => IsSupportedType(x));
+                foreach (var item in djv.Properties)
+                {
+                    if (IsSupportedType(item) == false)
+                        return false;
+                }
+                return true;
             }
 
             if (value is DynamicJsonArray dja)
             {
-                return dja.Items.All(IsSupportedType);
+                foreach (var item in dja)
+                {
+                    if (IsSupportedType(item) == false)
+                        return false;
+                }
+                return true;
             }
 
             if (value is IDictionary dictionary)

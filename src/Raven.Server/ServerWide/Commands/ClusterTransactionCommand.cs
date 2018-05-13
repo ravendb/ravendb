@@ -130,27 +130,30 @@ namespace Raven.Server.ServerWide.Commands
             var errors = new List<string>();
             foreach (var clusterCommand in ClusterCommands)
             {
-                if (clusterCommand.Type == CommandType.CompareExchangePUT)
+                long current;
+                switch (clusterCommand.Type)
                 {
-                    var put = new AddOrUpdateCompareExchangeCommand(clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context);
-                    if (put.Validate(context, items, index, out var current) == false)
-                    {
-                        errors.Add(
-                            $"Concurrency check failed for putting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
-                        continue;
-                    }
-                    toExecute.Add(put);
-                }
-
-                if (clusterCommand.Type == CommandType.CompareExchangeDELETE)
-                {
-                    var delete = new RemoveCompareExchangeCommand(clusterCommand.Id, clusterCommand.Index, context);
-                    if (delete.Validate(context, items, index, out var current) == false)
-                    {
-                        errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
-                        continue;
-                    }
-                    toExecute.Add(delete);
+                    case CommandType.CompareExchangePUT:
+                        var put = new AddOrUpdateCompareExchangeCommand(clusterCommand.Id, Database, clusterCommand.Document, clusterCommand.Index, context);
+                        if (put.Validate(context, items, index, out current) == false)
+                        {
+                            errors.Add(
+                                $"Concurrency check failed for putting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
+                            continue;
+                        }
+                        toExecute.Add(put);
+                        break;
+                    case CommandType.CompareExchangeDELETE:
+                        var delete = new RemoveCompareExchangeCommand(clusterCommand.Id, Database, clusterCommand.Index, context);
+                        if (delete.Validate(context, items, index, out current) == false)
+                        {
+                            errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
+                            continue;
+                        }
+                        toExecute.Add(delete);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid cluster command detected: " + clusterCommand.Type + "! Only CompareExchangePUT and CompareExchangeDELETE are supported.");
                 }
             }
 
@@ -171,7 +174,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public unsafe void SaveCommandsBatch(TransactionOperationContext context, long index)
         {
-            if(SerializedDatabaseCommands == null || DatabaseCommandsCount == 0)
+            if (SerializedDatabaseCommands == null || DatabaseCommandsCount == 0)
                 return;
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
@@ -227,12 +230,22 @@ namespace Raven.Server.ServerWide.Commands
             if (index.HasValue)
                 maxSize += sizeof(long);
 
-            var scope = contenxt.Allocator.Allocate(maxSize, out var prefixBuffer);
+            var lowerBufferSize = database.Length * sizeof(char);
+
+
+            var scope = contenxt.Allocator.Allocate(maxSize + lowerBufferSize, out var prefixBuffer);
             try
             {
+
                 fixed (char* pDb = database)
                 {
-                    var dbLen = Encoding.UTF8.GetBytes(pDb, database.Length, prefixBuffer.Ptr, prefixBuffer.Length);
+                    var lowerBufferStart = (char*)(prefixBuffer.Ptr + maxSize);
+                    for (int i = 0; i < database.Length; i++)
+                    {
+                        lowerBufferStart[i] = char.ToLowerInvariant(pDb[i]);
+                    }
+
+                    var dbLen = Encoding.UTF8.GetBytes(lowerBufferStart, database.Length, prefixBuffer.Ptr, prefixBuffer.Length);
                     prefixBuffer.Ptr[dbLen] = Separator;
                     var actualSize = dbLen + 1;
                     if (index.HasValue)
@@ -245,7 +258,7 @@ namespace Raven.Server.ServerWide.Commands
                     return scope;
                 }
             }
-            catch 
+            catch
             {
                 scope.Dispose();
                 throw;

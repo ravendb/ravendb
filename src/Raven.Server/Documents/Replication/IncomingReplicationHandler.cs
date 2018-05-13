@@ -1111,7 +1111,7 @@ namespace Raven.Server.Documents.Replication
                                     }
 
                                     var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, rcvdChangeVector, 
-                                        _incoming._parent._server.Engine.ClusterBase64Id, out var conflictingVector);
+                                        _incoming._parent.Database.DatabaseGroupId, out var conflictingVector);
 
                                     switch (conflictStatus)
                                     {

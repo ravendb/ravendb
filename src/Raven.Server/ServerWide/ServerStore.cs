@@ -1474,6 +1474,10 @@ namespace Raven.Server.ServerWide
                 databaseValues = new Dictionary<string, ExpandoObject>();
 
             Debug.Assert(record.Topology != null);
+
+            if(string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
+                record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+
             record.Topology.Stamp = new LeaderStamp
             {
                 Term = _engine.CurrentTerm,

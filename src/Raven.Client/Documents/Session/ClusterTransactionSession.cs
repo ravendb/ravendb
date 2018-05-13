@@ -44,8 +44,9 @@ namespace Raven.Client.Documents.Session
                 _storeCompareExchange = new Dictionary<string, StoredCompareExchange>();
 
             EnsureNotDeleted(key);
+            EnsureNotStored(key);
 
-            _storeCompareExchange.Add(key, new StoredCompareExchange(0, item));
+            _storeCompareExchange[key] = new StoredCompareExchange(0, item);
         }
 
         public void UpdateCompareExchangeValue<T>(CompareExchangeValue<T> item)
@@ -65,8 +66,7 @@ namespace Raven.Client.Documents.Session
             if (_deleteCompareExchange == null)
                 _deleteCompareExchange = new Dictionary<string, long>();
 
-            if (_deleteCompareExchange.ContainsKey(item.Key) == false)
-                _deleteCompareExchange.Add(item.Key, item.Index);
+            _deleteCompareExchange[item.Key] = item.Index;
         }
 
         public void DeleteCompareExchangeValue(string key, long index)
@@ -75,15 +75,12 @@ namespace Raven.Client.Documents.Session
 
             if (_deleteCompareExchange == null)
                 _deleteCompareExchange = new Dictionary<string, long>();
-            
-            if (_deleteCompareExchange.ContainsKey(key) == false)
-                _deleteCompareExchange.Add(key, index);
+
+            _deleteCompareExchange[key] = index;
         }
 
         public void Clear()
         {
-            _deleteCompareExchange?.Clear();
-            _storeCompareExchange?.Clear();
             _deleteCompareExchange = null;
             _storeCompareExchange = null;
         }

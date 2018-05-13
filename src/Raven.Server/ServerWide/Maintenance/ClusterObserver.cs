@@ -242,7 +242,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (nodeReport.Report.TryGetValue(database, out var report) == false)
                     return null;
 
-                var last = ChangeVectorUtils.GetEtagById(report.DatabaseChangeVector, _engine.ClusterBase64Id);
+                var last = ChangeVectorUtils.GetEtagById(report.DatabaseChangeVector, record.Topology.DatabaseTopologyIdBase64);
                 currentIndex = Math.Min(currentIndex, last);
             }
 

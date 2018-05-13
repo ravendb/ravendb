@@ -179,8 +179,8 @@ namespace Raven.Server.Documents
                 using (docContext.OpenReadTransaction())
                 {
                     var global = DocumentsStorage.GetDatabaseChangeVector(docContext);
-                    var clusterId = database.ServerStore.Engine.ClusterBase64Id;
-                    var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, clusterId);
+                    var dbGrpId = database.DatabaseGroupId;
+                    var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
                     var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
                     var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
                     foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))

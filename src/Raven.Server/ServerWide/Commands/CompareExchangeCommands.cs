@@ -11,31 +11,36 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class CompareExchangeCommandBase : CommandBase
     {
         public string Key;
+        public string Database;
+        protected string ActualKey;
         public long Index;
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
 
         protected CompareExchangeCommandBase() { }
 
-        protected CompareExchangeCommandBase(string key, long index, JsonOperationContext context)
+        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context)
         {
-            if (String.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
+            if (string.IsNullOrEmpty(database))
+                throw new ArgumentNullException(nameof(database), "The database argument must have value");
             if (index < 0)
                 throw new InvalidDataException("Index must be a non-negative number");
 
             Key = key;
             Index = index;
+            Database = database;
             ContextToWriteResult = context;
+            ActualKey = ("db/" + Database + "/" + Key).ToLowerInvariant();
         }
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
 
         public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
         {
-            var dbKey = Key.ToLowerInvariant();
             currentIndex = -1;
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
@@ -43,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands
                     return Index == currentIndex;
                 }
             }
-            return true;
+            return index == 0;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -99,12 +104,11 @@ namespace Raven.Server.ServerWide.Commands
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
         public RemoveCompareExchangeCommand() { }
-        public RemoveCompareExchangeCommand(string key, long index, JsonOperationContext contextToReturnResult) : base(key, index, contextToReturnResult) { }
+        public RemoveCompareExchangeCommand(string key, string database, long index, JsonOperationContext contextToReturnResult) : base(key, database, index, contextToReturnResult) { }
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
-            var dbKey = Key.ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
@@ -130,17 +134,16 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
-            : base(key, index, contextToReturnResult)
+        public AddOrUpdateCompareExchangeCommand(string key, string database, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
+            : base(key, database, index, contextToReturnResult)
         {
             Value = value;
         }
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
-            var dbKey = Key.ToLowerInvariant();
             Value = Value.Clone(context);
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);

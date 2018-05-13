@@ -71,6 +71,8 @@ namespace Raven.Server.Documents
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
 
+        public string DatabaseGroupId;
+
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
         public void ResetIdleTime()
@@ -779,6 +781,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
+                    DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
                     InitializeFromDatabaseRecord(record);
                     LastDatabaseRecordIndex = index;
                     IndexStore.HandleDatabaseRecordChange(record, index);

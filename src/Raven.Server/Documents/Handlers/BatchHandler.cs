@@ -133,9 +133,6 @@ namespace Raven.Server.Documents.Handlers
                 throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
             }
 
-            // wait for the command to be applied on this node.
-            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index); 
-
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
@@ -147,6 +144,12 @@ namespace Raven.Server.Documents.Handlers
 
                 array = reply.Array;
             }
+            else
+            {
+                // wait for the command to be applied on this node (batch of cmpxchng ops only)
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+            }
+
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
             {
                 array.Add(new DynamicJsonValue
@@ -434,8 +437,8 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 var global = DocumentsStorage.GetDatabaseChangeVector(context);
-                var clusterId = Database.ServerStore.Engine.ClusterBase64Id;
-                var current = ChangeVectorUtils.GetEtagById(global, clusterId);
+                var dbGrpId = Database.DatabaseGroupId;
+                var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
 
                 if (Options.WaitForIndexesTimeout != null)
                 {
@@ -447,7 +450,7 @@ namespace Raven.Server.Documents.Handlers
                     foreach (BlittableJsonReaderObject blittableCommand in _commands)
                     {
                         _count++;
-                        var changeVector = $"RAFT:{_count}-{clusterId}";
+                        var changeVector = $"RAFT:{_count}-{dbGrpId}";
                         var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                         switch (cmd.Type)
@@ -499,7 +502,7 @@ namespace Raven.Server.Documents.Handlers
                                     }
                                     else
                                     {
-                                        DeleteWithPrefix(context, cmd.Id);
+                                        Debug.Assert(cmd.IdPrefixed == false);
                                     }
                                 }
                                 else
@@ -535,7 +538,7 @@ namespace Raven.Server.Documents.Handlers
                     context.LastDatabaseChangeVector = global;
                 }
 
-                var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", clusterId, _count, context.LastDatabaseChangeVector);
+                var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, _count, context.LastDatabaseChangeVector);
                 if (result.IsValid)
                 {
                     context.LastDatabaseChangeVector = result.ChangeVector;
@@ -570,17 +573,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
-            private bool _isClusterTransaction;
-            public bool IsClusterTransaction
-            {
-                set
-                {
-                    if (_isClusterTransaction)
-                        return;
-                    _isClusterTransaction = value;
-                }
-                get => _isClusterTransaction;
-            }
+            public bool IsClusterTransaction;
 
             public MergedBatchCommand(DocumentDatabase database) : base(database)
             {
@@ -623,7 +616,10 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 if (IsClusterTransaction)
+                {
+                    Debug.Assert(false, "Shouldn't happen - cluster tx run via normal means");
                     return 0;// should never happened
+                }
 
                 _disposables.Clear();
 

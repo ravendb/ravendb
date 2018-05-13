@@ -781,8 +781,6 @@ more responsive application.
             if (TransactionMode != TransactionMode.ClusterWide)
                 return;
 
-            var prefix = DatabaseName + "/";
-
             ClusterTransactionSessionBase clusterTransactionSession = GetClusterSession();
 
             if (clusterTransactionSession == null)
@@ -797,7 +795,7 @@ more responsive application.
                         ["Object"] = item.Value.Entity
                     };
                     var blittable = EntityToBlittable.ConvertEntityToBlittable(tuple, Conventions, Context);
-                    result.SessionCommands.Add(new PutCompareExchangeCommandData(prefix + item.Key, blittable, item.Value.Index));
+                    result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
                 }
             }
 
@@ -805,7 +803,7 @@ more responsive application.
             {
                 foreach (var item in clusterTransactionSession.DeleteCompareExchange)
                 {
-                    result.SessionCommands.Add(new DeleteCompareExchangeCommandData(prefix + item.Key, item.Value));
+                    result.SessionCommands.Add(new DeleteCompareExchangeCommandData(item.Key, item.Value));
                 }
             }
             clusterTransactionSession.Clear();

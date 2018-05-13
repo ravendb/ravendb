@@ -173,7 +173,8 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 command.ParsedCommands = new ArraySegment<CommandData>(cmds, 0, index + 1);
-                command.IsClusterTransaction = await IsClusterTransaction(stream, parser, buffer, state);
+                if (await IsClusterTransaction(stream, parser, buffer, state))
+                    command.IsClusterTransaction = true;
             }
         }
 
@@ -200,7 +201,7 @@ namespace Raven.Server.Documents.Handlers
                    GetLongFromStringBuffer(state) == 8386654079495008852 && // Transact
                    *(int*)(state.StringBuffer + sizeof(long)) == 1299083113 && // ionM
                    *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 25711 && // od
-                   state.StringBuffer[sizeof(long) + sizeof(int) + sizeof(short)] == (byte)'e';
+                   *(state.StringBuffer + sizeof(long) + sizeof(int) + sizeof(short)) == (byte)'e';
         }
 
         private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore, 

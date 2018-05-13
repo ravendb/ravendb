@@ -112,7 +112,7 @@ namespace SlowTests.Cluster
                 var db1 = await GetDatabase(store1.Database);
                 var db2 = await GetDatabase(store2.Database);
 
-                Assert.Equal(db1.ServerStore.Engine.ClusterBase64Id, db2.ServerStore.Engine.ClusterBase64Id);
+                Assert.Equal(db1.DatabaseGroupId, db2.DatabaseGroupId);
 
                 using (var session = store2.OpenAsyncSession())
                 {
