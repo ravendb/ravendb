@@ -40,6 +40,8 @@ namespace Raven.Client
 
             public const string ClientConfigurationEtag = "Client-Configuration-Etag";
 
+            public const string LastKnownClusterTransactionIndex = "Known-Raft-Index";
+
             public const string RefreshClientConfiguration = "Refresh-Client-Configuration";
 
             public const string Etag = "ETag";

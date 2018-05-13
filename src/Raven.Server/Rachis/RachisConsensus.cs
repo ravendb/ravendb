@@ -263,6 +263,7 @@ namespace Raven.Server.Rachis
         public long CurrentTerm { get; private set; }
         public string Tag => _tag;
         public string ClusterId => _clusterId;
+        public string ClusterBase64Id => _clusterIdBase64Id;
         public string Url;
 
         private static readonly Slice GlobalStateSlice;
@@ -399,6 +400,8 @@ namespace Raven.Server.Rachis
                         }
                     }
                     _clusterId = topology.TopologyId;
+                    SetClusterBase(_clusterId);
+
                     InitializeState(context);
 
                     tx.Commit();
@@ -850,7 +853,7 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var topologyJson = SetTopology(this, context, topology);
             _clusterId = topology.TopologyId;
-
+            SetClusterBase(_clusterId);
             return topologyJson;
         }
         public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, TransactionOperationContext context,
@@ -953,6 +956,7 @@ namespace Raven.Server.Rachis
                         }
                     }
                     _clusterId = initialMessage.TopologyId;
+                    SetClusterBase(_clusterId);
 
                     switch (initialMessage.InitialMessageType)
                     {
@@ -1596,9 +1600,11 @@ namespace Raven.Server.Rachis
                 {
                     UpdateNodeTag(ctx, "A");
                 }
-                
+
+                var topologyId = Guid.NewGuid().ToString();
+
                 var topology = new ClusterTopology(
-                    Guid.NewGuid().ToString(),
+                    topologyId,
                     new Dictionary<string, string>
                     {
                         [_tag] = selfUrl
@@ -1609,6 +1615,8 @@ namespace Raven.Server.Rachis
                 );
 
                 SetTopology(null, ctx, topology);
+                _clusterId = topologyId;
+                SetClusterBase(topologyId);
 
                 SwitchToSingleLeader(ctx);
 
@@ -1753,6 +1761,20 @@ namespace Raven.Server.Rachis
         private TimeSpan _electionTimeout;
         private TimeSpan _tcpConnectionTimeout;
         private DateTime _lastStateChangeTime;
+        private readonly string _clusterIdBase64Id = new string(' ',22);
+
+        private unsafe void SetClusterBase(string str)
+        {
+            if(str == null)
+                return;
+
+            var guid = new Guid(str);
+            fixed (char* pChars = _clusterIdBase64Id)
+            {
+                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&guid, 0, 16);
+                Debug.Assert(result == 22);
+            }
+        }
 
         public void ReportLeaderTime(long leaderTime)
         {

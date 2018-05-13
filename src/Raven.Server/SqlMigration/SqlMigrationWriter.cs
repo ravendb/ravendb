@@ -139,9 +139,8 @@ namespace Raven.Server.SqlMigration
             _time.Restart();
 
             _command?.Dispose();
-            _command = new BatchHandler.MergedBatchCommand
+            _command = new BatchHandler.MergedBatchCommand(_context.DocumentDatabase)
             {
-                Database = _context.DocumentDatabase,
                 AttachmentStreamsTempFile = _context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetTempFile("put")
             };
 

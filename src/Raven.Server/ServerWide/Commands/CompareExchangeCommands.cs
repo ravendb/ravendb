@@ -31,6 +31,21 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
 
+        public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
+        {
+            var dbKey = Key.ToLowerInvariant();
+            currentIndex = -1;
+            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            {
+                if (items.ReadByKey(keySlice, out var reader))
+                {
+                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    return Index == currentIndex;
+                }
+            }
+            return true;
+        }
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);
@@ -125,7 +140,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             var dbKey = Key.ToLowerInvariant();
             Value = Value.Clone(context);
-            long itemIndex;
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
@@ -135,7 +149,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
                     if (Index == itemIndex)
                     {
                         items.Update(reader.Id, tvb);
@@ -153,7 +167,7 @@ namespace Raven.Server.ServerWide.Commands
             }
             return (index, Value);
         }
-
+        
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);

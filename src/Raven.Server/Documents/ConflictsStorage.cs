@@ -815,7 +815,7 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, out string conflictingVector)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, string priority, out string conflictingVector)
         {
             //tombstones also can be a conflict entry
             conflictingVector = null;
@@ -824,7 +824,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    if (ChangeVectorUtils.GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    if (ChangeVectorUtils.GetConflictStatus(remote, existingConflict.ChangeVector, priority) == ConflictStatus.Conflict)
                     {
                         conflictingVector = existingConflict.ChangeVector;
                         return ConflictStatus.Conflict;
@@ -845,7 +845,7 @@ namespace Raven.Server.Documents
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
 
 
-            var status = ChangeVectorUtils.GetConflictStatus(remote, local);
+            var status = ChangeVectorUtils.GetConflictStatus(remote, local, priority);
             if (status == ConflictStatus.Conflict)
             {
                 conflictingVector = local;

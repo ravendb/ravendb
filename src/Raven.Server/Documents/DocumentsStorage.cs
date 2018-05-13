@@ -1042,18 +1042,19 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector, string changeVector = null)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (var cv = context.GetLazyString(expectedChangeVector))
             {
-                return Delete(context, lowerId, id, cv);
+                return Delete(context, lowerId, id, expectedChangeVector: cv, changeVector: changeVector);
             }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
             LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
-            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, DocumentFlags documentFlags = DocumentFlags.None)
+            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
+            DocumentFlags documentFlags = DocumentFlags.None)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -1243,8 +1244,8 @@ namespace Raven.Server.Documents
             return -newEtag;
         }
 
-        // Note: Make sure to call this with a separator, to you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
+        // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, string changeVector = null)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1262,7 +1263,7 @@ namespace Raven.Server.Documents
                         hasMore = true;
                         var id = TableValueToId(context, (int)DocumentsTable.Id, ref holder.Value.Reader);
 
-                        var deleteOperationResult = Delete(context, id, null);
+                        var deleteOperationResult = Delete(context, id, null, changeVector: changeVector);
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }
@@ -1379,9 +1380,9 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string id,
             string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
-            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, bool forceChangeVector = false)
         {
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags, forceChangeVector);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)

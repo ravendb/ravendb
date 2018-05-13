@@ -170,7 +170,7 @@ namespace Raven.Client.Documents.Session
         /// SaveChanges will wait for the indexes to catch up with the saved changes
         /// </summary>
         void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, string[] indexes = null);
-
+        
         EntityToBlittable EntityToBlittable { get; }
     }
 }

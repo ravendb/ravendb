@@ -18,6 +18,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
@@ -32,6 +33,7 @@ using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Web.System;
 
@@ -145,6 +147,10 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, DatabaseInfo> DatabaseInfo = GenerateJsonDeserializationRoutine<DatabaseInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ClusterTopologyChanged> ClusterTopologyChanged = GenerateJsonDeserializationRoutine<ClusterTopologyChanged>();
+
+        public static readonly Func<BlittableJsonReaderObject, ClusterTransactionCommand.ClusterTransactionDataCommand> ClusterTransactionDataCommand = GenerateJsonDeserializationRoutine<ClusterTransactionCommand.ClusterTransactionDataCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, ClusterTransactionCommand.ClusterTransactionOptions> ClusterTransactionOptions = GenerateJsonDeserializationRoutine<ClusterTransactionCommand.ClusterTransactionOptions>();
 
         public class Parameters
         {

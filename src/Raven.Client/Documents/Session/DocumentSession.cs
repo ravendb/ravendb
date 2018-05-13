@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -15,7 +14,6 @@ using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Session
 {
@@ -46,26 +44,36 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Access the attachments operations
         /// </summary>
-        public IAttachmentsSessionOperations Attachments { get; }
+        public IAttachmentsSessionOperations Attachments => _attachments ?? (_attachments = new DocumentSessionAttachments(this));
+        private IAttachmentsSessionOperations _attachments;
 
-        public ICountersSessionOperations Counters { get; }
-
-        /// <summary>
+        /// <summary>        
         /// Access the revisions operations
         /// </summary>
-        public IRevisionsSessionOperations Revisions { get; }
+        public IRevisionsSessionOperations Revisions => _revisions ?? (_revisions = new DocumentSessionRevisions(this));
+        private IRevisionsSessionOperations _revisions;
+
+        /// <summary>
+        /// Access to cluster wide transaction operations
+        /// </summary>
+        public IClusterTransactionOperation ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionTransactionOperation(this));
+        private IClusterTransactionOperation _clusterTransaction;
+
+        protected override ClusterTransactionSessionBase GetClusterSession()
+        {
+            return (ClusterTransactionSessionBase)_clusterTransaction;
+        }
+
+        public ICountersSessionOperations Counters => _counters ?? (_counters = new DocumentSessionCounters(this));
+        private ICountersSessionOperations _counters;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecutor requestExecutor)
-            : base(dbName, documentStore, requestExecutor, id)
+        public DocumentSession(DocumentStore documentStore, Guid id, SessionOptions options)
+            : base(documentStore, id, options)
         {
-            Attachments = new DocumentSessionAttachments(this);
-            Revisions = new DocumentSessionRevisions(this);
-            Counters = new DocumentSessionCounters(this);
         }
-
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
@@ -79,6 +87,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                _documentStore.SetLastTransactionIndex(command.Result.TransactionIndex);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

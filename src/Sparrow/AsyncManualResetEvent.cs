@@ -27,6 +27,36 @@ namespace Sparrow
             return _tcs.Task;
         }
 
+        public Task<bool> WaitAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            // for each wait we will create a new task, since the cancellation token is unique.
+#pragma warning disable RDB0008 // TaskCompletionSource must have TaskCreationOptions.RunContinuationsAsynchronously set
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.None);
+#pragma warning restore RDB0008 // TaskCompletionSource must have TaskCreationOptions.RunContinuationsAsynchronously set
+            _tcs.Task.ContinueWith((t) =>
+            {
+                if (token.IsCancellationRequested)
+                {
+                    tcs.TrySetCanceled();
+                    return;
+                }
+                if (t.IsFaulted)
+                {
+                    tcs.TrySetException(t.Exception);
+                    return;
+                }
+
+                if (t.IsCanceled)
+                {
+                    tcs.TrySetCanceled();
+                    return;
+                }
+                tcs.TrySetResult(t.Result);
+            }, token);
+            return tcs.Task;
+        }
+
         public bool IsSet => _tcs.Task.IsCompleted;
 
         public Task<bool> WaitAsync(TimeSpan timeout)

@@ -34,6 +34,32 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/cmpxchg/indexes", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetCompareExchangeIndexes()
+        {
+            var keys = GetStringValuesQueryString("key");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                writer.WriteStartObject();
+                var first = true;
+                foreach (var tuple in ServerStore.Cluster.GetCompareExchangeIndexes(context, Database.Name, keys))
+                {
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    writer.WritePropertyName(tuple.Key);
+                    writer.WriteInteger(tuple.Index);
+                }
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
         private void GetCompareExchangeValues(TransactionOperationContext context)
         {
             var sw = Stopwatch.StartNew();

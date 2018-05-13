@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
@@ -14,7 +15,8 @@ namespace Raven.Server.Utils
     {
         Update,
         Conflict,
-        AlreadyMerged
+        AlreadyMerged,
+        ClusterConflict
     }
 
     public static class ChangeVectorUtils
@@ -41,6 +43,7 @@ namespace Raven.Server.Utils
             for (int i = 0; i < remote.Length; i++)
             {
                 bool found = false;
+
                 for (int j = 0; j < local.Length; j++)
                 {
                     if (remote[i].DbId == local[j].DbId)
@@ -77,6 +80,89 @@ namespace Raven.Server.Utils
 
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
+
+        public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, string priority, bool clusterAutoResolve = true)
+        {
+            if (remoteAsString == localAsString)
+                return ConflictStatus.AlreadyMerged;
+
+            if (string.IsNullOrEmpty(remoteAsString))
+                return ConflictStatus.AlreadyMerged;
+
+            if (string.IsNullOrEmpty(localAsString))
+                return ConflictStatus.Update;
+
+            var local = localAsString.ToChangeVector();
+            var remote = remoteAsString.ToChangeVector();
+
+            //any missing entries from a change vector are assumed to have zero value
+            var localHasLargerEntries = false;
+            var remoteHasLargerEntries = false;
+
+            int numOfMatches = 0;
+            var hasPriorityRemote = false;
+            var hasPriorityLocal = false;
+            for (int i = 0; i < remote.Length; i++)
+            {
+                bool found = false;
+                var isPriority = remote[i].DbId == priority;
+
+                if (isPriority)
+                    hasPriorityRemote = true;
+
+                for (int j = 0; j < local.Length; j++)
+                {
+                    if (local[j].DbId == priority)
+                        hasPriorityLocal = true;
+
+                    if (remote[i].DbId == local[j].DbId)
+                    {
+                        found = true;
+                        numOfMatches++;
+
+                        if (remote[i].Etag > local[j].Etag)
+                        {
+                            if (isPriority && clusterAutoResolve)
+                                return ConflictStatus.Update;
+
+                            remoteHasLargerEntries = true;
+                        }
+                        else if (remote[i].Etag < local[j].Etag)
+                        {
+                            if (isPriority)
+                                return ConflictStatus.AlreadyMerged;
+
+                            localHasLargerEntries = true;
+                        }
+                        break;
+                    }
+                }
+                if (found == false)
+                {
+                    if (isPriority && clusterAutoResolve)
+                        return ConflictStatus.Update;
+
+                    remoteHasLargerEntries = true;
+                }
+            }
+
+            if (hasPriorityLocal && hasPriorityRemote == false)
+                return ConflictStatus.AlreadyMerged;
+
+            if (numOfMatches < local.Length)
+            {
+                localHasLargerEntries = true;
+            }
+
+            if (remoteHasLargerEntries && localHasLargerEntries)
+                return ConflictStatus.Conflict;
+
+            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
+
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
+        }
+
 
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
 
@@ -241,14 +327,19 @@ namespace Raven.Server.Utils
                 .ToString();
         }
 
-        public static long GetEtagByNodeTag(string changeVector, string nodeTag)
+        public static long GetEtagById(string changeVector, string id)
         {
-            var index = changeVector.IndexOf(nodeTag + ":", StringComparison.Ordinal);
-            var offset = nodeTag.Length + 1;
+            if (changeVector == null)
+                return 0;
+
+            var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
             if (index == -1)
                 return 0;
-            var etag = changeVector.IndexOf('-', index);
-            return long.Parse(changeVector.Substring(index + offset, etag - index - offset));
+
+            var end = index - 1;
+            var start = changeVector.LastIndexOf(":", end, StringComparison.Ordinal) + 1;
+
+            return long.Parse(changeVector.Substring(start, end - start + 1));
         }
     }
 }

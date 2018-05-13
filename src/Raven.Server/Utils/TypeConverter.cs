@@ -9,6 +9,7 @@ using Jint.Native.Object;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;
@@ -62,14 +63,19 @@ namespace Raven.Server.Utils
             if (value is IEnumerable<IFieldable> || value is IFieldable)
                 return true;
 
-            List<bool> supporeted = new List<bool>();
+            if (value is DynamicJsonValue djv)
+            {
+                return djv.Properties.All(x => IsSupportedType(x));
+            }
+
+            if (value is DynamicJsonArray dja)
+            {
+                return dja.Items.All(IsSupportedType);
+            }
 
             if (value is IDictionary dictionary)
             {
-                foreach (var key in dictionary.Keys)
-                    supporeted.Add(IsSupportedType(dictionary[key]));
-
-                return supporeted.All(v => v);
+                return IsSupportedType(dictionary.Values);
             }
 
             if (value is IEnumerable<char>)
@@ -91,20 +97,27 @@ namespace Raven.Server.Utils
 
             var accessor = GetPropertyAccessor(value);
 
+            var isSupported = true;
+            var hasProperties = false;
             foreach (var property in accessor.GetPropertiesInOrder(value))
             {
+                hasProperties = true;
+
+                if (isSupported == false)
+                    return false;
+
                 var propertyValue = property.Value;
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    supporeted.Add(propertyValueAsEnumerable.Select(IsSupportedType).All(v => v));
+                    isSupported &= propertyValueAsEnumerable.Select(IsSupportedType).All(v => v);
                     continue;
                 }
 
-                supporeted.Add(IsSupportedType(propertyValue));
+                isSupported &= IsSupportedType(propertyValue);
             }
 
-            return supporeted.All(v => v);
+            return hasProperties & isSupported;
         }
 
         public static object ToBlittableSupportedType(object value, bool flattenArrays = false)

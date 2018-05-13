@@ -254,6 +254,14 @@ namespace Raven.Client.ServerWide
 
             return (addDestinations, removeDestinations);
         }
+//
+//        public DatabaseTopology()
+//        {
+//            if(string.IsNullOrEmpty(DatabaseTopologyIdBase64))
+//                DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+//        }
+//
+//        public string DatabaseTopologyIdBase64;
 
         [JsonIgnore]
         public int Count => Members.Count + Promotables.Count + Rehabs.Count;
@@ -289,7 +297,7 @@ namespace Raven.Client.ServerWide
                 [nameof(PromotablesStatus)] = DynamicJsonValue.Convert(PromotablesStatus),
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
-                [nameof(ReplicationFactor)] = ReplicationFactor
+                [nameof(ReplicationFactor)] = ReplicationFactor,
             };
         }
 

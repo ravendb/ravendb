@@ -24,7 +24,6 @@ namespace Raven.Client.Documents
     {
         protected DocumentStoreBase()
         {
-
             Subscriptions = new DocumentSubscriptions(this);
         }
 
@@ -78,7 +77,8 @@ namespace Raven.Client.Documents
         }
 
         /// <inheritdoc />
-        public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default(CancellationToken))
+        public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null,
+            CancellationToken token = default(CancellationToken))
         {
             AssertInitialized();
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
@@ -135,6 +135,34 @@ namespace Raven.Client.Documents
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
         public DocumentSubscriptions Subscriptions { get; }
+
+        private long _lastTransactionIndex;
+
+        public long? LastTransactionIndex
+        {
+            get
+            {
+                var local = _lastTransactionIndex;
+                if (local == 0)
+                    return null;
+                return local;
+            }
+        }
+
+        public void SetLastTransactionIndex(long? index)
+        {
+            if (index.HasValue == false)
+                return;
+
+            long initialValue;
+            do
+            {
+                initialValue = _lastTransactionIndex;
+                if (initialValue >= index.Value)
+                    return;
+            }
+            while (Interlocked.CompareExchange(ref _lastTransactionIndex, index.Value, initialValue) != initialValue);
+        }
 
         protected void EnsureNotClosed()
         {

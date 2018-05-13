@@ -27,14 +27,16 @@ namespace Raven.Client.Documents.Session.Operations
             if (result.SessionCommands.Count == 0)
                 return null;
 
+            _session.ValidateClusterTransaction(result);
+
             _session.IncrementRequestCount();
 
             _entities = result.Entities;
 
-            return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
+            return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options, _session.TransactionMode);
         }
 
-        public void SetResult(BlittableArrayResult result)
+        public void SetResult(BatchCommandResult result)
         {
             if (result.Results == null) //precaution
             {

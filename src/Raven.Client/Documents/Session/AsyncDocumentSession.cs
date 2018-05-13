@@ -13,7 +13,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Session
 {
@@ -27,15 +26,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecutor requestExecutor, Guid id)
-            : base(dbName, documentStore, requestExecutor, id)
+        public AsyncDocumentSession(DocumentStore documentStore, Guid id, SessionOptions options)
+            : base(documentStore, id, options)
         {
             GenerateDocumentIdsOnStore = false;
-            Attachments = new DocumentSessionAttachmentsAsync(this);
-            Revisions = new DocumentSessionRevisionsAsync(this);
-            Counters = new DocumentSessionCountersAsync(this);
         }
-
+    
         public async Task<bool> ExistsAsync(string id)
         {
             if (id == null)
@@ -99,11 +95,22 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncLazySessionOperations Lazily => this;
 
-        public IAttachmentsSessionOperationsAsync Attachments { get; }
+        public IAttachmentsSessionOperationsAsync Attachments => _attachments ?? (_attachments = new DocumentSessionAttachmentsAsync(this));
+        private IAttachmentsSessionOperationsAsync _attachments;
 
-        public ICountersSessionOperationsAsync Counters { get; }
+        public IRevisionsSessionOperationsAsync Revisions => _revisions ?? (_revisions = new DocumentSessionRevisionsAsync(this));
+        private IRevisionsSessionOperationsAsync _revisions;
 
-        public IRevisionsSessionOperationsAsync Revisions { get; }
+        public ICountersSessionOperationsAsync Counters => _counters ?? (_counters = new DocumentSessionCountersAsync(this));
+        private ICountersSessionOperationsAsync _counters;
+
+        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionTransactionOperationAsync(this));
+        private IClusterTransactionOperationAsync _clusterTransaction;
+
+        protected override ClusterTransactionSessionBase GetClusterSession()
+        {
+            return (ClusterTransactionSessionBase)_clusterTransaction;
+        }
 
         /// <summary>
         /// Begins the async save changes operation
@@ -124,6 +131,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                _documentStore.SetLastTransactionIndex(command.Result.TransactionIndex);
                 saveChangesOperation.SetResult(command.Result);
             }
         }
