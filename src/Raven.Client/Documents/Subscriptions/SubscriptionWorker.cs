@@ -53,13 +53,11 @@ namespace Raven.Client.Documents.Subscriptions
         internal SubscriptionWorker(SubscriptionWorkerOptions options, IDocumentStore documentStore, string dbName)
         {
             _options = options;
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionWorker<T>>(dbName);
             if (string.IsNullOrEmpty(options.SubscriptionName))
                 throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionName", nameof(options));
             _store = documentStore;
             _dbName = dbName ?? documentStore.Database;
-
-
+            _logger = LoggingSource.Instance.GetLogger<SubscriptionWorker<T>>(_dbName);
         }
 
         public void Dispose()

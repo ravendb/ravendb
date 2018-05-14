@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Patch
     public class AdminJsConsole
     {
         private readonly DocumentDatabase _database;
-        public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("AdminJsConsole");
+        public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("Server");
         private readonly RavenServer _server;
 
         public AdminJsConsole(RavenServer server, DocumentDatabase database)

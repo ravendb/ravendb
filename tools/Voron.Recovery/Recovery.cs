@@ -46,7 +46,7 @@ namespace Voron.Recovery
             _progressIntervalInSec = config.ProgressIntervalInSec;
             _previouslyWrittenDocs = new Dictionary<string, long>();
             LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName));
-            _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron recovery");
+            _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
         }
 
 

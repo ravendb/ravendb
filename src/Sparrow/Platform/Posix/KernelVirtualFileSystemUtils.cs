@@ -10,7 +10,7 @@ namespace Sparrow.Platform.Posix
 {
     public static class KernelVirtualFileSystemUtils
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger(nameof(KernelVirtualFileSystemUtils), "Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(KernelVirtualFileSystemUtils).FullName);
         private static readonly ConcurrentSet<string> IsOldFileAlert = new ConcurrentSet<string>();
 
         public static long? ReadNumberFromCgroupFile(string fileName)
