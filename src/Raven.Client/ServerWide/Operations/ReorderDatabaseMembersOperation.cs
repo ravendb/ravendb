@@ -33,7 +33,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            var order = EntityToBlittable.ConvertEntityToBlittable(_parameters, conventions, context);
+            var order = EntityToBlittable.ConvertCommandToBlittable(_parameters, context);
             return new ReorderDatabaseMembersCommand(_database, order);
         }
 

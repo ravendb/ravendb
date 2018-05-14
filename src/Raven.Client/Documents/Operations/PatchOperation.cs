@@ -77,11 +77,11 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(context));
                 _id = id ?? throw new ArgumentNullException(nameof(id));
                 _changeVector = changeVector;
-                _patch = EntityToBlittable.ConvertEntityToBlittable(new
+                _patch = EntityToBlittable.ConvertCommandToBlittable(new
                 {
                     Patch = patch,
                     PatchIfMissing = patchIfMissing
-                }, conventions, context);
+                },context);
                 _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
                 _returnDebugInformation = returnDebugInformation;
                 _test = test;

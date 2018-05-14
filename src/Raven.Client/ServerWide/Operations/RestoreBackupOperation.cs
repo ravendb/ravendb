@@ -44,7 +44,7 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_restoreConfiguration, _conventions, ctx);
+                        var config = EntityToBlittable.ConvertCommandToBlittable(_restoreConfiguration, ctx);
                         ctx.Write(stream, config);
                     })
                 };

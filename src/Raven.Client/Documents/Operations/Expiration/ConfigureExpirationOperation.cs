@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Expiration
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, _conventions, ctx);
+                        var config = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
                         ctx.Write(stream, config);
                     })
                 };

@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
                     request.Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(batch, DocumentConventions.Default, ctx);
+                        var config = EntityToBlittable.ConvertCommandToBlittable(batch, ctx);
 
                         ctx.Write(stream, config);
                     });

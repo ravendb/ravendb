@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Commands
                 Content = new BlittableJsonContent(stream =>
                 {
                     ctx.Write(stream, 
-                        EntityToBlittable.ConvertEntityToBlittable(_options, _conventions, ctx));
+                        EntityToBlittable.ConvertCommandToBlittable(_options, ctx));
                 })
             };
             return request;

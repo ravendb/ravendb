@@ -37,7 +37,7 @@ namespace Raven.Client.ServerWide.Operations
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
 
-                _compactSettings = EntityToBlittable.ConvertEntityToBlittable(compactSettings, conventions, context);
+                _compactSettings = EntityToBlittable.ConvertCommandToBlittable(compactSettings, context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

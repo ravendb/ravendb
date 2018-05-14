@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
@@ -36,7 +35,7 @@ namespace Raven.Server.Web.System
                 if (periodicBackup == null)
                     throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
 
-                var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(periodicBackup, DocumentConventions.Default, context);
+                var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(periodicBackup, context);
                 context.Write(writer, databaseRecordBlittable);
                 writer.Flush();
             }
