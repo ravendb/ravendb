@@ -7,7 +7,7 @@ namespace Raven.TestDriver
 {
     internal class RavenServerRunner<TLocator> where TLocator : RavenServerLocator
     {
-        internal static string EmptySettingsFile
+        internal static string EmptySettingsFilePath
         {
             get
             {
@@ -43,14 +43,14 @@ namespace Raven.TestDriver
                 throw new FileNotFoundException("Server file was not found", locator.ServerPath);
             }
 
-            File.WriteAllText(EmptySettingsFile, "{}");
+            File.WriteAllText(EmptySettingsFilePath, "{}");
 
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 var commandArguments = new List<string>
                 {
                     locator.CommandArguments,
-                    $"-c {EmptySettingsFile}",
+                    $"-c {EmptySettingsFilePath}",
                     "--ServerUrl=http://127.0.0.1:0",
                     "--RunInMemory=true",
                     "--Testing.ParentProcessId=" + currentProcess.Id,
