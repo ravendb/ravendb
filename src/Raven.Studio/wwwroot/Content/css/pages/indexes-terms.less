@@ -6,6 +6,7 @@
             .badge {
                 display: none;
             }
+
             .icon-arrow-down:before {
                 content: @arrow-right;
             }
@@ -30,24 +31,56 @@
         }
 
         .field-terms {
-            background-color: @gray-dark;
+            background-color: @gray-darker;
 
             ul {
+                display: flex;
+                flex-wrap: wrap;
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                padding: @grid-gutter-width/8;
+
+                &:after {
+                    content: '';
+                    flex-grow: 9999;
+                }
 
                 li {
-                    border: 1px solid transparent;
+                    width: 280px;
+                    flex-grow: 1;
 
-                    a {
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                        display: block;
-                    }
+                    &.terms-item {
+                        display: flex;
+                        padding: @grid-gutter-width/8;
+                        align-items: stretch;
 
-                    &:hover {
-                        .bg-primary;
+                        .name {
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                            display: block;
+                            padding: @grid-gutter-width/8 @grid-gutter-width/4;
+                            background-color: @gray-dark;
+                            flex-grow: 1;
+                            overflow: hidden;
+                        }
 
-                        a:hover {
-                            text-decoration: none !important;
+                        .query, .preview, .copy {
+                            display: none;
+                            margin: 0;
+                            background: @gray-dark;
+                            border: none;
+                            width: 34px;
+
+                            &:hover {
+                                .bg-primary;
+                            }
+                        }
+
+                        &:hover {
+                            .query, .preview, .copy {
+                                display: block;
+                            }
                         }
                     }
                 }
