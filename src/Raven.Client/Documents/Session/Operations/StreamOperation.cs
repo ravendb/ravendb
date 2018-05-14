@@ -184,7 +184,9 @@ namespace Raven.Client.Documents.Session.Operations
             private bool _initialized;
             private JsonOperationContext.ReturnBuffer _returnBuffer;
             private readonly bool _isQueryStream;
-            private PeepingTomStream _peepingTomStream;
+            private readonly PeepingTomStream _peepingTomStream;
+            private int _docsCountOnCachedRenewSession;
+            private bool _cachedItemsRenew;
 
             public void Dispose()
             {
@@ -199,6 +201,20 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 if (_initialized == false)
                     await InitializeAsync().ConfigureAwait(false);
+
+                if (_docsCountOnCachedRenewSession <= 16 * 1024)
+                {
+                    if (_cachedItemsRenew)
+                    {
+                        _session.Context.CachedProperties = new CachedProperties(_session.Context);
+                        ++_docsCountOnCachedRenewSession;
+                    }
+                }
+                else
+                {
+                    _session.Context.Renew();
+                    _docsCountOnCachedRenewSession = 0;
+                }
 
                 if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
@@ -216,6 +232,9 @@ namespace Raven.Client.Documents.Session.Operations
 
                 using (var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state))
                 {
+                    if (_cachedItemsRenew == false)
+                        _cachedItemsRenew = builder.NeedResetPropertiesCache();
+
                     await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
 
                     Current = builder.CreateReader();
