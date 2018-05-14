@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
@@ -20,10 +22,51 @@ namespace Raven.Client.Json
             ParseMain();
         }
 
+        private static readonly char[] _escapeChars = {'[', ']', '(', ')', '.'};
+        public static string EscapeString(string str)
+        {
+            StringBuilder sb = null;
+            for (int i = 0; i< str.Length; i++)
+            {
+                char c = str[i];
+                //We need to escape
+                if (IsEscapeChar(c))
+                {
+                    //First time should append prefix
+                    if (sb == null)
+                    {
+                        sb = new StringBuilder(str.Length,str.Length*2);
+                        sb.Append(str, 0, i);
+                    }
+                    sb.Append('\\');                    
+                }
+
+                if (sb != null)
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb == null ? str : sb.ToString();
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsEscapeChar(char c)
+        {
+            return _escapeChars[0] == c ||
+                   _escapeChars[1] == c ||
+                   _escapeChars[2] == c ||
+                   _escapeChars[3] == c ||
+                   _escapeChars[4] == c;
+        }
+
         private void ParseMain()
         {
             int currentPartStartIndex = _currentIndex;
             bool followingIndexer = false;
+            bool escapeChar = false;
+            Lazy<List<int>> escapePositions = new Lazy<List<int>>(()=> new List<int>());
 
             while (_currentIndex < _expression.Length)
             {
@@ -33,9 +76,16 @@ namespace Raven.Client.Json
                 {
                     case '[':
                     case '(':
+                        if (escapeChar)
+                        {
+                            escapePositions.Value.Add(_currentIndex);
+                            escapeChar = false;
+                            break;
+                        }
                         if (_currentIndex > currentPartStartIndex)
                         {
-                            string member = _expression.Substring(currentPartStartIndex, _currentIndex - currentPartStartIndex);
+                            
+                            string member = GetEscapedMember(_expression, currentPartStartIndex, _currentIndex - currentPartStartIndex, escapePositions.Value);
                             Parts.Add(member);
                         }
 
@@ -45,19 +95,35 @@ namespace Raven.Client.Json
                         break;
                     case ']':
                     case ')':
+                        if (escapeChar)
+                        {
+                            escapePositions.Value.Add(_currentIndex);
+                            escapeChar = false;
+                            break;
+                        }
                         throw new Exception("Unexpected character while parsing path: " + currentChar);
                     case '.':
+                        if (escapeChar)
+                        {
+                            escapePositions.Value.Add(_currentIndex);
+                            escapeChar = false;
+                            break;
+                        }
                         if (_currentIndex > currentPartStartIndex)
                         {
-                            string member = _expression.Substring(currentPartStartIndex, _currentIndex - currentPartStartIndex);
+                            string member = GetEscapedMember(_expression,currentPartStartIndex, _currentIndex - currentPartStartIndex, escapePositions.Value);
                             Parts.Add(member);
                         }
                         currentPartStartIndex = _currentIndex + 1;
                         followingIndexer = false;
                         break;
+                    case '\\':
+                        escapeChar = true;
+                        break;
                     default:
                         if (followingIndexer)
                             throw new Exception("Unexpected character following indexer: " + currentChar);
+                        escapeChar = false;
                         break;
                 }
 
@@ -66,9 +132,30 @@ namespace Raven.Client.Json
 
             if (_currentIndex > currentPartStartIndex)
             {
-                string member = _expression.Substring(currentPartStartIndex, _currentIndex - currentPartStartIndex);
+                string member = GetEscapedMember(_expression, currentPartStartIndex, _currentIndex - currentPartStartIndex, escapePositions.Value);
                 Parts.Add(member);
             }
+        }
+
+        private string GetEscapedMember(string expression, int start, int length, List<int> escapePositions)
+        {
+            if (escapePositions.Count == 0)
+            {
+                return expression.Substring(start, length);
+            }
+            var sb = new StringBuilder(length);
+            var startPos = start;
+            var remLength = length;
+            foreach (var pos in escapePositions)
+            {
+                var chunkLength = pos - startPos;
+                sb.Append(expression, startPos, chunkLength - 1);
+                startPos += chunkLength;
+                remLength -= chunkLength;
+            }
+            sb.Append(expression, startPos, remLength);
+            escapePositions.Clear();
+            return sb.ToString();
         }
 
         private void ParseIndexer(char indexerOpenChar)
