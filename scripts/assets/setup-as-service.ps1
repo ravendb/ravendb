@@ -1,3 +1,4 @@
+#Requires -Version 4.0
 #Requires -RunAsAdministrator
 $ErrorActionPreference = "Stop";
 $ProgressPreference = "SilentlyContinue";
