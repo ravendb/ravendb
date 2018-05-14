@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_counterBatch, _conventions, ctx);
+                        var config = EntityToBlittable.ConvertCommandToBlittable(_counterBatch, ctx);
                         ctx.Write(stream, config);
                     })
                 };

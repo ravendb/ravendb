@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Dynamic;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -22,10 +21,10 @@ namespace Raven.Server.ServerWide.Commands
             {
                 ["Type"] = nameof(AddDatabaseCommand),
                 [nameof(Name)] = Name,
-                [nameof(Record)] = EntityToBlittable.ConvertEntityToBlittable(Record, DocumentConventions.Default, context),
+                [nameof(Record)] = EntityToBlittable.ConvertCommandToBlittable(Record, context),
                 [nameof(RaftCommandIndex)] = RaftCommandIndex,
                 [nameof(Encrypted)] = Encrypted,
-                [nameof(DatabaseValues)] = EntityToBlittable.ConvertEntityToBlittable(DatabaseValues, DocumentConventions.Default, context),
+                [nameof(DatabaseValues)] = EntityToBlittable.ConvertCommandToBlittable(DatabaseValues, context),
                 [nameof(IsRestore)] = IsRestore
             };
         }

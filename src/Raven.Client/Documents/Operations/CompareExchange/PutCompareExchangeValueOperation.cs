@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 {
                     ["Object"] = _value
                 };
-                var blit = EntityToBlittable.ConvertEntityToBlittable(tuple, _conventions, ctx);
+                var blit = EntityToBlittable.ConvertCommandToBlittable(tuple, ctx);
 
                 var request = new HttpRequestMessage
                 {

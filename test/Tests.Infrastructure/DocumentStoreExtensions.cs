@@ -81,7 +81,7 @@ namespace FastTests
                 {
                     var documentJson = data as BlittableJsonReaderObject;
                     var metadataJson = metadata != null
-                        ? EntityToBlittable.ConvertEntityToBlittable(metadata, session.Advanced.DocumentStore.Conventions, session.Advanced.Context)
+                        ? EntityToBlittable.ConvertCommandToBlittable(metadata, session.Advanced.Context)
                         : null;
 
                     if (documentJson == null)
@@ -277,7 +277,7 @@ namespace FastTests
             {
                 using (var session = _store.OpenSession())
                 {
-                    var payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+                    var payloadJson = EntityToBlittable.ConvertCommandToBlittable(payload, session.Advanced.Context);
 
                     var command = new JsonCommandWithPayload<TResult>(url, HttpMethod.Delete, payloadJson);
 
@@ -293,7 +293,7 @@ namespace FastTests
                 {
                     BlittableJsonReaderObject payloadJson = null;
                     if (payload != null)
-                        payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+                        payloadJson = EntityToBlittable.ConvertCommandToBlittable(payload, session.Advanced.Context);
 
                     var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, method, payloadJson);
 

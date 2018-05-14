@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Xunit;
 using System;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -16,11 +15,11 @@ namespace FastTests.Client
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = EntityToBlittable.ConvertEntityToBlittable(new Order
+                var json = EntityToBlittable.ConvertCommandToBlittable(new Order
                 {
                     CustomerId = "1",
                     Number = "abc"
-                }, new DocumentConventions(), context);
+                }, context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludesUtil.Include(json, "CustomerId(customer/)", customerId =>
@@ -40,11 +39,11 @@ namespace FastTests.Client
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = EntityToBlittable.ConvertEntityToBlittable(new Order
+                var json = EntityToBlittable.ConvertCommandToBlittable(new Order
                 {
                     CustomerId = "1",
                     Number = "abc"
-                }, new DocumentConventions(), context);
+                }, context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludesUtil.Include(json, "CustomerId[{0}/customer]", customerId =>

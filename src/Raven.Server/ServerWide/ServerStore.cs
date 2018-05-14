@@ -14,7 +14,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -495,7 +494,7 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 // warm-up the json convertor, it takes about 250ms at first conversion.
-                EntityToBlittable.ConvertEntityToBlittable(new DatabaseRecord(), DocumentConventions.Default, ctx);
+                EntityToBlittable.ConvertCommandToBlittable(new DatabaseRecord(), ctx);
             }
 
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));

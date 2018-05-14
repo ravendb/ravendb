@@ -1,6 +1,5 @@
 ﻿using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using System;
@@ -90,7 +89,7 @@ namespace FastTests.Blittable
         };
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var blittableValues = EntityToBlittable.ConvertEntityToBlittable(values, DocumentConventions.Default, context);
+                var blittableValues = EntityToBlittable.ConvertCommandToBlittable(values, context);
 
                 var valuesDeserialized = JsonDeserializationTest.SerializationDeserializationValidation(blittableValues);
 

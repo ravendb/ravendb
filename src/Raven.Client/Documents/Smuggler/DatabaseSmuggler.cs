@@ -181,7 +181,7 @@ namespace Raven.Client.Documents.Smuggler
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
                 _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
-                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, context);
+                _options = EntityToBlittable.ConvertCommandToBlittable(options,context);
                 _operationId = operationId;
             }
 
@@ -227,7 +227,7 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(options));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, context);
+                _options = EntityToBlittable.ConvertCommandToBlittable(options,context);
                 _operationId = operationId;
             }
 
