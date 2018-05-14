@@ -16,7 +16,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    var json = EntityToBlittable.ConvertEntityToBlittable(meter, store.Conventions, session.Advanced.Context);
+                    var json = EntityToBlittable.ConvertCommandToBlittable(meter, session.Advanced.Context);
                     var parsed = (MeterValue)session.Advanced.EntityToBlittable.ConvertToEntity(typeof(MeterValue), "meter", json);
 
                     Assert.Equal(meter.Name, parsed.Name);

@@ -54,11 +54,11 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var solver = EntityToBlittable.ConvertEntityToBlittable(new ConflictSolver
+                        var solver = EntityToBlittable.ConvertCommandToBlittable(new ConflictSolver
                         {
                             ResolveByCollection = _solver.CollectionByScript,
                             ResolveToLatest = _solver.ResolveToLatest,
-                        }, _conventions, ctx);
+                        }, ctx);
                         ctx.Write(stream, solver);
                     })
                 };

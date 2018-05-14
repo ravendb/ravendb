@@ -225,6 +225,8 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 0;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+                if (string.IsNullOrWhiteSpace(databaseRecord.DatabaseName))
+                    throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
@@ -560,7 +562,7 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var blittable = EntityToBlittable.ConvertEntityToBlittable(restorePoints, DocumentConventions.Default, context);
+                    var blittable = EntityToBlittable.ConvertCommandToBlittable(restorePoints, context);
                     context.Write(writer, blittable);
                     writer.Flush();
                 }

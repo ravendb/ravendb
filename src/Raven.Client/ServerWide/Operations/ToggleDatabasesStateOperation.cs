@@ -63,7 +63,7 @@ namespace Raven.Client.ServerWide.Operations
                     throw new ArgumentNullException(nameof(parameters));
 
                 _disable = disable;
-                _parameters = EntityToBlittable.ConvertEntityToBlittable(parameters, conventions, context);
+                _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters,context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

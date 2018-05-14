@@ -77,7 +77,7 @@ namespace Raven.Client.Extensions
 
             writer.WritePropertyName(nameof(query.QueryParameters));
             if (query.QueryParameters != null)
-                writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query.QueryParameters, conventions, context));
+                writer.WriteObject(EntityToBlittable.ConvertCommandToBlittable(query.QueryParameters, context));
             else
                 writer.WriteNull();
 

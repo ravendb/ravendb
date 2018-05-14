@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -644,7 +643,7 @@ namespace Raven.Server.Documents
 
                     // save the database record
                     writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
-                    var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+                    var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
                     context.Write(writer, databaseRecordBlittable);
 
                     // save the database values (subscriptions, periodic backups statuses, etl states...)

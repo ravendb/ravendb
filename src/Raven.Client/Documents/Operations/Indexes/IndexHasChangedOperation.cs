@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(definition.Name));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-                _definition = EntityToBlittable.ConvertEntityToBlittable(definition, conventions, context);
+                _definition = EntityToBlittable.ConvertCommandToBlittable(definition, context);
             }
 
             public override bool IsReadRequest => false;
