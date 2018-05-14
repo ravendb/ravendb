@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
 {
     public sealed class DatabasesHandler : RequestHandler
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("DatabasesHandler");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()

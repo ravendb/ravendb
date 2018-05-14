@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
     {
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("global", typeof(LatestVersionCheck).FullName);
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Server", typeof(LatestVersionCheck).FullName);
 
         private static AlertRaised _alert;
 

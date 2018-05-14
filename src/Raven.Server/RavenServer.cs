@@ -66,7 +66,7 @@ namespace Raven.Server
             UnhandledExceptions.Track(Logger);
         }
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
                 
         public readonly RavenConfiguration Configuration;
 
@@ -106,7 +106,7 @@ namespace Raven.Server
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricCounters();
 
-            _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
+            _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
         }
 
         public TcpListenerStatus GetTcpServerStatus()

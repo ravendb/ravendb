@@ -14,7 +14,7 @@ namespace Raven.Server.Https
 {
     public class AuthenticatingAdapter : IConnectionAdapter
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AuthenticatingAdapter>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AuthenticatingAdapter>("Server");
 
         private readonly RavenServer _server;
         private readonly HttpsConnectionAdapter _httpsConnectionAdapter;

@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _token = _cts.Token;
             _server = serverStore;
             WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
-            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>($"Logger on {serverStore.NodeTag}");
+            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
             CurrentTerm = term;
         }
 

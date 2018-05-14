@@ -24,7 +24,7 @@ namespace Raven.Server.Documents
         {
             _databasesLandlord = databasesLandlord;
             _serverStore = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<CatastrophicFailureHandler>("Raven/Server");
+            _logger = LoggingSource.Instance.GetLogger<CatastrophicFailureHandler>("Server");
         }
 
         public bool TryGetStats(Guid environmentId, out FailureStats stats)

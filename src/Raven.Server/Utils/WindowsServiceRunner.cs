@@ -33,19 +33,19 @@ namespace Raven.Server.Utils
 
     internal class RavenWin32Service : IWin32Service
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Raven/WindowsService");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenWin32Service>("Server");
 
         private RavenServer _ravenServer;
 
-        private readonly string _serviceName;
         private readonly string[] _args;
 
-        public string ServiceName => _serviceName;
+        public string ServiceName { get; }
+
         private ServiceStoppedCallback _serviceStoppedCallback;
 
         public RavenWin32Service(string serviceName, RavenConfiguration configuration, string[] args)
         {
-            _serviceName = serviceName;
+            ServiceName = serviceName;
             _args = args;
             _ravenServer = new RavenServer(configuration);
         }
