@@ -24,9 +24,13 @@ namespace Raven.Client.Documents.Session
 
         public AttachmentName[] GetNames(object entity)
         {
-            if (entity == null ||
-                DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false ||
-                document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            if (document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                 return Array.Empty<AttachmentName>();
 
             var results = new AttachmentName[attachments.Length];
@@ -71,8 +75,7 @@ namespace Raven.Client.Documents.Session
 
         protected void ThrowEntityNotInSession(object entity)
         {
-            throw new ArgumentException(entity + " is not associated with the session, cannot add attachment to it. " +
-                                        "Use documentId instead or track the entity in the session.", nameof(entity));
+            throw new ArgumentException($"{entity} is not associated with the session. Use documentId instead or track the entity in the session.", nameof(entity));
         }
 
         public void Delete(object entity, string name)
