@@ -61,7 +61,7 @@ namespace Raven.Server.Web
             var flagsSpans = Enum.GetNames(typeof(UnsecuredAccessAddressRange))
                 .Select(x => $"<span class='text-warning'>{x}</span>");
 
-            var unsecuredAccessFlagsHtml = string.Join("&nbsp;<strong>|</strong>&nbsp;", flagsSpans);
+            var unsecuredAccessFlagsHtml = string.Join("&nbsp;<strong>,</strong>&nbsp;", flagsSpans);
             return unsecuredAccessFlagsHtml;
         }
         
