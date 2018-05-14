@@ -109,16 +109,12 @@ namespace SlowTests.Cluster
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var db1 = await GetDatabase(store1.Database);
-                var db2 = await GetDatabase(store2.Database);
-
-                Assert.Equal(db1.DatabaseGroupId, db2.DatabaseGroupId);
-
                 using (var session = store2.OpenAsyncSession())
                 {
                     await session.StoreAsync(user2, "users/1");
                     await session.SaveChangesAsync();
                 }
+
                 using (var session = store1.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
@@ -134,23 +130,52 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
-        public void ChangeVectorWithPriority()
+        public async Task ResolveInFavorOfLocalClusterTransaction()
         {
-            var a = new string('a', 22);
-            var b = new string('b', 22);
-            var c = new string('c', 22);
+            var user1 = new User()
+            {
+                Name = "Karmel"
+            };
+            var user2 = new User()
+            {
+                Name = "Indych"
+            };
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store2.OpenAsyncSession())
+                {
+                    session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+                    await session.StoreAsync(user2, "users/1");
+                    await session.SaveChangesAsync();
+                }
 
-            var cv1 = $"A:10-{a}, B:20-{b}, RAFT:5-{c}";
-            var cv2 = $"A:20-{a}, B:10-{b}, RAFT:5-{c}";
-            var cv3 = $"A:20-{a}, B:10-{b}, RAFT:6-{c}";
-            var cv4 = $"A:30-{a}, B:10-{b}, RAFT:6-{c}";
-
-            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(cv1, cv2, c));
-            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(cv1, cv3, c));
-            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(cv3, cv1, c));
-
-            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(cv3, cv4, c));
-            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(cv4, cv3, c));
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(user1, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                await SetupReplicationAsync(store1, store2);
+                
+                // 1. at first we will resolve to the local, since both are form cluster transaction
+                Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Indych"));
+                
+                // 2. after the resolution the document is stripped from the cluster transaction flag
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(user1, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                
+                // 3. so in the next conflict we will be overwriting it.
+                Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
+            }
         }
 
         [Fact]
@@ -409,9 +434,9 @@ namespace SlowTests.Cluster
                 var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende"));
                 Assert.Equal(user1.Name, user.Value.Name);
 
-                var indexes = await session.Advanced.ClusterTransaction.GetCompareExchangeIndexesAsync(new [] { "usernames/ayende" , "usernames/karmel" , "usernames/grisha" });
-                Assert.Equal(3, indexes.Count);
-                Assert.Equal(user.Index, indexes["usernames/ayende"]);
+                var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(new [] { "usernames/ayende" , "usernames/karmel" , "usernames/grisha" });
+                Assert.Equal(3, values.Count);
+                Assert.Equal(user.Index, values["usernames/ayende"].Index);
             }
         }
 

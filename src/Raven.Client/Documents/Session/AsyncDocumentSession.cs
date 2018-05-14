@@ -104,12 +104,12 @@ namespace Raven.Client.Documents.Session
         public ICountersSessionOperationsAsync Counters => _counters ?? (_counters = new DocumentSessionCountersAsync(this));
         private ICountersSessionOperationsAsync _counters;
 
-        public IClusterTransactionOperationAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionTransactionOperationAsync(this));
-        private IClusterTransactionOperationAsync _clusterTransaction;
+        public IClusterTransactionOperationsAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperationsAsync(this));
+        private IClusterTransactionOperationsAsync _clusterTransaction;
 
-        protected override ClusterTransactionSessionBase GetClusterSession()
+        protected override ClusterTransactionOperationsBase GetClusterSession()
         {
-            return (ClusterTransactionSessionBase)_clusterTransaction;
+            return (ClusterTransactionOperationsBase)_clusterTransaction;
         }
 
         /// <summary>

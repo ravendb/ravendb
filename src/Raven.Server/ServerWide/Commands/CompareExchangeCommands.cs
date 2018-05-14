@@ -17,6 +17,11 @@ namespace Raven.Server.ServerWide.Commands
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
 
+        public static string GetActualKey(string database, string key)
+        {
+            return ("db/" + database + "/" + key).ToLowerInvariant();
+        }
+
         protected CompareExchangeCommandBase() { }
 
         protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context)
@@ -32,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands
             Index = index;
             Database = database;
             ContextToWriteResult = context;
-            ActualKey = ("db/" + Database + "/" + Key).ToLowerInvariant();
+            ActualKey = GetActualKey(database, key);
         }
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
@@ -134,8 +139,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string key, string database, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
-            : base(key, database, index, contextToReturnResult)
+        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
+            : base(database, key, index, contextToReturnResult)
         {
             Value = value;
         }

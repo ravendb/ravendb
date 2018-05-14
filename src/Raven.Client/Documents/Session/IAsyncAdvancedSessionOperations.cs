@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Access cluster transaction operations
         /// </summary>
-        IClusterTransactionOperationAsync ClusterTransaction { get; }
+        IClusterTransactionOperationsAsync ClusterTransaction { get; }
 
         /// <summary>
         ///     Updates entity with latest changes from server

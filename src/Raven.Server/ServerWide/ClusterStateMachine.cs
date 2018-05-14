@@ -1085,8 +1085,7 @@ namespace Raven.Server.ServerWide
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            var dbKey = key.ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, key, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {

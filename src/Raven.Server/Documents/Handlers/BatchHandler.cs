@@ -458,7 +458,8 @@ namespace Raven.Server.Documents.Handlers
                             case CommandType.PUT:
                                 if (current < _count)
                                 {
-                                    var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector, forceChangeVector: true);
+                                    var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
+                                        flags: DocumentFlags.FromClusterTransaction);
                                     context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                     AddPutResult(putResult);
                                 }
@@ -492,17 +493,11 @@ namespace Raven.Server.Documents.Handlers
                             case CommandType.DELETE:
                                 if (current < _count)
                                 {
-                                    if (cmd.IdPrefixed == false)
+                                    using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
                                     {
-                                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
-                                        {
-                                            var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: changeVector);
-                                            AddDeleteResult(deleteResult, cmd.Id);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Debug.Assert(cmd.IdPrefixed == false);
+                                        var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: changeVector,
+                                            documentFlags: DocumentFlags.FromClusterTransaction);
+                                        AddDeleteResult(deleteResult, cmd.Id);
                                     }
                                 }
                                 else

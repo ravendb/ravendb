@@ -16,7 +16,6 @@ namespace Raven.Server.Utils
         Update,
         Conflict,
         AlreadyMerged,
-        ClusterConflict
     }
 
     public static class ChangeVectorUtils
@@ -81,91 +80,7 @@ namespace Raven.Server.Utils
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
 
-        public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, string priority, bool clusterAutoResolve = true)
-        {
-            if (remoteAsString == localAsString)
-                return ConflictStatus.AlreadyMerged;
-
-            if (string.IsNullOrEmpty(remoteAsString))
-                return ConflictStatus.AlreadyMerged;
-
-            if (string.IsNullOrEmpty(localAsString))
-                return ConflictStatus.Update;
-
-            var local = localAsString.ToChangeVector();
-            var remote = remoteAsString.ToChangeVector();
-
-            //any missing entries from a change vector are assumed to have zero value
-            var localHasLargerEntries = false;
-            var remoteHasLargerEntries = false;
-
-            int numOfMatches = 0;
-            var hasPriorityRemote = false;
-            var hasPriorityLocal = false;
-            for (int i = 0; i < remote.Length; i++)
-            {
-                bool found = false;
-                var isPriority = remote[i].DbId == priority;
-
-                if (isPriority)
-                    hasPriorityRemote = true;
-
-                for (int j = 0; j < local.Length; j++)
-                {
-                    if (local[j].DbId == priority)
-                        hasPriorityLocal = true;
-
-                    if (remote[i].DbId == local[j].DbId)
-                    {
-                        found = true;
-                        numOfMatches++;
-
-                        if (remote[i].Etag > local[j].Etag)
-                        {
-                            if (isPriority && clusterAutoResolve)
-                                return ConflictStatus.Update;
-
-                            remoteHasLargerEntries = true;
-                        }
-                        else if (remote[i].Etag < local[j].Etag)
-                        {
-                            if (isPriority)
-                                return ConflictStatus.AlreadyMerged;
-
-                            localHasLargerEntries = true;
-                        }
-                        break;
-                    }
-                }
-                if (found == false)
-                {
-                    if (isPriority && clusterAutoResolve)
-                        return ConflictStatus.Update;
-
-                    remoteHasLargerEntries = true;
-                }
-            }
-
-            if (hasPriorityLocal && hasPriorityRemote == false)
-                return ConflictStatus.AlreadyMerged;
-
-            if (numOfMatches < local.Length)
-            {
-                localHasLargerEntries = true;
-            }
-
-            if (remoteHasLargerEntries && localHasLargerEntries)
-                return ConflictStatus.Conflict;
-
-            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
-                return ConflictStatus.AlreadyMerged; // change vectors identical
-
-            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
-        }
-
-
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
-
 
         static ChangeVectorUtils()
         {

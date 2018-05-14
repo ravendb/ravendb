@@ -308,7 +308,7 @@ namespace Voron.Data.Tables
                         slice.Content.Ptr < oldData + oldDataSize)
                     {
                         throw new InvalidOperationException(
-                            "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
+                            "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens. You probably should clone your data.");
                     }
                 }
             }

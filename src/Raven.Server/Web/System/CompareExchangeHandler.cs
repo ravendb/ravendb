@@ -41,9 +41,8 @@ namespace Raven.Server.Web.System
             var start = GetStart();
             var pageSize = GetPageSize();
 
-            var prefix = Database.Name + "/";
             var startsWithKey = GetStringQueryString("startsWith", false);
-            var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, prefix + startsWithKey, start, pageSize);
+            var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, CompareExchangeCommandBase.GetActualKey(Database.Name, startsWithKey), start, pageSize);
 
             var numberOfResults = 0;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -78,13 +77,12 @@ namespace Raven.Server.Web.System
         
         private void GetCompareExchangeValuesByKey(TransactionOperationContext context, StringValues keys)
         {
-            var prefix = Database.Name + "/";
             var sw = Stopwatch.StartNew();
 
             var items = new List<(string Key, long Index, BlittableJsonReaderObject Value)>(keys.Count);
             foreach (var key in keys)
             {
-                var item = ServerStore.Cluster.GetCompareExchangeValue(context, prefix + key);
+                var item = ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeCommandBase.GetActualKey(Database.Name, key));
                 if (item.Value == null && keys.Count == 1)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -132,7 +130,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new AddOrUpdateCompareExchangeCommand(key, Database.Name, updateJson, index, context);
+                var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
@@ -163,7 +161,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var command = new RemoveCompareExchangeCommand(key, Database.Name, index, context);
+                var command = new RemoveCompareExchangeCommand(Database.Name, key, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);

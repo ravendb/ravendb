@@ -37,8 +37,7 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             string changeVector = null,
             DocumentFlags flags = DocumentFlags.None,
-            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, 
-            bool forceChangeVector = false)
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (context.Transaction == null)
             {
@@ -116,7 +115,7 @@ namespace Raven.Server.Documents
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
-                if (forceChangeVector == false)
+                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
                 {
                     if (string.IsNullOrEmpty(result.ChangeVector))
                         ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);

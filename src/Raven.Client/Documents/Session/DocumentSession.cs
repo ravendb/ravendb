@@ -56,12 +56,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Access to cluster wide transaction operations
         /// </summary>
-        public IClusterTransactionOperation ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionTransactionOperation(this));
-        private IClusterTransactionOperation _clusterTransaction;
+        public IClusterTransactionOperations ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperations(this));
+        private IClusterTransactionOperations _clusterTransaction;
 
-        protected override ClusterTransactionSessionBase GetClusterSession()
+        protected override ClusterTransactionOperationsBase GetClusterSession()
         {
-            return (ClusterTransactionSessionBase)_clusterTransaction;
+            return (ClusterTransactionOperationsBase)_clusterTransaction;
         }
 
         public ICountersSessionOperations Counters => _counters ?? (_counters = new DocumentSessionCounters(this));

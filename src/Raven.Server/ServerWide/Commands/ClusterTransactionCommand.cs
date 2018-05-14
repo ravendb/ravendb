@@ -13,7 +13,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Util;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -27,18 +26,21 @@ namespace Raven.Server.ServerWide.Commands
             public CommandType Type;
             public string Id;
             public BlittableJsonReaderObject Document;
-            public LazyStringValue ChangeVector;
-            public bool IdPrefixed;
+            public string ChangeVector;
             public long Index;
 
             public static ClusterTransactionDataCommand FromCommandData(BatchRequestParser.CommandData command)
             {
+                if (command.IdPrefixed)
+                {
+                    throw new NotSupportedException("Deleting by prefix is not supported.");
+                }
+
                 return new ClusterTransactionDataCommand
                 {
                     Id = command.Id,
                     ChangeVector = command.ChangeVector,
                     Document = command.Document,
-                    IdPrefixed = command.IdPrefixed,
                     Index = command.Index,
                     Type = command.Type
                 };
@@ -51,7 +53,6 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Type)] = Type,
                     [nameof(Id)] = Id,
                     [nameof(Index)] = Index,
-                    [nameof(IdPrefixed)] = IdPrefixed,
                     [nameof(ChangeVector)] = ChangeVector,
                     [nameof(Document)] = Document?.Clone(context)
                 };
@@ -92,6 +93,13 @@ namespace Raven.Server.ServerWide.Commands
 
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
+
+        public static Slice CommandsCountKey;
+
+        static ClusterTransactionCommand()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "CommandsCountKey", out CommandsCountKey);
+        }
 
         public ClusterTransactionCommand() { }
 
@@ -134,8 +142,8 @@ namespace Raven.Server.ServerWide.Commands
                 switch (clusterCommand.Type)
                 {
                     case CommandType.CompareExchangePUT:
-                        var put = new AddOrUpdateCompareExchangeCommand(clusterCommand.Id, Database, clusterCommand.Document, clusterCommand.Index, context);
-                        if (put.Validate(context, items, index, out current) == false)
+                        var put = new AddOrUpdateCompareExchangeCommand(Database, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context);
+                        if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add(
                                 $"Concurrency check failed for putting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
@@ -144,8 +152,8 @@ namespace Raven.Server.ServerWide.Commands
                         toExecute.Add(put);
                         break;
                     case CommandType.CompareExchangeDELETE:
-                        var delete = new RemoveCompareExchangeCommand(clusterCommand.Id, Database, clusterCommand.Index, context);
-                        if (delete.Validate(context, items, index, out current) == false)
+                        var delete = new RemoveCompareExchangeCommand(Database, clusterCommand.Id, clusterCommand.Index, context);
+                        if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
                             continue;
@@ -169,9 +177,7 @@ namespace Raven.Server.ServerWide.Commands
 
             return null;
         }
-
-        private static readonly byte[] CommandsCountKey = Encoding.UTF8.GetBytes("CommandsCount");
-
+        
         public unsafe void SaveCommandsBatch(TransactionOperationContext context, long index)
         {
             if (SerializedDatabaseCommands == null || DatabaseCommandsCount == 0)
@@ -181,11 +187,10 @@ namespace Raven.Server.ServerWide.Commands
             var commandsIndexTree = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsIndex);
             var commands = SerializedDatabaseCommands.Clone(context);
 
-            using (Slice.From(context.Allocator, Database, out Slice databaseSlice))
-            using (Slice.From(context.Allocator, CommandsCountKey, out Slice commandsCountKey))
+            using (Slice.From(context.Allocator, Database.ToLowerInvariant(), out Slice databaseSlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
-                var count = commandsIndexTree.ReadLong(commandsCountKey) ?? 0;
+                var count = commandsIndexTree.ReadLong(CommandsCountKey) ?? 0;
 
                 tvb.Add(databaseSlice.Content.Ptr, databaseSlice.Size);
                 tvb.Add(Separator);
@@ -194,7 +199,7 @@ namespace Raven.Server.ServerWide.Commands
                 tvb.Add(count);
                 items.Insert(tvb);
 
-                using (commandsIndexTree.DirectAdd(commandsCountKey, sizeof(long), out byte* ptr))
+                using (commandsIndexTree.DirectAdd(CommandsCountKey, sizeof(long), out byte* ptr))
                     *(long*)ptr = count + DatabaseCommandsCount;
             }
         }

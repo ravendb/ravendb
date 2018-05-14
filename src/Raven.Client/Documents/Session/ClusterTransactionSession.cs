@@ -6,7 +6,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
-    public abstract class ClusterTransactionSessionBase
+    public abstract class ClusterTransactionOperationsBase
     {
         private readonly InMemoryDocumentSessionOperations _session;
 
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session
         private Dictionary<string, long> _deleteCompareExchange;
         public Dictionary<string, long> DeleteCompareExchange => _deleteCompareExchange;
 
-        protected ClusterTransactionSessionBase(InMemoryDocumentSessionOperations session)
+        protected ClusterTransactionOperationsBase(InMemoryDocumentSessionOperations session)
         {
             if (session.TransactionMode != TransactionMode.ClusterWide)
             {
@@ -90,9 +90,9 @@ namespace Raven.Client.Documents.Session
             return _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key));
         }
 
-        protected Task<Dictionary<string, long>> GetCompareExchangeIndexesInternal(string[] keys)
+        protected Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesInternal<T>(string[] keys)
         {
-            return _session.Operations.SendAsync(new GetCompareExchangeIndexOperation(keys));
+            return _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<T>(keys));
         }
 
         protected void EnsureNotDeleted(string key)
@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public interface IClusterTransactionOperationBase
+    public interface IClusterTransactionOperationsBase
     {
         void DeleteCompareExchangeValue(string key, long index);
 
@@ -123,23 +123,23 @@ namespace Raven.Client.Documents.Session
         void CreateCompareExchangeValue<T>(string key, T value);
     }
 
-    public interface IClusterTransactionOperation : IClusterTransactionOperationBase
+    public interface IClusterTransactionOperations : IClusterTransactionOperationsBase
     {
         CompareExchangeValue<T> GetCompareExchangeValue<T>(string key);
 
-        Dictionary<string, long> GetCompareExchangeIndexes(string[] keys);
+        Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string[] keys);
     }
 
-    public interface IClusterTransactionOperationAsync : IClusterTransactionOperationBase
+    public interface IClusterTransactionOperationsAsync : IClusterTransactionOperationsBase
     {
         Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key);
 
-        Task<Dictionary<string, long>> GetCompareExchangeIndexesAsync(string[] keys);
+        Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsync<T>(string[] keys);
     }
 
-    public class ClusterTransactionTransactionOperationAsync : ClusterTransactionSessionBase, IClusterTransactionOperationAsync
+    public class ClusterTransactionOperationsAsync : ClusterTransactionOperationsBase, IClusterTransactionOperationsAsync
     {
-        public ClusterTransactionTransactionOperationAsync(InMemoryDocumentSessionOperations session) : base(session)
+        public ClusterTransactionOperationsAsync(InMemoryDocumentSessionOperations session) : base(session)
         {
         }
 
@@ -148,15 +148,15 @@ namespace Raven.Client.Documents.Session
             return GetCompareExchangeValueAsyncInternal<T>(key);
         }
 
-        public Task<Dictionary<string, long>> GetCompareExchangeIndexesAsync(string[] keys)
+        public Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsync<T>(string[] keys)
         {
-            return GetCompareExchangeIndexesInternal(keys);
+            return GetCompareExchangeValuesInternal<T>(keys);
         }
     }
 
-    public class ClusterTransactionTransactionOperation : ClusterTransactionSessionBase, IClusterTransactionOperation
+    public class ClusterTransactionOperations : ClusterTransactionOperationsBase, IClusterTransactionOperations
     {
-        public ClusterTransactionTransactionOperation(InMemoryDocumentSessionOperations session) : base(session)
+        public ClusterTransactionOperations(InMemoryDocumentSessionOperations session) : base(session)
         {
         }
 
@@ -165,9 +165,9 @@ namespace Raven.Client.Documents.Session
             return AsyncHelpers.RunSync(() => GetCompareExchangeValueAsyncInternal<T>(key));
         }
 
-        public Dictionary<string, long> GetCompareExchangeIndexes(string[] keys)
+        public Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string[] keys)
         {
-            return AsyncHelpers.RunSync(() => GetCompareExchangeIndexesInternal(keys));
+            return AsyncHelpers.RunSync(() => GetCompareExchangeValuesInternal<T>(keys));
         }
     }
 

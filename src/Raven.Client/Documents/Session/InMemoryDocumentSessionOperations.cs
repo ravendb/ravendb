@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Session
 
         private BatchOptions _saveChangesOptions;
 
-        public readonly TransactionMode TransactionMode;
+        public TransactionMode TransactionMode;
 
         private bool _isDisposed;
         private JsonSerializer _jsonSerializer;
@@ -230,6 +230,11 @@ namespace Raven.Client.Documents.Session
             var metadata = new MetadataAsDictionary(metadataAsBlittable);
             documentInfo.MetadataInstance = metadata;
             return metadata;
+        }
+
+        public void SetTransactionMode(TransactionMode mode)
+        {
+            TransactionMode = mode;
         }
 
         /// <summary>
@@ -781,14 +786,14 @@ more responsive application.
             if (TransactionMode != TransactionMode.ClusterWide)
                 return;
 
-            ClusterTransactionSessionBase clusterTransactionSession = GetClusterSession();
+            ClusterTransactionOperationsBase clusterTransactionOperations = GetClusterSession();
 
-            if (clusterTransactionSession == null)
+            if (clusterTransactionOperations == null)
                 return;
 
-            if (clusterTransactionSession.StoreCompareExchange != null)
+            if (clusterTransactionOperations.StoreCompareExchange != null)
             {
-                foreach (var item in clusterTransactionSession.StoreCompareExchange)
+                foreach (var item in clusterTransactionOperations.StoreCompareExchange)
                 {
                     var tuple = new Dictionary<string, object>
                     {
@@ -799,17 +804,17 @@ more responsive application.
                 }
             }
 
-            if (clusterTransactionSession.DeleteCompareExchange != null)
+            if (clusterTransactionOperations.DeleteCompareExchange != null)
             {
-                foreach (var item in clusterTransactionSession.DeleteCompareExchange)
+                foreach (var item in clusterTransactionOperations.DeleteCompareExchange)
                 {
                     result.SessionCommands.Add(new DeleteCompareExchangeCommandData(item.Key, item.Value));
                 }
             }
-            clusterTransactionSession.Clear();
+            clusterTransactionOperations.Clear();
         }
 
-        protected abstract ClusterTransactionSessionBase GetClusterSession();
+        protected abstract ClusterTransactionOperationsBase GetClusterSession();
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {

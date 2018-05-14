@@ -1078,7 +1078,8 @@ namespace Raven.Server.Documents
                     collectionName.GetTableName(CollectionTableType.Tombstones));
                 tombstoneTable.Delete(local.Tombstone.StorageId);
 
-                var flags = local.Tombstone.Flags | documentFlags;
+                var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                var flags = localFlags | documentFlags;
 
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -1100,7 +1101,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    local.Tombstone.Flags | documentFlags).Etag;
+                    localFlags | documentFlags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
 
@@ -1144,12 +1145,12 @@ namespace Raven.Server.Documents
 
                 var ptr = table.DirectRead(doc.StorageId, out int size);
                 var tvr = new TableValueReader(ptr, size);
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr) | documentFlags;
+                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction) | documentFlags;
 
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
                 {
-                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, doc.Flags);
+                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, flags);
                     changeVector = tombstoneEtag.ChangeVector;
                     etag = tombstoneEtag.Etag;
                 }
@@ -1380,9 +1381,9 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string id,
             string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
-            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, bool forceChangeVector = false)
+            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags, forceChangeVector);
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
