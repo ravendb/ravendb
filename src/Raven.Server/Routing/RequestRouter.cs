@@ -68,48 +68,54 @@ namespace Raven.Server.Routing
             _serverMetrics.Requests.RequestsPerSec.Mark();
 
             Interlocked.Increment(ref _serverMetrics.Requests.ConcurrentRequestsCount);
-            _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
 
-            if (handler == null)
+            try
             {
-                if(_auditLog != null)
+                _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
+
+                if (handler == null)
                 {
-                    _auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
-                        $"(Cert: {context.Connection.ClientCertificate?.Subject} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
+                    if (_auditLog != null)
+                    {
+                        _auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
+                            $"(Cert: {context.Connection.ClientCertificate?.Subject} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
+                    }
+
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                    {
+                        ctx.Write(writer,
+                            new DynamicJsonValue
+                            {
+                                ["Type"] = "Error",
+                                ["Message"] = $"There is no handler for {context.Request.Method} {context.Request.Path}"
+                            });
+                    }
+                    return null;
                 }
 
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                if (_ravenServer.Configuration.Security.AuthenticationEnabled)
                 {
-                    ctx.Write(writer,
-                        new DynamicJsonValue
-                        {
-                            ["Type"] = "Error",
-                            ["Message"] = $"There is no handler for {context.Request.Method} {context.Request.Path}"
-                        });
+                    var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
+                    if (authResult == false)
+                        return reqCtx.Database?.Name;
                 }
-                return null;
-            }
 
-            if (_ravenServer.Configuration.Security.AuthenticationEnabled)
-            {
-                var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
-                if (authResult == false)
-                    return reqCtx.Database?.Name;
-            }
-
-            if (reqCtx.Database != null)
-            {
-                using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
+                if (reqCtx.Database != null)
+                {
+                    using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
+                        await handler(reqCtx);
+                }
+                else
+                {
                     await handler(reqCtx);
+                }
             }
-            else
+            finally
             {
-                await handler(reqCtx);
+                Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
             }
-
-            Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
 
             return reqCtx.Database?.Name;
         }
@@ -118,15 +124,15 @@ namespace Raven.Server.Routing
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
-            if(_auditLog != null)
+            if (_auditLog != null)
             {
-                if(feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
+                if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
                 {
                     // only one thread will win it, technically, there can't really be threading
                     // here, because there is a single connection, but better to be safe
-                    if(Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
+                    if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
                     {
-                        if(feature.WrongProtocolMessage != null)
+                        if (feature.WrongProtocolMessage != null)
                         {
                             _auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
                                 $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
@@ -161,7 +167,7 @@ namespace Raven.Server.Routing
                                 return false;
                         }
                     }
-                    
+
                     return true;
                 case AuthorizationStatus.ClusterAdmin:
                 case AuthorizationStatus.Operator:
