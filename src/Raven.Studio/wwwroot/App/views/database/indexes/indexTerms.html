@@ -18,13 +18,20 @@
             
 
             <div class="collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
-                <div class="field-terms panel-body">
+                <div class="field-terms">
                     <h3 class="text-center" data-bind="visible: !terms().length"><i class="icon-empty-set"></i><span>No entries were found.</span></h3>
-                    <ul class="list-unstyled row" data-bind="foreach: terms; visible: terms().length">
-                        <li class="col-sm-3">
-                            <a data-bind="text: $data, click: _.partial($root.navigateToQuery, $parent.name, $data)" href="#">
-                            </a>
+                    <ul class="terms-list" data-bind="visible: terms().length">
+                        <!-- ko foreach: terms -->
+                        <li class="terms-item">
+                            <span class="name" data-bind="text: $data">
+                            </span>
+                            <button class="query" data-bind="click: _.partial($root.navigateToQuery, $parent.name, $data)"><i class="icon-query"></i></button>
+                            <!-- <button class="preview"><i class="icon-preview"></i></button>      TODO: add preview binding -->
+                            <!-- <button class="copy"><i class="icon-copy-to-clipboard"></i></button>      TODO: add copy to clipboard binding -->
                         </li>
+                        <!-- /ko -->
+                        <!--DO NOT REMOVE EMPTY LI BELOW: Additional li fixes bottom row flex-grow -->
+                        <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
                     </ul>
                     <div class="loadMore" data-bind="visible: hasMoreTerms">
                         <div class="row">
