@@ -7,11 +7,16 @@ namespace Raven.TestDriver
 {
     internal class RavenServerRunner<TLocator> where TLocator : RavenServerLocator
     {
+        internal static string _emptySettingsFilePath;
+
         internal static string EmptySettingsFilePath
         {
             get
             {
-                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "testdriver.settings.json");
+                if (string.IsNullOrEmpty(_emptySettingsFilePath))
+                    _emptySettingsFilePath = Path.Combine(Path.GetTempPath(), "testdriver.settings.json");
+
+                return _emptySettingsFilePath;
             }
         }
 
