@@ -52,12 +52,27 @@ namespace Raven.Client.Documents.Session
             object entity,
             DocumentConventions conventions,
             JsonOperationContext context,
-            JsonSerializer serializer = null,
-            DocumentInfo documentInfo = null)
+            JsonSerializer serializer,
+            DocumentInfo documentInfo)
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo))
-                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer ?? conventions.CreateSerializer(), writer);
+                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer, writer);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static BlittableJsonReaderObject ConvertCommandToBlittable(
+            object entity,
+            JsonOperationContext context
+            )
+        {
+            using (var writer = new BlittableJsonWriter(context))
+            {
+                DocumentConventions.Default.CreateSerializer().Serialize(writer, entity);
+                writer.FinalizeDocument();
+                return writer.CreateReader();
+            }
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static BlittableJsonReaderObject ConvertEntityToBlittableInternal(
