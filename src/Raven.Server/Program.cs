@@ -17,7 +17,7 @@ namespace Raven.Server
 {
     public class Program
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
 
         public static int Main(string[] args)
         {

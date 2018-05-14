@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreBackupTask
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTask>("RestoreBackupTask");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTask>("Server");
 
         private readonly ServerStore _serverStore;
         private readonly RestoreBackupConfiguration _restoreConfiguration;

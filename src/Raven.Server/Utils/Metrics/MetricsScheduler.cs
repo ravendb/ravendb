@@ -27,7 +27,7 @@ namespace Raven.Server.Utils.Metrics
 
         private MetricsScheduler()
         {
-            _logger = LoggingSource.Instance.GetLogger<MetricsScheduler>("MetricsScheduler");
+            _logger = LoggingSource.Instance.GetLogger<MetricsScheduler>("Server");
             _tickIntervalInNanoseconds = Clock.NanosecondsInSecond;
             _schedulerThread = new Thread(SchedulerTicking)
             {

@@ -14,7 +14,7 @@ namespace Raven.Server.Utils
 {
     public static class CpuUsage
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
         private static readonly object Locker = new object();
         private static WindowsInfo _previousWindowsInfo;
         private static LinuxInfo _previousLinuxInfo;
