@@ -223,9 +223,9 @@ namespace Raven.TestDriver
                 }
             }
 
-            if (File.Exists(RavenServerRunner<TServerLocator>.EmptySettingsFile))
+            if (File.Exists(RavenServerRunner<TServerLocator>.EmptySettingsFilePath))
             {
-                File.Delete(RavenServerRunner<TServerLocator>.EmptySettingsFile);
+                File.Delete(RavenServerRunner<TServerLocator>.EmptySettingsFilePath);
             }
         }
 
