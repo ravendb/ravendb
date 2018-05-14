@@ -222,6 +222,11 @@ namespace Raven.TestDriver
                     ReportError(e);
                 }
             }
+
+            if (File.Exists(RavenServerRunner<TServerLocator>.EmptySettingsFile))
+            {
+                File.Delete(RavenServerRunner<TServerLocator>.EmptySettingsFile);
+            }
         }
 
         public void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
