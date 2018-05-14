@@ -76,7 +76,7 @@ namespace SlowTests.Client.Attachments
 
                     var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                     await SetDatabaseId(store, dbId1);
-                    
+
                     var readBuffer = new byte[8];
                     for (var i = 0; i < names.Length; i++)
                     {
@@ -293,14 +293,14 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    
-                    
+
+
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal("A:2", attachment.Details.ChangeVector.Substring(0,3));
+                        Assert.Equal("A:2", attachment.Details.ChangeVector.Substring(0, 3));
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -456,9 +456,7 @@ namespace SlowTests.Client.Attachments
 
                     var user2 = session.Load<User>("users/2");
                     Assert.Null(user2);
-                    // ReSharper disable once ExpressionIsAlwaysNull
-                    var attachments2 = session.Advanced.Attachments.GetNames(user2);
-                    Assert.Empty(attachments2);
+                    Assert.Throws<ArgumentNullException>(() => session.Advanced.Attachments.GetNames(user2));
                 }
             }
         }
