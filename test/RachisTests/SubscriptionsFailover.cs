@@ -405,8 +405,7 @@ namespace RachisTests
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase);
                 var res = await documentDatabase.ServerStore.ModifyDatabaseRevisions(context,
                     defaultDatabase,
-                    EntityToBlittable.ConvertEntityToBlittable(configuration,
-                        new DocumentConventions(),
+                    EntityToBlittable.ConvertCommandToBlittable(configuration,
                         context));
 
                 foreach (var s in Servers)// need to wait for it on all servers

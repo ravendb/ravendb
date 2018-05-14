@@ -25,7 +25,7 @@ namespace SlowTests.Authentication
 
             public ClaimDomainCommand(DocumentConventions conventions, JsonOperationContext context, ClaimDomainInfo claimInfo)
             {
-                _payload = EntityToBlittable.ConvertEntityToBlittable(claimInfo, conventions, context);
+                _payload = EntityToBlittable.ConvertCommandToBlittable(claimInfo, context);
             }
 
             public override bool IsReadRequest => false;
@@ -77,7 +77,7 @@ namespace SlowTests.Authentication
 
             public SetupLetsEncryptCommand(DocumentConventions conventions, JsonOperationContext context, SetupInfo setupInfo)
             {
-                _payload = EntityToBlittable.ConvertEntityToBlittable(setupInfo, conventions, context);
+                _payload = EntityToBlittable.ConvertCommandToBlittable(setupInfo, context);
                 ResponseType = RavenCommandResponseType.Raw;
             }
 
