@@ -12,7 +12,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class ServerDashboardHandler : ServerNotificationHandlerBase
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerDashboardHandler>("ServerDashboardHandler");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerDashboardHandler>("Server");
 
         [RavenAction("/server-dashboard/watch", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task Get()

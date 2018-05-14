@@ -16,7 +16,7 @@ namespace Raven.Server.TrafficWatch
 {
     internal class TrafficWatchConnection : IDisposable
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Raven/Server");
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Server");
 
         readonly JsonContextPool _jsonContextPool = new JsonContextPool();
 

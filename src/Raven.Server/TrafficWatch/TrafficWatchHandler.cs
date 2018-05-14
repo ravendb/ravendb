@@ -18,7 +18,7 @@ namespace Raven.Server.TrafficWatch
 {
    public class TrafficWatchHandler : RequestHandler
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Raven/Server");
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Server");
 
         [RavenAction("/admin/traffic-watch", "GET", AuthorizationStatus.Operator)]
         public async Task TrafficWatchWebsockets()

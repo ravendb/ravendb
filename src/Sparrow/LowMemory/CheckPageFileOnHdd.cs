@@ -19,7 +19,7 @@ namespace Sparrow.LowMemory
 {
     public static class CheckPageFileOnHdd
     {
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger("heckPageFileOnHdd", "Raven/Server");
+        private static readonly Logger Log = LoggingSource.Instance.GetLogger("Server", typeof(CheckPageFileOnHdd).FullName);
 
         private const string PageFileName = "pagefile.sys";
 

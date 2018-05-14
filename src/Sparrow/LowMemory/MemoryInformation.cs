@@ -14,7 +14,7 @@ namespace Sparrow.LowMemory
 {
     public static class MemoryInformation
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Server");
 
         private static readonly ConcurrentQueue<Tuple<long, DateTime>> MemByTime = new ConcurrentQueue<Tuple<long, DateTime>>();
         private static DateTime _memoryRecordsSet;

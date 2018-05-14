@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide
     {
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Secrets!");
         
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Secrets");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SecretProtection>("Server");
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
 
