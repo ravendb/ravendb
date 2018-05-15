@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class MergedBatchCommand : TransactionOperationsMerger.DocumentPutTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents.Handlers
                             DocumentsStorage.PutOperationResults putResult;
                             try
                             {
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
                             }
                             catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
                             {

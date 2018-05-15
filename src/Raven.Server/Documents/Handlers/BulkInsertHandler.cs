@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class MergedInsertBulkCommand : TransactionOperationsMerger.DocumentPutTransactionCommand
         {
             public Logger Logger;
             public DocumentDatabase Database;
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var cmd = Commands[i];
                     Debug.Assert(cmd.Type == CommandType.PUT);
-                    Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
+                    Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
                 }
                 if (Logger.IsInfoEnabled)
                 {
