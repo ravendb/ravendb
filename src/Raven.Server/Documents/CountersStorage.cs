@@ -125,7 +125,7 @@ namespace Raven.Server.Documents
             }
 
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = context.AllocateStringValue(null, p + sizeOfDocId + 1, size - (sizeOfDocId + 1) - DbIdAsBase64Size - 1);
+            var name = ExtractCounterName(context, result);
             return (doc, name);
         }
 
