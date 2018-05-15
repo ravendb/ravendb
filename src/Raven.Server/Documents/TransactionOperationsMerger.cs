@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -390,7 +391,7 @@ namespace Raven.Server.Documents
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand> pendingOps, Exception e)
         {
-            _checkIfGeneratedIdIsNotOverlapping = e is VoronConcurrencyErrorException;
+            _checkIfGeneratedIdIsNotOverlapping = e is OverlappingGeneratedNewIdException;
 
             if (pendingOps.Count == 1 && _checkIfGeneratedIdIsNotOverlapping == false)
             {
