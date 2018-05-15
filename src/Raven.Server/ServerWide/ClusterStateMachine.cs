@@ -316,7 +316,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
                 // we simply update the value without invoking the OnChange function

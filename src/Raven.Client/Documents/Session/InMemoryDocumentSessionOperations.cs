@@ -799,7 +799,7 @@ more responsive application.
                     {
                         ["Object"] = item.Value.Entity
                     };
-                    var blittable = EntityToBlittable.ConvertEntityToBlittable(tuple, Conventions, Context);
+                    var blittable = EntityToBlittable.ConvertCommandToBlittable(tuple, Context);
                     result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
                 }
             }
