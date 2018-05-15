@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+    public class PatchDocumentCommand : TransactionOperationsMerger.DocumentPutTransactionCommand, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Patch
                 if (originalDoc == null)
                 {
                     if (_isTest == false || _run.PutOrDeleteCalled)
-                        putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
+                        putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
 
                     result.Status = PatchStatus.Created;
                 }
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Patch
                     Debug.Assert(originalDocument != null);
                     if (_isTest == false || _run.PutOrDeleteCalled)
                         putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
-                            originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                            originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
 
                     result.Status = PatchStatus.Patched;
                 }
