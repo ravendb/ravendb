@@ -74,6 +74,11 @@ namespace Raven.Server.Documents.Handlers
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docOps.DocumentId,
                                     operation.CounterName);
                                 break;
+                            case CounterOperationType.Put:
+                                LoadDocument();
+                                 _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, docOps.DocumentId,
+                                    operation.CounterName, operation.ChangeVector, operation.Delta);
+                                break;
                             case CounterOperationType.None:
                                 break;
                             case CounterOperationType.Get:
@@ -153,6 +158,7 @@ namespace Raven.Server.Documents.Handlers
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
+                            case CounterOperationType.Put:
                                 if (loc < 0)
                                 {
                                     CreateUpdatesIfNeeded();

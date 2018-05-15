@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Smuggler
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
             public override Counts CompareExchange => _result.CompareExchange;
-            public override Counts Counters => _result.CompareExchange;
+            public override Counts Counters => _result.Counters;
 
 
             public override DynamicJsonValue ToJson()

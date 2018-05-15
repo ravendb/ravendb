@@ -405,30 +405,39 @@ namespace Raven.Server.Smuggler.Documents
 
         private class StreamCounterActions : StreamActionsBase, ICounterActions
         {
-            public void WriteCounter(CounterDetail counterDetail)
+            public void WriteCounters(CounterBatch counterBatch)
             {
-                if (First == false)
-                    Writer.WriteComma();
-                First = false;
+                foreach (var counter in counterBatch.Documents)
+                {
+                    foreach (var op in counter.Operations)
+                    {
+                        if (First == false)
+                            Writer.WriteComma();
+                        First = false;
 
-                Writer.WriteStartObject();
+                        Writer.WriteStartObject();
 
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.DocId));
-                Writer.WriteString(counterDetail.DocumentId);
-                Writer.WriteComma();
+                        Writer.WritePropertyName(nameof(DocumentItem.CounterItem.DocId));
+                        Writer.WriteString(counter.DocumentId);
+                        Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Name));
-                Writer.WriteString(counterDetail.CounterName);
-                Writer.WriteComma();
+                        Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Name));
+                        Writer.WriteString(op.CounterName);
+                        Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Value));
-                Writer.WriteDouble(counterDetail.TotalValue);
-                Writer.WriteComma();
+                        Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Value));
+                        Writer.WriteDouble(op.Delta);
+                        Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.ChangeVector));
-                Writer.WriteString(counterDetail.ChangeVector);
+                        Writer.WritePropertyName(nameof(DocumentItem.CounterItem.ChangeVector));
+                        Writer.WriteString(op.ChangeVector);
 
-                Writer.WriteEndObject();
+                        Writer.WriteEndObject();
+
+                    }
+
+                }
+
             }
 
             public StreamCounterActions(BlittableJsonTextWriter writer, string propertyName) : base(writer, propertyName)
@@ -464,8 +473,7 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    //remove HasCounter flag if exists, since its not recognizable in v4.0
-                    document.EnsureMetadata(removeCountersFlag: true);
+                    document.EnsureMetadata();
 
                     _context.Write(Writer, document.Data);
                 }

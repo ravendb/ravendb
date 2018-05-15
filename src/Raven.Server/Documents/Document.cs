@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         public bool TryGetMetadata(out BlittableJsonReaderObject metadata) => 
             Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
-        public void EnsureMetadata(bool removeCountersFlag = false)
+        public void EnsureMetadata()
         {
             if (_metadataEnsured)
                 return;
@@ -63,9 +63,7 @@ namespace Raven.Server.Documents
             }
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
-                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
-            if (removeCountersFlag && Flags.HasFlag(DocumentFlags.HasCounters))           
-                Flags &= ~DocumentFlags.HasCounters;            
+                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;        
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             Debug.Assert(LastModified != DateTime.MinValue, $"LastModified cannot be DateTime.MinValue. {Id}");

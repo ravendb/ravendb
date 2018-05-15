@@ -146,6 +146,7 @@ namespace Raven.Server.Documents.Replication
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
+                        var hasCounters = false;
 
                         WriteHeaderToRemotePeer();
                         //handle initial response to last etag and staff
@@ -157,6 +158,7 @@ namespace Raven.Server.Documents.Replication
                                 //The first time we start replication we need to register the destination current CV
                                 case ReplicationMessageReply.ReplyType.Ok:
                                     LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
+                                    hasCounters = response.Reply.HasCounters;
                                     break;
                                 case ReplicationMessageReply.ReplyType.Error:
                                     var exception = new InvalidOperationException(response.Reply.Exception);
@@ -213,6 +215,18 @@ namespace Raven.Server.Documents.Replication
                             AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
+                        }
+
+                        if (hasCounters == false)
+                        {
+                            var msg = "Destination server does not support Counters feature." +
+                                      "Aborting and closing the channel. ";
+
+                            if (_log.IsInfoEnabled)
+                                _log.Info(msg);
+
+                            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
+                            throw new OperationCanceledException(msg);
                         }
 
                         DateTime nextReplicateAt = default(DateTime);

@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -583,20 +586,50 @@ namespace Raven.Server.Smuggler.Documents
             using (var actions = _destination.Counters())
             using (_source.GetCounterValues(out var counters))
             {
+                var batch = new CounterBatch();
+
                 foreach (var counterDetail in counters)
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Counters.ReadCount++;
 
-                    try
+                    var counterOp = new CounterOperation
                     {
-                        actions.WriteCounter(counterDetail);
-                    }
-                    catch (Exception e)
+                        Type = CounterOperationType.Put,
+                        CounterName = counterDetail.CounterName,
+                        Delta = counterDetail.TotalValue,
+                        ChangeVector = counterDetail.ChangeVector
+                    };
+
+                    var exsicting = batch.Documents.SingleOrDefault(x => x.DocumentId == counterDetail.DocumentId);
+                    if (exsicting != null)
                     {
-                        result.Counters.ErroredCount++;
-                        result.AddError($"Could not write Counter: DocId: {counterDetail.DocumentId}, Name:'{counterDetail.CounterName}', Value : {counterDetail.TotalValue}");
+                        exsicting.Operations.Add(counterOp);
                     }
+                    else
+                    {
+                        batch.Documents.Add(new DocumentCountersOperation
+                        {
+                            DocumentId = counterDetail.DocumentId,
+                            Operations = new List<CounterOperation>
+                            {
+                                counterOp
+                            }
+                        });
+
+                    }
+
+                }
+
+                try
+                {
+                    actions.WriteCounters(batch);
+                }
+                catch (Exception e)
+                {
+                    result.Counters.Processed = false;
+                    result.AddError($"An Error occured while writing Counters : {e}");
+                    throw;
                 }
             }
 

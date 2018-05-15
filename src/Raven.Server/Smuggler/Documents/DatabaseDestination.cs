@@ -13,6 +13,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
@@ -541,13 +542,6 @@ namespace Raven.Server.Smuggler.Documents
 
                     PutAttachments(context, document);
 
-                    //add @HasCounters flag if needed
-                    if (document.TryGetMetadata(out var metadata) && 
-                        metadata.TryGetMember(Raven.Client.Constants.Documents.Metadata.Counters, out _))
-                    {
-                        document.Flags |= DocumentFlags.HasCounters;
-                    }
-
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
 
                 }
@@ -656,37 +650,18 @@ namespace Raven.Server.Smuggler.Documents
                 _database = database;
             }
 
-            public void WriteCounter(CounterDetail counterDetail)
+            public void WriteCounters(CounterBatch counterBatch)
             {
-                AsyncHelpers.RunSync(() => PutCounter(counterDetail));
+                AsyncHelpers.RunSync(() => PutCounters(counterBatch));
             }
 
-            private async Task PutCounter(CounterDetail counterDetail)
+            private async Task PutCounters(CounterBatch counterBatch)
             {
-                await _database.TxMerger.Enqueue(new MergedPutCounterCommand(_database, counterDetail));
+                await _database.TxMerger.Enqueue(new CountersHandler.ExecuteCounterBatchCommand(_database, counterBatch));
             }
 
             public void Dispose()
             {
-            }
-        }
-
-        private class MergedPutCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            private readonly DocumentDatabase _database;
-            private readonly CounterDetail _counterDetail;
-
-            public MergedPutCounterCommand(DocumentDatabase database, CounterDetail counterDetail)
-            {
-                _database = database;
-                _counterDetail = counterDetail;
-            }
-
-            public override int Execute(DocumentsOperationContext context)
-            {
-                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, _counterDetail.DocumentId, _counterDetail.CounterName,
-                    _counterDetail.ChangeVector, _counterDetail.TotalValue);
-                return 1;
             }
         }
 
