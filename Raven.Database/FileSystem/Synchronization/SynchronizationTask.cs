@@ -77,6 +77,8 @@ namespace Raven.Database.FileSystem.Synchronization
             get { return context; }
         }
 
+        public bool HasActiveDestinations { get; private set; }
+
         public void IncomingSynchronizationStarted(string fileName, FileSystemInfo sourceFileSystemInfo, Guid sourceFileETag, SynchronizationType type)
         {
             var activeForDestination = activeIncomingSynchronizations.GetOrAdd(sourceFileSystemInfo.Url,
@@ -252,6 +254,8 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             var destinationSyncs = new Dictionary<SynchronizationDestination, Task<IEnumerable<Task<SynchronizationReport>>>>();
 
+            var hasActiveDestinations = false;
+
             foreach (var dst in GetSynchronizationDestinations())
             {
                 SynchronizationDestination destination = dst;
@@ -259,7 +263,9 @@ namespace Raven.Database.FileSystem.Synchronization
                 // If the destination is disabled, we skip it.
                 if (destination.Enabled == false)
                     continue;
-
+                
+                HasActiveDestinations = hasActiveDestinations = true;
+                
                 if (Log.IsDebugEnabled)
                     Log.Debug("Starting to synchronize a destination server {0}", dst.Url);
 
@@ -272,6 +278,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 destinationSyncs.Add(destination, SynchronizeDestinationAsync(destination, forceSyncingAll));
             }
+
+            if (hasActiveDestinations == false)
+                HasActiveDestinations = false;
 
             return destinationSyncs;
         }

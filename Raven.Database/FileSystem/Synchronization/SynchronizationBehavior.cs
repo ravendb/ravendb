@@ -219,12 +219,16 @@ namespace Raven.Database.FileSystem.Synchronization
                         return;
                     case ConflictResolutionStrategy.CurrentVersion:
 
-                        fs.Storage.Batch(accessor =>
+                        using (fs.FileLock.Lock())
                         {
-                            accessor.UpdateFileMetadata(fileName, localMetadata, null);
+                            fs.Storage.Batch(accessor =>
+                            {
+                                accessor.UpdateFileMetadata(fileName, localMetadata, null);
 
-                            fs.ConflictArtifactManager.Delete(fileName, accessor);
-                        });
+                                fs.ConflictArtifactManager.Delete(fileName, accessor);
+                            });
+                        }
+
                         if (Log.IsDebugEnabled)
                             Log.Debug("Conflict automatically resolved by choosing current version of the file {0}", fileName);
 
@@ -253,16 +257,22 @@ namespace Raven.Database.FileSystem.Synchronization
             if(localMetadata == null) // nothing to do local file does not exists
                 return;
 
-            fs.Storage.Batch(accessor =>
+            using (fs.FileLock.Lock())
             {
-                fs.Files.IndicateFileToDelete(fileName, null);
-                fs.Files.PutTombstone(fileName, localMetadata);
-            });
+                fs.Storage.Batch(accessor =>
+                {
+                    fs.Files.IndicateFileToDelete(fileName, null);
+                    fs.Files.PutTombstone(fileName, localMetadata);
+                });
+            }
         }
 
         private void ExecuteMetadataUpdate()
         {
-            fs.Files.UpdateMetadata(fileName, sourceMetadata, null);
+            using (fs.FileLock.Lock())
+            {
+                fs.Files.UpdateMetadata(fileName, sourceMetadata, null);
+            }
         }
 
         private void ExecuteRename(string rename)
@@ -314,20 +324,24 @@ namespace Raven.Database.FileSystem.Synchronization
                 sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
                 FileUpdateResult updateResult = null;
-                fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
 
-                fs.Storage.Batch(accessor =>
+                using (fs.FileLock.Lock())
                 {
-                    using (fs.DisableAllTriggersForCurrentThread())
+                    fs.Storage.Batch(accessor =>
                     {
-                        fs.Files.IndicateFileToDelete(fileName, null);
-                    }
+                        updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null);
 
-                    accessor.RenameFile(tempFileName, fileName);
+                        using (fs.DisableAllTriggersForCurrentThread())
+                        {
+                            fs.Files.IndicateFileToDelete(fileName, null);
+                        }
 
-                    fs.Search.Delete(tempFileName);
-                    fs.Search.Index(fileName, sourceMetadata, updateResult.Etag);
-                });
+                        accessor.RenameFile(tempFileName, fileName);
+                    });
+                }
+
+                fs.Search.Delete(tempFileName);
+                fs.Search.Index(fileName, sourceMetadata, updateResult.Etag);
 
                 if (Log.IsDebugEnabled)
                 {

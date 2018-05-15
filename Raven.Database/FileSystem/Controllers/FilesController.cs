@@ -228,29 +228,32 @@ namespace Raven.Database.FileSystem.Controllers
         {
             name = FileHeader.Canonize(name);
 
-            Storage.Batch(accessor =>
+            using (FileSystem.FileLock.Lock())
             {
-                Synchronizations.AssertFileIsNotBeingSynced(name);
-
-                var fileAndPages = accessor.GetFile(name, 0, 0);
-
-                var metadata = fileAndPages.Metadata;
-
-                if (metadata == null)
-                    throw new FileNotFoundException();
-
-                if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-                    throw new FileNotFoundException();
-
-                Historian.Update(name, metadata);
-                Files.IndicateFileToDelete(name, GetEtag());
-
-                if (name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) == false) // don't create a tombstone for .downloading file
+                Storage.Batch(accessor =>
                 {
-                    Files.PutTombstone(name, metadata);
-                    accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
-                }
-            });
+                    Synchronizations.AssertFileIsNotBeingSynced(name);
+
+                    var fileAndPages = accessor.GetFile(name, 0, 0);
+
+                    var metadata = fileAndPages.Metadata;
+
+                    if (metadata == null)
+                        throw new FileNotFoundException();
+
+                    if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+                        throw new FileNotFoundException();
+
+                    Historian.Update(name, metadata);
+                    Files.IndicateFileToDelete(name, GetEtag());
+
+                    if (name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) == false) // don't create a tombstone for .downloading file
+                    {
+                        Files.PutTombstone(name, metadata);
+                        accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
+                    }
+                });
+            }
 
             SynchronizationTask.Context.NotifyAboutWork();
 
@@ -300,15 +303,18 @@ namespace Raven.Database.FileSystem.Controllers
             var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
             var etag = GetEtag();
 
-            Storage.Batch(accessor =>
+            using (FileSystem.FileLock.Lock())
             {
-                Synchronizations.AssertFileIsNotBeingSynced(name);
+                Storage.Batch(accessor =>
+                {
+                    Synchronizations.AssertFileIsNotBeingSynced(name);
 
-                Historian.Update(name, metadata);
-                Files.UpdateMetadata(name, metadata, etag);
+                    Historian.Update(name, metadata);
+                    Files.UpdateMetadata(name, metadata, etag);
+                });
+            }
 
-                SynchronizationTask.Context.NotifyAboutWork();
-            });
+            SynchronizationTask.Context.NotifyAboutWork();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
@@ -327,67 +333,70 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 try
                 {
-                    Storage.Batch(accessor =>
+                    using (FileSystem.FileLock.Lock())
                     {
-                        FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+                        Storage.Batch(accessor =>
+                        {
+                            FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
 
-                        var existingFile = accessor.ReadFile(name);
-                        if (existingFile == null || existingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
-                            throw new FileNotFoundException();
+                            var existingFile = accessor.ReadFile(name);
+                            if (existingFile == null || existingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
+                                throw new FileNotFoundException();
 
-                        var renamingFile = accessor.ReadFile(targetFilename);
-                        if (renamingFile != null && renamingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) == false)
-                            throw new FileExistsException("Cannot copy because file " + targetFilename + " already exists");
+                            var renamingFile = accessor.ReadFile(targetFilename);
+                            if (renamingFile != null && renamingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) == false)
+                                throw new FileExistsException("Cannot copy because file " + targetFilename + " already exists");
 
-                        var metadata = existingFile.Metadata;
+                            var metadata = existingFile.Metadata;
 
-                        if (etag != null && existingFile.Etag != etag)
-                            throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+                            if (etag != null && existingFile.Etag != etag)
+                                throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+                                {
+                                    ActualETag = existingFile.Etag,
+                                    ExpectedETag = etag
+                                };
+
+                            Historian.UpdateLastModified(metadata);
+
+                            var operation = new CopyFileOperation
                             {
-                                ActualETag = existingFile.Etag,
-                                ExpectedETag = etag
+                                FileSystem = FileSystem.Name,
+                                SourceFilename = name,
+                                TargetFilename = targetFilename,
+                                MetadataAfterOperation = metadata
                             };
 
-                        Historian.UpdateLastModified(metadata);
+                            accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name, targetFilename), JsonExtensions.ToJObject(operation));
+                            var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
+                            Files.AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
 
-                        var operation = new CopyFileOperation
-                        {
-                            FileSystem = FileSystem.Name,
-                            SourceFilename = name,
-                            TargetFilename = targetFilename,
-                            MetadataAfterOperation = metadata
-                        };
+                            var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
 
-                        accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name, targetFilename), JsonExtensions.ToJObject(operation));
-                        var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
-                        Files.AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
+                            if (targetTombstrone != null &&
+                                targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                            {
+                                // if there is a tombstone delete it
+                                accessor.Delete(targetTombstrone.FullPath);
+                            }
 
-                        var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
+                            FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
 
-                        if (targetTombstrone != null &&
-                            targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
-                        {
-                            // if there is a tombstone delete it
-                            accessor.Delete(targetTombstrone.FullPath);
-                        }
+                            accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
+                            var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
 
-                        FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
+                            FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
 
-                        accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
-                        var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
+                            accessor.DeleteConfig(configName);
 
-                        FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
-
-                        accessor.DeleteConfig(configName);
-
-                        Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
+                            Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
 
 
-                        Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
-                        Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });
+                            Publisher.Publish(new ConfigurationChangeNotification {Name = configName, Action = ConfigurationChangeAction.Set});
+                            Publisher.Publish(new FileChangeNotification {File = operation.TargetFilename, Action = FileChangeAction.Add});
 
 
-                    });
+                        });
+                    }
 
                     break;
                 }
