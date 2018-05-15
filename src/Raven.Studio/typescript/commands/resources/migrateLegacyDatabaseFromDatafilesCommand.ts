@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class migrateLegacyDatabaseFromDatafilesCommand extends commandBase {
 
-    constructor(private restoreConfiguration: Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration) {
+    constructor(private restoreConfiguration: Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration) {
         super();
     }
 
