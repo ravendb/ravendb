@@ -159,6 +159,28 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Periodic Backup task with that name");
         }
 
+        internal string EnsureUniqueTaskName(string defaultTaskName)
+        {
+            var result = defaultTaskName;
+
+            int counter = 2;
+
+            while (true)
+            {
+                try
+                {
+                    EnsureTaskNameIsNotUsed(result);
+
+                    return result;
+                }
+                catch (Exception)
+                {
+                    result = $"{defaultTaskName} #{counter}";
+                    counter++;
+                }
+            }
+        }
+
         public int GetIndexesCount()
         {
             var count = 0;
