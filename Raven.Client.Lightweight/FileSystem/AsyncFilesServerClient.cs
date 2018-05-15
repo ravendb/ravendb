@@ -332,7 +332,7 @@ namespace Raven.Client.FileSystem
                 .Append("&pageSize=")
                 .Append(pageSize);
 
-            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions, timeout: TimeSpan.FromMinutes(15))
                                         .AddOperationHeaders(OperationsHeaders));
 
             request.RemoveAuthorizationHeader();
@@ -397,7 +397,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.ToString().Trim(), HttpMethods.Get, operationMetadata.Credentials, Conventions)
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.ToString().Trim(), HttpMethods.Get, operationMetadata.Credentials, Conventions, timeout: TimeSpan.FromMinutes(15))
                                             .AddOperationHeaders(OperationsHeaders));
 
             request.RemoveAuthorizationHeader();
