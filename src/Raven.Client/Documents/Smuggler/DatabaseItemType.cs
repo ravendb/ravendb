@@ -18,5 +18,6 @@ namespace Raven.Client.Documents.Smuggler
         LegacyDocumentDeletions = 1 << 9,
         LegacyAttachmentDeletions = 1 << 10,
         DatabaseRecord = 1 << 11,
+        Unknown = 1 << 12
     }
 }

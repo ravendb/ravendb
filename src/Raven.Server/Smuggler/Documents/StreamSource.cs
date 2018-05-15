@@ -92,29 +92,20 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             var type = ReadType();
-            if (type == null)
-                return DatabaseItemType.None;
-
-            while (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
+            var dbItemType = GetType(type);
+            while (dbItemType == DatabaseItemType.Unknown)
             {
-                SkipArray();
-                type = ReadType();
-                if (type == null)
-                    return DatabaseItemType.None;
-            }
-
-            if (type.Equals("Counters", StringComparison.OrdinalIgnoreCase))
-            {
-                var msg = "You are trying to import Counters, which are not supported in 4.0. Skipping counter items.";
+                var msg = $"You are trying to import items of type '{type}' which is unknown or not supported in 4.0. Ignoring items.";
                 if (_log.IsOperationsEnabled)
                     _log.Operations(msg);
                 _result.AddWarning(msg);
 
                 SkipArray();
                 type = ReadType();
+                dbItemType = GetType(type);
             }
 
-            return GetType(type);
+            return dbItemType;
         }
 
         public DatabaseRecord GetDatabaseRecord()
@@ -738,20 +729,6 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (metadata != null &&
-                        metadata.TryGet("@counters", out BlittableJsonReaderArray counters))
-                    {
-                        //remove counters from metadata
-                        var newMetadata = new DynamicJsonValue(metadata);
-                        newMetadata.Remove("@counters");
-
-                        data.Modifications = new DynamicJsonValue
-                        {
-                            [Constants.Documents.Metadata.Key] = newMetadata
-                        };
-
-                    }
-
                     if (legacyImport)
                     {
                         if (modifier.Id.Contains(HiLoHandler.RavenHiloIdPrefix))
@@ -840,9 +817,9 @@ namespace Raven.Server.Smuggler.Documents
                         data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection) &&
                         data.TryGet(nameof(DocumentTombstone.LastModified), out tombstone.LastModified))
                     {
-                        if (type == "Counter")
+                        if (Enum.TryParse<DocumentTombstone.TombstoneType>(type, out var tombstoneType) == false)
                         {
-                            var msg = "Ignoring counter tombstone which you try to import. Counters are not supported in 4.0";
+                            var msg = $"Ignoring a tombstone of type `{type}` which is not supported in 4.0. ";
                             if (_log.IsOperationsEnabled)
                                 _log.Operations(msg);
 
@@ -851,7 +828,7 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
 
-                        tombstone.Type = Enum.Parse<DocumentTombstone.TombstoneType>(type);
+                        tombstone.Type = tombstoneType;
                         yield return tombstone;
                     }
                     else
@@ -1107,7 +1084,7 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachmentDeletions;
 
-            throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());
+            return DatabaseItemType.Unknown;
         }
 
         public void Dispose()

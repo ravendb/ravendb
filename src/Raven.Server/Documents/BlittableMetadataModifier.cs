@@ -51,7 +51,7 @@ namespace Raven.Server.Documents
         {
             var str = CreateLazyStringValueFromParserState(state);
             if (Enum.TryParse(str, true, out DocumentFlags flags) == false)
-                ThrowInvalidFlagsProperty(str, reader);
+                return DocumentFlags.None;
             return flags;
         }
 
@@ -712,11 +712,6 @@ namespace Raven.Server.Documents
         private void ThrowExpectedFieldTypeOfString(string field, JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata.{field} to have string type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
-        }
-
-        private void ThrowInvalidFlagsProperty(LazyStringValue str, IJsonParser reader)
-        {
-            throw new InvalidDataException($"Cannot parse the value of property @metadata.@flags: {str}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
         private void ThrowInvalidLastModifiedProperty(State state, LazyStringValue str, IJsonParser reader)
