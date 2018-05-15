@@ -15,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
