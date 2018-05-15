@@ -171,6 +171,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 Action = SynchronizationAction.Finish,
                 Direction = SynchronizationDirection.Incoming
             });
+
+            fs.SynchronizationTask.Context.NotifyAboutWork();
         }
 
         private void Prepare()
@@ -346,7 +348,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 if (Log.IsDebugEnabled)
                 {
                     var message = localFile == null 
-                        ? string.Format("Temporary downloading file '{0}' was renamed to '{1}'. Indexes were updated.", tempFileName, fileName) 
+                        ? string.Format("Temporary downloading file '{0}' was renamed to '{1}'. Indexes were updated. File etag: {2}", tempFileName, fileName, updateResult?.Etag) 
                         : string.Format("Old file '{0}' was deleted. Indexes were updated.", fileName);
 
                     Log.Debug(message);

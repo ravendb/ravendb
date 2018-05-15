@@ -36,6 +36,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Null(server2.Synchronization.StartAsync().Result[0].Exception);
 
             SyncTestUtils.TurnOffSynchronization(server1);
+            SyncTestUtils.TurnOffSynchronization(server2);
 
             await server1.RenameAsync("test.bin", "rename.bin");
 
@@ -44,6 +45,8 @@ namespace Raven.Tests.FileSystem.Synchronization
             var secondServer1Synchronization = await server1.Synchronization.StartAsync();
             Assert.Null(secondServer1Synchronization[0].Exception);
             Assert.Equal(SynchronizationType.Rename, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
+
+            SyncTestUtils.TurnOnSynchronization(server2, server3);
 
             var secondServer2Synchronization = await server2.Synchronization.StartAsync();
             Assert.Null(secondServer2Synchronization[0].Exception);
@@ -190,6 +193,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Null(syncResult.First().Exception);
 
             SyncTestUtils.TurnOffSynchronization(server1);
+            SyncTestUtils.TurnOffSynchronization(server2);
 
             await server1.DeleteAsync("test.bin");
 
@@ -199,6 +203,8 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.True(secondServer1Synchronization.Count() == 1);
             Assert.Null(secondServer1Synchronization.First().Exception);
             Assert.Equal(SynchronizationType.Delete, secondServer1Synchronization.First().Reports.First().Type);
+
+            SyncTestUtils.TurnOnSynchronization(server2, server3);
 
             var secondServer2Synchronization = await server2.Synchronization.StartAsync();
             Assert.True(secondServer2Synchronization.Count() == 1);
@@ -237,6 +243,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Null(server2.Synchronization.StartAsync().Result[0].Exception);
 
             SyncTestUtils.TurnOffSynchronization(server1);
+            SyncTestUtils.TurnOffSynchronization(server2);
 
             await server1.UpdateMetadataAsync("test.bin", new RavenJObject { { "new_test", "new_value" } });
 
@@ -245,6 +252,8 @@ namespace Raven.Tests.FileSystem.Synchronization
             var secondServer1Synchronization = await server1.Synchronization.StartAsync();
             Assert.Null(secondServer1Synchronization[0].Exception);
             Assert.Equal(SynchronizationType.MetadataUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
+
+            SyncTestUtils.TurnOnSynchronization(server2, server3);
 
             var secondServer2Synchronization = await server2.Synchronization.StartAsync();
             Assert.Null(secondServer2Synchronization[0].Exception);
