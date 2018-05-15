@@ -453,7 +453,7 @@ class databaseCreationModel {
     }
     
     
-    toOfflineMigrationDto(): Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration {
+    toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {
         const migration = this.legacyMigration;
         return {
             DataDirectory: migration.dataDirectory(),
@@ -467,7 +467,7 @@ class databaseCreationModel {
             EncryptionAlgorithm: migration.isEncrypted() ? migration.encryptionAlgorithm() : undefined,
             EncryptionKeyBitsSize: migration.isEncrypted() ? migration.encryptionKeyBitsSize() : undefined,
             OutputFilePath: null
-        } as Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration;
+        } as Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration;
     }
 }
 
