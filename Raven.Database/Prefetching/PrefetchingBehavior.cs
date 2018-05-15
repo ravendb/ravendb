@@ -1531,13 +1531,14 @@ namespace Raven.Database.Prefetching
             }
 
             if (Interlocked.Increment(ref currentlyTrackedDeletedItems) >= MaxDeletedDocumentsToTrack) 
-            {
-                currentlyTrackedDeletedItems = 0;
+            {                
                 var replacementOfDocumentsToRemove = new ConcurrentDictionary<string, ImmutableAppendOnlyList<Etag>>(StringComparer.InvariantCultureIgnoreCase);
                 var prevDocumentsToRemove = documentsToRemove;
                 //The reason we clean this dictionary is because we have high throughput of deletes so it is cheaper to replace the dictionary then cleaning it.
                 //Also Clear will lock the dictionary and prevent concurrent work.
-                Interlocked.Exchange(ref documentsToRemove, replacementOfDocumentsToRemove);                
+                Interlocked.Exchange(ref documentsToRemove, replacementOfDocumentsToRemove);
+                //We might have a few documents to delete that won't be counted here but i think we can live with that, otherwise we have to lock.
+                Interlocked.Exchange(ref currentlyTrackedDeletedItems, 0);
             }
             documentsToRemove.AddOrUpdate(key, s => ImmutableAppendOnlyList<Etag>.CreateFrom( deletedEtag ) ,
                                           (s, set) => set.Append(deletedEtag));
