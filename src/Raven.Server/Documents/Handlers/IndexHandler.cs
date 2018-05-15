@@ -616,12 +616,12 @@ namespace Raven.Server.Documents.Handlers
                         field.EndsWith("__maxY"))
                     {
                         if (index.Definition.IndexFields != null &&
-                        index.Definition.IndexFields.TryGetValue(field.Substring(0, name.Length - 6), out var indexField) == true)
+                        index.Definition.IndexFields.TryGetValue(field.Substring(0, field.Length - 6), out var indexField) == true)
                         {
                             if (indexField.Spatial?.Strategy == Client.Documents.Indexes.Spatial.SpatialSearchStrategy.BoundingBox)
                             {
-                                // here we need to convert these to numbers, otherwise the studio
-                                // can't display them in the studio
+                                // Term-values for 'Spatial Index Fields' with 'BoundingBox' are encoded in Lucene as 'prefixCoded bytes'
+                                // Need to convert to numbers for the Studioio
                                 var readableTerms = new HashSet<string>();
                                 foreach (var item in result.Terms)
                                 {

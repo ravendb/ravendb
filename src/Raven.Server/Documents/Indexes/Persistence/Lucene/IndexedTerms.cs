@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
@@ -95,7 +96,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (term == null)
                         break;
 
-                    var text = term.Text;
+                    string text;
+                    if (term.Field.EndsWith("__maxX") ||
+                        term.Field.EndsWith("__maxY") ||
+                        term.Field.EndsWith("__minY") ||
+                        term.Field.EndsWith("__minX"))
+                        {
+                            // This is a Spatial Index field term 
+                            // Lucene keeps the index-entries-values for 'Spatial Index Fields' with 'BoundingBox' encoded as 'prefixCoded bytes'
+                            // Need to convert to numbers
+                            var num = NumericUtils.PrefixCodedToDouble(term.Text);
+                            text = NumberUtil.NumberToString(num);
+                        }
+                    else
+                    {
+                            text = term.Text;
+                    }
 
                     termDocs.Seek(termEnum, state);
                     for (var i = 0; i < termEnum.DocFreq() && termDocs.Next(state); i++)
