@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using static Sparrow.DatabasePerformanceMetrics;
@@ -60,7 +61,12 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);
+        }
+
+        public abstract class DocumentPutTransactionCommand : MergedTransactionCommand
+        {
+            public bool CheckIfGeneratedIdIsNotOverlapping;
         }
 
         public abstract class MergedTransactionCommand
@@ -119,7 +125,7 @@ namespace Raven.Server.Documents
                     _log.Info("Unable to elevate the transaction merger thread for " + _parent.Name, e);
                 }
             }
-            
+
             var oomTimer = new Stopwatch();// this is allocated here to avoid OOM when using it
 
             while (true) // this is actually only executed once, except if we are trying to recover from OOM errors
@@ -161,7 +167,7 @@ namespace Raven.Server.Documents
                                 "OutOfMemoryException happened in the transaction merger, will abort all transactions for the next 3 seconds and then resume operations",
                                 e);
                         }
-                        catch 
+                        catch
                         {
                             // under these conditions, this may throw, but we don't care, we wanna survive (cue music)
                         }
@@ -361,6 +367,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
+                _checkIfGeneratedIdIsNotOverlapping = false;
                 tx?.Dispose();
             }
         }
@@ -383,7 +390,9 @@ namespace Raven.Server.Documents
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand> pendingOps, Exception e)
         {
-            if (pendingOps.Count == 1)
+            _checkIfGeneratedIdIsNotOverlapping = e is VoronConcurrencyErrorException;
+
+            if (pendingOps.Count == 1 && _checkIfGeneratedIdIsNotOverlapping == false)
             {
                 pendingOps[0].Exception = e;
                 NotifyOnThreadPool(pendingOps);
@@ -468,7 +477,7 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently",
                                     e);
                             }
-                            
+
                             using (context.Transaction)
                             using (previous)
                             {
@@ -543,7 +552,7 @@ namespace Raven.Server.Documents
                 previous.EndAsyncCommit();
 
                 //not sure about this 'if'
-                if (commitStats != null) 
+                if (commitStats != null)
                 {
                     SlowWriteNotification.Notify(commitStats, _parent);
                 }
@@ -573,6 +582,7 @@ namespace Raven.Server.Documents
         }
 
         private bool _alreadyListeningToPreviousOperationEnd;
+        private bool _checkIfGeneratedIdIsNotOverlapping;
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps,
@@ -644,7 +654,7 @@ namespace Raven.Server.Documents
 
             // we have now reached the point were we are consuming too much memory, and we cannot
             // proceed with accepting a new request, it is time to start rejecting requests
-            WaitHandle[] waitHandles = 
+            WaitHandle[] waitHandles =
             {
                 _waitHandle.WaitHandle,
                 previousOperation.AsyncWaitHandle
@@ -776,6 +786,9 @@ namespace Raven.Server.Documents
                         {
                             using (var tx = context.OpenWriteTransaction())
                             {
+                                if (_checkIfGeneratedIdIsNotOverlapping && op is DocumentPutTransactionCommand documentCommand)
+                                    documentCommand.CheckIfGeneratedIdIsNotOverlapping = _checkIfGeneratedIdIsNotOverlapping;
+
                                 op.Execute(context);
                                 tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
                                 tx.Commit();
