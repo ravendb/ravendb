@@ -14,7 +14,9 @@ using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
+using Raven.Server.Exceptions;
 using Sparrow;
+using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents
@@ -170,7 +172,17 @@ namespace Raven.Server.Documents
 
                     if (oldValue.Pointer == null)
                     {
-                        table.Insert(tvb);
+                        try
+                        {
+                            table.Insert(tvb);
+                        }
+                        catch (VoronConcurrencyErrorException)
+                        {
+                            if (knownNewId && checkIfGeneratedIdIsNotOverlapping == false)
+                                ThrowOverlappingGeneratedNewIdException(id);
+
+                            throw;
+                        }
                     }
                     else
                     {
@@ -423,6 +435,11 @@ namespace Raven.Server.Documents
             }
 
             return false;
+        }
+
+        private static void ThrowOverlappingGeneratedNewIdException(string id)
+        {
+            throw new OverlappingGeneratedNewIdException($"Could not insert document with ID '{id}' because it overlaps existing one.");
         }
 
         public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
