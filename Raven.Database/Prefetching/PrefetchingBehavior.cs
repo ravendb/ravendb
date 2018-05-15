@@ -21,6 +21,8 @@ using Raven.Database.Indexing;
 using Raven.Database.Util;
 using Raven.Imports.metrics;
 using Raven.Imports.metrics.Core;
+using Voron.Util;
+using DisposableAction = Raven.Abstractions.Extensions.DisposableAction;
 
 namespace Raven.Database.Prefetching
 {
@@ -32,10 +34,11 @@ namespace Raven.Database.Prefetching
             public DateTime AddedAt;
         }
 
+        private static readonly int MaxDeletedDocumentsToTrack = 64_000;
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         private readonly BaseBatchSizeAutoTuner autoTuner;
         private readonly WorkContext context;
-        private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove = new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+        private ConcurrentDictionary<string, ImmutableAppendOnlyList<Etag>> documentsToRemove = new ConcurrentDictionary<string, ImmutableAppendOnlyList<Etag>>(StringComparer.InvariantCultureIgnoreCase);
         private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches = new ConcurrentDictionary<Etag, FutureIndexBatch>();
 
         private readonly ConcurrentJsonDocumentSortedList prefetchingQueue = new ConcurrentJsonDocumentSortedList();
@@ -44,6 +47,7 @@ namespace Raven.Database.Prefetching
 
         private int numberOfTimesWaitedHadToWaitForIO = 0;
         private int splitPrefetchingCount = 0;
+        private int currentlyTrackedDeletedItems = 0;
 
         private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
         private int currentIndexingAge;
@@ -1498,8 +1502,11 @@ namespace Raven.Database.Prefetching
                 if (docToRemove.Value.All(etag => lastIndexedEtag.CompareTo(etag) > 0) == false)
                     continue;
 
-                HashSet<Etag> _;
-                documentsToRemove.TryRemove(docToRemove.Key, out _);
+                ImmutableAppendOnlyList<Etag> value;
+                if(documentsToRemove.TryRemove(docToRemove.Key, out value))
+                {
+                    currentlyTrackedDeletedItems -= value.Count; //doesn't have to be accurate
+                }
             }
 
             HandleCleanupOfUnusedDocumentsInQueue();
@@ -1507,7 +1514,7 @@ namespace Raven.Database.Prefetching
 
         public bool FilterDocuments(JsonDocument document)
         {
-            HashSet<Etag> etags;
+            ImmutableAppendOnlyList<Etag> etags;
             return (documentsToRemove.TryGetValue(document.Key, out etags) && etags.Any(x => x.CompareTo(document.Etag) >= 0)) == false;
         }
 
@@ -1523,8 +1530,29 @@ namespace Raven.Database.Prefetching
                 return;
             }
 
-            documentsToRemove.AddOrUpdate(key, s => new HashSet<Etag> { deletedEtag },
-                                          (s, set) => new HashSet<Etag>(set) { deletedEtag });
+            if (++currentlyTrackedDeletedItems >= MaxDeletedDocumentsToTrack) //This doesn't need to be accurate, can avoid interlock read.
+            {
+                currentlyTrackedDeletedItems = 0;
+                var replacementOfDocumentsToRemove = new ConcurrentDictionary<string, ImmutableAppendOnlyList<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+                var prevDocumentsToRemove = documentsToRemove;
+                //The reason we clean this dictionary is because we have high throughput of deletes so it is cheaper to replace the dictionary then cleaning it.
+                //Also Clear will lock the dictionary and prevent concurrent work.
+                Interlocked.Exchange(ref documentsToRemove, replacementOfDocumentsToRemove);                
+                //release memory faster so it won't get to GC Gen2
+                Task.Run(() => { prevDocumentsToRemove?.Clear(); })
+                    .ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                    {
+                        //Must observe the exception even if log is not enabled
+                        var exception = t.Exception;
+                        if (log.IsWarnEnabled)
+                            log.WarnException("Observed exception during the clearing of an old documentsToRemove", exception);
+                    }
+                }); 
+            }
+            documentsToRemove.AddOrUpdate(key, s => ImmutableAppendOnlyList<Etag>.CreateFrom( deletedEtag ) ,
+                                          (s, set) => set.Append(deletedEtag));
         }
 
         public bool ShouldSkipDeleteFromIndex(JsonDocument item)
