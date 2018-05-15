@@ -309,7 +309,7 @@ namespace Raven.Client.FileSystem
                 .Append("&pageSize=")
                 .Append(pageSize);
 
-            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions, timeout: TimeSpan.FromMinutes(15))
                                         .AddOperationHeaders(OperationsHeaders));
 
             request.RemoveAuthorizationHeader();
