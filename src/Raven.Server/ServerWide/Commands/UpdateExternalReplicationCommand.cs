@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide.Commands
             //this covers the case of a new watcher and edit of an old watcher
             if (string.IsNullOrEmpty(Watcher.Name))
             {
-                Watcher.Name = Watcher.GetDefaultTaskName();
+                Watcher.Name = record.EnsureUniqueTaskName(Watcher.GetDefaultTaskName());
             }
             record.EnsureTaskNameIsNotUsed(Watcher.Name);
             record.ExternalReplications.Add(Watcher);
