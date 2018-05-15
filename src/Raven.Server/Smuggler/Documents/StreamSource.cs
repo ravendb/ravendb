@@ -100,7 +100,18 @@ namespace Raven.Server.Smuggler.Documents
                 SkipArray();
                 type = ReadType();
                 if (type == null)
-                    break;
+                    return DatabaseItemType.None;
+            }
+
+            if (type.Equals("Counters", StringComparison.OrdinalIgnoreCase))
+            {
+                var msg = "You are trying to import Counters, which are not supported in 4.0. Skipping counter items.";
+                if (_log.IsOperationsEnabled)
+                    _log.Operations(msg);
+                _result.AddWarning(msg);
+
+                SkipArray();
+                type = ReadType();
             }
 
             return GetType(type);
@@ -704,9 +715,17 @@ namespace Raven.Server.Smuggler.Documents
                     builder.Reset();
 
                     if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type) &&
-                        type == DocumentItem.ExportDocumentType.Attachment)
+                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type))
                     {
+                        if (type != DocumentItem.ExportDocumentType.Attachment)
+                        {
+                            var msg = $"Ignoring an item of type `{type}`. " + data;
+                            if (_log.IsOperationsEnabled)
+                                _log.Operations(msg);
+                            _result.AddWarning(msg);
+                            continue;
+                        }
+
                         if (attachments == null)
                             attachments = new List<DocumentItem.AttachmentStream>();
 
@@ -717,6 +736,20 @@ namespace Raven.Server.Smuggler.Documents
                         ProcessAttachmentStream(context, data, ref attachment);
                         attachments.Add(attachment);
                         continue;
+                    }
+
+                    if (metadata != null &&
+                        metadata.TryGet("@counters", out BlittableJsonReaderArray counters))
+                    {
+                        //remove counters from metadata
+                        var newMetadata = new DynamicJsonValue(metadata);
+                        newMetadata.Remove("@counters");
+
+                        data.Modifications = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Key] = newMetadata
+                        };
+
                     }
 
                     if (legacyImport)
@@ -730,8 +763,12 @@ namespace Raven.Server.Smuggler.Documents
                                     [Constants.Documents.Metadata.Collection] = CollectionName.HiLoCollection
                                 }
                             };
-                            data = context.ReadObject(data, modifier.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
+                    }
+
+                    if (data.Modifications != null)
+                    {
+                        data = context.ReadObject(data, modifier.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                     }
 
                     _result.LegacyLastDocumentEtag = modifier.LegacyEtag;
