@@ -309,6 +309,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
+                case DatabaseItemType.Counters:
                     return SkipArray(onSkipped);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
