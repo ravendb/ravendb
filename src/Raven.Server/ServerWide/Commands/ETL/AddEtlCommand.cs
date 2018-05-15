@@ -19,19 +19,24 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         protected AddEtlCommand(T configuration, string databaseName) : base(databaseName)
         {
-            if (string.IsNullOrEmpty(configuration.Name))
-            {
-                configuration.Name = configuration.GetDefaultTaskName();
-            }
             Configuration = configuration;
         }
 
-        protected void Add(ref List<T> etls, T configuration)
+        protected void Add(ref List<T> etls, DatabaseRecord record, long etag)
         {
+            if (string.IsNullOrEmpty(Configuration.Name))
+            {
+                Configuration.Name = record.EnsureUniqueTaskName(Configuration.GetDefaultTaskName());
+            }
+            
+            record.EnsureTaskNameIsNotUsed(Configuration.Name);
+
+            Configuration.TaskId = etag;
+
             if (etls == null)
                 etls = new List<T>();
 
-            etls.Add(configuration);
+            etls.Add(Configuration);
         }
 
         public override void FillJson(DynamicJsonValue json)
@@ -54,9 +59,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.EnsureTaskNameIsNotUsed(Configuration.Name);
-            Configuration.TaskId = etag;
-            Add(ref record.RavenEtls, Configuration);
+            Add(ref record.RavenEtls, record, etag);
             return null;
         }
     }
@@ -75,9 +78,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.EnsureTaskNameIsNotUsed(Configuration.Name);
-            Configuration.TaskId = etag;
-            Add(ref record.SqlEtls, Configuration);
+            Add(ref record.SqlEtls, record, etag);
             return null;
         }
     }
