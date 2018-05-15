@@ -472,7 +472,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+    public class MergedPutCommand : TransactionOperationsMerger.DocumentPutTransactionCommand, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Handlers
         {
             try
             {
-                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
+                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
             }
             catch (ConcurrencyException e)
             {
