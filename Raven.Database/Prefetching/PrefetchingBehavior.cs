@@ -1505,7 +1505,7 @@ namespace Raven.Database.Prefetching
                 ImmutableAppendOnlyList<Etag> value;
                 if(documentsToRemove.TryRemove(docToRemove.Key, out value))
                 {
-                    currentlyTrackedDeletedItems -= value.Count; //doesn't have to be accurate
+                    Interlocked.Add(ref currentlyTrackedDeletedItems, -1 * value.Count);
                 }
             }
 
@@ -1530,7 +1530,7 @@ namespace Raven.Database.Prefetching
                 return;
             }
 
-            if (++currentlyTrackedDeletedItems >= MaxDeletedDocumentsToTrack) //This doesn't need to be accurate, can avoid interlock read.
+            if (Interlocked.Increment(ref currentlyTrackedDeletedItems) >= MaxDeletedDocumentsToTrack) 
             {
                 currentlyTrackedDeletedItems = 0;
                 var replacementOfDocumentsToRemove = new ConcurrentDictionary<string, ImmutableAppendOnlyList<Etag>>(StringComparer.InvariantCultureIgnoreCase);
@@ -1538,18 +1538,6 @@ namespace Raven.Database.Prefetching
                 //The reason we clean this dictionary is because we have high throughput of deletes so it is cheaper to replace the dictionary then cleaning it.
                 //Also Clear will lock the dictionary and prevent concurrent work.
                 Interlocked.Exchange(ref documentsToRemove, replacementOfDocumentsToRemove);                
-                //release memory faster so it won't get to GC Gen2
-                Task.Run(() => { prevDocumentsToRemove?.Clear(); })
-                    .ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        //Must observe the exception even if log is not enabled
-                        var exception = t.Exception;
-                        if (log.IsWarnEnabled)
-                            log.WarnException("Observed exception during the clearing of an old documentsToRemove", exception);
-                    }
-                }); 
             }
             documentsToRemove.AddOrUpdate(key, s => ImmutableAppendOnlyList<Etag>.CreateFrom( deletedEtag ) ,
                                           (s, set) => set.Append(deletedEtag));
