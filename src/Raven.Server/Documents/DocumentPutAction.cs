@@ -16,7 +16,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Raven.Server.Exceptions;
 using Sparrow;
-using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents
@@ -55,7 +54,9 @@ namespace Raven.Server.Documents
 
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
-            id = BuildDocumentId(context, id, out long newEtag, out bool knownNewId);
+            var newEtag = _documentsStorage.GenerateNextEtag();
+
+            id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents
 
                     if (oldValue.Pointer == null)
                     {
-                         table.Insert(tvb);
+                        table.Insert(tvb);
                     }
                     else
                     {
@@ -265,10 +266,8 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string BuildDocumentId(DocumentsOperationContext context, string id,out long newEtag, out bool knownNewId)
+        private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
         {
-            newEtag = _documentsStorage.GenerateNextEtag();
-
             if (string.IsNullOrWhiteSpace(id))
             {
                 knownNewId = true;
@@ -285,7 +284,6 @@ namespace Raven.Server.Documents
 
                 if (lastChar == '/')
                 {
-                    bool persistEtag = false;
                     string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
                     // PERF: we are creating an string and mutating it for performance reasons.
@@ -309,9 +307,6 @@ namespace Raven.Server.Documents
                     }
 
                     id = value;
-
-                    if (persistEtag)
-                        _documentsStorage.EnsureLastEtagIsPersisted(context, newEtag);
 
                     knownNewId = true;
                 }
