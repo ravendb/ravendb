@@ -325,17 +325,20 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 case ConflictResolutionStrategy.CurrentVersion:
 
-                    Storage.Batch(accessor =>
+                    using (FileSystem.FileLock.Lock())
                     {
-                        var localMetadata = accessor.GetFile(canonicalFilename, 0, 0).Metadata;
-                        var conflict = accessor.GetConfigurationValue<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename));
+                        Storage.Batch(accessor =>
+                        {
+                            var localMetadata = accessor.GetFile(canonicalFilename, 0, 0).Metadata;
+                            var conflict = accessor.GetConfigurationValue<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename));
 
-                        ConflictResolver.ApplyCurrentStrategy(canonicalFilename, conflict, localMetadata);
+                            ConflictResolver.ApplyCurrentStrategy(canonicalFilename, conflict, localMetadata);
 
-                        accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
+                            accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
 
-                        ConflictArtifactManager.Delete(canonicalFilename, accessor);
-                    });
+                            ConflictArtifactManager.Delete(canonicalFilename, accessor);
+                        });
+                    }
 
                     Publisher.Publish(new ConflictNotification
                     {
@@ -346,18 +349,21 @@ namespace Raven.Database.FileSystem.Controllers
                     break;
                 case ConflictResolutionStrategy.RemoteVersion:
 
-                    Storage.Batch(accessor =>
+                    using (FileSystem.FileLock.Lock())
                     {
-                        var localMetadata = accessor.GetFile(canonicalFilename, 0, 0).Metadata;
-                        var conflict = accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename)).JsonDeserialization<ConflictItem>();
+                        Storage.Batch(accessor =>
+                        {
+                            var localMetadata = accessor.GetFile(canonicalFilename, 0, 0).Metadata;
+                            var conflict = accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename)).JsonDeserialization<ConflictItem>();
 
-                        ConflictResolver.ApplyRemoteStrategy(canonicalFilename, conflict, localMetadata);
+                            ConflictResolver.ApplyRemoteStrategy(canonicalFilename, conflict, localMetadata);
 
-                        accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
-                        accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename), JsonExtensions.ToJObject(conflict));
+                            accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
+                            accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename), JsonExtensions.ToJObject(conflict));
 
-                        // ConflictArtifactManager.Delete(canonicalFilename, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
-                    });
+                            // ConflictArtifactManager.Delete(canonicalFilename, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
+                        });
+                    }
 
                     SynchronizationTask.Context.NotifyAboutWork();
 

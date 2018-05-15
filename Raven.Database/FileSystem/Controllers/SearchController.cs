@@ -117,40 +117,50 @@ namespace Raven.Database.FileSystem.Controllers
 
         private void DeleteFiles(IEnumerable<string> keys, int totalResults, Action<string> progress)
         {
+            List<FileHeader> files = null;
+
             Storage.Batch(accessor =>
             {
-                var files = keys.Select(accessor.ReadFile);
-                foreach (var fileWithIndex in files.Select((value, i) => new {i, value}))
-                {
-                    var file = fileWithIndex.value;
-                    var fileName = file.FullPath;
-                    try
-                    {
-                        Synchronizations.AssertFileIsNotBeingSynced(fileName);
-                    }
-                    catch (Exception)
-                    {
-                        //ignore files that are being synced
-                        continue;
-                    }
-
-                    var metadata = file.Metadata;
-                    if (metadata == null || metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-                        continue;
-                    
-                    Historian.Update(fileName, metadata);
-                    Files.IndicateFileToDelete(fileName, null);
-
-                    // don't create a tombstone for .downloading file
-                    if (!fileName.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
-                    {
-                        Files.PutTombstone(fileName, metadata);
-                        accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)); // delete conflict item too
-                    }
-
-                    progress(string.Format("File {0}/{1} was deleted, name: '{2}'.", fileWithIndex.i, totalResults, fileName));
-                }	
+                files = keys.Select(accessor.ReadFile).ToList();
             });
+
+            foreach (var fileWithIndex in files.Select((value, i) => new {i, value}))
+            {
+                var file = fileWithIndex.value;
+                var fileName = file.FullPath;
+                try
+                {
+                    Synchronizations.AssertFileIsNotBeingSynced(fileName);
+                }
+                catch (Exception)
+                {
+                    //ignore files that are being synced
+                    continue;
+                }
+
+                var metadata = file.Metadata;
+                if (metadata == null || metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+                    continue;
+                
+                Historian.Update(fileName, metadata);
+
+                using (FileSystem.FileLock.Lock())
+                {
+                    Storage.Batch(accessor =>
+                    {
+                        Files.IndicateFileToDelete(fileName, null);
+
+                        // don't create a tombstone for .downloading file
+                        if (!fileName.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
+                        {
+                            Files.PutTombstone(fileName, metadata);
+                            accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)); // delete conflict item too
+                        }
+                    });
+                }
+
+                progress(string.Format("File {0}/{1} was deleted, name: '{2}'.", fileWithIndex.i, totalResults, fileName));
+            }	
         }
 
         private class DeleteByQueryOperationStatus : OperationStateBase

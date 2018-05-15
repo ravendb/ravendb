@@ -67,6 +67,7 @@ namespace Raven.Database.FileSystem
             ExtensionsState = new AtomicDictionary<object>();
 
             Name = name;
+            
             ResourceName = string.Concat(Constants.FileSystem.UrlPrefix, "/", name);
             configuration = config;
 
@@ -89,6 +90,8 @@ namespace Raven.Database.FileSystem
 
                 notificationPublisher = new NotificationPublisher(transportState);
                 synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, configuration);
+
+                FileLock = new FileSynchronizationLock(synchronizationTask);
 
                 metricsCounters = new MetricsCountersManager();
 
@@ -127,6 +130,8 @@ namespace Raven.Database.FileSystem
         public SynchronizationActions Synchronizations { get; private set; }
 
         public ResourceTimerManager TimerManager { get; private set; }
+
+        internal FileSynchronizationLock FileLock { get; private set; }
 
         public void Initialize()
         {
@@ -483,5 +488,21 @@ namespace Raven.Database.FileSystem
             return fsStats;
         }
 
+        public class FileSynchronizationLock
+        {
+            private readonly SynchronizationTask task;
+
+            private readonly PutSerialLock fileLock = new PutSerialLock();
+
+            public FileSynchronizationLock(SynchronizationTask task)
+            {
+                this.task = task;
+            }
+
+            public IDisposable Lock()
+            {
+                return task.HasActiveDestinations ? fileLock.Lock() : null;
+            }
+        }
     }
 }

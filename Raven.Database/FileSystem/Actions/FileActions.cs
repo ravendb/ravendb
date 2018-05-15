@@ -92,40 +92,44 @@ namespace Raven.Database.FileSystem.Actions
 
                 long? size = -1;
 
-                Storage.Batch(accessor =>
+                using (FileSystem.FileLock.Lock())
                 {
-                    FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
-                    AssertPutOperationNotVetoed(name, metadata);
-
-                    SynchronizationTask.Cancel(name);
-
-                    var contentLength = options.ContentLength;
-                    var contentSize = options.ContentSize;
-
-                    if (contentLength == 0 || contentSize.HasValue == false)
+                    Storage.Batch(accessor =>
                     {
-                        size = contentLength;
-                        if (options.TransferEncodingChunked)
-                            size = null;
-                    }
-                    else
-                    {
-                        size = contentSize;
-                    }
+                        FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+                        AssertPutOperationNotVetoed(name, metadata);
 
-                    FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, metadata));
+                        SynchronizationTask.Cancel(name);
 
-                    using (FileSystem.DisableAllTriggersForCurrentThread())
-                    {
-                        IndicateFileToDelete(name, etag);
-                    }
+                        var contentLength = options.ContentLength;
+                        var contentSize = options.ContentSize;
 
-                    putResult = accessor.PutFile(name, size, metadata);
+                        if (contentLength == 0 || contentSize.HasValue == false)
+                        {
+                            size = contentLength;
+                            if (options.TransferEncodingChunked)
+                                size = null;
+                        }
+                        else
+                        {
+                            size = contentSize;
+                        }
 
-                    FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, metadata));
+                        FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, metadata));
 
-                    Search.Index(name, metadata, putResult.Etag);
-                });
+                        using (FileSystem.DisableAllTriggersForCurrentThread())
+                        {
+                            IndicateFileToDelete(name, etag);
+                        }
+
+                        putResult = accessor.PutFile(name, size, metadata);
+
+                        FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, metadata));
+                    });
+                }
+
+                Search.Index(name, metadata, putResult.Etag);
+
                 if (Log.IsDebugEnabled)
                     Log.Debug("Inserted a new file '{0}' with ETag {1}", name, putResult.Etag);
 
@@ -158,7 +162,11 @@ namespace Raven.Database.FileSystem.Actions
                     }
 
                     FileUpdateResult updateMetadata = null;
-                    Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
+                    using (FileSystem.FileLock.Lock())
+                    {
+                        Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
+                    }
+
                     metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
                     Search.Index(name, metadata, updateMetadata.Etag);
@@ -260,48 +268,54 @@ namespace Raven.Database.FileSystem.Actions
         {
             var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 
-            Storage.Batch(accessor =>
+            FileUpdateResult touchResult = null;
+
+            using (FileSystem.FileLock.Lock())
             {
-                AssertRenameOperationNotVetoed(operation.Name, operation.Rename);
-
-                Publisher.Publish(new FileChangeNotification { File = operation.Name, Action = FileChangeAction.Renaming });
-
-                var renameFile = accessor.ReadFile(operation.Rename);
-
-                if (renameFile != null)
+                Storage.Batch(accessor =>
                 {
-                    if (renameFile.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                    AssertRenameOperationNotVetoed(operation.Name, operation.Rename);
+
+                    Publisher.Publish(new FileChangeNotification {File = operation.Name, Action = FileChangeAction.Renaming});
+
+                    var renameFile = accessor.ReadFile(operation.Rename);
+
+                    if (renameFile != null)
                     {
-                        // if there is a tombstone delete it
-                        accessor.Delete(renameFile.FullPath);
+                        if (renameFile.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                        {
+                            // if there is a tombstone delete it
+                            accessor.Delete(renameFile.FullPath);
+                        }
+                        else if (operation.ForceExistingFileRemoval)
+                        {
+                            // used by synchronization
+                            accessor.Delete(renameFile.FullPath);
+                        }
                     }
-                    else if (operation.ForceExistingFileRemoval)
-                    {
-                        // used by synchronization
-                        accessor.Delete(renameFile.FullPath);
-                    }
-                }
 
-                FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(operation.Name, operation.MetadataAfterOperation));
+                    FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(operation.Name, operation.MetadataAfterOperation));
 
-                accessor.RenameFile(operation.Name, operation.Rename, true);
-                accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
+                    accessor.RenameFile(operation.Name, operation.Rename, true);
+                    accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
 
-                FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(operation.Name, operation.Rename, operation.MetadataAfterOperation));
+                    FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(operation.Name, operation.Rename, operation.MetadataAfterOperation));
 
-                // copy renaming file metadata and set special markers
-                var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
+                    // copy renaming file metadata and set special markers
+                    var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
 
-                accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
+                    accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
 
-                // let's bump renamed doc etag so it'll be greater than tombstone
-                var touchResult = accessor.TouchFile(operation.Rename, null);
+                    // let's bump renamed doc etag so it'll be greater than tombstone
 
-                accessor.DeleteConfig(configName);
+                    touchResult = accessor.TouchFile(operation.Rename, null);
 
-                Search.Delete(operation.Name);
-                Search.Index(operation.Rename, operation.MetadataAfterOperation, touchResult.Etag);
-            });
+                    accessor.DeleteConfig(configName);
+                });
+            }
+
+            Search.Delete(operation.Name);
+            Search.Index(operation.Rename, operation.MetadataAfterOperation, touchResult.Etag);
 
             Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
             Publisher.Publish(new FileChangeNotification { File = operation.Rename, Action = FileChangeAction.Renamed });
@@ -311,30 +325,35 @@ namespace Raven.Database.FileSystem.Actions
         {
             var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
 
-            Storage.Batch(accessor =>
+            FileUpdateResult putResult = null;
+
+            using (FileSystem.FileLock.Lock())
             {
-                AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
-
-                var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
-
-                if (targetTombstrone != null &&
-                    targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                Storage.Batch(accessor =>
                 {
-                    // if there is a tombstone delete it
-                    accessor.Delete(targetTombstrone.FullPath);
-                }
+                    AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
 
-                FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
+                    var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
 
-                accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
-                var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
+                    if (targetTombstrone != null &&
+                        targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                    {
+                        // if there is a tombstone delete it
+                        accessor.Delete(targetTombstrone.FullPath);
+                    }
 
-                FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
+                    FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
 
-                accessor.DeleteConfig(configName);
+                    accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
+                    putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
 
-                Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
-            });
+                    FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
+
+                    accessor.DeleteConfig(configName);
+                });
+            }
+
+            Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
 
             Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
             Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });

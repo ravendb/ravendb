@@ -49,16 +49,20 @@ namespace Raven.Database.FileSystem.Util
                     if (this.fileSystem == null)
                         throw new ArgumentNullException("fileSystem");
 
-                    storage.Batch(accessor =>
+                    using (fileSystem.FileLock.Lock())
                     {
-                        using (fileSystem.DisableAllTriggersForCurrentThread())
+                        storage.Batch(accessor =>
                         {
-                            fileSystem.Files.IndicateFileToDelete(fileName, null);
-                        }
+                            using (fileSystem.DisableAllTriggersForCurrentThread())
+                            {
+                                fileSystem.Files.IndicateFileToDelete(fileName, null);
+                            }
 
-                        var putResult = accessor.PutFile(fileName, null, metadata);
-                        fileSystem.Search.Index(fileName, metadata, putResult.Etag);
-                    });
+                            var putResult = accessor.PutFile(fileName, null, metadata);
+                            fileSystem.Search.Index(fileName, metadata, putResult.Etag);
+                        });
+                    }
+
                     Metadata = metadata;
                     break;
                 default:
