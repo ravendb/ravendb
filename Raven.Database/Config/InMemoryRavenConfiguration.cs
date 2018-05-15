@@ -372,6 +372,7 @@ namespace Raven.Database.Config
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
             FileSystem.DisableRDC = ravenSettings.FileSystem.DisableRDC.Value;
+            FileSystem.SynchronizationBatchProcessing = ravenSettings.FileSystem.SynchronizationBatchProcessing.Value;
 
             Studio.AllowNonAdminUsersToSetupPeriodicExport = ravenSettings.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value;
 
@@ -1676,6 +1677,8 @@ namespace Raven.Database.Config
 
 
             public bool DisableRDC { get; set; }
+
+            public bool SynchronizationBatchProcessing { get; set; }
         }
 
         public class StudioConfiguration

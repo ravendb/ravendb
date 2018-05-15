@@ -295,6 +295,7 @@ namespace Raven.Database.Config
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate], false);
             FileSystem.DisableRDC = new BooleanSetting(settings[Constants.FileSystem.DisableRDC], false);
+            FileSystem.SynchronizationBatchProcessing = new BooleanSetting(settings[Constants.FileSystem.SynchronizationBatchProcessing], false);
 
             Studio.AllowNonAdminUsersToSetupPeriodicExport = new BooleanSetting(settings[Constants.AllowNonAdminUsersToSetupPeriodicExport], false);
 
@@ -644,6 +645,8 @@ namespace Raven.Database.Config
             public BooleanSetting PreventSchemaUpdate { get; set; }
 
             public BooleanSetting DisableRDC { get; set; }
+
+            public BooleanSetting SynchronizationBatchProcessing { get; set; }
         }
 
         public class CounterConfiguration

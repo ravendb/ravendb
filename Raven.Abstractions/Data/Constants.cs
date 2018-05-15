@@ -340,6 +340,8 @@ namespace Raven.Abstractions.Data
 
             public const string DisableRDC = "Raven/FileSystem/DisableRDC";
 
+            public const string SynchronizationBatchProcessing = "Raven/FileSystem/SynchronizationBatchProcessing";
+
             public static class Versioning
             {
                 public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
