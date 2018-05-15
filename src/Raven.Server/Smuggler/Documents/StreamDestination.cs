@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
@@ -91,6 +91,11 @@ namespace Raven.Server.Smuggler.Documents
         public IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context)
         {
             return new StreamKeyValueActions<BlittableJsonReaderObject>(_writer, nameof(DatabaseItemType.CompareExchange));
+        }
+
+        public ICounterActions Counters()
+        {
+            return new StreamCounterActions(_writer, nameof(DatabaseItemType.Counters));
         }
 
         public IIndexActions Indexes()
@@ -398,6 +403,39 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private class StreamCounterActions : StreamActionsBase, ICounterActions
+        {
+            public void WriteCounter(CounterDetail counterDetail)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+
+                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.DocId));
+                Writer.WriteString(counterDetail.DocumentId);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Name));
+                Writer.WriteString(counterDetail.CounterName);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.Value));
+                Writer.WriteDouble(counterDetail.TotalValue);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(DocumentItem.CounterItem.ChangeVector));
+                Writer.WriteString(counterDetail.ChangeVector);
+
+                Writer.WriteEndObject();
+            }
+
+            public StreamCounterActions(BlittableJsonTextWriter writer, string propertyName) : base(writer, propertyName)
+            {
+            }
+        }
+
         private class StreamDocumentActions : StreamActionsBase, IDocumentActions
         {
             private readonly DocumentsOperationContext _context;
@@ -417,20 +455,18 @@ namespace Raven.Server.Smuggler.Documents
                 if (item.Attachments != null)
                     throw new NotSupportedException();
 
-                if (item.Counters != null)
-                    throw new NotSupportedException();
-
                 var document = item.Document;
                 using (document.Data)
                 {
                     WriteUniqueAttachmentStreams(document, progress);
-                    WriteUniqueCounters(document, progress);
 
                     if (First == false)
                         Writer.WriteComma();
                     First = false;
 
+                    // TODO remove @HasCounters flag 
                     document.EnsureMetadata();
+
                     _context.Write(Writer, document.Data);
                 }
             }
@@ -513,81 +549,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            private void WriteUniqueCounters(Document document, SmugglerProgressBase.CountsWithLastEtag progress)
-            {
-                if ((document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters ||
-                    document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
-                    return;
-
-                if (_countersAlreadyExported == null)
-                    _countersAlreadyExported = new HashSet<string>();
-
-                foreach (var counterObject in counters)
-                {
-                    var counter = counterObject.ToString();
-                    if (_countersAlreadyExported.Add(counter))
-                    {
-                        var values = _source.GetCounterValues(document.Id, counter).ToList();
-                        WriteCounter(document.Id, counter, values);
-                        progress.Counters.ReadCount += values.Count;
-                    }
-                }
-            }
-
             public DocumentsOperationContext GetContextForNewDocument()
             {
                 _context.CachedProperties.NewDocument();
                 return _context;
             }
-
-            private void WriteCounter(string docId, string counter, IEnumerable<(string ChangeVector, long Value)> values)
-            {
-                if (First == false)
-                    Writer.WriteComma();
-                First = false;
-
-                Writer.WriteStartObject();
-
-                Writer.WritePropertyName(Constants.Documents.Metadata.Key);
-                Writer.WriteStartObject();
-
-                Writer.WritePropertyName(DocumentItem.ExportDocumentType.Key);
-                Writer.WriteString(DocumentItem.ExportDocumentType.Counter);
-
-                Writer.WriteEndObject();
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(DocumentItem.DocumentCounter.Name));
-                Writer.WriteString(counter);
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(DocumentItem.DocumentCounter.Values));
-                Writer.WriteStartArray();
-                var first = true;
-                foreach (var (cv, val) in values)
-                {
-                    if (first == false)
-                        Writer.WriteComma();
-                    first = false;
-
-                    Writer.WriteStartObject();
-
-                    Writer.WritePropertyName(nameof(DocumentItem.DocumentCounterValues.ChangeVector));
-                    Writer.WriteString(cv);
-
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(DocumentItem.DocumentCounterValues.Value));
-                    Writer.WriteDouble(val);
-
-                    Writer.WriteEndObject();
-                }
-                Writer.WriteEndArray();
-
-                Writer.WriteEndObject();
-            }
-
 
             private void WriteAttachmentStream(LazyStringValue hash, Stream stream, string tag)
             {

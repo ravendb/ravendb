@@ -82,9 +82,9 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.DatabaseRecord);
             EnsureStepProcessed(result.Documents);
             EnsureStepProcessed(result.Documents.Attachments);
-            EnsureStepProcessed(result.Documents.Counters);
             EnsureStepProcessed(result.RevisionDocuments);
             EnsureStepProcessed(result.RevisionDocuments.Attachments);
+            EnsureStepProcessed(result.Counters);
             EnsureStepProcessed(result.Tombstones);
             EnsureStepProcessed(result.Conflicts);
             EnsureStepProcessed(result.Indexes);
@@ -164,6 +164,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                     counts = ProcessCompareExchange(result);
                     break;
+                case DatabaseItemType.Counters:
+                    counts = ProcessCounters(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -173,7 +176,6 @@ namespace Raven.Server.Smuggler.Documents
             if (counts is SmugglerProgressBase.CountsWithLastEtag countsWithEtag)
             {
                 countsWithEtag.Attachments.Processed = true;
-                countsWithEtag.Counters.Processed = true;
             }
 
             result.AddInfo($"Finished processing {type}. {counts}");
@@ -211,6 +213,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.CompareExchange:
                     counts = result.CompareExchange;
+                    break;
+                case DatabaseItemType.Counters:
+                    counts = result.Counters;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
@@ -571,6 +576,31 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.CompareExchange;
+        }
+
+        private SmugglerProgressBase.Counts ProcessCounters(SmugglerResult result)
+        {
+            using (var actions = _destination.Counters())
+            using (_source.GetCounterValues(out var counters))
+            {
+                foreach (var counterDetail in counters)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Counters.ReadCount++;
+
+                    try
+                    {
+                        actions.WriteCounter(counterDetail);
+                    }
+                    catch (Exception e)
+                    {
+                        result.Counters.ErroredCount++;
+                        result.AddError($"Could not write Counter: DocId: {counterDetail.DocumentId}, Name:'{counterDetail.CounterName}', Value : {counterDetail.TotalValue}");
+                    }
+                }
+            }
+
+            return result.Counters;
         }
 
         private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)

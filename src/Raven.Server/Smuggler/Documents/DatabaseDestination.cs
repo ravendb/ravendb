@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -25,6 +26,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -81,6 +83,11 @@ namespace Raven.Server.Smuggler.Documents
         public IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context)
         {
             return new DatabaseCompareExchangeActions(_database, context);
+        }
+
+        public ICounterActions Counters()
+        {
+            return new CounterActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -144,8 +151,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (item.Attachments != null)
                     progress.Attachments.ReadCount += item.Attachments.Count;
-                if (item.Counters != null)
-                    progress.Counters.ReadCount += item.Counters.Sum(c => c.Values.Length);
+
+
                 _command.Add(item);
                 HandleBatchOfDocumentsIfNecessary();
             }
@@ -496,20 +503,6 @@ namespace Raven.Server.Smuggler.Documents
                     var document = documentType.Document;
                     var id = document.Id;
 
-                    if (documentType.Counters != null)
-                    {
-                        foreach (var counter in documentType.Counters)
-                        {
-                            foreach (BlittableJsonReaderObject bjro in counter.Values)
-                            {
-                                if (bjro.TryGet(nameof(DocumentItem.DocumentCounterValues.ChangeVector), out string cv) == false || 
-                                    bjro.TryGet(nameof(DocumentItem.DocumentCounterValues.Value), out long val) == false)
-                                    throw new InvalidDataException("Invalid counter value : " + bjro);
-
-                                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, id, counter.Name, cv, val);
-                            }
-                        }
-                    }
 
                     if (IsRevision)
                     {
@@ -547,6 +540,14 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     PutAttachments(context, document);
+
+                    //add @HasCounters flag if needed
+                    if (document.TryGetMetadata(out var metadata) && 
+                        metadata.TryGetMember(Raven.Client.Constants.Documents.Metadata.Counters, out _))
+                    {
+                        document.Flags |= DocumentFlags.HasCounters;
+                    }
+
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
 
                 }
@@ -645,5 +646,49 @@ namespace Raven.Server.Smuggler.Documents
                 Documents.Add(document);
             }
         }
+
+        private class CounterActions : ICounterActions
+        {
+            private readonly DocumentDatabase _database;
+
+            public CounterActions(DocumentDatabase database)
+            {
+                _database = database;
+            }
+
+            public void WriteCounter(CounterDetail counterDetail)
+            {
+                AsyncHelpers.RunSync(() => PutCounter(counterDetail));
+            }
+
+            private async Task PutCounter(CounterDetail counterDetail)
+            {
+                await _database.TxMerger.Enqueue(new MergedPutCounterCommand(_database, counterDetail));
+            }
+
+            public void Dispose()
+            {
+            }
+        }
+
+        private class MergedPutCounterCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly DocumentDatabase _database;
+            private readonly CounterDetail _counterDetail;
+
+            public MergedPutCounterCommand(DocumentDatabase database, CounterDetail counterDetail)
+            {
+                _database = database;
+                _counterDetail = counterDetail;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, _counterDetail.DocumentId, _counterDetail.CounterName,
+                    _counterDetail.ChangeVector, _counterDetail.TotalValue);
+                return 1;
+            }
+        }
+
     }
 }

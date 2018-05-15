@@ -15,6 +15,7 @@ using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.Counters;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -88,18 +89,49 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static ReplicationBatchItem CreateReplicationBatchItem(DocumentsOperationContext context, Table.TableValueHolder result)
+        public IEnumerable<CounterDetail> GetAllCounters(DocumentsOperationContext context)
+        {
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CountersEtagSlice], 0, 0))
+            {
+                yield return TableValueToCounterDetail(context, result);
+            }
+        }
+
+        private static CounterDetail TableValueToCounterDetail(DocumentsOperationContext context, Table.TableValueHolder tvh)
+        {
+            var (doc, name) = ExtractDocIdAndName(context, tvh);
+
+            return new CounterDetail
+            {
+                DocumentId = doc,
+                CounterName = name,
+                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
+                TotalValue = TableValueToLong((int)CountersTable.Value, ref tvh.Reader)
+            };
+        }
+
+        private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndName(DocumentsOperationContext context, Table.TableValueHolder result)
         {
             var p = result.Reader.Read((int)CountersTable.CounterKey, out var size);
-            Debug.Assert(size > DbIdAsBase64Size + 2/* record separators */);
+            Debug.Assert(size > DbIdAsBase64Size + 2 /* record separators */);
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
             {
                 if (p[sizeOfDocId] == 30)
                     break;
             }
+
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
             var name = context.AllocateStringValue(null, p + sizeOfDocId + 1, size - (sizeOfDocId + 1) - DbIdAsBase64Size - 1);
+            return (doc, name);
+        }
+
+        private static ReplicationBatchItem CreateReplicationBatchItem(DocumentsOperationContext context, Table.TableValueHolder result)
+        {
+            var (doc, name) = ExtractDocIdAndName(context, result);
 
             return new ReplicationBatchItem
             {

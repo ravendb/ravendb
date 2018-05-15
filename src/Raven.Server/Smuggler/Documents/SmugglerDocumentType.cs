@@ -16,12 +16,10 @@ namespace Raven.Server.Smuggler.Documents
 
             public const string Document = nameof(Document);
             public const string Attachment = nameof(Attachment);
-            public const string Counter = nameof(Counter);
         }
 
         public Document Document;
         public List<AttachmentStream> Attachments;
-        public List<DocumentCounter> Counters;
         public DocumentTombstone Tombstone;
         public DocumentConflict Conflict;
 
@@ -46,14 +44,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public struct DocumentCounter
+        public struct CounterItem
         {
-            public LazyStringValue Name;
-            public BlittableJsonReaderArray Values;
-        }
-
-        public class DocumentCounterValues
-        {
+            public string Name;
+            public string DocId;
             public string ChangeVector;
             public long Value;
         }
