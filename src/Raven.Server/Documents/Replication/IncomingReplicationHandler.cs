@@ -1115,13 +1115,20 @@ namespace Raven.Server.Documents.Replication
                                     switch (conflictStatus)
                                     {
                                         case ConflictStatus.Update:
+                                            var flags = item.Flags;
+                                            if (removeClusterTx)
+                                            {
+                                                flags.Strip(DocumentFlags.FromClusterTransaction);
+                                            }
+
                                             if (document != null)
                                             {
 #if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
 #endif
+                                                
                                                 database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, rcvdChangeVector,
-                                                    item.Flags.Strip(DocumentFlags.FromClusterTransaction), NonPersistentDocumentFlags.FromReplication);
+                                                    flags, NonPersistentDocumentFlags.FromReplication);
                                             }
                                             else
                                             {
@@ -1132,8 +1139,8 @@ namespace Raven.Server.Documents.Replication
                                                         item.LastModifiedTicks,
                                                         rcvdChangeVector,
                                                         new CollectionName(item.Collection),
-                                                        NonPersistentDocumentFlags.FromReplication, 
-                                                        item.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                                                        NonPersistentDocumentFlags.FromReplication,
+                                                        flags);
                                                 }
                                             }
                                             break;

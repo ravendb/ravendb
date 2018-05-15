@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (command.IdPrefixed)
                 {
-                    throw new NotSupportedException("Deleting by prefix is not supported.");
+                    throw new NotSupportedException("Deleting by prefix is not supported on cluster transaction.");
                 }
 
                 return new ClusterTransactionDataCommand
@@ -281,6 +281,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long fromIndex)
         {
+            var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out Slice prefixSlice, fromIndex))
             {
@@ -293,7 +294,7 @@ namespace Raven.Server.ServerWide.Commands
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         yield break;
-                    if (result.Database != database) // beware of reading commands of other databases.
+                    if (result.Database != lowerDb) // beware of reading commands of other databases.
                         yield break;
                     if (result.Index < fromIndex)
                         continue;

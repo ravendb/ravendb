@@ -1101,7 +1101,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    localFlags | documentFlags).Etag;
+                    flags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
 

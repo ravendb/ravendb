@@ -183,7 +183,7 @@ namespace Raven.Server.Documents
                     var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
                     var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
                     var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
-                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name.ToLowerInvariant(), first))
+                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))
                     {
                         var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
                         database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>

@@ -783,13 +783,13 @@ more responsive application.
 
         private void PrepareCompareExchangeEntities(SaveChangesData result)
         {
-            if (TransactionMode != TransactionMode.ClusterWide)
-                return;
-
             ClusterTransactionOperationsBase clusterTransactionOperations = GetClusterSession();
 
             if (clusterTransactionOperations == null)
                 return;
+
+            if (TransactionMode != TransactionMode.ClusterWide)
+                throw new InvalidOperationException($"Performing cluster transaction operations require the '{nameof(TransactionMode)}' to be set to '{nameof(TransactionMode.ClusterWide)}'.");
 
             if (clusterTransactionOperations.StoreCompareExchange != null)
             {

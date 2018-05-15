@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Replication
                     using (Slice.External(context.Allocator, incoming.LowerId, out var key))
                     {
                         _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, key, new CollectionName(incoming.Collection), newChangeVector,
-                            incoming.LastModified.Ticks, NonPersistentDocumentFlags.None, incoming.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
+                            incoming.LastModified.Ticks, NonPersistentDocumentFlags.None, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                     }
                 }
             }
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Replication
                 if (existing.Document != null)
                 {
                     _database.DocumentsStorage.RevisionsStorage.Put(context, existing.Document.Id, existing.Document.Data,
-                        existing.Document.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
+                        existing.Document.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
                         NonPersistentDocumentFlags.None, existing.Document.ChangeVector, existing.Document.LastModified.Ticks);
                 }
                 else if(existing.Tombstone != null)
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Replication
                     using (Slice.External(context.Allocator, existing.Tombstone.LowerId, out var key))
                     {
                         _database.DocumentsStorage.RevisionsStorage.Delete(context, existing.Tombstone.LowerId, key, new CollectionName(existing.Tombstone.Collection), existing.Tombstone.ChangeVector,
-                            existing.Tombstone.LastModified.Ticks, NonPersistentDocumentFlags.None, existing.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
+                            existing.Tombstone.LastModified.Ticks, NonPersistentDocumentFlags.None, existing.Tombstone.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                     }
                 }
             }
