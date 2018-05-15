@@ -32,16 +32,16 @@ namespace Raven.Client.Documents.Operations
 
         public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchByIndexCommand(conventions, context, _queryToUpdate, _options);
+            return new PatchByQueryCommand(conventions, context, _queryToUpdate, _options);
         }
 
-        private class PatchByIndexCommand : RavenCommand<OperationIdResult>
+        private class PatchByQueryCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly IndexQuery _queryToUpdate;
             private readonly QueryOperationOptions _options;
 
-            public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context,
+            public PatchByQueryCommand(DocumentConventions conventions, JsonOperationContext context,
                 IndexQuery queryToUpdate,
                 QueryOperationOptions options = null)
             {
