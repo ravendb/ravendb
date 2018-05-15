@@ -63,6 +63,7 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(Key)] = Key;
             json[nameof(Index)] = Index;
+            json[nameof(Database)] = Database;
             return json;
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using SlowTests.Client;
 
 namespace Tryouts
 {
@@ -10,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Cluster.ClusterTransactionTests())
+                using (var test = new UniqueValues())
                 {
-                    await test.CanCreateClusterTransactionRequest();
+                    await test.CanPutUniqueString();
                 }
             }
         }
