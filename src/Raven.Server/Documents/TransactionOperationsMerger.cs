@@ -791,7 +791,6 @@ namespace Raven.Server.Documents
                                 }
                             }
                             DoCommandNotification(op);
-                            break;
                         }
                         catch (Exception e)
                         {
@@ -804,6 +803,7 @@ namespace Raven.Server.Documents
                             op.Exception = e;
                             NotifyOnThreadPool(op);
                         }
+                        break;
                     }
                 }
             }
