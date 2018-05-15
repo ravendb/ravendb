@@ -1016,6 +1016,8 @@ namespace Raven.Server.Documents.Replication
 
                     var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector;
 
+                    var groupId = _incoming._parent.Database.DatabaseGroupId;
+
                     foreach (var item in _incoming._replicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
@@ -1110,15 +1112,18 @@ namespace Raven.Server.Documents.Replication
                                         continue;
                                     }
 
-                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item, out var conflictingVector, out var removeClusterTx);
+                                    var shouldStripClusterTxFlag = false;
+                                    var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
+                                    var conflictStatus =
+                                        ConflictsStorage.GetConflictStatusForDocument(context, item, out var conflictingVector, out var hasLocalClusterTx);
 
                                     switch (conflictStatus)
                                     {
                                         case ConflictStatus.Update:
                                             var flags = item.Flags;
-                                            if (removeClusterTx)
+                                            if (shouldStripClusterTxFlag)
                                             {
-                                                flags.Strip(DocumentFlags.FromClusterTransaction);
+                                                flags = flags.Strip(DocumentFlags.FromClusterTransaction);
                                             }
 
                                             if (document != null)
@@ -1148,25 +1153,17 @@ namespace Raven.Server.Documents.Replication
                                             if (_incoming._log.IsInfoEnabled)
                                                 _incoming._log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
 
-                                            if (removeClusterTx)
+                                            // we will always prefer the local
+                                            if (hasLocalClusterTx)
                                             {
-                                                // if we are in a conflict status and the cluster tx flag should be removed, means that 
-                                                // we should try to resolve it to the document that have the higher group id etag
-
-                                                var groupId = _incoming._parent.Database.DatabaseGroupId;
-                                                var local = ChangeVectorUtils.GetEtagById(conflictingVector, groupId);
-                                                var remote = ChangeVectorUtils.GetEtagById(rcvdChangeVector, groupId);
-
-                                                if (local > remote)
-                                                {
-                                                    goto case ConflictStatus.AlreadyMerged;
-                                                }
-
-                                                if (remote > local)
-                                                {
-                                                    goto case ConflictStatus.Update;
-                                                }
-                                                // if local and remote are equal we continue to resolve it in the traditional way
+                                                shouldStripClusterTxFlag = true;
+                                                goto case ConflictStatus.AlreadyMerged;
+                                            }
+                                            // otherwise we will choose the remote document from the transaction
+                                            if (hasRemoteClusterTx)
+                                            {
+                                                shouldStripClusterTxFlag = true;
+                                                goto case ConflictStatus.Update;
                                             }
                                             
                                             // if the conflict is going to be resolved locally, that means that we have local work to do
@@ -1176,7 +1173,7 @@ namespace Raven.Server.Documents.Replication
                                                 rcvdChangeVector, conflictingVector, item.Flags);
                                             break;
                                         case ConflictStatus.AlreadyMerged:
-                                            if (removeClusterTx)
+                                            if (shouldStripClusterTxFlag)
                                             {
                                                 // we have to strip the cluster tx flag from the local document
                                                 var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
