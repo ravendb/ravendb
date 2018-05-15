@@ -464,8 +464,8 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    // TODO remove @HasCounters flag 
-                    document.EnsureMetadata();
+                    //remove HasCounter flag if exists, since its not recognizable in v4.0
+                    document.EnsureMetadata(removeCountersFlag: true);
 
                     _context.Write(Writer, document.Data);
                 }
