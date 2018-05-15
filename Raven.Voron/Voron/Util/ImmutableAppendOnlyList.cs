@@ -45,6 +45,14 @@ namespace Voron.Util
         }
 
         /// <summary>
+        /// Creates a new list with the given item as the initial content.
+        /// </summary>
+        public static ImmutableAppendOnlyList<T> CreateFrom(T item)
+        {
+            var values = new []{item};
+            return new ImmutableAppendOnlyList<T>(values, 0, 1);
+        }
+        /// <summary>
         /// Creates a new list with the given initial capacity.
         /// </summary>
         public static ImmutableAppendOnlyList<T> Create(int initialCapacity)
