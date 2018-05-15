@@ -219,10 +219,18 @@ namespace Raven.Database.FileSystem.Synchronization
                     try
                     {
                         var result = Execute(true);
-                        var synchronizations = result.Values.SelectMany(x => x.Result as IEnumerable<Task>);
+                        var synchronizations = result.Values.SelectMany(x => x.Result as IEnumerable<Task>).ToArray();
 
-                        Task.WaitAll(synchronizations.ToArray());
+                        if (systemConfiguration.FileSystem.SynchronizationBatchProcessing)
+                        {
+                            Task.WaitAll(synchronizations);
+                        }
+                        else
+                        {
+                            // if any synchronization slot gets released try to schedule another synchronization 
 
+                            Task.WaitAny(synchronizations); 
+                        }
                     }
                     catch (Exception e)
                     {
