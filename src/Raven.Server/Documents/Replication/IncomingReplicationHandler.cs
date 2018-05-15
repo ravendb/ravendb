@@ -1112,28 +1112,22 @@ namespace Raven.Server.Documents.Replication
                                         continue;
                                     }
 
-                                    var shouldStripClusterTxFlag = false;
                                     var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
                                     var conflictStatus =
                                         ConflictsStorage.GetConflictStatusForDocument(context, item, out var conflictingVector, out var hasLocalClusterTx);
 
+                                    var flags = item.Flags;
+                                    var resolvedDocument = document;
                                     switch (conflictStatus)
                                     {
                                         case ConflictStatus.Update:
-                                            var flags = item.Flags;
-                                            if (shouldStripClusterTxFlag)
-                                            {
-                                                flags = flags.Strip(DocumentFlags.FromClusterTransaction);
-                                            }
-
-                                            if (document != null)
+                                            if (resolvedDocument != null)
                                             {
 #if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
 #endif
-                                                
-                                                database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, rcvdChangeVector,
-                                                    flags, NonPersistentDocumentFlags.FromReplication);
+                                                database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks, 
+                                                    rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                             }
                                             else
                                             {
@@ -1156,44 +1150,40 @@ namespace Raven.Server.Documents.Replication
                                             // we will always prefer the local
                                             if (hasLocalClusterTx)
                                             {
-                                                shouldStripClusterTxFlag = true;
-                                                goto case ConflictStatus.AlreadyMerged;
+                                                // we have to strip the cluster tx flag from the local document
+                                                var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
+                                                flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                                                if (local.Document != null)
+                                                {
+                                                    resolvedDocument = local.Document.Data.Clone(context);
+                                                }
+                                                else if (local.Tombstone != null)
+                                                {
+                                                    resolvedDocument = null;
+                                                }
+                                                else
+                                                {
+                                                    throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id + ", this should not be possible");
+                                                }
+                                                goto case ConflictStatus.Update;
                                             }
                                             // otherwise we will choose the remote document from the transaction
                                             if (hasRemoteClusterTx)
                                             {
-                                                shouldStripClusterTxFlag = true;
+                                                flags = flags.Strip(DocumentFlags.FromClusterTransaction);
                                                 goto case ConflictStatus.Update;
                                             }
-                                            
-                                            // if the conflict is going to be resolved locally, that means that we have local work to do
-                                            // that we need to distribute to our siblings
-                                            IsIncomingReplication = false;
-                                            _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document,
-                                                rcvdChangeVector, conflictingVector, item.Flags);
+                                            else
+                                            {
+                                                // if the conflict is going to be resolved locally, that means that we have local work to do
+                                                // that we need to distribute to our siblings
+                                                IsIncomingReplication = false;
+                                                _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document,
+                                                    rcvdChangeVector, conflictingVector, item.Flags);
+                                            }
                                             break;
                                         case ConflictStatus.AlreadyMerged:
-                                            if (shouldStripClusterTxFlag)
-                                            {
-                                                // we have to strip the cluster tx flag from the local document
-                                                var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
-                                                if (local.Document != null)
-                                                {
-                                                    database.DocumentsStorage.Put(context, item.Id, null, local.Document.Data.Clone(context),
-                                                        flags: local.Document.Flags.Strip(DocumentFlags.FromClusterTransaction),
-                                                        nonPersistentFlags: NonPersistentDocumentFlags.FromReplication);
-                                                }
-                                                else if (local.Tombstone != null)
-                                                {
-                                                    using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
-                                                    {
-                                                        database.DocumentsStorage.Delete(context, keySlice, item.Id, null,
-                                                            nonPersistentFlags: NonPersistentDocumentFlags.FromReplication,
-                                                            documentFlags: item.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                                                    }
-                                                }
-                                            }
-
+                                            // we have to do nothing here
                                             break;
                                         default:
                                             throw new ArgumentOutOfRangeException(nameof(conflictStatus),
