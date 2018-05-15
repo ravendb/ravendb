@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var document = Database.DocumentsStorage.GetDocumentMetrics(context, id);
-                if(document == null)
+                if (document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return Task.CompletedTask;
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
                 else
                     await GetDocumentsAsync(context, metadataOnly);
 
-                
+
             }
         }
 
@@ -235,9 +235,9 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-            int numberOfResults = 0;            
-         
-            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, numberOfResults);         
+            int numberOfResults = 0;
+
+            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, numberOfResults);
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
         }
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Handlers
                 await writer.OuterFlushAsync();
             }
             return numberOfResults;
-        }        
+        }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task Delete()
@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.Handlers
 
         public static string GenerateNonConflictingId(DocumentDatabase database, string prefix)
         {
-            return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded()
+            return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded();
         }
 
         public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
@@ -510,7 +510,7 @@ namespace Raven.Server.Documents.Handlers
 
                 // The TransactionMerger will re-run us when we ask it to as a 
                 // separate transaction
-                if(_id?.EndsWith('/') == true)
+                if (_id?.EndsWith('/') == true)
                 {
                     _id = GenerateNonConflictingId(_database, _id);
                     RetryOnError = true;
