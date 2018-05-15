@@ -52,15 +52,14 @@ namespace Raven.Server.Documents
             AssertMetadataWasFiltered(document);
 #endif
 
-            var newEtag = _documentsStorage.GenerateNextEtag();
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
-            id = BuildDocumentId(id, newEtag, out bool knownNewId);
+            id = BuildDocumentId(context, id, out long newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-            
+
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
                 {
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents
                     // null - means, don't care, don't check
                     // "" / empty - means, must be new
                     // anything else - must match exactly
-                    if (expectedChangeVector != null) 
+                    if (expectedChangeVector != null)
                     {
                         var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
@@ -288,8 +287,10 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
+        private string BuildDocumentId(DocumentsOperationContext context, string id, out long newEtag, out bool knownNewId)
         {
+            newEtag = _documentsStorage.GenerateNextEtag();
+
             if (string.IsNullOrWhiteSpace(id))
             {
                 knownNewId = true;
@@ -305,7 +306,8 @@ namespace Raven.Server.Documents
                 }
 
                 if (lastChar == '/')
-                {                    
+                {
+                    bool persistEtag = false;
                     string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
                     // PERF: we are creating an string and mutating it for performance reasons.
@@ -325,10 +327,25 @@ namespace Raven.Server.Documents
                         i += 19;
                         valuePtr[i] = '-';
 
-                        Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+                        while (true)
+                        {
+                            Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+
+                            using (DocumentIdWorker.GetSliceFromId(context, value, out var lowerId))
+                            {
+                                if (_documentsStorage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: false, tvr: out _) == false)
+                                    break;
+                            }
+
+                            newEtag = _documentsStorage.GenerateNextEtag();
+                            persistEtag = true;
+                        }
                     }
 
                     id = value;
+
+                    if (persistEtag)
+                        _documentsStorage.EnsureLastEtagIsPersisted(context, newEtag);
 
                     knownNewId = true;
                 }
