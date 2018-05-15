@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
@@ -48,8 +49,18 @@ namespace SlowTests.Issues
 
                     Assert.Equal(0, results.Count);
 
-                    var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+                    IndexErrors[] errors = null;
 
+                    for (int i = 0; i < 100; i++)
+                    {
+                        errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+
+                        if (errors.Length > 0 && errors[0].Errors.Length > 0)
+                            break;
+
+                        Thread.Sleep(50);
+                    }
+                    
                     Assert.Equal(1, errors[0].Errors.Length);
                 }
             }
