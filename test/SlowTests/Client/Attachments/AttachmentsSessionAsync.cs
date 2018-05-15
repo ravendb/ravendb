@@ -456,9 +456,7 @@ namespace SlowTests.Client.Attachments
 
                     var user2 = await session.LoadAsync<User>("users/2");
                     Assert.Null(user2);
-                    // ReSharper disable once ExpressionIsAlwaysNull
-                    var attachments2 = session.Advanced.Attachments.GetNames(user2);
-                    Assert.Empty(attachments2);
+                    Assert.Throws<ArgumentNullException>(() => session.Advanced.Attachments.GetNames(user2));
                 }
             }
         }
