@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Handlers
                                     cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
                                     if (cmd.Type == CommandType.PUT && cmd.Id?.EndsWith('/') == true)
                                     {
-                                        cmd.Id = cmd.Id + Database.DocumentsStorage.GenerateNextEtag() + "-" + Guid.NewGuid().ToBase64Unpadded();
+                                        cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
                                         RetryOnError = true;
                                     }
                                 }

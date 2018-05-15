@@ -483,6 +483,11 @@ namespace Raven.Server.Documents.Handlers
         public ExceptionDispatchInfo ExceptionDispatchInfo;
         public DocumentsStorage.PutOperationResults PutResult;
 
+        public static string GenerateNonConflictingId(DocumentDatabase database, string prefix)
+        {
+            return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded()
+        }
+
         public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
         {
             _document = doc;
@@ -507,7 +512,7 @@ namespace Raven.Server.Documents.Handlers
                 // separate transaction
                 if(_id?.EndsWith('/') == true)
                 {
-                    _id = _id + _database.DocumentsStorage.GenerateNextEtag() + "-" + Guid.NewGuid().ToBase64Unpadded();
+                    _id = GenerateNonConflictingId(_database, _id);
                     RetryOnError = true;
                 }
                 throw;
