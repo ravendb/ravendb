@@ -308,7 +308,7 @@ namespace Voron.Data.Tables
                         slice.Content.Ptr < oldData + oldDataSize)
                     {
                         throw new InvalidOperationException(
-                            "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
+                            "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens. You probably should clone your data.");
                     }
                 }
             }
@@ -891,7 +891,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate(false))
@@ -1383,7 +1383,7 @@ namespace Voron.Data.Tables
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
-            Action<TableValueHolder> beforeDelete = null)
+            Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder,bool> shouldAbort = null)
         {
             AssertWritableTable();
 
@@ -1410,13 +1410,17 @@ namespace Voron.Data.Tables
                         if (fstIt.Seek(long.MinValue) == false)
                             break;
 
-                        if (beforeDelete != null)
+                        if (beforeDelete != null || shouldAbort != null)
                         {
                             var ptr = DirectRead(fstIt.CurrentKey, out int size);
                             if (tableValueHolder == null)
                                 tableValueHolder = new TableValueHolder();
                             tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
-                            beforeDelete(tableValueHolder);
+                            if (shouldAbort?.Invoke(tableValueHolder) == true)
+                            {
+                                return deleted;
+                            }
+                            beforeDelete?.Invoke(tableValueHolder);
                         }
 
                         Delete(fstIt.CurrentKey);

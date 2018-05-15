@@ -788,6 +788,11 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
+            if (nodeTag != null && nodeTag.Equals("RAFT"))
+            {
+                throw new ArgumentException("Can't set the node tag to 'RAFT'. It is a reserved tag.");
+            }
+
             using (_disposerLock.EnsureNotDisposed())
             {
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

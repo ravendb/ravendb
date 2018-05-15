@@ -171,6 +171,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, string[] indexes = null);
 
+        /// <summary>
+        /// Overwrite the existing transaction mode for the current session.
+        /// </summary>
+        /// <param name="mode"></param>
+        void SetTransactionMode(TransactionMode mode);
+
         EntityToBlittable EntityToBlittable { get; }
     }
 }

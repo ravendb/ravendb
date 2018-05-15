@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -11,14 +12,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class BatchCommand : RavenCommand<BlittableArrayResult>, IDisposable
+    public class BatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly List<Stream> _attachmentStreams;
         private readonly HashSet<Stream> _uniqueAttachmentStreams;
         private readonly BatchOptions _options;
+        private readonly TransactionMode _mode;
 
-        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
+        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));
@@ -50,6 +52,7 @@ namespace Raven.Client.Documents.Commands.Batches
             }
 
             _options = options;
+            _mode = mode;
 
             Timeout = options?.RequestTimeout;
         }
@@ -65,6 +68,12 @@ namespace Raven.Client.Documents.Commands.Batches
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Commands", _commands);
+                        if (_mode == TransactionMode.ClusterWide)
+                        {
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(TransactionMode));
+                            writer.WriteString(nameof(TransactionMode.ClusterWide));
+                        }
                         writer.WriteEndObject();
                     }
                 })
@@ -103,7 +112,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 // we are still looking at this result, so we clone it to the side
                 response = response.Clone(context);
             }
-            Result = JsonDeserializationClient.BlittableArrayResult(response);
+            Result = JsonDeserializationClient.BatchCommandResult(response);
         }
 
         private void AppendOptions(StringBuilder sb)
@@ -113,26 +122,28 @@ namespace Raven.Client.Documents.Commands.Batches
 
             sb.AppendLine("?");
 
-            if (_options.WaitForReplicas)
+            var replicationOptions = _options.ReplicationOptions;
+            if (replicationOptions != null)
             {
-                sb.Append("&waitForReplicasTimeout=").Append(_options.WaitForReplicasTimeout);
+                sb.Append("&waitForReplicasTimeout=").Append(replicationOptions.WaitForReplicasTimeout);
 
-                if (_options.ThrowOnTimeoutInWaitForReplicas)
+                if (replicationOptions.ThrowOnTimeoutInWaitForReplicas)
                     sb.Append("&throwOnTimeoutInWaitForReplicas=true");
 
                 sb.Append("&numberOfReplicasToWaitFor=");
-                sb.Append(_options.Majority
+                sb.Append(replicationOptions.Majority
                     ? "majority"
-                    : _options.NumberOfReplicasToWaitFor.ToString());
+                    : replicationOptions.NumberOfReplicasToWaitFor.ToString());
             }
 
-            if (_options.WaitForIndexes)
+            var indexOptions = _options.IndexOptions;
+            if (indexOptions != null)
             {
-                sb.Append("&waitForIndexesTimeout=").Append(_options.WaitForIndexesTimeout);
-                sb.Append("&waitForIndexThrow=").Append(_options.ThrowOnTimeoutInWaitForIndexes.ToString());
-                if (_options.WaitForSpecificIndexes != null)
+                sb.Append("&waitForIndexesTimeout=").Append(indexOptions.WaitForIndexesTimeout);
+                sb.Append("&waitForIndexThrow=").Append(indexOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
+                if (indexOptions.WaitForSpecificIndexes != null)
                 {
-                    foreach (var specificIndex in _options.WaitForSpecificIndexes)
+                    foreach (var specificIndex in indexOptions.WaitForSpecificIndexes)
                     {
                         sb.Append("&waitForSpecificIndex=").Append(specificIndex);
                     }

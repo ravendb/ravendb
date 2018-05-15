@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -38,6 +39,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IRevisionsSessionOperations Revisions { get; }
         
+        /// <summary>
+        ///     Access cluster transaction operations
+        /// </summary>
+        IClusterTransactionOperations ClusterTransaction { get; }
+
         /// <summary>
         ///     Updates entity with latest changes from server
         /// </summary>

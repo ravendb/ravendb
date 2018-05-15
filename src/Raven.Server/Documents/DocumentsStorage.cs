@@ -1042,18 +1042,19 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector, string changeVector = null)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (var cv = context.GetLazyString(expectedChangeVector))
             {
-                return Delete(context, lowerId, id, cv);
+                return Delete(context, lowerId, id, expectedChangeVector: cv, changeVector: changeVector);
             }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
             LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
-            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, DocumentFlags documentFlags = DocumentFlags.None)
+            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
+            DocumentFlags documentFlags = DocumentFlags.None)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -1077,7 +1078,8 @@ namespace Raven.Server.Documents
                     collectionName.GetTableName(CollectionTableType.Tombstones));
                 tombstoneTable.Delete(local.Tombstone.StorageId);
 
-                var flags = local.Tombstone.Flags | documentFlags;
+                var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                var flags = localFlags | documentFlags;
 
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -1099,7 +1101,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    local.Tombstone.Flags | documentFlags).Etag;
+                    flags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
 
@@ -1143,12 +1145,12 @@ namespace Raven.Server.Documents
 
                 var ptr = table.DirectRead(doc.StorageId, out int size);
                 var tvr = new TableValueReader(ptr, size);
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr) | documentFlags;
+                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction) | documentFlags;
 
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
                 {
-                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, doc.Flags);
+                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, flags);
                     changeVector = tombstoneEtag.ChangeVector;
                     etag = tombstoneEtag.Etag;
                 }
@@ -1243,8 +1245,8 @@ namespace Raven.Server.Documents
             return -newEtag;
         }
 
-        // Note: Make sure to call this with a separator, to you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
+        // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, string changeVector = null)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1262,7 +1264,7 @@ namespace Raven.Server.Documents
                         hasMore = true;
                         var id = TableValueToId(context, (int)DocumentsTable.Id, ref holder.Value.Reader);
 
-                        var deleteOperationResult = Delete(context, id, null);
+                        var deleteOperationResult = Delete(context, id, null, changeVector: changeVector);
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }

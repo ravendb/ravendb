@@ -70,6 +70,10 @@ namespace Raven.Server.Documents
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
 
+        public string DatabaseGroupId;
+
+        public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
+
         public void ResetIdleTime()
         {
             _lastIdleTicks = DateTime.MinValue.Ticks;
@@ -103,7 +107,7 @@ namespace Raven.Server.Documents
                             throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                     }
                 }
-
+                ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
@@ -776,6 +780,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
+                    DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
                     InitializeFromDatabaseRecord(record);
                     LastDatabaseRecordIndex = index;
                     IndexStore.HandleDatabaseRecordChange(record, index);

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -815,37 +816,46 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, out string conflictingVector)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, IncomingReplicationHandler.ReplicationItem remote, out string conflictingVector, out bool hasLocalClusterTx)
         {
-            //tombstones also can be a conflict entry
+            hasLocalClusterTx = false;
             conflictingVector = null;
-            var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
+
+            //tombstones also can be a conflict entry
+            var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, remote.Id);
+            ConflictStatus status;
             if (conflicts.Count > 0)
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    if (ChangeVectorUtils.GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    status = ChangeVectorUtils.GetConflictStatus(remote.ChangeVector, existingConflict.ChangeVector);
+                    if (status == ConflictStatus.Conflict)
                     {
                         conflictingVector = existingConflict.ChangeVector;
-                        return ConflictStatus.Conflict;
+                        return status;
                     }
                 }
                 // this document will resolve the conflicts when putted
                 return ConflictStatus.Update;
             }
 
-            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, id);
+            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, remote.Id);
             string local;
 
             if (result.Document != null)
+            {
                 local = result.Document.ChangeVector;
+                hasLocalClusterTx = result.Document.Flags.Contain(DocumentFlags.FromClusterTransaction);
+            }
             else if (result.Tombstone != null)
+            {
                 local = result.Tombstone.ChangeVector;
+                hasLocalClusterTx = result.Tombstone.Flags.Contain(DocumentFlags.FromClusterTransaction);
+            }
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
-
-
-            var status = ChangeVectorUtils.GetConflictStatus(remote, local);
+           
+            status = ChangeVectorUtils.GetConflictStatus(remote.ChangeVector, local);
             if (status == ConflictStatus.Conflict)
             {
                 conflictingVector = local;

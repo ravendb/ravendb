@@ -224,6 +224,10 @@ namespace Raven.Server.ServerWide
                                     {
                                         if (notification == null)
                                             break;
+
+                                        if (notification.TryGet("Id",out string id) && id != nameof(ClusterTopologyChanged))
+                                            continue;
+
                                         var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
                                         if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
                                         {
@@ -571,7 +575,6 @@ namespace Raven.Server.ServerWide
         {
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
-            _engine.StateMachine.DatabaseValueChanged += DatabasesLandlord.ClusterOnDatabaseValueChanged;
             _engine.StateMachine.ValueChanged += OnValueChanged;
 
             _engine.TopologyChanged += OnTopologyChanged;
@@ -582,7 +585,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var db in _engine.StateMachine.GetDatabaseNames(context))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db, 0, "Init"));
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
@@ -681,7 +684,7 @@ namespace Raven.Server.ServerWide
                 NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
         }
 
-        private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
+        private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType _) t)
         {
             switch (t.Type)
             {
@@ -1470,6 +1473,10 @@ namespace Raven.Server.ServerWide
                 databaseValues = new Dictionary<string, ExpandoObject>();
 
             Debug.Assert(record.Topology != null);
+
+            if(string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
+                record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+
             record.Topology.Stamp = new LeaderStamp
             {
                 Term = _engine.CurrentTerm,
