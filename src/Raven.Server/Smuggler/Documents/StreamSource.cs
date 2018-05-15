@@ -840,6 +840,17 @@ namespace Raven.Server.Smuggler.Documents
                         data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection) &&
                         data.TryGet(nameof(DocumentTombstone.LastModified), out tombstone.LastModified))
                     {
+                        if (type == "Counter")
+                        {
+                            var msg = "Ignoring counter tombstone which you try to import. Counters are not supported in 4.0";
+                            if (_log.IsOperationsEnabled)
+                                _log.Operations(msg);
+
+                            _result.Tombstones.ErroredCount++;
+                            _result.AddWarning(msg);
+                            continue;
+                        }
+
                         tombstone.Type = Enum.Parse<DocumentTombstone.TombstoneType>(type);
                         yield return tombstone;
                     }
