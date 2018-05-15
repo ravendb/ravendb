@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
+using Sparrow;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private class MergedInsertBulkCommand : TransactionOperationsMerger.DocumentPutTransactionCommand
+        private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public Logger Logger;
             public DocumentDatabase Database;
@@ -174,7 +174,31 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var cmd = Commands[i];
                     Debug.Assert(cmd.Type == CommandType.PUT);
-                    Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
+                    try
+                    {
+                        Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
+                    }
+                    catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                    {
+                        // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                        // this means that we have existing values under the current etag
+                        // we'll generate a new (random) id for them. 
+
+                        // The TransactionMerger will re-run us when we ask it to as a 
+                        // separate transaction
+
+                        for (; i < NumberOfCommands; i++)
+                        {
+                            cmd = Commands[i];
+                            if (cmd.Id?.EndsWith('/') == true)
+                            {
+                                cmd.Id = cmd.Id + Database.DocumentsStorage.GenerateNextEtag() + "-" + Guid.NewGuid().ToBase64Unpadded();
+                                RetryOnError = true;
+                            }
+                        }
+
+                        throw;
+                    }
                 }
                 if (Logger.IsInfoEnabled)
                 {
