@@ -29,6 +29,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;

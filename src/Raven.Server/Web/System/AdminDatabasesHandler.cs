@@ -38,6 +38,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -1119,10 +1120,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task MigrateDatabaseOffline()
         {
-            OfflineMigrationConfiguration configuration;
-
             ServerStore.EnsureNotPassive();
 
+            OfflineMigrationConfiguration configuration;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
