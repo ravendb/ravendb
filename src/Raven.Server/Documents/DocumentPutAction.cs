@@ -14,7 +14,6 @@ using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
-using Raven.Server.Exceptions;
 using Sparrow;
 using static Raven.Server.Documents.DocumentsStorage;
 
@@ -52,9 +51,8 @@ namespace Raven.Server.Documents
             AssertMetadataWasFiltered(document);
 #endif
 
-            var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
-
             var newEtag = _documentsStorage.GenerateNextEtag();
+            var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
@@ -402,11 +400,6 @@ namespace Raven.Server.Documents
             }
 
             return false;
-        }
-
-        private static void ThrowOverlappingGeneratedNewIdException(string id)
-        {
-            throw new OverlappingGeneratedNewIdException($"Could not insert document with ID '{id}' because it overlaps existing one.");
         }
 
         public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
