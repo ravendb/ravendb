@@ -12,7 +12,10 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string Key;
         public string Database;
-        protected string ActualKey;
+        private string _actualKey;
+
+        protected string ActualKey => _actualKey ?? (_actualKey = GetActualKey(Database, Key));
+
         public long Index;
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
@@ -37,7 +40,6 @@ namespace Raven.Server.ServerWide.Commands
             Index = index;
             Database = database;
             ContextToWriteResult = context;
-            ActualKey = GetActualKey(database, key);
         }
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
