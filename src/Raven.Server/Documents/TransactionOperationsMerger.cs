@@ -65,16 +65,13 @@ namespace Raven.Server.Documents
             _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);
         }
 
-        public abstract class DocumentPutTransactionCommand : MergedTransactionCommand
-        {
-            public bool CheckIfGeneratedIdIsNotOverlapping;
-        }
-
         public abstract class MergedTransactionCommand
         {
             public abstract int Execute(DocumentsOperationContext context);
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             public Exception Exception;
+
+            public bool RetryOnError = false;
         }
 
         /// <summary>
@@ -368,7 +365,6 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _checkIfGeneratedIdIsNotOverlapping = false;
                 tx?.Dispose();
             }
         }
@@ -391,9 +387,7 @@ namespace Raven.Server.Documents
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand> pendingOps, Exception e)
         {
-            _checkIfGeneratedIdIsNotOverlapping = e is OverlappingGeneratedNewIdException;
-
-            if (pendingOps.Count == 1 && _checkIfGeneratedIdIsNotOverlapping == false)
+            if (pendingOps.Count == 1 && pendingOps[0].RetryOnError == false)
             {
                 pendingOps[0].Exception = e;
                 NotifyOnThreadPool(pendingOps);
@@ -583,7 +577,6 @@ namespace Raven.Server.Documents
         }
 
         private bool _alreadyListeningToPreviousOperationEnd;
-        private bool _checkIfGeneratedIdIsNotOverlapping;
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps,
@@ -781,27 +774,36 @@ namespace Raven.Server.Documents
             {
                 foreach (var op in pendingOps)
                 {
-                    try
+                    bool alreadyRetried = false;
+                    while (true)
                     {
-                        using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        try
                         {
-                            using (var tx = context.OpenWriteTransaction())
+                            using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             {
-                                if (_checkIfGeneratedIdIsNotOverlapping && op is DocumentPutTransactionCommand documentCommand)
-                                    documentCommand.CheckIfGeneratedIdIsNotOverlapping = _checkIfGeneratedIdIsNotOverlapping;
-
-                                op.Execute(context);
-                                tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
-                                tx.Commit();
-                                SlowWriteNotification.Notify(stats, _parent);
+                                using (var tx = context.OpenWriteTransaction())
+                                {
+                                    op.RetryOnError = false;
+                                    op.Execute(context);
+                                    tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+                                    tx.Commit();
+                                    SlowWriteNotification.Notify(stats, _parent);
+                                }
                             }
+                            DoCommandNotification(op);
+                            break;
                         }
-                        DoCommandNotification(op);
-                    }
-                    catch (Exception e)
-                    {
-                        op.Exception = e;
-                        NotifyOnThreadPool(op);
+                        catch (Exception e)
+                        {
+                            if(alreadyRetried == false && op.RetryOnError)
+                            {
+                                alreadyRetried = true;
+                                continue;
+                            }
+
+                            op.Exception = e;
+                            NotifyOnThreadPool(op);
+                        }
                     }
                 }
             }

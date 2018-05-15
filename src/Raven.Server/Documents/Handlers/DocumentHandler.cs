@@ -23,6 +23,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -472,9 +473,9 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : TransactionOperationsMerger.DocumentPutTransactionCommand, IDisposable
+    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
-        private readonly string _id;
+        private string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
         private readonly DocumentDatabase _database;
@@ -494,7 +495,22 @@ namespace Raven.Server.Documents.Handlers
         {
             try
             {
-                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
+                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
+            }
+            catch (Voron.Exceptions.VoronConcurrencyErrorException)
+            {
+                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                // this means that we have existing values under the current etag
+                // we'll generate a new (random) id for them. 
+
+                // The TransactionMerger will re-run us when we ask it to as a 
+                // separate transaction
+                if(_id?.EndsWith('/') == true)
+                {
+                    _id = _id + _database.DocumentsStorage.GenerateNextEtag() + "-" + Guid.NewGuid().ToBase64Unpadded();
+                    RetryOnError = true;
+                }
+                throw;
             }
             catch (ConcurrencyException e)
             {
