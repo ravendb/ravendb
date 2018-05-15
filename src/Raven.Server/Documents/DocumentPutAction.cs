@@ -38,8 +38,7 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks = null,
             string changeVector = null,
             DocumentFlags flags = DocumentFlags.None,
-            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
-            bool checkIfGeneratedIdIsNotOverlapping = false)
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (context.Transaction == null)
             {
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents
 
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
-            id = BuildDocumentId(context, id, checkIfGeneratedIdIsNotOverlapping, out long newEtag, out bool knownNewId);
+            id = BuildDocumentId(context, id, out long newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
@@ -172,17 +171,7 @@ namespace Raven.Server.Documents
 
                     if (oldValue.Pointer == null)
                     {
-                        try
-                        {
-                            table.Insert(tvb);
-                        }
-                        catch (VoronConcurrencyErrorException)
-                        {
-                            if (knownNewId && checkIfGeneratedIdIsNotOverlapping == false)
-                                ThrowOverlappingGeneratedNewIdException(id);
-
-                            throw;
-                        }
+                         table.Insert(tvb);
                     }
                     else
                     {
@@ -276,7 +265,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string BuildDocumentId(DocumentsOperationContext context, string id, bool checkIfGeneratedIdIsNotOverlapping, out long newEtag, out bool knownNewId)
+        private string BuildDocumentId(DocumentsOperationContext context, string id,out long newEtag, out bool knownNewId)
         {
             newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -316,24 +305,7 @@ namespace Raven.Server.Documents
                         i += 19;
                         valuePtr[i] = '-';
 
-                        if (checkIfGeneratedIdIsNotOverlapping == false)
-                            Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
-                        else
-                        {
-                            while (true)
-                            {
-                                Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
-
-                                using (DocumentIdWorker.GetSliceFromId(context, value, out var lowerId))
-                                {
-                                    if (_documentsStorage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: false, tvr: out _) == false)
-                                        break;
-                                }
-
-                                newEtag = _documentsStorage.GenerateNextEtag();
-                                persistEtag = true;
-                            }
-                        }
+                        Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
                     }
 
                     id = value;

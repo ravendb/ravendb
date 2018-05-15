@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        public class MergedBatchCommand : TransactionOperationsMerger.DocumentPutTransactionCommand, IDisposable
+        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
@@ -319,7 +319,26 @@ namespace Raven.Server.Documents.Handlers
                             DocumentsStorage.PutOperationResults putResult;
                             try
                             {
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
+                            }
+                            catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                            {
+                                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                                // this means that we have existing values under the current etag
+                                // we'll generate a new (random) id for them. 
+
+                                // The TransactionMerger will re-run us when we ask it to as a 
+                                // separate transaction
+                                for (; i < ParsedCommands.Count; i++)
+                                {
+                                    cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
+                                    if (cmd.Type == CommandType.PUT && cmd.Id?.EndsWith('/') == true)
+                                    {
+                                        cmd.Id = cmd.Id + Database.DocumentsStorage.GenerateNextEtag() + "-" + Guid.NewGuid().ToBase64Unpadded();
+                                        RetryOnError = true;
+                                    }
+                                }
+                                throw;
                             }
                             catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
                             {

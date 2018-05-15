@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocumentCommand : TransactionOperationsMerger.DocumentPutTransactionCommand, IDisposable
+    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -58,6 +58,11 @@ namespace Raven.Server.Documents.Patch
             _database = database;
             _isTest = isTest;
             _debugMode = debugMode;
+
+            if(string.IsNullOrEmpty(id) || id.EndsWith('/') || id.EndsWith('|'))
+            {
+                throw new ArgumentException("The id argument has invalid value: '" + id + "'", "id");
+            }
         }
 
         public PatchResult PatchResult { get; private set; }
@@ -161,7 +166,7 @@ namespace Raven.Server.Documents.Patch
                 if (originalDoc == null)
                 {
                     if (_isTest == false || _run.PutOrDeleteCalled)
-                        putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
+                        putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
 
                     result.Status = PatchStatus.Created;
                 }
@@ -171,7 +176,7 @@ namespace Raven.Server.Documents.Patch
                     Debug.Assert(originalDocument != null);
                     if (_isTest == false || _run.PutOrDeleteCalled)
                         putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
-                            originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags, checkIfGeneratedIdIsNotOverlapping: CheckIfGeneratedIdIsNotOverlapping);
+                            originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
 
                     result.Status = PatchStatus.Patched;
                 }
