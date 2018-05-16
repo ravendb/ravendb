@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetDatabaseRecordOperation : IServerOperation<DatabaseRecord>
+    public class GetDatabaseRecordOperation : IServerOperation<DatabaseRecordWithEtag>
     {
         private readonly string _database;
 
@@ -15,12 +15,12 @@ namespace Raven.Client.ServerWide.Operations
             _database = database;
         }
 
-        public RavenCommand<DatabaseRecord> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public RavenCommand<DatabaseRecordWithEtag> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetDatabaseRecordCommand(conventions, _database);
         }
 
-        private class GetDatabaseRecordCommand : RavenCommand<DatabaseRecord>
+        private class GetDatabaseRecordCommand : RavenCommand<DatabaseRecordWithEtag>
         {
             private readonly DocumentConventions _conventions;
             private readonly string _database;
@@ -50,7 +50,7 @@ namespace Raven.Client.ServerWide.Operations
                     return;
                 }
 
-                Result = (DatabaseRecord)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecord), "database-record", response, _conventions);
+                Result = (DatabaseRecordWithEtag)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecordWithEtag), "database-record", response, _conventions);
             }
         }
     }

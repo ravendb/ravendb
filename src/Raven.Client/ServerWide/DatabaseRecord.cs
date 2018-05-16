@@ -14,6 +14,11 @@ using Raven.Client.Exceptions.Documents.Indexes;
 
 namespace Raven.Client.ServerWide
 {
+    public class DatabaseRecordWithEtag : DatabaseRecord
+    {
+        public long Etag { get; set; }
+    }
+
     // The DatabaseRecord resides in EVERY server/node inside the cluster regardless if the db is actually within the node 
     public class DatabaseRecord
     {
