@@ -9,11 +9,13 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly string _id;
         private readonly long _value;
+        private bool _forced;
 
-        public SeedIdentityForCommand(string id, long value)
+        public SeedIdentityForCommand(string id, long value, bool forced = false)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _value = value;
+            _forced = forced;
         }
 
         public override bool IsReadRequest { get; } = false;
@@ -23,7 +25,10 @@ namespace Raven.Client.Documents.Commands
             EnsureIsNotNullOrEmpty(_id, nameof(_id));
 
             url = $"{node.Url}/databases/{node.Database}/identity/seed?name={UrlEncode(_id)}&value={_value}";
-
+            if (_forced)
+            {
+                url += $"&force={_forced}";
+            }
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post

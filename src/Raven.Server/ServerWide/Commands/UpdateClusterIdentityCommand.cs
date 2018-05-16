@@ -19,11 +19,14 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities)
+        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities, bool force)
             : base(databaseName)
         {
             Identities = new Dictionary<string, long>(identities);
+            Force = force;
         }
+
+        public bool Force { get; set; }
 
         public override string GetItemId()
         {
@@ -46,7 +49,17 @@ namespace Raven.Server.ServerWide.Commands
 
                 using (Slice.From(context.Allocator, itemKey, out var key))
                 {
-                    var isSet = identities.AddMax(key, kvp.Value);
+                    bool isSet;
+                    if (Force == false)
+                    {
+                        isSet = identities.AddMax(key, kvp.Value);                        
+                    }
+                    else
+                    {
+                        identities.Add(key, kvp.Value);
+                        isSet = true;
+                    }
+                    
                     long newVal;
                     if (isSet)
                     {
@@ -71,6 +84,10 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Identities)] = (Identities ?? new Dictionary<string, long>()).ToJson();
+            if (Force)
+            {
+                json[nameof(Force)] = true;
+            }
         }
     }
 }
