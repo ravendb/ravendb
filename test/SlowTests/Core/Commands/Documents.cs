@@ -39,8 +39,15 @@ namespace SlowTests.Core.Commands
                     cts.Cancel();
                     var putTask = commands.PutAsync("test/1", null, document, null, cts.Token);
 
-                    Assert.True(SpinWait.SpinUntil(() => putTask.IsCanceled, TimeSpan.FromSeconds(150)));
-                    Assert.True(putTask.IsCanceled);
+                    try
+                    {
+                        Assert.True(SpinWait.SpinUntil(() => putTask.IsCanceled, TimeSpan.FromSeconds(10)));
+                        Assert.True(putTask.IsCanceled);
+                    }
+                    catch (Exception)
+                    {
+                        throw new InvalidOperationException("Task was expected to be cacnelled, but was " + putTask.Status, putTask.Exception);
+                    }
                 }
             }
         }
