@@ -82,7 +82,7 @@ class taskNode extends layoutable {
         this.type = dto.TaskType;
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;
-        this.name = ongoingTaskModel.generateTaskNameIfNeeded(dto);
+        this.name = dto.TaskName;
         this.responsibleNode = responsibleNode;
     }
 
