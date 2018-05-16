@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Queries
             return null;
         }
 
-        private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query, 
+        private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
             QueryExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDef,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false)
         {
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Queries
 
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
 
-                            if (indexDef != null && 
+                            if (indexDef != null &&
                                 indexDef.IndexFields != null &&
                                 indexDef.IndexFields.TryGetValue(fieldName, out var indexingOptions))
                             {
@@ -519,11 +519,14 @@ namespace Raven.Server.Documents.Queries
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
-            if (valueType != ValueTokenType.String)
+            if (valueType != ValueTokenType.String && valueType != ValueTokenType.Null)
                 ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             if (metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+
+            if (valueType == ValueTokenType.Null)
+                return LuceneQueryHelper.Equal(fieldName, LuceneTermType.Null, value: null, exact: true);
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer)
             {
