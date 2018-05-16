@@ -13,18 +13,18 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             switch (SqlProviderParser.GetSupportedProvider(factoryName))
             {
                 case SqlProvider.SqlClient:
-                    database = GetConnectionStringValue(connectionString, new[] { "Initial Catalog", "Database" }, throwIfNotFound: false);
+                    database = GetConnectionStringValue(connectionString, new[] { "Initial Catalog", "Database" });
 
                     if (database == null)
                         database = "master";
 
-                    server = GetConnectionStringValue(connectionString, new[] { "Data Source", "Server" });
+                    server = GetConnectionStringValue(connectionString, new[] { "Data Source", "Server", "Address", "Addr", "Network Address" });
                     break;
                 case SqlProvider.Npgsql:
                     database = GetConnectionStringValue(connectionString, new[] { "Database" });
                     server = GetConnectionStringValue(connectionString, new[] { "Host", "Data Source", "Server" });
 
-                    var port = GetConnectionStringValue(connectionString, new[] { "Port" }, throwIfNotFound: false);
+                    var port = GetConnectionStringValue(connectionString, new[] { "Port" });
 
                     if (string.IsNullOrEmpty(port))
                         server += $":{port}";
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             return (database, server);
         }
 
-        public static string GetConnectionStringValue(string connectionString, string[] keyNames, bool throwIfNotFound = true)
+        public static string GetConnectionStringValue(string connectionString, string[] keyNames)
         {
             var parts = connectionString.Split(';');
 
@@ -55,9 +55,6 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                         return keyValue[1].Trim();
                 }
             }
-
-            if (throwIfNotFound)
-                throw new InvalidDataException($"Invalid connection string. Could not find neither of '{string.Join(",", keyNames)}' keys in the connection string: {connectionString}");
 
             return null;
         }
