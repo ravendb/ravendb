@@ -24,7 +24,6 @@ namespace FastTests.Client
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                UseNewLocalServer(); // if we modify the server certs, we must do that on a local instance and not the global one
                 var serverCertPath = SetupServerAuthentication();
                 adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>

@@ -179,7 +179,7 @@ namespace FastTests
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                         AsyncHelpers.RunSync(async () =>
                         {
-                            await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout); 
+                            await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
                         });
                     }
 
@@ -541,7 +541,7 @@ namespace FastTests
             }
             catch (CryptographicException e)
             {
-                 throw new CryptographicException($"Failed to load the test certificate from {serverCertPath}.", e);
+                throw new CryptographicException($"Failed to load the test certificate from {serverCertPath}.", e);
             }
 
             X509Certificate2 clientCertificate;
@@ -604,8 +604,7 @@ namespace FastTests
 
         protected string SetupServerAuthentication(
             IDictionary<string, string> customSettings = null,
-            string serverUrl = null,
-            bool doNotReuseServer = true)
+            string serverUrl = null)
         {
             var serverCertPath = GenerateAndSaveSelfSignedCertificate();
 
@@ -615,8 +614,7 @@ namespace FastTests
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
             customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
 
-            if (doNotReuseServer)
-                DoNotReuseServer(customSettings);
+            DoNotReuseServer(customSettings);
 
             return serverCertPath;
         }
