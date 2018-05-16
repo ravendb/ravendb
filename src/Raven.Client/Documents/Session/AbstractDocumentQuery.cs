@@ -524,7 +524,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <summary>
         ///   Filter the results from the index using the specified where clause.
         /// </summary>
-        public void WhereLucene(string fieldName, string whereClause)
+        public void WhereLucene(string fieldName, string whereClause, bool exact)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -532,7 +532,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-            var whereToken = WhereToken.Create(WhereOperator.Lucene, fieldName, AddQueryParameter(whereClause));
+
+            var options = exact ? new WhereToken.WhereOptions(exact) : null;
+            var whereToken = WhereToken.Create(WhereOperator.Lucene, fieldName, AddQueryParameter(whereClause), options);
             tokens.AddLast(whereToken);
         }
 
