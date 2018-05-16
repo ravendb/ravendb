@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
@@ -57,7 +56,6 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
@@ -1217,21 +1215,7 @@ namespace Raven.Server.ServerWide
                     command = new PutRavenConnectionStringCommand(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
                     break;
                 case ConnectionStringType.Sql:
-                    var connection = JsonDeserializationCluster.SqlConnectionString(connectionString);
-                    try
-                    {
-                        using (new SqlConnection(connection.ConnectionString))
-                        {
-                            // if connection string is invalid then the above 'new' will throw..
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception("Invalid connection string. " + e.Message);
-                    }
-
-                    command = new PutSqlConnectionStringCommand(connection, databaseName);
-
+                    command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
