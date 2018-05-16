@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.Revisions
         private CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            var tvr = table.SeekOneForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice);
+            var tvr = table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice);
             if (tvr == null)
                 return null;
 

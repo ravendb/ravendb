@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
@@ -14,7 +15,7 @@ namespace Raven.Server.Utils
     {
         Update,
         Conflict,
-        AlreadyMerged
+        AlreadyMerged,
     }
 
     public static class ChangeVectorUtils
@@ -41,6 +42,7 @@ namespace Raven.Server.Utils
             for (int i = 0; i < remote.Length; i++)
             {
                 bool found = false;
+
                 for (int j = 0; j < local.Length; j++)
                 {
                     if (remote[i].DbId == local[j].DbId)
@@ -79,7 +81,6 @@ namespace Raven.Server.Utils
         }
 
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
-
 
         static ChangeVectorUtils()
         {
@@ -241,14 +242,19 @@ namespace Raven.Server.Utils
                 .ToString();
         }
 
-        public static long GetEtagByNodeTag(string changeVector, string nodeTag)
+        public static long GetEtagById(string changeVector, string id)
         {
-            var index = changeVector.IndexOf(nodeTag + ":", StringComparison.Ordinal);
-            var offset = nodeTag.Length + 1;
+            if (changeVector == null)
+                return 0;
+
+            var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
             if (index == -1)
                 return 0;
-            var etag = changeVector.IndexOf('-', index);
-            return long.Parse(changeVector.Substring(index + offset, etag - index - offset));
+
+            var end = index - 1;
+            var start = changeVector.LastIndexOf(":", end, StringComparison.Ordinal) + 1;
+
+            return long.Parse(changeVector.Substring(start, end - start + 1));
         }
     }
 }

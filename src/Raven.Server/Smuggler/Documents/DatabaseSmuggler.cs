@@ -543,7 +543,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
         {
-            using (var actions = _destination.CompareExchange())
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var actions = _destination.CompareExchange(context))
             using (_source.GetCompareExchangeValues(out var compareExchange))
             {
                 foreach (var kvp in compareExchange)
@@ -564,7 +565,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exhcnage '{kvp.key}->{kvp.value}': {e.Message}");
+                        result.AddError($"Could not write compare exchange '{kvp.key}->{kvp.value}': {e.Message}");
                     }
                 }
             }

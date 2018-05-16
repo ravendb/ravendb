@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Replication
                 var newChangeVector = _database.DocumentsStorage.GetNewChangeVector(context);
                 if (incoming.Doc != null)
                 {
-                    _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
+                    _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc, incoming.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
                         NonPersistentDocumentFlags.None, newChangeVector, incoming.LastModified.Ticks);
                 }
                 else

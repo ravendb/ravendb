@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -54,6 +55,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         var dbs = CollectDatabaseInformation(ctx);
                         var djv = new DynamicJsonValue();
+
                         foreach (var tuple in dbs)
                         {
                             djv[tuple.name] = tuple.report;
@@ -161,6 +163,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                         report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+
                         foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
                         {
                             var node = outgoing.GetNode();

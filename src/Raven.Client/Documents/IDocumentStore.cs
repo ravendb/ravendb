@@ -167,7 +167,7 @@ namespace Raven.Client.Documents
         MaintenanceOperationExecutor Maintenance { get; }
 
         OperationExecutor Operations { get; }
-
+        
         CountersOperationExecutor Counters { get; }
 
         DatabaseSmuggler Smuggler { get; }

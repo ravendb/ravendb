@@ -11,31 +11,59 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class CompareExchangeCommandBase : CommandBase
     {
         public string Key;
+        public string Database;
+        private string _actualKey;
+
+        protected string ActualKey => _actualKey ?? (_actualKey = GetActualKey(Database, Key));
+
         public long Index;
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
 
+        public static string GetActualKey(string database, string key)
+        {
+            return ("db/" + database + "/" + key).ToLowerInvariant();
+        }
+
         protected CompareExchangeCommandBase() { }
 
-        protected CompareExchangeCommandBase(string key, long index, JsonOperationContext context)
+        protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context)
         {
-            if (String.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
+            if (string.IsNullOrEmpty(database))
+                throw new ArgumentNullException(nameof(database), "The database argument must have value");
             if (index < 0)
                 throw new InvalidDataException("Index must be a non-negative number");
 
             Key = key;
             Index = index;
+            Database = database;
             ContextToWriteResult = context;
         }
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
+
+        public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
+        {
+            currentIndex = -1;
+            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
+            {
+                if (items.ReadByKey(keySlice, out var reader))
+                {
+                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    return Index == currentIndex;
+                }
+            }
+            return index == 0;
+        }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);
             json[nameof(Key)] = Key;
             json[nameof(Index)] = Index;
+            json[nameof(Database)] = Database;
             return json;
         }
 
@@ -84,12 +112,11 @@ namespace Raven.Server.ServerWide.Commands
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
         public RemoveCompareExchangeCommand() { }
-        public RemoveCompareExchangeCommand(string key, long index, JsonOperationContext contextToReturnResult) : base(key, index, contextToReturnResult) { }
+        public RemoveCompareExchangeCommand(string key, string database, long index, JsonOperationContext contextToReturnResult) : base(key, database, index, contextToReturnResult) { }
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
-            var dbKey = Key.ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
@@ -115,18 +142,16 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
-            : base(key, index, contextToReturnResult)
+        public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
+            : base(database, key, index, contextToReturnResult)
         {
             Value = value;
         }
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
-            var dbKey = Key.ToLowerInvariant();
             Value = Value.Clone(context);
-            long itemIndex;
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
@@ -135,7 +160,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
                     if (Index == itemIndex)
                     {
                         items.Update(reader.Id, tvb);
@@ -153,7 +178,7 @@ namespace Raven.Server.ServerWide.Commands
             }
             return (index, Value);
         }
-
+        
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);

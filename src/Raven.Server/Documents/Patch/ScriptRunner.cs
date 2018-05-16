@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -559,8 +560,8 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length != 1 || args[0].IsString() == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
-
-                return CmpXchangeInternal(args[0].AsString());
+                
+                return CmpXchangeInternal(CompareExchangeCommandBase.GetActualKey(_database.Name, args[0].AsString()));
             }
 
             private JsValue LoadDocument(JsValue self, JsValue[] args)
@@ -722,11 +723,10 @@ namespace Raven.Server.Documents.Patch
                 if (string.IsNullOrEmpty(key))
                     return JsValue.Undefined;
                 BlittableJsonReaderObject value = null;
-                var prefix = _database.Name + "/";
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, prefix + key).Value;
+                    value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
                 }
 
                 if (value == null)

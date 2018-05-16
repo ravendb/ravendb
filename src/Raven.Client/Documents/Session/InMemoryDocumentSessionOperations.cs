@@ -50,7 +50,11 @@ namespace Raven.Client.Documents.Session
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
         protected internal readonly SessionInfo SessionInfo;
+
         private BatchOptions _saveChangesOptions;
+
+        public TransactionMode TransactionMode;
+
         private bool _isDisposed;
         private JsonSerializer _jsonSerializer;
 
@@ -189,21 +193,21 @@ namespace Raven.Client.Documents.Session
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
         /// </summary>
         protected InMemoryDocumentSessionOperations(
-            string databaseName,
             DocumentStoreBase documentStore,
-            RequestExecutor requestExecutor,
-            Guid id)
+            Guid id,
+            SessionOptions options)
         {
             Id = id;
-            DatabaseName = databaseName;
+            DatabaseName = options.Database ?? documentStore.Database;
             _documentStore = documentStore;
-            _requestExecutor = requestExecutor;
-            _releaseOperationContext = requestExecutor.ContextPool.AllocateOperationContext(out _context);
+            _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
+            _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false);
+            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.LastTransactionIndex);
+            TransactionMode = options.TransactionMode;
         }
 
         /// <summary>
@@ -226,6 +230,11 @@ namespace Raven.Client.Documents.Session
             var metadata = new MetadataAsDictionary(metadataAsBlittable);
             documentInfo.MetadataInstance = metadata;
             return metadata;
+        }
+
+        public void SetTransactionMode(TransactionMode mode)
+        {
+            TransactionMode = mode;
         }
 
         /// <summary>
@@ -732,7 +741,9 @@ more responsive application.
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
-            if(DeferredCommands.Count > 0)
+            PrepareCompareExchangeEntities(result);
+
+            if (DeferredCommands.Count > 0)
             {
                 // this allow OnBeforeStore to call Defer during the call to include
                 // additional values during the same SaveChanges call
@@ -745,9 +756,65 @@ more responsive application.
                 DeferredCommands.Clear();
                 DeferredCommandsDictionary.Clear();
             }
-
+            
             return result;
         }
+
+        internal void ValidateClusterTransaction(SaveChangesData result)
+        {
+            if (TransactionMode != TransactionMode.ClusterWide)
+                return;
+
+            foreach (var command in result.SessionCommands)
+            {
+                switch (command.Type)
+                {
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                    case CommandType.CompareExchangeDELETE:
+                    case CommandType.CompareExchangePUT:
+                        break;
+                    default:
+                        throw new NotSupportedException($"The command '{command.Type}' is not supported in a cluster session.");
+
+                }
+            }
+        }
+
+        private void PrepareCompareExchangeEntities(SaveChangesData result)
+        {
+            ClusterTransactionOperationsBase clusterTransactionOperations = GetClusterSession();
+
+            if (clusterTransactionOperations == null)
+                return;
+
+            if (TransactionMode != TransactionMode.ClusterWide)
+                throw new InvalidOperationException($"Performing cluster transaction operations require the '{nameof(TransactionMode)}' to be set to '{nameof(TransactionMode.ClusterWide)}'.");
+
+            if (clusterTransactionOperations.StoreCompareExchange != null)
+            {
+                foreach (var item in clusterTransactionOperations.StoreCompareExchange)
+                {
+                    var tuple = new Dictionary<string, object>
+                    {
+                        ["Object"] = item.Value.Entity
+                    };
+                    var blittable = EntityToBlittable.ConvertCommandToBlittable(tuple, Context);
+                    result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
+                }
+            }
+
+            if (clusterTransactionOperations.DeleteCompareExchange != null)
+            {
+                foreach (var item in clusterTransactionOperations.DeleteCompareExchange)
+                {
+                    result.SessionCommands.Add(new DeleteCompareExchangeCommandData(item.Key, item.Value));
+                }
+            }
+            clusterTransactionOperations.Clear();
+        }
+
+        protected abstract ClusterTransactionOperationsBase GetClusterSession();
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {
@@ -959,11 +1026,17 @@ more responsive application.
             var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
-            _saveChangesOptions.WaitForReplicas = true;
-            _saveChangesOptions.Majority = majority;
-            _saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
-            _saveChangesOptions.WaitForReplicasTimeout = realTimeout;
-            _saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
+
+            var replicationOptions = new ReplicationBatchOptions
+            {
+                WaitForReplicas = true,
+                Majority = majority,
+                NumberOfReplicasToWaitFor = replicas,
+                WaitForReplicasTimeout = realTimeout,
+                ThrowOnTimeoutInWaitForReplicas = throwOnTimeout
+            };
+
+            _saveChangesOptions.ReplicationOptions = replicationOptions;
         }
 
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false,
@@ -972,10 +1045,16 @@ more responsive application.
             var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
-            _saveChangesOptions.WaitForIndexes = true;
-            _saveChangesOptions.WaitForIndexesTimeout = realTimeout;
-            _saveChangesOptions.ThrowOnTimeoutInWaitForIndexes = throwOnTimeout;
-            _saveChangesOptions.WaitForSpecificIndexes = indexes;
+
+            var indexOptions = new IndexBatchOptions
+            {
+                WaitForIndexes = true,
+                WaitForIndexesTimeout = realTimeout,
+                ThrowOnTimeoutInWaitForIndexes = throwOnTimeout,
+                WaitForSpecificIndexes = indexes
+            };
+
+            _saveChangesOptions.IndexOptions = indexOptions;
         }
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)

@@ -20,7 +20,9 @@ namespace Raven.Server.Documents
         HasAttachments = 0x100,
         Resolved = 0x200,
         Conflicted = 0x400,
-        HasCounters = 0x800
+        HasCounters = 0x800,
+
+        FromClusterTransaction = 0x1000
     }
 
     [Flags]
@@ -44,6 +46,11 @@ namespace Raven.Server.Documents
         public static bool Contain(this DocumentFlags current, DocumentFlags flag)
         {
             return (current & flag) == flag;
+        }
+
+        public static DocumentFlags Strip(this DocumentFlags current, DocumentFlags flag)
+        {
+            return current & ~flag;
         }
 
         public static bool Contain(this NonPersistentDocumentFlags current, NonPersistentDocumentFlags flag)

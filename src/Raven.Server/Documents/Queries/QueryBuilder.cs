@@ -28,6 +28,7 @@ using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeTh
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using Version = Lucene.Net.Util.Version;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -390,9 +391,9 @@ namespace Raven.Server.Documents.Queries
                     if (v.Type != ValueTokenType.String)
                         throw new InvalidQueryException("Expected value of type string, but got: " + v.Type, query.QueryText, parameters);
 
-                    var prefix = documentsContext.DocumentDatabase.Name + "/";
+                    var prefix = CompareExchangeCommandBase.GetActualKey(documentsContext.DocumentDatabase.Name, v.Value.ToString());
                     object value = null;
-                    server.Cluster.GetCompareExchangeValue(serverContext, prefix + v.Value).Value?.TryGetMember("Object", out value);
+                    server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember("Object", out value);
 
                     if (value == null)
                         return new ValueExpression(null, ValueTokenType.Null);

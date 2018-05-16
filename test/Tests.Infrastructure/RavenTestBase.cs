@@ -391,7 +391,7 @@ namespace FastTests
 
         protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal)
         {
-            int timeout = 5000;// * (Debugger.IsAttached ? 100 : 1);
+            int timeout = 15000;// * (Debugger.IsAttached ? 100 : 1);
 
             var sw = Stopwatch.StartNew();
             do

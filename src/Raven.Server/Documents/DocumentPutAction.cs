@@ -84,6 +84,7 @@ namespace Raven.Server.Documents
                     // null - means, don't care, don't check
                     // "" / empty - means, must be new
                     // anything else - must match exactly
+
                     if (expectedChangeVector != null) 
                     {
                         var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -114,10 +115,14 @@ namespace Raven.Server.Documents
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
-                if (string.IsNullOrEmpty(result.ChangeVector))
-                    ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
+                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                {
+                    if (string.IsNullOrEmpty(result.ChangeVector))
+                        ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
 
-                changeVector = result.ChangeVector;
+                    changeVector = result.ChangeVector;
+                }
+
                 nonPersistentFlags |= result.NonPersistentFlags;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 {
