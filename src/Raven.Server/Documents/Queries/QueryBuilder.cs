@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
@@ -33,6 +32,8 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
+        private static readonly KeywordAnalyzer KeywordAnalyzer = new KeywordAnalyzer();
+
         public static Lucene.Net.Search.Query BuildQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression,
             IndexDefinitionBase indexDef, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
@@ -357,7 +358,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.EndsWith:
                         return HandleEndsWith(query, me, metadata, parameters);
                     case MethodType.Lucene:
-                        return HandleLucene(query, me, metadata, parameters, analyzer);
+                        return HandleLucene(query, me, metadata, parameters, analyzer, exact);
                     case MethodType.Exists:
                         return HandleExists(query, parameters, me, metadata);
                     case MethodType.Exact:
@@ -514,7 +515,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query HandleLucene(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
-            Analyzer analyzer)
+            Analyzer analyzer, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -526,7 +527,10 @@ namespace Raven.Server.Documents.Queries
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
             if (valueType == ValueTokenType.Null)
-                return LuceneQueryHelper.Equal(fieldName, LuceneTermType.Null, value: null, exact: true);
+                return LuceneQueryHelper.Equal(fieldName, LuceneTermType.Null, null, exact);
+
+            if (exact)
+                analyzer = KeywordAnalyzer;
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer)
             {

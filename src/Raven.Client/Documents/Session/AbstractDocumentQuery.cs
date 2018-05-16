@@ -524,7 +524,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <summary>
         ///   Filter the results from the index using the specified where clause.
         /// </summary>
-        public void WhereLucene(string fieldName, string whereClause)
+        public void WhereLucene(string fieldName, string whereClause, bool exact)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -532,7 +532,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-            var whereToken = WhereToken.Create(WhereOperator.Lucene, fieldName, AddQueryParameter(whereClause));
+
+            var options = exact ? new WhereToken.WhereOptions(exact) : null;
+            var whereToken = WhereToken.Create(WhereOperator.Lucene, fieldName, AddQueryParameter(whereClause), options);
             tokens.AddLast(whereToken);
         }
 
@@ -594,16 +596,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            
+
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
-            
-            if (IfValueIsMethod(WhereOperator.Equals, whereParams, tokens)) 
+
+            if (IfValueIsMethod(WhereOperator.Equals, whereParams, tokens))
                 return;
-            
+
             var transformToEqualValue = TransformValue(whereParams);
             var addQueryParameter = AddQueryParameter(transformToEqualValue);
-            var whereToken = WhereToken.Create(WhereOperator.Equals, whereParams.FieldName, addQueryParameter, 
+            var whereToken = WhereToken.Create(WhereOperator.Equals, whereParams.FieldName, addQueryParameter,
                 new WhereToken.WhereOptions(whereParams.Exact));
             tokens.AddLast(whereToken);
         }
@@ -629,7 +631,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 {
                     throw new ArgumentException($"Unknown method {type}");
                 }
-                
+
                 tokens.AddLast(token);
                 return true;
             }
@@ -672,10 +674,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            
-            if (IfValueIsMethod(WhereOperator.NotEquals, whereParams, tokens)) 
+
+            if (IfValueIsMethod(WhereOperator.NotEquals, whereParams, tokens))
                 return;
-            
+
             var whereToken = WhereToken.Create(WhereOperator.NotEquals, whereParams.FieldName, AddQueryParameter(transformToEqualValue),
                 new WhereToken.WhereOptions(whereParams.Exact));
             tokens.AddLast(whereToken);
@@ -1194,7 +1196,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 .ToArray();
 
             var whereToken = WhereToken.Create(WhereOperator.In, fieldName, AddQueryParameter(array), new WhereToken.WhereOptions(false));
-            
+
             tokens.AddLast(whereToken);
         }
 
@@ -1216,7 +1218,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
 
             var whereToken = WhereToken.Create(WhereOperator.AllIn, fieldName, AddQueryParameter(array));
-            
+
             tokens.AddLast(whereToken);
         }
 

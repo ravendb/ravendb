@@ -82,7 +82,14 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLucene(string fieldName, string whereClause)
         {
-            WhereLucene(fieldName, whereClause);
+            WhereLucene(fieldName, whereClause, exact: false);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLucene(string fieldName, string whereClause, bool exact)
+        {
+            WhereLucene(fieldName, whereClause, exact);
             return this;
         }
 

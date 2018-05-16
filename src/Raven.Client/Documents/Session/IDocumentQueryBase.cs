@@ -194,6 +194,13 @@ namespace Raven.Client.Documents.Session
         TSelf WhereLucene(string fieldName, string whereClause);
 
         /// <summary>
+        ///     Filter the results from the index using the specified where clause.
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="whereClause">Lucene-syntax based query predicate.</param>
+        TSelf WhereLucene(string fieldName, string whereClause, bool exact);
+
+        /// <summary>
         ///     Matches fields where the value is between the specified start and end, exclusive
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>

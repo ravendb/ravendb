@@ -16,13 +16,16 @@ namespace SlowTests.Issues
                                    select new
                                    {
                                        Name = c.Name,
+                                       NameExact = c.Name,
                                        ExternalId = c.ExternalId
                                    };
+
+                Index("NameExact", FieldIndexing.Exact);
             }
         }
 
         [Fact]
-        public void CanUseNullInWhereLucene()
+        public void CanUseNullInWhereLuceneOrPassExact()
         {
             using (var store = GetDocumentStore())
             {
@@ -91,6 +94,62 @@ namespace SlowTests.Issues
                         .WhereLucene("ExternalId", null)
                         .AndAlso()
                         .WhereLucene("Name", "C3")
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("C3", results[0].Name);
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Advanced
+                        .DocumentQuery<Company, Index1>()
+                        .WhereLucene("ExternalId", "NULL_VALUE", exact: true)
+                        .ToList();
+
+                    Assert.Equal(2, results.Count);
+
+                    results = session
+                        .Advanced
+                        .DocumentQuery<Company, Index1>()
+                        .WhereLucene("ExternalId", "NULL_VALUE", exact: true)
+                        .AndAlso()
+                        .WhereLucene("Name", "C3")
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("C3", results[0].Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Advanced
+                        .DocumentQuery<Company>()
+                        .WhereLucene("ExternalId", "NULL_VALUE", exact: true)
+                        .ToList();
+
+                    Assert.Equal(2, results.Count);
+
+                    results = session
+                        .Advanced
+                        .DocumentQuery<Company>()
+                        .WhereLucene("ExternalId", "NULL_VALUE", exact: true)
+                        .AndAlso()
+                        .WhereLucene("Name", "C3")
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("C3", results[0].Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Advanced
+                        .DocumentQuery<Company, Index1>()
+                        .WhereLucene("ExternalId", "NULL_VALUE AND NameExact:C3", exact: true)
                         .ToList();
 
                     Assert.Equal(1, results.Count);
