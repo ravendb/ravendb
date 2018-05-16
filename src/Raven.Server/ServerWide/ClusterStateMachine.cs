@@ -1373,7 +1373,19 @@ namespace Raven.Server.ServerWide
                         }
                     }
                 }
-                return (stream, () => tcpClient.Client.Disconnect(false));
+                return (stream, () =>
+                {
+                    {
+                        try
+                        {
+                            tcpClient.Client.Disconnect(false);
+                        }
+                        catch (ObjectDisposedException ode)
+                        {
+                            //Happens, we don't really care at this point
+                        }
+                    }
+                });
             }
             catch (Exception)
             {

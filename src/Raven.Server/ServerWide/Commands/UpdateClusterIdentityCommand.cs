@@ -81,6 +81,35 @@ namespace Raven.Server.ServerWide.Commands
             result = resultDict;
         }
 
+        public override object FromRemote(object remoteResult)
+        {
+            var bja = remoteResult as BlittableJsonReaderArray;
+            if (bja == null)
+                throw new ArgumentException($"UpdateClusterIdentityCommand.FromRemote expected an object of type 'BlittableJsonReaderArray' but got {remoteResult.GetType().Name}.");
+            var res = new Dictionary<string, long>();
+            foreach (var o in bja)
+            {
+                var bjro = o as BlittableJsonReaderObject;
+                if(o == null)
+                    throw new ArgumentException($"UpdateClusterIdentityCommand.FromRemote expected an array of type 'BlittableJsonReaderObject' but got {o.GetType().Name}.");
+                var names = bjro.GetPropertyNames();
+                foreach (var name in names)
+                {
+                    if (bjro.TryGetMember(name, out var value))
+                    {
+                        if (value is long == false)
+                        {
+                            throw new ArgumentException($"UpdateClusterIdentityCommand.FromRemote expected properties with 'long' type but got {value.GetType().Name}.");
+                        }
+                        res.Add(name,(long)value);
+                    }
+                        
+                }
+            }
+
+            return res;
+        }
+
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Identities)] = (Identities ?? new Dictionary<string, long>()).ToJson();
