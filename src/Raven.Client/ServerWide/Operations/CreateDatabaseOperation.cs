@@ -2,6 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -23,31 +24,30 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new CreateDatabaseCommand(conventions, _databaseRecord, _replicationFactor);
+            return new CreateDatabaseCommand(_databaseRecord, _replicationFactor);
         }
 
         internal class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
         {
-            private readonly DocumentConventions _conventions;
             private readonly DatabaseRecord _databaseRecord;
             private readonly int _replicationFactor;
+            private readonly long? _etag;
             private readonly string _databaseName;
 
-            public CreateDatabaseCommand(DocumentConventions conventions, DatabaseRecord databaseRecord, int replicationFactor = 1)
+            public CreateDatabaseCommand(DatabaseRecord databaseRecord, int replicationFactor = 1, long? etag = null)
             {
-                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseRecord = databaseRecord;
                 _replicationFactor = replicationFactor;
+                _etag = etag;
                 _databaseName = databaseRecord?.DatabaseName ?? throw new ArgumentNullException(nameof(databaseRecord));
-             
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={_databaseName}";
-                
+
                 url += "&replicationFactor=" + _replicationFactor;
-                var databaseDocument = EntityToBlittable.ConvertCommandToBlittable(_databaseRecord,ctx);
+                var databaseDocument = EntityToBlittable.ConvertCommandToBlittable(_databaseRecord, ctx);
 
                 var request = new HttpRequestMessage
                 {
@@ -57,6 +57,9 @@ namespace Raven.Client.ServerWide.Operations
                         ctx.Write(stream, databaseDocument);
                     })
                 };
+
+                if (_etag.HasValue)
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.Etag, $"\"{_etag.ToInvariantString()}\"");
 
                 return request;
             }

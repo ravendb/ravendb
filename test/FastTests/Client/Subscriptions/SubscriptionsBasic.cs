@@ -760,7 +760,7 @@ namespace FastTests.Client.Subscriptions
 
             public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new CreateDatabaseOperation.CreateDatabaseCommand(conventions, _databaseRecord, _replicationFactor);
+                return new CreateDatabaseOperation.CreateDatabaseCommand(_databaseRecord, _replicationFactor);
             }
         }
     }
