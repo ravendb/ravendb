@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             switch (SqlProviderParser.GetSupportedProvider(FactoryName))
             {
                 case SqlProvider.SqlClient:
-                    var encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"}, throwIfNotFound: false);
+                    var encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
 
                     if (string.IsNullOrEmpty(encrypt))
                         return false;
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
                     return encryptBool;
                 case SqlProvider.Npgsql:
-                    var sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" }, throwIfNotFound: false);
+                    var sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" });
 
                     if (string.IsNullOrEmpty(sslMode))
                         return false;
