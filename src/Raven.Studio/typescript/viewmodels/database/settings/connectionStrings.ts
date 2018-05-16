@@ -101,7 +101,7 @@ class connectionStrings extends viewModelBase {
             const task = tasksThatUseConnectionStrings[i];
             
             let taskData = { TaskId: task.TaskId,
-                TaskName: !task.TaskName ? ongoingTaskModel.generateTaskName(task): task.TaskName,
+                TaskName: task.TaskName,
                 TaskType: task.TaskType };
             let stringName: string;
             
