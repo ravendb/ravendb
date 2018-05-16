@@ -1574,14 +1574,14 @@ namespace Raven.Server.ServerWide
             return (etag, id.Substring(0, id.Length - 1) + '/' + result, (long)result);
         }
 
-        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long newIdentity)
+        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long newIdentity, bool force)
         {
             var identities = new Dictionary<string, long>
             {
                 [id] = newIdentity
             };
 
-            var (_, result) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
+            var (_, result) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities, force));
 
             if (result == null)
             {
