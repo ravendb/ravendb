@@ -34,7 +34,7 @@ namespace Raven.Database.Prefetching
             public DateTime AddedAt;
         }
 
-        private static readonly int MaxDeletedDocumentsToTrack = 64_000;
+        private static readonly int MaxDeletedDocumentsToTrack = 64000;
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         private readonly BaseBatchSizeAutoTuner autoTuner;
         private readonly WorkContext context;
