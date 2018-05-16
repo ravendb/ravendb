@@ -401,7 +401,7 @@ namespace Tests.Infrastructure
                 if (useSsl)
                 {
                     serverUrl = UseFiddlerUrl($"https://127.0.0.1:{GetPort()}");
-                    SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer: false);
+                    SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
@@ -503,7 +503,7 @@ namespace Tests.Infrastructure
             if (useSsl)
             {
                 serverUrl = UseFiddlerUrl($"https://127.0.0.1:{port}");
-                SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer: false);
+                SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
