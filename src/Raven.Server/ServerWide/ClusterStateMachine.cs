@@ -1121,8 +1121,7 @@ namespace Raven.Server.ServerWide
             string dbName, string prefix, int start = 0, int pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            var dbKey = prefix.ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (Slice.From(context.Allocator, prefix, out Slice keySlice))
             {
                 foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, start))
                 {
@@ -1141,7 +1140,7 @@ namespace Raven.Server.ServerWide
         private static unsafe string ReadCompareExchangeKey(TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)UniqueItems.Key, out var size);
-            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 1);
+            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 4);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)

@@ -9,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
@@ -238,7 +239,8 @@ namespace Raven.Server.Smuggler.Documents
                 scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
-                compareExchange = _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _database.Name, _database.Name, 0, int.MaxValue);
+                compareExchange = _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _database.Name,
+                    CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
 
                 return scope.Delay();
             }
