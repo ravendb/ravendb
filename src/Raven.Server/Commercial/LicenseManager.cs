@@ -57,6 +57,7 @@ namespace Raven.Server.Commercial
         private bool _eulaAcceptedButHasPendingRestart;
 
         private readonly object _locker = new object();
+        private LicenseSupportInfo _lastKnownSupportInfo;
 
         public event Action LicenseChanged;
 
@@ -604,7 +605,11 @@ namespace Raven.Server.Commercial
         private async Task<License> GetUpdatedLicenseInternal(License currentLicense)
         {
             return await GetUpdatedLicense(currentLicense,
-                    async response => await HandleLeaseLicenseFailure(response).ConfigureAwait(false),
+                    async response =>
+                    {
+                        var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        AddLeaseLicenseError($"status code: {response.StatusCode}, response: {responseString}");
+                    },
                     leasedLicense =>
                     {
                         var newLicense = leasedLicense.License;
@@ -687,18 +692,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failed to lease license", e);
-
-                var alert = AlertRaised.Create(
-                    null,
-                    "Failed to lease license",
-                    "Could not lease license",
-                    AlertType.LicenseManager_LeaseLicenseError,
-                    NotificationSeverity.Warning,
-                    details: new ExceptionDetails(e));
-
-                _serverStore.NotificationCenter.Add(alert);
+                var message = e is HttpRequestException ? "failed to connect to api.ravendb.net" : "see exception details";
+                AddLeaseLicenseError(message, e);
 
                 if (forceUpdate)
                     throw;
@@ -881,21 +876,35 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task HandleLeaseLicenseFailure(HttpResponseMessage response)
+        private void AddLeaseLicenseError(string errorMessage, Exception exception = null)
         {
-            if (Logger.IsInfoEnabled == false || _skipLeasingErrorsLogging)
+            if (_skipLeasingErrorsLogging)
                 return;
 
-            var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (_licenseStatus.Expired == false &&
+                _licenseStatus.Expiration != null &&
+                _licenseStatus.Expiration.Value.Subtract(DateTime.UtcNow).TotalDays > 3 &&
+                (exception == null || exception is HttpRequestException))
+            {
+                // ignore the error if the license isn't expired yet
+                // and we don't have access to api.ravendb.net from this machine
+                return;
+            }
+
+            const string title = "Failed to lease license";
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.Info($"{title}, {errorMessage}", exception);
+            }
 
             var alert = AlertRaised.Create(
                 null,
-                "Lease license failure",
+                title,
                 "Could not lease license",
                 AlertType.LicenseManager_LeaseLicenseError,
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(
-                    new InvalidOperationException($"Status code: {response.StatusCode}, response: {responseString}")));
+                    new InvalidOperationException(errorMessage, exception)));
 
             _serverStore.NotificationCenter.Add(alert);
         }
@@ -1409,28 +1418,61 @@ namespace Raven.Server.Commercial
                 UtilizedCores = GetUtilizedCores()
             };
 
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/support",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
-                .ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode == false)
+            const int timeoutInSec = 5;
+            try
             {
-                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                using (var cts = new CancellationTokenSource(timeoutInSec * 1000))
+                {
+                    var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/support",
+                            new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), cts.Token)
+                        .ConfigureAwait(false);
 
-                var message = $"Couldn't get license support info, response: {responseString}, status code: {response.StatusCode}";
-                if (Logger.IsInfoEnabled)
+                    if (response.IsSuccessStatusCode == false)
+                    {
+                        var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                        var message = $"Couldn't get license support info, response: {responseString}, status code: {response.StatusCode}";
+                        if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                            Logger.Info(message);
+
+                        return GetDefaultLicenseSupportInfo();
+                    }
+
+                    var licenseSupportStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var json = context.Read(licenseSupportStream, "license support info");
+                        return _lastKnownSupportInfo = JsonDeserializationServer.LicenseSupportInfo(json);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is HttpRequestException == false && e is TaskCanceledException == false)
+                    throw;
+
+                // couldn't reach api.ravendb.net
+                if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                {
+                    var message = @"Couldn't reach api.ravendb.net to get the support info";
+                    if (e is TaskCanceledException)
+                        message += $", the request was aborted after {timeoutInSec} seconds";
                     Logger.Info(message);
+                }
 
-                throw new InvalidOperationException(message);
+                return GetDefaultLicenseSupportInfo();
             }
+        }
 
-            var licenseSupportStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+        private LicenseSupportInfo GetDefaultLicenseSupportInfo()
+        {
+            if (_lastKnownSupportInfo != null)
+                return _lastKnownSupportInfo;
+
+            return _lastKnownSupportInfo = new LicenseSupportInfo
             {
-                var json = context.Read(licenseSupportStream, "license support info");
-
-                return JsonDeserializationServer.LicenseSupportInfo(json);
-            }
+                Status = Status.NoSupport
+            };
         }
 
         public void AcceptEula()
