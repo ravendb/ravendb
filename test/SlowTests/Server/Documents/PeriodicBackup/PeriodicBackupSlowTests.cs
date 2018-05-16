@@ -391,11 +391,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
-                var backupToMovePath = $"{backupPath}\\IncrementalBackupTemp";
+                var backupToMovePath = $"{backupPath}{Path.DirectorySeparatorChar}IncrementalBackupTemp";
                 Directory.CreateDirectory(backupToMovePath);
                 var incrementalBackupFile = Directory.GetFiles(backupDirectory).OrderBackups().Last();
                 var fileName = Path.GetFileName(incrementalBackupFile);
-                File.Move(incrementalBackupFile, $"{backupToMovePath}\\{fileName}");
+                File.Move(incrementalBackupFile, $"{backupToMovePath}{Path.DirectorySeparatorChar}{fileName}");
 
                 await store1.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), backupDirectory);
                 using (var session = store1.OpenAsyncSession())
