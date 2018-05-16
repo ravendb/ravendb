@@ -72,47 +72,13 @@ abstract class ongoingTaskModel {
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
-        this.taskName(ongoingTaskModel.generateTaskNameIfNeeded(dto));
+        this.taskName(dto.TaskName);
         this.taskId = dto.TaskId;
         this.taskType(dto.TaskType);
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);
         this.taskConnectionStatus(dto.TaskConnectionStatus);
     }
-
-    static generateTaskNameIfNeeded(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
-        dto.TaskName = dto.TaskName ? dto.TaskName.trim() : dto.TaskName;
-        return dto.TaskName || ongoingTaskModel.generateTaskName(dto);
-    }
-
-    static generateTaskName(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
-        // Note: This is static because it is also being called from other places (i.e. databaseGroupGraph.ts) which don't have the tasks models objects..
-        let taskName: string = "";
-
-        switch (dto.TaskType) { 
-            case "Replication":
-                const dtoReplication = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
-                taskName = `External replication to ${dtoReplication.DestinationDatabase}@${dtoReplication.DestinationUrl || 'N/A'}`;
-                break;
-            case "Backup":
-                const dtoBackup = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
-                taskName = dtoBackup.BackupDestinations.length === 0 ? "Backup w/o destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
-                break;
-            case "RavenEtl":
-                const dtoRavenEtl = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView;
-                taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl || 'N/A'}`;
-                break;
-            case "SqlEtl":
-                const dtoSqlEtl = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;
-                taskName = `SQL ETL to ${dtoSqlEtl.DestinationDatabase}@${dtoSqlEtl.DestinationServer}`;
-                break;
-            case "Subscription":
-                taskName = dto.TaskName;
-                break;
-        }
-
-        return taskName;
-    } 
 }
 
 export = ongoingTaskModel;
