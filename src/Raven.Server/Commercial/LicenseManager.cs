@@ -387,31 +387,19 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task Activate(License license, bool skipLeaseLicense, bool ensureNotPassive = true)
+        public async Task Activate(License license, bool skipLeaseLicense, bool ensureNotPassive = true, bool forceActivate = false)
         {
             var newLicenseStatus = GetLicenseStatus(license);
-
-            var licenseExpiration = newLicenseStatus.Expiration;
-            if (licenseExpiration.HasValue == false)
+            if (newLicenseStatus.Expiration.HasValue == false)
                 throw new LicenseExpiredException("License doesn't have an expiration date!");
 
-            if (licenseExpiration < DateTime.UtcNow)
+            if (forceActivate == false)
             {
-                if (skipLeaseLicense == false)
-                {
-                    // license expired, we'll try to update it
-                    license = await GetUpdatedLicenseInternal(license);
-                    if (license != null)
-                    {
-                        await Activate(license, skipLeaseLicense: true, ensureNotPassive: ensureNotPassive);
-                        return;
-                    }
-                }
-
-                throw new LicenseExpiredException($"License already expired on: {licenseExpiration}");
+                if (await ContinueActivatingLicense(
+                        license, skipLeaseLicense, ensureNotPassive, 
+                        newLicenseStatus).ConfigureAwait(false) == false)
+                    return;
             }
-
-            ThrowIfCannotActivateLicense(newLicenseStatus);
 
             using (DisableCalculatingCoresCount())
             {
@@ -420,8 +408,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-
-                    await _serverStore.PutLicenseAsync(license);
+                    await _serverStore.PutLicenseAsync(license).ConfigureAwait(false);
 
                     _licenseStatus.Attributes = newLicenseStatus.Attributes;
                     _licenseStatus.ErrorMessage = null;
@@ -442,6 +429,28 @@ namespace Raven.Server.Commercial
             }
 
             await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+        }
+
+        private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, bool ensureNotPassive, LicenseStatus newLicenseStatus)
+        {
+            if (newLicenseStatus.Expired)
+            {
+                if (skipLeaseLicense == false)
+                {
+                    // license expired, we'll try to update it
+                    license = await GetUpdatedLicenseInternal(license);
+                    if (license != null)
+                    {
+                        await Activate(license, skipLeaseLicense: true, ensureNotPassive: ensureNotPassive);
+                        return false;
+                    }
+                }
+
+                throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}");
+            }
+
+            ThrowIfCannotActivateLicense(newLicenseStatus);
+            return true;
         }
 
         public LicenseStatus GetLicenseStatus(License license)
@@ -664,7 +673,8 @@ namespace Raven.Server.Commercial
                 if (updatedLicense == null)
                     return;
 
-                await Activate(updatedLicense, skipLeaseLicense: true);
+                // we'll activate the license from the license server
+                await Activate(updatedLicense, skipLeaseLicense: true, forceActivate: true);
 
                 var alert = AlertRaised.Create(
                     null,
