@@ -125,6 +125,16 @@ namespace FastTests.Client
 
                     Assert.Equal(1991, result);
                 }
+                using (var commands = store.Commands())
+                {
+                    var command = new SeedIdentityForCommand("users", 1975, forced:true);
+
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
+
+                    var result = command.Result;
+
+                    Assert.Equal(1975, result);
+                }
             }
         }
     }

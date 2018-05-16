@@ -35,13 +35,14 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var value = GetLongQueryString("value", true);
+            var forced = GetBoolValueQueryString("force", false)??false;
             if (value == null)
                 throw new ArgumentException("Query string value 'value' must have a non empty value");
 
             if (name[name.Length - 1] != '|')
                 name += '|';
 
-            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value);
+            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value, forced);
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
