@@ -18,6 +18,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Exceptions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -1084,6 +1085,17 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.IsType<FaultyInMemoryIndex>(index);
                 Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexName, index.Name);
+
+                using (database.NotificationCenter.GetStored(out var items))
+                {
+                    var alerts = items.ToList();
+                    Assert.Equal(1, alerts.Count);
+
+                    var readAlert = alerts[0].Json;
+                    
+                    Assert.Equal(AlertType.IndexStore_IndexCouldNotBeOpened.ToString(), readAlert[nameof(AlertRaised.AlertType)].ToString());
+                    Assert.Contains(indexName, readAlert[nameof(AlertRaised.Message)].ToString());
+                }
             }
         }
 
