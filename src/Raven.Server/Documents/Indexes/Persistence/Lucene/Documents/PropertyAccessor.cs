@@ -215,7 +215,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 return jsValue.AsObject();
             }
-
+            if (jsValue.IsUndefined())
+            {
+                return null;
+            }
 
             ThrowInvalidObject(jsValue);
             return null;
