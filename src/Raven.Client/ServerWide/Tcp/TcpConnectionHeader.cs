@@ -12,7 +12,8 @@ namespace Raven.Client.ServerWide.Tcp
             Replication,
             Cluster,
             Heartbeats,
-            Ping
+            Ping,
+            TestConnection
         }
 
         public string DatabaseName { get; set; }
@@ -38,6 +39,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public const int SubscriptionTcpVersion = 40;
 
+        public static readonly int TestConnectionTcpVersion = 50;
+		
         public static int GetOperationTcpVersion(OperationTypes operationType, int remoteVersion = 0)
         {
             switch (operationType)
@@ -57,6 +60,8 @@ namespace Raven.Client.ServerWide.Tcp
                     return  ClusterTcpVersion;
                 case OperationTypes.Heartbeats:
                     return  HeartbeatsTcpVersion;
+                case OperationTypes.TestConnection:
+                    return  TestConnectionTcpVersion;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(operationType), operationType, null);
             }
