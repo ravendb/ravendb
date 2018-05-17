@@ -1,129 +1,300 @@
 ﻿#about-page {
-    table td, table th {
-        padding-right: 20px;
-        padding-bottom: 10px;
+    flex-grow: 1;
+    display: flex;
+    align-items: stretch;
+    margin: @grid-gutter-width/2;
+    flex-wrap: wrap;
+
+    @media (min-width: @screen-sm) {
+        flex-direction: row;
+    }
+
+    .big-label {
+        padding: 6px 9px;
+    }
+
+    .big-label, .big-button {
+        display: flex;
+        text-align: left;
+
+        i {
+            font-size: 34px;
+            margin-right: @grid-gutter-width/2;
+            margin-top: 2px;
+        }
+
+        .content {
+            flex-grow: 1;
+
+            small {
+                font-size: 12px;
+            }
+
+            strong {
+                font-size: 16px;
+                font-weight: 900;
+            }
+
+            small, strong, span {
+                display: block;
+                line-height: 19px;
+            }
+        }
+    }
+
+    .about-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex-grow: 1;
+        justify-content: space-between;
     }
 
     .license-info {
-        @media (min-width: @screen-sm) {
-            min-width: 380px;
-        }
+        flex-grow: 1;
     }
 
-    .license-actions {
+    .license-properties-container {
+        background-color: @gray-dark;
+        flex-grow: 1;
+        height: 250px;
+        overflow-y: scroll;
+    }
 
-        .btn-block {
-            min-width: 150px;
-        }
+    .support-info {
+        flex-grow: 1;
+        width: 460px;
+    }
+
+    .about-properties-container {
+        display: flex;
+        align-items: stretch;
+        flex-grow: 1;
+        flex-wrap: wrap;
+    }
+
+    .about-info, .license-info, .support-info {
+        margin: @grid-gutter-width/2;
+    }
+
+    .license-id-container {
+        margin-bottom: 1px;
+        background-color: @gray-dark;
     }
 
     .icon-logo {
         font-size: 130px;
     }
 
-    .path {
-        word-break: break-all;
-        font-size: 15px;
-        color: @gray-dark;
-        font-weight: 700;
+    .license-actions {
+        .btn + .btn {
+            margin-left: @grid-gutter-width/2;
+        }
     }
 
-    .license-table {
-        overflow-y: auto;
-        max-height: 420px;
+    .about-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-gap: @grid-gutter-width;
+
+        @media (min-width: @screen-sm) {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 
-    .license-table table td {
-        width: 50%;
+
+    @value-cell-width: 65px;
+
+    .license-properties, .support-properties {
+        h4 {
+            font-size: 16px;
+            color: @gray-lighter;
+            font-weight: 900;
+        }
     }
 
-    .padding {
-        padding: 20px;
+    .license-properties {
+        display: grid;
+        grid-gap: @grid-gutter-width/2 @grid-gutter-width;
+        grid-template-columns: auto auto;
+
+        h4 {
+            text-align: center;
+            grid-column: 1 / span 2;
+        }
+
+        .name {
+            text-align: right;
+            font-size: 12px;
+        }
+
+        .value {
+            text-align: left;
+            line-height: 13px;
+
+            small {
+                font-size: 12px;
+            }
+
+            .icon-checkmark {
+                color: @brand-success-light;
+            }
+
+            .icon-cancel {
+                color: @gray-base;
+            }
+        }
+    }
+
+    .grid-span-2 {
+        grid-column: span 2;
+    }
+
+    .support-properties {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: auto 1fr 1fr 1fr auto;
+        font-size: 12px;
+        text-align: center;
+        //max-width: 400px;
+        line-height: 13px;
+        height: 100%;
+
+        & > div > i {
+            font-size: 24px;
+            margin-bottom: 1px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        strong {
+            color: @gray-light;
+        }
+
+        & > div {
+            //background-color: @gray-dark;
+            padding: @grid-gutter-width/2;
+
+            &:not(.top-row) {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            &:nth-of-type(3n) {
+                //border-left: 1px solid @gray-darker;
+            }
+        }
+
+        &.community {
+            .community {
+                background-color: @gray-dark;
+
+                &.top-row {
+                    box-shadow: 0 -3px 0 @brand-success-light;
+                }
+            }
+        }
+
+        &.professional {
+            .professional {
+                background-color: @gray-dark;
+
+                &.top-row {
+                    box-shadow: 0 -3px 0 @brand-success-light;
+                }
+            }
+        }
+
+        &.production {
+            .production {
+                background-color: @gray-dark;
+
+                &.top-row {
+                    box-shadow: 0 -3px 0 @brand-success-light;
+                }
+            }
+        }
+    }
+
+    .social {
+        text-align: center;
+
+        a {
+            padding: 0 @grid-gutter-width/4;
+            color: @text-color;
+
+            &:hover {
+                color: @brand-primary;
+            }
+        }
     }
 
     .roundborder {
-        display: inline-block;
-        width: 100px;
-        height: 100px;
-        position: relative;
-        margin-right: @grid-gutter-width;
-    }
-
-    @media (min-height:900px) {
-        .roundborder {
-            width: 150px;
-            height: 150px;
-        }
-    }
-
-    .roundborder:after, .roundborder:before {
-        content: '';
         display: block;
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 300px;
-        border: 8px solid #eee;
-        -webkit-transform: rotate(45deg);
-        transform: rotate(45deg);
-    }
+        width: 75px;
+        height: 75px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
 
-    .roundborder:before {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 85%;
-        height: 85%;
-        border: none;
-        -webkit-transform: translateX(-50%) translateY(-50%);
-        transform: translateX(-50%) translateY(-50%);
-    }
-
-    .roundborder.valid:after, .roundborder.professional-support:after {
-        border-color: @brand-success;
-    }
-
-    .roundborder.invalid:after {
-        border-color: @brand-danger;
-    }
-
-    .roundborder.expired:after {
-        border-color: #f36523;
-    }
-
-    .roundborder.dev-only i, .roundborder.no-support i {
-        border-color: #f36523;
-    }
-
-    .roundborder.invalid i {
-        color: #df382c;
-    }
-
-    .roundborder.dev-only:after, .roundborder.no-support:after {
-        border-color: #eee;
-    }
-
-    .roundborder i {
-        color: @gray-light;
-        font-size: 50px;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        -webkit-transform: translateX(-50%) translateY(-50%);
-        transform: translateX(-50%) translateY(-50%);
-    }
-
-    .roundborder.commercial i {
-        color: @brand-success-light;
-    }
-
-    @media (min-height:900px) {
-        .roundborder i {
-            font-size: 70px;
+        &:after, &:before {
+            content: '';
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 300px;
+            border: 4px solid;
+            -webkit-transform: rotate(45deg);
+            transform: rotate(45deg);
         }
-    }
 
-    .force-license-update {
-        margin-top: 10px;
+        &:before {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 85%;
+            height: 85%;
+            border: none;
+            -webkit-transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        i {
+            font-size: 40px;
+        }
+
+        &.valid, &.professional-support {
+            color: @brand-success;
+        }
+
+        &.invalid {
+            color: @brand-danger;
+        }
+
+        &.expired {
+            color: #f36523;
+        }
+
+        &.dev-only, &.no-support {
+            color: #f36523;
+        }
+
+        &.invalid i {
+            color: #df382c;
+        }
+
+        &.dev-only, &.no-support {
+            color: #eee;
+        }
+
+
+
+        .commercial i {
+            color: @brand-success-light;
+        }
     }
 }
