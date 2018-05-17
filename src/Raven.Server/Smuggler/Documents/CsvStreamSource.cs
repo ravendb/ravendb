@@ -159,7 +159,16 @@ namespace Raven.Server.Smuggler.Documents
                     continue;
 
                 var context = actions.GetContextForNewDocument();
-                yield return ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
+                DocumentItem item = null;
+                try
+                {
+                    item = ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
+                }
+                catch
+                {
+                    item = new DocumentItem();
+                }
+                yield return item;
             }
 
         }
