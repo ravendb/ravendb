@@ -47,11 +47,16 @@ namespace Raven.Server.Documents
         private const string LegacyRevisionState = "Historical";
         private const string LegacyHasRevisionsDocumentState = "Current";
 
-        private DocumentFlags ReadFlags(JsonParserState state, IJsonParser reader)
+        private DocumentFlags ReadFlags(JsonParserState state)
         {
-            var str = CreateLazyStringValueFromParserState(state);
-            if (Enum.TryParse(str, true, out DocumentFlags flags) == false)
-                return DocumentFlags.None;
+            var split = CreateLazyStringValueFromParserState(state).Split(',');
+            var flags = DocumentFlags.None;
+            for (var i = 0; i < split.Length; i++)
+            {
+                if (Enum.TryParse(split[i], true, out DocumentFlags flag) == false)
+                    continue;
+                flags |= flag;
+            }
             return flags;
         }
 
@@ -330,7 +335,7 @@ namespace Raven.Server.Documents
                     }
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state, reader);
-                    Flags = ReadFlags(state, reader);
+                    Flags = ReadFlags(state);
                     break;
 
                 case 12: // @index-score
@@ -662,7 +667,7 @@ namespace Raven.Server.Documents
 
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state, reader);
-                    Flags = ReadFlags(state, reader);
+                    Flags = ReadFlags(state);
                     break;
                 case State.ReadingLastModified:
                 case State.ReadingLegacyLastModified:
