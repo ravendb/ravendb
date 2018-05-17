@@ -172,8 +172,9 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 catch (Exception e)
                 {
-                    _result.AddError($"Fail to parse CSV line {line}, Error:{e.Message}");
-                    item = new DocumentItem();
+                    _result.AddError($"Fail to parse CSV line {line}, Error:{e}");
+                    _result.Documents.ErroredCount++;
+                    continue;
                 }
                 yield return item;
             }
