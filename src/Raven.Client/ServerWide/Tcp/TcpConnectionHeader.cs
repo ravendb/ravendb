@@ -25,13 +25,20 @@ namespace Raven.Client.ServerWide.Tcp
 
         public string Info { get; set; }
 
-        public static readonly int NumberOfRetriesForSendingTcpHeader = 2;
-        public static readonly int ClusterTcpVersion = 10;
-        public static readonly int HeartbeatsTcpVersion = 20;
-        public static readonly int ReplicationTcpVersion = 31;
-        public static readonly int SubscriptionTcpVersion = 40;
+        public const int NumberOfRetriesForSendingTcpHeader = 2;
+        public const int ClusterTcpVersion = 10;
+        public const int HeartbeatsTcpVersion = 20;
+        public const int ReplicationTcpVersion = 32;
 
-        public static int GetOperationTcpVersion(OperationTypes operationType)
+        public class Legacy
+        {
+            public const int V40ReplicationTcpVersion= 31;
+        }
+
+
+        public const int SubscriptionTcpVersion = 40;
+
+        public static int GetOperationTcpVersion(OperationTypes operationType, int remoteVersion = 0)
         {
             switch (operationType)
             {
@@ -43,6 +50,8 @@ namespace Raven.Client.ServerWide.Tcp
                 case OperationTypes.Subscription:
                     return SubscriptionTcpVersion;
                 case OperationTypes.Replication:
+                    if (Legacy.V40ReplicationTcpVersion == remoteVersion)
+                        return remoteVersion;
                     return ReplicationTcpVersion;
                 case OperationTypes.Cluster:
                     return  ClusterTcpVersion;

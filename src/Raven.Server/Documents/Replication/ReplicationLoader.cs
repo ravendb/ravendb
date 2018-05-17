@@ -224,8 +224,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
-                        [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector,
-                        [nameof(ReplicationMessageReply.HasCounters)] = true
+                        [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector
                     };
 
                     documentsOperationContext.Write(writer, response);

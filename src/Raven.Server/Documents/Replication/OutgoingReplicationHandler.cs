@@ -10,6 +10,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -72,6 +73,9 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
         private readonly TcpConnectionInfo _connectionInfo;
+
+        internal bool _inLegacyMode;
+
 
         public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
@@ -138,7 +142,8 @@ namespace Raven.Server.Documents.Replication
                 task.Wait(CancellationToken);
                 using (Interlocked.Exchange(ref _tcpClient, task.Result))
                 {
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Engine.TcpConnectionTimeout);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, _parent._server.Server.Certificate.Certificate,
+                        _parent._server.Engine.TcpConnectionTimeout);
                     wrapSsl.Wait(CancellationToken);
 
                     using (_stream = wrapSsl.Result) // note that _stream is being disposed by the interruptible read
@@ -146,7 +151,6 @@ namespace Raven.Server.Documents.Replication
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
-                        var hasCounters = false;
 
                         WriteHeaderToRemotePeer();
                         //handle initial response to last etag and staff
@@ -158,7 +162,6 @@ namespace Raven.Server.Documents.Replication
                                 //The first time we start replication we need to register the destination current CV
                                 case ReplicationMessageReply.ReplyType.Ok:
                                     LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
-                                    hasCounters = response.Reply.HasCounters;
                                     break;
                                 case ReplicationMessageReply.ReplyType.Error:
                                     var exception = new InvalidOperationException(response.Reply.Exception);
@@ -215,18 +218,6 @@ namespace Raven.Server.Documents.Replication
                             AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
-                        }
-
-                        if (hasCounters == false)
-                        {
-                            var msg = "Destination server does not support Counters feature." +
-                                      "Aborting and closing the channel. ";
-
-                            if (_log.IsInfoEnabled)
-                                _log.Info(msg);
-
-                            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
-                            throw new OperationCanceledException(msg);
                         }
 
                         DateTime nextReplicateAt = default(DateTime);
@@ -324,7 +315,7 @@ namespace Raven.Server.Documents.Replication
                                         SendHeartbeat(null);
                                     }
                                     else
-                                    {                                        
+                                    {
                                         //Send a heartbeat first so we will get an updated CV of the destination
                                         var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                                         SendHeartbeat(null);
@@ -350,6 +341,7 @@ namespace Raven.Server.Documents.Replication
                                     }
                                 }
                             }
+
                             _waitForChanges.Reset();
                         }
                     }
@@ -363,12 +355,13 @@ namespace Raven.Server.Documents.Replication
                     {
                         HandleOperationCancelException(oce);
                     }
+
                     if (e.InnerException is IOException ioe)
                     {
                         HandleIOException(ioe);
                     }
                 }
-                
+
                 HandleException(e);
             }
             catch (OperationCanceledException e)
@@ -378,6 +371,10 @@ namespace Raven.Server.Documents.Replication
             catch (IOException e)
             {
                 HandleIOException(e);
+            }
+            catch (LegacyReplicationViolationException e)
+            {
+                LegacyReplicationViolationException(e);
             }
             catch (Exception e)
             {
@@ -405,6 +402,14 @@ namespace Raven.Server.Documents.Replication
                     else
                         _log.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
                 }
+                Failed?.Invoke(this, e);
+            }
+
+            void LegacyReplicationViolationException(LegacyReplicationViolationException e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"LegacyReplicationViolationException occurred on replication thread ({FromToString}). " +
+                              "Replication is stopped and will not continue until the violation is resolved. ", e);
                 Failed?.Invoke(this, e);
             }
 
@@ -527,6 +532,28 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
+                        if (_inLegacyMode == false &&
+                            headerResponse.Version == TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion)
+                        {
+                            // Downgrade replication version to match the other side
+                            _inLegacyMode = true;
+                            if (_log.IsInfoEnabled)
+                                _log.Info($"{Node.FromString()} downgraded it's replication version " +
+                                          $"to {TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion}, in order to match the replication version of " +
+                                          $"destination {Destination.FromString()}.");
+
+                            documentsContext.Write(writer, new DynamicJsonValue
+                            {
+                                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
+                                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion
+                            });
+                            writer.Flush();
+                            ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
+                            return;
+                        }
+
                         //Kindly request the server to drop the connection
                         documentsContext.Write(writer, new DynamicJsonValue
                         {

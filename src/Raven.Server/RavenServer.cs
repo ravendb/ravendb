@@ -1222,7 +1222,7 @@ namespace Raven.Server
 
         private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error, out int version)
         {
-            version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
+            version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation, header.OperationVersion);
             if (version == header.OperationVersion)
             {
                 error = null;

@@ -18,6 +18,5 @@
         public string DatabaseId { get; set; }
         public string NodeTag { get; set; }
         public long CurrentEtag { get; set; }
-        public bool HasCounters { get; set; }
     }
 }
