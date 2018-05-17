@@ -1,100 +1,254 @@
 <div id="about-page" class="content-margin">
-    <div class="row">
-        <div class="col-lg-6 text-center">
-            <i class="icon-logo text-primary"></i>
-            <div class="flex-horizontal margin-bottom">
-                <div class="flex-grow"></div>
-                <table>
-                    <tr>
-                        <th>Server version</th>
-                        <td><span data-bind="text: serverVersion().FullVersion"></span></td>
-                    </tr>
-                    <tr>
-                        <th>Studio version</th>
-                        <td><span data-bind="text: clientVersion()"></span></td>
-                    </tr>
-                </table>
-                <div class="flex-grow"></div>
-            </div>
+
+    <div class="about-info">
+        <div>
+            <a href="https://ravendb.net/" target="_blank"><i class="icon-logo text-primary"></i></a>
             <div class="margin-top">
-                <p class="lead margin-bottom">
-                    Care to share your thoughts on our product?
-                </p>
-                <a data-bind="click: openFeedbackForm" class="btn btn-info">
-                    <i class="icon-rocket"></i>
-                    <span>Send feedback</span>
-                </a>
-            </div>
-            <div class="margin-top">
-                <small>Copyright © 2009 - 2018 Hibernating Rhinos. All rights reserved.</small>
+                <div class="about-grid">
+                    <div class="big-label">
+                        <i class="icon-server"></i>
+                        <div class="content">
+                            <small>Server version</small>
+                            <strong data-bind="text: serverVersion().FullVersion"></strong>
+                        </div>
+                    </div>
+                    <div class="big-label">
+                        <i class="icon-client"></i>
+                        <div class="content">
+                            <small>Studio version</small>
+                            <strong data-bind="text: clientVersion()"></strong>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex-horizontal flex-stretch-items">
+                            <button class="btn btn-primary big-button">
+                                <i class="icon-client"></i>
+                                <div class="content">
+                                    <small>New version (4.0.1) is available</small>
+                                    <strong>Download now</strong>
+                                </div>
+                            </button>
+                            <button class="btn btn-primary">
+                                <i class="icon-refresh"></i>
+                            </button>
+
+                        </div>
+
+                        <div class="text-center margin-top">
+                            <a href="#" target="_blank">See what's new</a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <a data-bind="click: openFeedbackForm" class="btn btn-info big-button">
+                            <i class="icon-rocket"></i>
+                            <div class="content">
+                                <small>Help us improve</small>
+                                <strong>Send feedback</strong>
+                            </div>
+                        </a>
+
+                        <div class="social margin-top">
+                            <a href="https://www.facebook.com/RavenDB-265907650186374/" target="_blank"><i class="icon-facebook"></i></a>
+                            <a href="https://plus.google.com/communities/112242341438716210743" target="_blank"><i class="icon-googleplus"></i></a>
+                            <a href="https://twitter.com/ravendb" target="_blank"><i class="icon-twitter"></i></a>
+                            <a href="https://www.linkedin.com/company/hibernating-rhinos-ltd-" target="_blank"><i class="icon-linkedin"></i></a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="panel padding padding-sm margin-bottom">
-                <div class="flex-horizontal flex-content-center flex-wrap">
-                    <div data-bind="attr: { class: 'roundborder flex-noshrink ' + licenseCssClass() }">
-                        <i class="icon-license-information"></i>
+        <div class="margin-top">
+            <small>Copyright © 2009 - 2018 Hibernating Rhinos. All rights reserved.</small>
+        </div>
+    </div>
+
+    <div class="about-properties-container">
+
+        <div class="license-info panel flex-vertical">
+            <div class="header">
+                <div class="padding">
+                    <h2>License information</h2>
+
+                    <div class="flex-horizontal margin-top margin-bottom">
+                        <div data-bind="attr: { class: 'roundborder flex-noshrink ' + licenseCssClass() }">
+                            <i class="icon-license-information"></i>
+                        </div>
+
+                        <div class="big-label">
+                            <div class="content">
+                                <small>Type</small>
+                                <strong data-bind="text: licenseType"></strong>
+                            </div>
+                        </div>
+
+                        <div class="big-label" data-bind="visible: formattedExpiration">
+                            <div class="content">
+                                <small>Expires</small>
+                                <strong>2019 May 11th</strong>
+                                <!--TODO: Add expiration warning-->
+                                <!--<small class="text-danger">25 days left</small>-->
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex-grow license-info">
-                        <div>
-                            <h2>License information</h2>
-                            <table>
-                                <tr>
-                                    <th>Type</th>
-                                    <td data-bind="text: licenseType"></td>
-                                </tr>
-                                <tr data-bind="visible: formattedExpiration">
-                                    <th>Expires</th>
-                                    <td><span data-bind="text: formattedExpiration"></span></td>
-                                </tr>
-                                <tr data-bind="visible: shortDescription">
-                                    <th>Limits</th>
-                                    <td><span data-bind="text: shortDescription"></span></td>
-                                </tr>
-                                <tr data-bind="visible: licenseId">
-                                    <th>License ID</th>
-                                    <td><span data-bind="text: licenseId"></span></td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div data-bind="visible: registered" class="license-actions">
-                            <button class="btn btn-primary" data-bind="click: register, visible: accessManager.canReplaceLicense">Replace License</button>
-                            <span class="force-license-update">
-                                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, 
-                                    css: { 'btn-spinner': spinners.forceLicenseUpdate }, visible: accessManager.canForceUpdate">
-                                    <i class="icon-force"></i>
-                                    <span>Force Update</span>
-                                </button>
-                            </span>
-                        </div>
-                        <div data-bind="visible: !registered()" class="license-actions">
-                            <button class="btn btn-primary" data-bind="click: register">Register</button>
+                </div>
+                <div class="license-id-container padding">
+                    <div class="big-label" data-bind="visible: licenseId">
+                        <div class="content text-center">
+                            <small>License ID</small>
+                            <strong data-bind="text: licenseId"></strong>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="panel padding padding-sm">
-                <div class="flex-horizontal flex-content-center flex-wrap">
-                    <div data-bind="attr: { class: 'roundborder flex-noshrink ' + supportCssClass() }">
-                        <i class="icon-support"></i>
-                    </div>
-                    <div class="flex-grow license-info">
-                        <h2>Support plan</h2>
-                        <table>
-                            <tr>
-                                <th>Type</th>
-                                <td><span data-bind="text: supportLabel"></span></td>
-                            </tr>
-                        </table>
-                        <div class="license-actions" data-bind="visible: accessManager.canUpgrade">
-                            <a href="https://ravendb.net/support" target="_blank" class="btn btn-success" data-bind="visible: canUpgradeSupport">
-                                <i class="icon-support"></i>
-                                <span>Upgrade</span>
-                            </a>
-                        </div>
-                    </div>
+
+
+            <div class="license-properties-container padding">
+                <div class="license-properties">
+                    <div class="name">Eligible for Commercial Use</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Number of databases</div><div class="value"><i class="icon-infinity"></i></div>
+                    <div class="name">Single database size</div><div class="value"><i class="icon-infinity"></i></div>
+                    <div class="name">Management Studio (GUI)</div><div class="value"><i class="icon-checkmark"></i></div>
+
+                    <h4>Clustering</h4>
+
+                    <div class="name">Max cluster size</div><div class="value"><strong>3</strong></div>
+                    <div class="name">Max cores in cluster</div><div class="value"><strong>3</strong></div>
+                    <div class="name">Max cluster memory usage</div><div class="value"><strong>6GB RAM</strong></div>
+                    <div class="name">Highly available tasks</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Dynamic database distribution</div><div class="value"><i class="icon-cancel"></i></div>
+
+                    <h4>Monitoring</h4>
+
+                    <div class="name">Server Dashboard</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">SNMP</div><div class="value"><i class="icon-cancel"></i></div>
+
+                    <h4>Extensions</h4>
+
+                    <div class="name">Document Revisions</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Document Expiration</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Attachments</div><div class="value"><i class="icon-checkmark"></i></div>
+
+                    <h4>External Replication</h4>
+
+                    <div class="name">Immediate</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Delayed</div><div class="value"><i class="icon-cancel"></i></div>
+
+                    <h4>Backups</h4>
+
+                    <div class="name">Local</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Cloud & Remote</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Snapshot backups</div><div class="value"><i class="icon-cancel"></i></div>
+
+                    <h4>ETL</h4>
+
+                    <div class="name">SQL ETL</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">RavenDB ETL</div><div class="value"><i class="icon-cancel"></i></div>
+
+                    <h4>Security</h4>
+
+                    <div class="name">Certificates</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Encryption in transit</div><div class="value"><strong>TLS 1.2 & X.509</strong></div>
+                    <div class="name">Storage encryption</div><div class="value"><i class="icon-cancel"></i></div>
+
                 </div>
+
+
+            </div>
+            <div class="padding">
+                <div data-bind="" class="license-actions flex-horizontal">
+                    <!-- ko if: !registered() -->
+                    <button class="btn btn-primary flex-grow" data-bind="click: register">REGISTER</button>
+                    <!-- /ko -->
+                    <!-- ko if: registered() -->
+                    <button class="btn btn-primary flex-grow" data-bind="click: register, visible: accessManager.canReplaceLicense"><i class="icon-replace"></i> <span>REPLACE LICENSE</span></button>
+                    <button class="btn btn-info flex-grow" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate,
+                                    css: { 'btn-spinner': spinners.forceLicenseUpdate }, visible: accessManager.canForceUpdate">
+                        <i class="icon-force"></i>
+                        <span>FORCE UPDATE</span>
+                    </button>
+                    <!-- TODO: Add binding -->
+                    <button class="btn btn-danger flex-grow" data-bind=""><i class="icon-cancel"></i> <span>DEACTIVATE</span></button>
+                    <!-- /ko -->
+                </div>
+            </div>
+        </div>
+
+
+
+        <div class="support-info panel flex-vertical">
+
+            <div class="header">
+                <div class="padding">
+                    <h2>Support plan</h2>
+                    <div class="flex-horizontal margin-top margin-bottom">
+                        <div data-bind="attr: { class: 'roundborder flex-noshrink ' + supportCssClass() }">
+                            <i class="icon-support"></i>
+                        </div>
+
+                        <div class="big-label">
+                            <div class="content">
+                                <small>Type</small>
+                                <strong data-bind="text: supportLabel"></strong>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="support-properties community flex-grow">
+
+                <div class="top-row community">
+                    <h4>Community</h4>
+                    <strong>Essential support<br/> to get started</strong>
+                </div>
+                <div class="top-row professional">
+                    <h4>Professional</h4>
+                    <strong>Priority support<br /> for professional<br /> projects</strong>
+                </div>
+                <div class="top-row production">
+                    <h4>Production</h4>
+                    <strong>Top-tier support<br /> for enterprise and<br /> mission-critical<br /> projects</strong>
+                </div>
+
+                <div class="community">
+                    <i class="icon-group"></i>
+                    Support via our<br /> community forum
+                </div>
+
+                <div class="grid-span-2 professional production">
+                    <i class="icon-user"></i>
+                    Access to RavenDB core developers
+                </div>
+                <div class="community"></div>
+
+                <div class="grid-span-2 professional production">
+                    <i class="icon-phone"></i>
+                    Email &amp; Phone support
+                </div>
+
+                <div class="community"></div>
+
+                <div class="professional">
+                    <i class="icon-clock"></i>
+                    Next day SLA<br />
+                    <small class="text-muted">Sun-Thu | 8:00-18:00<br /> GMT+2</small>
+                </div>
+
+                <div class="production">
+                    <i class="icon-clock"></i>
+                    2 hour SLA<br />
+                    <small class="text-muted">We're there for you <br />24/7</small>
+                </div>
+
+                <div class="community"><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block"><i class="icon-newtab"></i> <span>ACCESS</span></a></div>
+                <div class="grid-span-2 professional production"><a href="http://ravendb.net/support" target="_blank" class="btn btn-success btn-block"><i class="icon-umbrella"></i> <span>UPGRADE</span></a></div>
             </div>
         </div>
     </div>
+
 </div>
