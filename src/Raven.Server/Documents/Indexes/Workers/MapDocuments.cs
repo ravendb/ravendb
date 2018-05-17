@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize);
 
-                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
+                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
                             {
                                 while (true)
                                 {

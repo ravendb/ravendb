@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new AutoIndexDocsEnumerator(documents, stats);
         }
