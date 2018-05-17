@@ -1313,6 +1313,11 @@ namespace Raven.Server
                 return true;
             }
 
+            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection)
+            {
+                return true;
+            }
+
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
                 // check for the term          
@@ -1463,6 +1468,12 @@ namespace Raven.Server
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                        case TcpConnectionHeaderMessage.OperationTypes.TestConnection:
+                            if (header.DatabaseName == null)
+                            {
+                                msg = "Cannot allow access. Database name is empty.";
+                                return false;
+                            }
                             if (auth.CanAccess(header.DatabaseName, requireAdmin: false))
                                 return true;
                             msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
