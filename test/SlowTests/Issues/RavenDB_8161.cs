@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                     store.Operations.Send(new PatchByQueryOperation(new IndexQuery
                     {
                         Query = @"FROM Orders UPDATE { put(""orders/"", this); } "
-                    })).WaitForCompletion(TimeSpan.FromSeconds(30));
+                    })).WaitForCompletion(TimeSpan.FromSeconds(300));
                 }
 
                 WaitForIndexing(store);
