@@ -644,24 +644,87 @@ namespace Raven.Server.Smuggler.Documents
         private class CounterActions : ICounterActions
         {
             private readonly DocumentDatabase _database;
+            private CountersHandler.ExecuteCounterBatchCommand _cmd;
+            private CountersHandler.ExecuteCounterBatchCommand _prevCommand;
+            private Task _prevCommandTask = Task.CompletedTask;
+            private int _batchSize;
+            private const int _maxBatchSize = 10000;
 
             public CounterActions(DocumentDatabase database)
             {
                 _database = database;
+                _batchSize = 0;
+                _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
+                {
+                    HasWrites = true
+                };
             }
 
-            public void WriteCounters(CounterBatch counterBatch)
+            private void AddToBatch(CounterDetail counter)
             {
-                AsyncHelpers.RunSync(() => PutCounters(counterBatch));
+                var counterOp = new CounterOperation
+                {
+                    Type = CounterOperationType.Put,
+                    CounterName = counter.CounterName,
+                    Delta = counter.TotalValue,
+                    ChangeVector = counter.ChangeVector
+                };
+
+                _cmd.Add(counter.DocumentId, counterOp);
+                _batchSize++;
             }
 
-            private async Task PutCounters(CounterBatch counterBatch)
+            public void WriteCounter(CounterDetail counterDetail)
             {
-                await _database.TxMerger.Enqueue(new CountersHandler.ExecuteCounterBatchCommand(_database, counterBatch));
+                AddToBatch(counterDetail);
+                HandleBatchOfDocumentsIfNecessary();
             }
 
             public void Dispose()
             {
+                FinishBatchOfDocuments();
+            }
+
+            private void HandleBatchOfDocumentsIfNecessary()
+            {
+                if (_batchSize < _maxBatchSize)
+                    return;
+
+                var prevCommand = _prevCommand;
+                var prevCommandTask = _prevCommandTask;
+
+                var commandTask = _database.TxMerger.Enqueue(_cmd);
+
+                _prevCommand = _cmd;
+                _prevCommandTask = commandTask;
+
+                if (prevCommand != null)
+                {                   
+                    prevCommandTask.GetAwaiter().GetResult();                  
+                }
+
+                _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
+                {
+                    HasWrites = true
+                };
+
+                _batchSize = 0;
+            }
+
+            private void FinishBatchOfDocuments()
+            {
+                if (_prevCommand != null)
+                {
+                    AsyncHelpers.RunSync(() => _prevCommandTask);
+                    _prevCommand = null;
+                }
+
+                if (_batchSize > 0)
+                {
+                    AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
+                }
+
+                _cmd = null;
             }
         }
 

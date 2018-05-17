@@ -586,50 +586,19 @@ namespace Raven.Server.Smuggler.Documents
             using (var actions = _destination.Counters())
             using (_source.GetCounterValues(out var counters))
             {
-                var batch = new CounterBatch();
-
                 foreach (var counterDetail in counters)
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Counters.ReadCount++;
 
-                    var counterOp = new CounterOperation
+                    if (result.Counters.ReadCount % 1000 == 0)
                     {
-                        Type = CounterOperationType.Put,
-                        CounterName = counterDetail.CounterName,
-                        Delta = counterDetail.TotalValue,
-                        ChangeVector = counterDetail.ChangeVector
-                    };
-
-                    var exsicting = batch.Documents.SingleOrDefault(x => x.DocumentId == counterDetail.DocumentId);
-                    if (exsicting != null)
-                    {
-                        exsicting.Operations.Add(counterOp);
-                    }
-                    else
-                    {
-                        batch.Documents.Add(new DocumentCountersOperation
-                        {
-                            DocumentId = counterDetail.DocumentId,
-                            Operations = new List<CounterOperation>
-                            {
-                                counterOp
-                            }
-                        });
-
+                        var message = $"Read {result.Counters.ReadCount:#,#;;0} counters.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
                     }
 
-                }
-
-                try
-                {
-                    actions.WriteCounters(batch);
-                }
-                catch (Exception e)
-                {
-                    result.Counters.Processed = false;
-                    result.AddError($"An Error occured while writing Counters : {e}");
-                    throw;
+                    actions.WriteCounter(counterDetail);
                 }
             }
 
