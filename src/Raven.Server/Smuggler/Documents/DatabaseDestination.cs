@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
@@ -25,6 +27,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -81,6 +84,11 @@ namespace Raven.Server.Smuggler.Documents
         public IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context)
         {
             return new DatabaseCompareExchangeActions(_database, context);
+        }
+
+        public ICounterActions Counters()
+        {
+            return new CounterActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -144,8 +152,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (item.Attachments != null)
                     progress.Attachments.ReadCount += item.Attachments.Count;
-                if (item.Counters != null)
-                    progress.Counters.ReadCount += item.Counters.Sum(c => c.Values.Length);
+
+
                 _command.Add(item);
                 HandleBatchOfDocumentsIfNecessary();
             }
@@ -496,20 +504,6 @@ namespace Raven.Server.Smuggler.Documents
                     var document = documentType.Document;
                     var id = document.Id;
 
-                    if (documentType.Counters != null)
-                    {
-                        foreach (var counter in documentType.Counters)
-                        {
-                            foreach (BlittableJsonReaderObject bjro in counter.Values)
-                            {
-                                if (bjro.TryGet(nameof(DocumentItem.DocumentCounterValues.ChangeVector), out string cv) == false || 
-                                    bjro.TryGet(nameof(DocumentItem.DocumentCounterValues.Value), out long val) == false)
-                                    throw new InvalidDataException("Invalid counter value : " + bjro);
-
-                                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, id, counter.Name, cv, val);
-                            }
-                        }
-                    }
 
                     if (IsRevision)
                     {
@@ -547,6 +541,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     PutAttachments(context, document);
+
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
 
                 }
@@ -645,5 +640,93 @@ namespace Raven.Server.Smuggler.Documents
                 Documents.Add(document);
             }
         }
+
+        private class CounterActions : ICounterActions
+        {
+            private readonly DocumentDatabase _database;
+            private CountersHandler.ExecuteCounterBatchCommand _cmd;
+            private CountersHandler.ExecuteCounterBatchCommand _prevCommand;
+            private Task _prevCommandTask = Task.CompletedTask;
+            private int _batchSize;
+            private const int _maxBatchSize = 10000;
+
+            public CounterActions(DocumentDatabase database)
+            {
+                _database = database;
+                _batchSize = 0;
+                _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
+                {
+                    HasWrites = true
+                };
+            }
+
+            private void AddToBatch(CounterDetail counter)
+            {
+                var counterOp = new CounterOperation
+                {
+                    Type = CounterOperationType.Put,
+                    CounterName = counter.CounterName,
+                    Delta = counter.TotalValue,
+                    ChangeVector = counter.ChangeVector
+                };
+
+                _cmd.Add(counter.DocumentId, counterOp);
+                _batchSize++;
+            }
+
+            public void WriteCounter(CounterDetail counterDetail)
+            {
+                AddToBatch(counterDetail);
+                HandleBatchOfDocumentsIfNecessary();
+            }
+
+            public void Dispose()
+            {
+                FinishBatchOfDocuments();
+            }
+
+            private void HandleBatchOfDocumentsIfNecessary()
+            {
+                if (_batchSize < _maxBatchSize)
+                    return;
+
+                var prevCommand = _prevCommand;
+                var prevCommandTask = _prevCommandTask;
+
+                var commandTask = _database.TxMerger.Enqueue(_cmd);
+
+                _prevCommand = _cmd;
+                _prevCommandTask = commandTask;
+
+                if (prevCommand != null)
+                {                   
+                    prevCommandTask.GetAwaiter().GetResult();                  
+                }
+
+                _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
+                {
+                    HasWrites = true
+                };
+
+                _batchSize = 0;
+            }
+
+            private void FinishBatchOfDocuments()
+            {
+                if (_prevCommand != null)
+                {
+                    AsyncHelpers.RunSync(() => _prevCommandTask);
+                    _prevCommand = null;
+                }
+
+                if (_batchSize > 0)
+                {
+                    AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
+                }
+
+                _cmd = null;
+            }
+        }
+
     }
 }

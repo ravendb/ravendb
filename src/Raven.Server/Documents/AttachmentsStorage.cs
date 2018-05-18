@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -301,10 +302,10 @@ namespace Raven.Server.Documents
                 Memory.Copy(copyOfDoc.Address, tvr.Pointer, tvr.Size);
                 var copyTvr = new TableValueReader(copyOfDoc.Address, tvr.Size);
                 var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out int size), size, context);
-
                 var attachments = GetAttachmentsMetadataForDocument(context, lowerDocumentId);
 
-                var flags = DocumentFlags.None;
+                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref copyTvr);
+
                 data.Modifications = new DynamicJsonValue(data);
                 if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
@@ -312,12 +313,13 @@ namespace Raven.Server.Documents
 
                     if (attachments.Count > 0)
                     {
-                        flags = DocumentFlags.HasAttachments;
+                        flags |= DocumentFlags.HasAttachments;
                         metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
                     }
                     else
                     {
                         metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                        flags &= ~DocumentFlags.HasAttachments;
                     }
 
                     data.Modifications[Constants.Documents.Metadata.Key] = metadata;
@@ -326,7 +328,7 @@ namespace Raven.Server.Documents
                 {
                     if (attachments.Count > 0)
                     {
-                        flags = DocumentFlags.HasAttachments;
+                        flags |= DocumentFlags.HasAttachments;
                         data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
                             [Constants.Documents.Metadata.Attachments] = attachments

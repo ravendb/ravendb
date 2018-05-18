@@ -30,6 +30,8 @@ namespace Raven.Client.Documents.Operations.Counters
         public long TotalValue { get; set; }
         public Dictionary<string, long> CounterValues { get; set; }
 
+        public string ChangeVector { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -218,6 +219,12 @@ namespace Raven.Server.Smuggler.Documents
             return null;
         }
 
+        public IDisposable GetCounterValues(out IEnumerable<CounterDetail> counters)
+        {
+            counters = InternalGetCounterValues();
+            return null;
+        }
+
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
         {
             parser.SetBuffer(value.Buffer, value.Size);
@@ -257,6 +264,36 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private IEnumerable<CounterDetail> InternalGetCounterValues()
+        {           
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet(nameof(DocumentItem.CounterItem.DocId), out string docId) == false ||
+                        reader.TryGet(nameof(DocumentItem.CounterItem.Name), out string name) == false ||
+                        reader.TryGet(nameof(DocumentItem.CounterItem.ChangeVector), out string cv) == false ||
+                        reader.TryGet(nameof(DocumentItem.CounterItem.Value), out long value) == false)
+                    {
+                        _result.Counters.ErroredCount++;
+                        _result.AddWarning("Could not read counter entry.");
+
+                        continue;
+                    }
+
+                    yield return new CounterDetail
+                    {
+                        DocumentId = docId,
+                        CounterName = name,
+                        ChangeVector = cv,
+                        TotalValue = value
+                    };
+
+                }
+            }        
+        }
+
+
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             switch (type)
@@ -272,6 +309,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
+                case DatabaseItemType.Counters:
                     return SkipArray(onSkipped);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
@@ -676,7 +714,6 @@ namespace Raven.Server.Smuggler.Documents
             try
             {
                 List<DocumentItem.AttachmentStream> attachments = null;
-                List<DocumentItem.DocumentCounter> counters = null;
                 while (true)
                 {
                     if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -720,19 +757,6 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (metadata != null &&
-                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out type) &&
-                        type == DocumentItem.ExportDocumentType.Counter)
-                    {
-                        if (counters == null)
-                            counters = new List<DocumentItem.DocumentCounter>();
-
-                        var counter = new DocumentItem.DocumentCounter();
-                        ProcessCounter(context, data, ref counter);
-                        counters.Add(counter);
-                        continue;
-                    }
-
                     if (legacyImport)
                     {
                         if (modifier.Id.Contains(HiLoHandler.RavenHiloIdPrefix))
@@ -761,11 +785,9 @@ namespace Raven.Server.Smuggler.Documents
                             NonPersistentFlags = modifier.NonPersistentFlags,
                             LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
                         },
-                        Attachments = attachments,
-                        Counters = counters
+                        Attachments = attachments
                     };
                     attachments = null;
-                    counters = null;
                 }
             }
             finally
@@ -1028,20 +1050,6 @@ namespace Raven.Server.Smuggler.Documents
             attachment.Stream.Flush();
         }
 
-        public void ProcessCounter(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.DocumentCounter counter)
-        {
-            if (data.TryGet(nameof(DocumentItem.DocumentCounter.Name), out LazyStringValue name) == false ||
-                data.TryGet(nameof(DocumentItem.DocumentCounter.Values), out BlittableJsonReaderArray values) == false)              
-                throw new ArgumentException($"Data of counter is not valid: {data}");
-
-            if (_writeBuffer == null)
-                _returnWriteBuffer = _context.GetManagedBuffer(out _writeBuffer);
-
-            counter.Name = name;
-            counter.Values = values;
-        }
-
-
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)
         {
             return new BlittableJsonDocumentBuilder(context,
@@ -1079,6 +1087,9 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.CompareExchange), StringComparison.OrdinalIgnoreCase) ||
                 type.Equals("CmpXchg", StringComparison.OrdinalIgnoreCase)) //support the old name
                 return DatabaseItemType.CompareExchange;
+
+            if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Counters;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

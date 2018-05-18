@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Smuggler
             Identities = new Counts();
             Indexes = new Counts();
             CompareExchange = new Counts();
+            Counters = new Counts();
         }
 
         public string Message { get; private set; }
@@ -108,7 +109,9 @@ namespace Raven.Client.Documents.Smuggler
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
             public override Counts CompareExchange => _result.CompareExchange;
-            
+            public override Counts Counters => _result.Counters;
+
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
@@ -152,6 +155,8 @@ namespace Raven.Client.Documents.Smuggler
         
         public virtual Counts CompareExchange { get; set; }
 
+        public virtual Counts Counters { get; set; }
+
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
@@ -164,6 +169,7 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
+                [nameof(Counters)] = Counters.ToJson()
             };
         }
 
@@ -234,20 +240,17 @@ namespace Raven.Client.Documents.Smuggler
 
             public Counts Attachments { get; set; } = new Counts();
 
-            public Counts Counters { get; set; } = new Counts();
-
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(LastEtag)] = LastEtag;
                 json[nameof(Attachments)] = Attachments.ToJson();
-                json[nameof(Counters)] = Counters.ToJson();
                 return json;
             }
 
             public override string ToString()
             {
-                return $"{base.ToString()} Attachments: {Attachments}. Counters: {Counters}";
+                return $"{base.ToString()} Attachments: {Attachments}";
             }
         }
 

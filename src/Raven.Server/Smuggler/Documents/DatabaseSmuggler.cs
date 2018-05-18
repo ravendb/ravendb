@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -82,9 +85,9 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.DatabaseRecord);
             EnsureStepProcessed(result.Documents);
             EnsureStepProcessed(result.Documents.Attachments);
-            EnsureStepProcessed(result.Documents.Counters);
             EnsureStepProcessed(result.RevisionDocuments);
             EnsureStepProcessed(result.RevisionDocuments.Attachments);
+            EnsureStepProcessed(result.Counters);
             EnsureStepProcessed(result.Tombstones);
             EnsureStepProcessed(result.Conflicts);
             EnsureStepProcessed(result.Indexes);
@@ -164,6 +167,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                     counts = ProcessCompareExchange(result);
                     break;
+                case DatabaseItemType.Counters:
+                    counts = ProcessCounters(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -173,7 +179,6 @@ namespace Raven.Server.Smuggler.Documents
             if (counts is SmugglerProgressBase.CountsWithLastEtag countsWithEtag)
             {
                 countsWithEtag.Attachments.Processed = true;
-                countsWithEtag.Counters.Processed = true;
             }
 
             result.AddInfo($"Finished processing {type}. {counts}");
@@ -211,6 +216,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.CompareExchange:
                     counts = result.CompareExchange;
+                    break;
+                case DatabaseItemType.Counters:
+                    counts = result.Counters;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
@@ -571,6 +579,30 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.CompareExchange;
+        }
+
+        private SmugglerProgressBase.Counts ProcessCounters(SmugglerResult result)
+        {
+            using (var actions = _destination.Counters())
+            using (_source.GetCounterValues(out var counters))
+            {
+                foreach (var counterDetail in counters)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Counters.ReadCount++;
+
+                    if (result.Counters.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {result.Counters.ReadCount:#,#;;0} counters.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    actions.WriteCounter(counterDetail);
+                }
+            }
+
+            return result.Counters;
         }
 
         private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)

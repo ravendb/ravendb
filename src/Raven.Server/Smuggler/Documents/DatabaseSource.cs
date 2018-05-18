@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -40,6 +41,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
             DatabaseItemType.CompareExchange,
+            DatabaseItemType.Counters,
             DatabaseItemType.None
         };
 
@@ -241,6 +243,19 @@ namespace Raven.Server.Smuggler.Documents
 
                 compareExchange = _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _database.Name,
                     CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
+
+                return scope.Delay();
+            }
+        }
+
+        public IDisposable GetCounterValues(out IEnumerable<CounterDetail> counters)
+        {
+            using (var scope = new DisposableScope())
+            {
+                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+
+                counters = _database.DocumentsStorage.CountersStorage.GetAllCounters(_context);
 
                 return scope.Delay();
             }

@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         var summary = database.GetDatabaseSummary();
                         result.Documents.ReadCount += summary.DocumentsCount;
                         result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
-                        result.Documents.Counters.ReadCount += summary.CountersCount;
+                        result.Counters.ReadCount += summary.CountersCount;
                         result.RevisionDocuments.ReadCount += summary.RevisionsCount;
                         result.Conflicts.ReadCount += summary.ConflictsCount;
                         result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
@@ -176,6 +176,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         result.RevisionDocuments.Processed = true;
                         result.Conflicts.Processed = true;
                         result.Indexes.Processed = true;
+                        result.Counters.Processed = true;
                         onProgress.Invoke(result.Progress);
 
                         databaseRecord.Topology = new DatabaseTopology();

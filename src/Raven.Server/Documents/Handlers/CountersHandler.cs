@@ -24,60 +24,96 @@ namespace Raven.Server.Documents.Handlers
     {
         public class ExecuteCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly DocumentDatabase _database;
-            private readonly CounterBatch _counterBatch;
             public bool HasWrites;
             public CountersDetail CountersDetail;
             public string LastChangeVector;
 
+            private readonly DocumentDatabase _database;
+            private readonly bool _replyWithAllNodesValues;
+            private Dictionary<string, List<CounterOperation>> _dictionary;
+
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
                 _database = database;
-                _counterBatch = counterBatch;
-
+                _dictionary = new Dictionary<string, List<CounterOperation>>();
+                _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues?? false;
                 CountersDetail = new CountersDetail
                 {
                     Counters = new List<CounterDetail>()
                 };
-                foreach (var docOps  in counterBatch.Documents)
+
+                if (counterBatch == null)
+                    return;
+                foreach (var docOps in counterBatch.Documents)
                 {
                     foreach (var operation in docOps.Operations)
                     {
                         HasWrites |= operation.Type != CounterOperationType.Get &&
                                      operation.Type != CounterOperationType.None;
+                        Add(docOps.DocumentId, operation);
                     }
+                }
+            }
+
+            // used only from smuggler import
+            public ExecuteCounterBatchCommand(DocumentDatabase database)
+            {
+                _database = database;
+                _dictionary = new Dictionary<string, List<CounterOperation>>();
+
+                CountersDetail = new CountersDetail
+                {
+                    Counters = new List<CounterDetail>()
+                };
+            }
+
+            public void Add(string id, CounterOperation op)
+            {
+                if (_dictionary.TryGetValue(id, out var existing) == false)
+                {
+                    _dictionary[id] = new List<CounterOperation> { op };
+                }
+
+                else
+                {
+                    existing.Add(op);
                 }
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
-                foreach (var docOps in _counterBatch.Documents)
+                foreach (var kvp in _dictionary)
                 {
                     Document doc = null;
                     BlittableJsonReaderObject metadata = null;
                     
-                    foreach (var operation in docOps.Operations)
+                    foreach (var operation in kvp.Value)
                     {
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
                                 LoadDocument();
 
-                                LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docOps.DocumentId,
+                                LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, kvp.Key,
                                     operation.CounterName, operation.Delta);
 
-                                GetCounterValue(context, _database, docOps.DocumentId, operation.CounterName, _counterBatch.ReplyWithAllNodesValues, CountersDetail);
+                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                                
                                 break;
                             case CounterOperationType.Delete:
                                 LoadDocument();
-                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docOps.DocumentId,
+                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, kvp.Key,
                                     operation.CounterName);
+                                break;
+                            case CounterOperationType.Put:
+                                LoadDocument();
+                                 _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
+                                    operation.CounterName, operation.ChangeVector, operation.Delta);
                                 break;
                             case CounterOperationType.None:
                                 break;
                             case CounterOperationType.Get:
-                                GetCounterValue(context, _database, docOps.DocumentId, operation.CounterName, _counterBatch.ReplyWithAllNodesValues, CountersDetail);
+                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                                 break;
                             default:
                                 ThrowInvalidBatchOperationType(operation);
@@ -87,18 +123,18 @@ namespace Raven.Server.Documents.Handlers
 
                     if (metadata != null)
                     {
-                        UpdateDocumentCounters(metadata, docOps.Operations);
+                        UpdateDocumentCounters(metadata, kvp.Value);
 
                         if (metadata.Modifications != null)
                         {
-                            var data = context.ReadObject(doc.Data, docOps.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            var data = context.ReadObject(doc.Data, kvp.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                             var flags = data.TryGet(Constants.Documents.Metadata.Key, out metadata) && 
                                         metadata.TryGet(Constants.Documents.Metadata.Counters, out object _)
                                         ? DocumentFlags.HasCounters
                                         : DocumentFlags.None;
 
-                            _database.DocumentsStorage.Put(context, docOps.DocumentId, null, data, flags: flags); 
+                            _database.DocumentsStorage.Put(context, kvp.Key, null, data, flags: flags); 
                         }
                     }
 
@@ -108,11 +144,11 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         try
                         {
-                            doc = _database.DocumentsStorage.Get(context, docOps.DocumentId,
+                            doc = _database.DocumentsStorage.Get(context, kvp.Key,
                                 throwOnConflict: true);
                             if (doc == null)
                             {
-                                ThrowMissingDocument(docOps.DocumentId);
+                                ThrowMissingDocument(kvp.Key);
                                 return; // never hit
                             }
 
@@ -153,6 +189,7 @@ namespace Raven.Server.Documents.Handlers
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
+                            case CounterOperationType.Put:
                                 if (loc < 0)
                                 {
                                     CreateUpdatesIfNeeded();

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using CsvHelper;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -332,6 +333,12 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
             compareExchange = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
+            return new DisposableAction(() => { });
+        }
+
+        public IDisposable GetCounterValues(out IEnumerable<CounterDetail> counters)
+        {
+            counters = Enumerable.Empty<CounterDetail>();
             return new DisposableAction(() => { });
         }
 

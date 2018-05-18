@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.Counters
     public class CounterBatch
     {
         public bool ReplyWithAllNodesValues;
-        public List<DocumentCountersOperation> Documents;
+        public List<DocumentCountersOperation> Documents = new List<DocumentCountersOperation>();
     }
 
     public class DocumentCountersOperation
@@ -76,7 +76,8 @@ namespace Raven.Client.Documents.Operations.Counters
         None,
         Increment,
         Delete,
-        Get
+        Get,
+        Put
     }
 
     public class CounterOperation
@@ -84,6 +85,8 @@ namespace Raven.Client.Documents.Operations.Counters
         public CounterOperationType Type;
         public string CounterName;
         public long Delta;
+
+        public string ChangeVector;
 
         public static CounterOperation Parse(BlittableJsonReaderObject input)
         {

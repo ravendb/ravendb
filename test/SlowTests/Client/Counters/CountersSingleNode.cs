@@ -409,5 +409,32 @@ namespace SlowTests.Client.Counters
             }
         }
 
+        [Fact]
+        public void CounterNameShouldPreserveCase()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.Advanced.Counters.Increment("users/1-A", "Likes", 10);
+                    session.SaveChanges();
+                }
+
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+                    var val = session.Advanced.Counters.Get(user, "Likes");
+                    Assert.Equal(10, val);
+
+                    var counters = session.Advanced.GetCountersFor(user);
+                    Assert.Equal("Likes", counters[0]);
+
+                }
+
+            }
+        }
+
     }
 }
