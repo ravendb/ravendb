@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminScriptRunnersDebugInfoHandler:RequestHandler
+    public class AdminScriptRunnersDebugInfoHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/scriptRunners", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/debug/script-runners", "GET", AuthorizationStatus.Operator)]
         public Task GetJSAdminDebugInfo()
         {
-            var detailed = GetBoolValueQueryString("detailed", required: false);
+            var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -24,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var runnerInfo in Server.AdminScripts.GetDebugInfo(detailed ?? false))
+                    foreach (var runnerInfo in Server.AdminScripts.GetDebugInfo(detailed))
                     {
                         if (first == false)
                             writer.WriteComma();
