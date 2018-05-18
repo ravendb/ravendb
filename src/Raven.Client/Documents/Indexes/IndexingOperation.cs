@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Indexes
 
             public const string Linq = "Linq";
 
+            public const string Jint = "Jint";
+
             public const string Bloom = "Bloom";
         }
 

@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                     }
 
-                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
+                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
                                     {
                                         while (docsEnumerator.MoveNext(out IEnumerable mapResults))
                                         {

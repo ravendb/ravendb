@@ -169,6 +169,7 @@ class indexPerformance extends viewModelBase {
             "Map": "#0b4971",
             "Storage/DocumentRead": "#0077b5",
             "Linq": "#008cc9",
+            "Jint": "#008cc9",
             "LoadDocument": "#008cc9",
             "Bloom": "#34b3e4",
             "Lucene/Delete": "#66418c",
