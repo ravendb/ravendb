@@ -24,6 +24,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private readonly Stream _stream;
         private readonly DocumentsOperationContext _context;
+        private SmugglerResult _result;
         private DatabaseItemType _currentType;
         private readonly string _collection;
         private StreamReader _reader;
@@ -57,6 +58,7 @@ namespace Raven.Server.Smuggler.Documents
             buildVersion = ServerVersion.DevBuildNumber;
             _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader);
+            _result = result;
             _csvReader.Configuration.Delimiter = ",";
             return new DisposableAction(() =>
             {
@@ -155,13 +157,27 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
+            var line = 0;
             while (_csvReader.Read())
             {
+                line++;
+
                 if (ProcessFieldsIfNeeded())
                     continue;
 
                 var context = actions.GetContextForNewDocument();
-                yield return ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
+                DocumentItem item = null;
+                try
+                {
+                    item = ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
+                }
+                catch (Exception e)
+                {
+                    _result.AddError($"Fail to parse CSV line {line}, Error:{e}");
+                    _result.Documents.ErroredCount++;
+                    continue;
+                }
+                yield return item;
             }
 
         }
