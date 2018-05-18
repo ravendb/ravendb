@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ScriptRunnersDebugInfoHandler:DatabaseRequestHandler
+    public class ScriptRunnersDebugInfoHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/scriptRunners", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/script-runners", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetJSDebugInfo()
         {
-            var detailed = GetBoolValueQueryString("detailed", required: false);
-            
+            var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
+
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -24,19 +20,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var runnerInfo in Database.Scripts.GetDebugInfo(detailed ?? false))
+                    foreach (var runnerInfo in Database.Scripts.GetDebugInfo(detailed))
                     {
                         if (first == false)
                             writer.WriteComma();
                         first = false;
                         using (var runnerInfoReader = context.ReadObject(runnerInfo, "runnerInfo"))
-                            writer.WriteObject(runnerInfoReader);                        
+                            writer.WriteObject(runnerInfoReader);
                     }
                     writer.WriteEndArray();
                     writer.WriteEndObject();
                 }
             }
             return Task.CompletedTask;
-        }        
+        }
     }
 }
