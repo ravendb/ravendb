@@ -66,7 +66,16 @@ namespace Raven.Client.Documents.Changes
 
         private void OnConnectionStatusChanged(object sender, EventArgs e)
         {
-            _semaphore.Wait();
+            try
+            {
+                _semaphore.Wait(_cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // disposing
+                return;
+            }
+
             try
             {
                 if (Connected)
@@ -573,6 +582,9 @@ namespace Raven.Client.Documents.Changes
 
         private void NotifyAboutError(Exception e)
         {
+            if (_cts.Token.IsCancellationRequested)
+                return;
+
             OnError?.Invoke(e);
 
             foreach (var state in _counters.ValuesSnapshot)
