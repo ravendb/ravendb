@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using SlowTests.Client;
+using SlowTests.MailingList;
 
 namespace Tryouts
 {
@@ -11,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new UniqueValues())
+                using (var test = new Severin_null_data_time())
                 {
-                    await test.CanPutUniqueString();
+                    test.QueryDateCompareTest();
                 }
             }
         }
