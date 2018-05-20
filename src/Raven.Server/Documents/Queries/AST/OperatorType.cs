@@ -9,8 +9,6 @@
         LessThanEqual,
         GreaterThanEqual,
         And,
-        AndNot,
-        Or,
-        OrNot,
+        Or
     }
 }
