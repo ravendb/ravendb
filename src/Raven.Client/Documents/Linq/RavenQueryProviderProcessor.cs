@@ -692,12 +692,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
             var memberInfo = GetMember(expression.Left);
-            var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
+            var memberType = GetMemberType(memberInfo);
+            var value = GetValueFromExpression(expression.Right, memberType);
+            var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
+
+            if (memberType.IsValueType)
+            {
+                _documentQuery.OpenSubclause();
+            }
 
             _documentQuery.WhereGreaterThan(
-                GetFieldNameForRangeQuery(memberInfo, value),
+                fieldName,
                 value,
                 _insideExact);
+
+            if (memberType.IsValueType)
+            {
+                _documentQuery.AndAlso();
+                _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
+                _documentQuery.CloseSubclause();
+            }
         }
 
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
@@ -709,13 +723,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             var memberInfo = GetMember(expression.Left);
+            var memberType = GetMemberType(memberInfo);
 
-            var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
+            var value = GetValueFromExpression(expression.Right, memberType);
+            var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
+            if (memberType.IsValueType)
+            {
+                _documentQuery.OpenSubclause();
+                
+            }
             _documentQuery.WhereGreaterThanOrEqual(
-                GetFieldNameForRangeQuery(memberInfo, value),
+                fieldName,
                 value,
                 _insideExact);
+            if (memberType.IsValueType)
+            {
+                _documentQuery.AndAlso();
+                _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
+                _documentQuery.CloseSubclause();
+            }
         }
 
         private void VisitLessThan(BinaryExpression expression)
@@ -726,12 +753,25 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
             var memberInfo = GetMember(expression.Left);
-            var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
+            var memberType = GetMemberType(memberInfo);
+            var value = GetValueFromExpression(expression.Right, memberType);
+            var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
+            if (memberType.IsValueType)
+            {
+                _documentQuery.OpenSubclause();
+            }
             _documentQuery.WhereLessThan(
-                GetFieldNameForRangeQuery(memberInfo, value),
+                fieldName,
                 value,
                 _insideExact);
+
+             if (memberType.IsValueType)
+            {
+                _documentQuery.AndAlso();
+                _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
+                _documentQuery.CloseSubclause();
+            }
         }
 
         private void VisitLessThanOrEqual(BinaryExpression expression)
@@ -742,14 +782,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
             var memberInfo = GetMember(expression.Left);
+            var memberType = GetMemberType(memberInfo);
 
-
-            var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
-
+            var value = GetValueFromExpression(expression.Right, memberType);
+            var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
+            if (memberType.IsValueType)
+            {
+                _documentQuery.OpenSubclause();
+            }
             _documentQuery.WhereLessThanOrEqual(
-                GetFieldNameForRangeQuery(memberInfo, value),
+                fieldName,
                 value,
                 _insideExact);
+               if (memberType.IsValueType)
+            {
+                _documentQuery.AndAlso();
+                _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
+                _documentQuery.CloseSubclause();
+            }
         }
 
         private void VisitAny(MethodCallExpression expression)
