@@ -7,6 +7,7 @@ namespace Raven.Server.Documents.Queries.AST
         public QueryExpression Left;
         public OperatorType Operator;
         public QueryExpression Right;
+        public bool Parenthesis;
 
         public BinaryExpression(QueryExpression left, QueryExpression right, OperatorType op)
         {
@@ -47,14 +48,8 @@ namespace Raven.Server.Documents.Queries.AST
                 case OperatorType.And:
                     op = "and";
                     break;
-                case OperatorType.AndNot:
-                    op = "and not";
-                    break;
                 case OperatorType.Or:
                     op = "or";
-                    break;
-                case OperatorType.OrNot:
-                    op = "or not";
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

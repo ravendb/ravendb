@@ -75,6 +75,11 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
+        public virtual void VisitNegatedExpresson(NegatedExpression expr)
+        {
+            VisitExpression(expr.Expression);
+        }
+
         public virtual void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> select, bool isDistinct)
         {
             foreach (var s in select)
@@ -125,9 +130,7 @@ namespace Raven.Server.Documents.Queries.AST
                     VisitSimpleWhereExpression(@where);
                     break;
                 case OperatorType.And:
-                case OperatorType.AndNot:
                 case OperatorType.Or:
-                case OperatorType.OrNot:
                     VisitCompoundWhereExpression(@where);
                     break;
                 default:
@@ -141,7 +144,6 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpression(where.Left);
             VisitExpression(where.Right);
         }
-
 
         public void VisitExpression(QueryExpression expr)
         {
@@ -167,6 +169,9 @@ namespace Raven.Server.Documents.Queries.AST
                     break;
                 case ExpressionType.True:
                     VisitTrue();
+                    break;
+                case ExpressionType.Negated:
+                    VisitNegatedExpresson((NegatedExpression)expr);
                     break;
                 default:
                     GetValueThrowInvalidExprType(expr);

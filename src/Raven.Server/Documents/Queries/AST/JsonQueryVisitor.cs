@@ -13,7 +13,17 @@ namespace Raven.Server.Documents.Queries.AST
         {
             _writer = writer;
         }
-        
+
+        public override void VisitNegatedExpresson(NegatedExpression expr)
+        {
+            _writer.WriteStartObject();
+            _writer.WritePropertyName("Type");
+            _writer.WriteValue("Not");
+            _writer.WritePropertyName("Expression");
+            VisitExpression(expr.Expression);
+            _writer.WriteEndObject();
+        }
+
         public override void VisitInclude(List<QueryExpression> includes)
         {
             _writer.WritePropertyName("Include");

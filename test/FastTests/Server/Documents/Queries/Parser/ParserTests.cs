@@ -116,12 +116,10 @@ UPDATE {
         [InlineData("Name <= 'Oren'", OperatorType.LessThanEqual)]
         [InlineData("Name > 'Oren'", OperatorType.GreaterThan)]
         [InlineData("Name >= 'Oren'", OperatorType.GreaterThanEqual)]
-     
+
         [InlineData("State = 2 AND Act = 'Wait'", OperatorType.And)]
         [InlineData("(State = 2 OR Act = 'Wait')", OperatorType.Or)]
-        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", OperatorType.OrNot)]
-        [InlineData("State = 2 AND NOT (User = 'Admin' OR User ='Root')", OperatorType.AndNot)]
-       public void CanParse(string q, OperatorType type)
+        public void CanParse(string q, OperatorType type)
         {
             var parser = new QueryParser();
             parser.Init(q);
@@ -131,7 +129,21 @@ UPDATE {
             Assert.IsType<BinaryExpression>(op);
             Assert.Equal(type, ((BinaryExpression)op).Operator);
         }
-        
+
+        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", OperatorType.Or)]
+        [InlineData("State = 2 AND NOT (User = 'Admin' OR User ='Root')", OperatorType.And)]
+        public void CanParseNegated(string q, OperatorType type)
+        {
+            var parser = new QueryParser();
+            parser.Init(q);
+
+            QueryExpression op;
+            Assert.True(parser.Expression(out op));
+            Assert.IsType<BinaryExpression>(op);
+            Assert.Equal(type, ((BinaryExpression)op).Operator);
+            Assert.IsType<NegatedExpression>(((BinaryExpression)op).Right);
+        }
+
         [InlineData("Name between 'Oren' AND 'Phoebe'", typeof(BetweenExpression))]
         [InlineData("(Name between 'Oren' AND 'Phoebe')", typeof(BetweenExpression))]
         [InlineData("boost()", typeof(MethodExpression))]
@@ -141,9 +153,9 @@ UPDATE {
         [InlineData("Name IN ()", typeof(InExpression))]
         [InlineData("(Name IN ())", typeof(InExpression))]
         [InlineData("Age in (23)", typeof(InExpression))]
-        [InlineData("Age in (23,48)",typeof(InExpression))]
+        [InlineData("Age in (23,48)", typeof(InExpression))]
         [InlineData("Status in ('Active', 'Passive')", typeof(InExpression))]
-        [InlineData("(Status in ('Active', 'Passive'))",typeof(InExpression))]
+        [InlineData("(Status in ('Active', 'Passive'))", typeof(InExpression))]
         public void CanParse2(string q, Type type)
         {
             var parser = new QueryParser();
@@ -153,7 +165,7 @@ UPDATE {
             Assert.True(parser.Expression(out op));
             Assert.Equal(type, op.GetType());
         }
-        
+
         [Theory]
         [InlineData("Name =     'Oren'", "Name = 'Oren'")]
         [InlineData("Name between \n'Oren' AND 'Phoebe'", "Name BETWEEN 'Oren' AND 'Phoebe'")]
@@ -163,8 +175,8 @@ UPDATE {
         [InlineData("Age in (23,48)", "Age IN (23, 48)")]
         [InlineData("(Status in ('Active', 'Passive'))", "Status IN ('Active', 'Passive')")]
         [InlineData("State = 2 AND Act = 'Wait'", "(State = 2 AND Act = 'Wait')")]
-        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", "((State = 2 OR Act = 'Wait') OR NOT User = 'Admin')")]
-        [InlineData("State = 2 AND NOT (User = 'Admin' OR User = 'Root')", "(State = 2 AND NOT (User = 'Admin' OR User = 'Root'))")]
+        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", "((State = 2 OR Act = 'Wait') OR NOT (User = 'Admin'))")]
+        [InlineData("State = 2 AND NOT (User = 'Admin' OR User = 'Root')", "(State = 2 AND NOT ((User = 'Admin' OR User = 'Root')))")]
         [InlineData("boost()", "boost()")]
         [InlineData("boost( User = 'Admin' )", "boost(User = 'Admin')")]
         [InlineData("boost(User = 'Admin' OR User = 'Root', 2)", "boost((User = 'Admin' OR User = 'Root'), 2)")]
@@ -179,16 +191,16 @@ UPDATE {
             new StringQueryVisitor(output.GetStringBuilder()).VisitExpression(op);
             Assert.Equal(o, output.GetStringBuilder().ToString());
         }
-        
+
         [Theory]
         [InlineData("State = 2 AND Act = 'Wait'", "{\"Type\":\"And\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Equal\",\"Left\":\"Act\",\"Right\":\"Wait\"}}")]
         [InlineData("( Name between 'Oren' AND 'Phoebe' )", "{\"Between\":{\"Min\":\"Oren\",\"Max\":\"Phoebe\"}}")]
         [InlineData("Name IN ()", "{\"In\":[]}")]
         [InlineData("Age in (23,48)", "{\"In\":[23,48]}")]
-        [InlineData("State = 2 AND NOT (User = 'Admin' OR User = 'Root')", "{\"Type\":\"AndNot\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Admin\"},\"Right\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Root\"}}}")]
+        [InlineData("State = 2 AND NOT (User = 'Admin' OR User = 'Root')", "{\"Type\":\"And\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Not\",\"Expression\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Admin\"},\"Right\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Root\"}}}}")]
         [InlineData("Name =     'Oren'", "{\"Type\":\"Equal\",\"Left\":\"Name\",\"Right\":\"Oren\"}")]
         [InlineData("boost()", "{\"Method\":\"boost\",\"Arguments\":[]}")]
-        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", "{\"Type\":\"OrNot\",\"Left\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Equal\",\"Left\":\"Act\",\"Right\":\"Wait\"}},\"Right\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Admin\"}}")]
+        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", "{\"Type\":\"Or\",\"Left\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Equal\",\"Left\":\"Act\",\"Right\":\"Wait\"}},\"Right\":{\"Type\":\"Not\",\"Expression\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Admin\"}}}")]
         [InlineData("boost(User = 'Admin' OR User = 'Root', 2)", "{\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Admin\"},\"Right\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Root\"}},2]}")]
         [InlineData("(Name IN ())", "{\"In\":[]}")]
         [InlineData("(Status in ('Active', 'Passive'))", "{\"In\":[\"Active\",\"Passive\"]}")]
