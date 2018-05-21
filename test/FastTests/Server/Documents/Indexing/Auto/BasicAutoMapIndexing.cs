@@ -976,23 +976,23 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         now.Add(TimeSpan.FromSeconds(1))
                            .Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
-                database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
+                database.IndexStore.RunIdleOperations(); // should not remove anything, age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 
                 index1 = database.IndexStore.GetIndex(index1.Name);
                 index2 = database.IndexStore.GetIndex(index2.Name);
 
-                Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
+                Assert.Equal(IndexState.Idle, index1.State);
                 Assert.Equal(IndexState.Idle, index2.State);
 
                 now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
 
-                database.IndexStore.RunIdleOperations(); // this will delete index2
+                database.IndexStore.RunIdleOperations(); // this will delete indexes
 
                 index1 = database.IndexStore.GetIndex(index1.Name);
                 index2 = database.IndexStore.GetIndex(index2.Name);
 
-                Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
+                Assert.Null(index1);
                 Assert.Null(index2);
             }
         }
