@@ -1012,7 +1012,7 @@ namespace Raven.Server.Web.System
                         {
                             using (token)
                             {
-                                var before = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                                var before = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
                                 var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
                                 // first fill in data 
@@ -1041,7 +1041,7 @@ namespace Raven.Server.Web.System
                                 await compactDatabaseTask.Execute(onProgress, overallResult);
                                 overallResult.Processed = true;
 
-                                overallResult.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                                overallResult.SizeAfterCompactionInMb = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
                                 overallResult.SizeBeforeCompactionInMb = before;
 
                                 return (IOperationResult)overallResult;
@@ -1064,41 +1064,11 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public async Task<long> CalculateStorageSizeInBytes(string databaseName)
+        private async Task<Size> CalculateStorageSize(string databaseName)
         {
-            long sizeOnDiskInBytes = 0;
-
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            var storageEnvironments = database?.GetAllStoragesEnvironment();
-            if (storageEnvironments != null)
-            {
-                foreach (var environment in storageEnvironments)
-                {
-                    Transaction tx = null;
-                    try
-                    {
-                        try
-                        {
-                            tx = environment?.Environment.ReadTransaction();
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            continue;
-                        }
-                        var storageReport = environment?.Environment.GenerateReport(tx);
-                        if (storageReport == null)
-                            continue;
 
-                        var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-                        sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
-                    }
-                    finally
-                    {
-                        tx?.Dispose();
-                    }
-                }
-            }
-            return sizeOnDiskInBytes;
+            return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
         }
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]

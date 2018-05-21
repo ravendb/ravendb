@@ -176,6 +176,40 @@ namespace SlowTests.Voron.Storage
         }
 
         [Theory]
+        [InlineData(0)]
+        [InlineData(7)]
+        [InlineData(14)]
+        public void TempBuffersReportsArePresent(int numberOfTrees)
+        {
+            RequireFileBasedPager();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < numberOfTrees; i++)
+                {
+                    var tree = tx.CreateTree("tree_" + i);
+
+                    AddEntries(tree, i);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var report = Env.GenerateDetailedReport(tx);
+
+                Assert.NotEmpty(report.TempBuffers);
+
+                foreach (var tempBuffer in report.TempBuffers)
+                {
+                    Assert.NotNull(tempBuffer.Name);
+                    Assert.True(tempBuffer.AllocatedSpaceInBytes > 0);
+                }
+            }
+        }
+
+        [Theory]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(15)]

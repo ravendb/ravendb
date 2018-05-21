@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -17,6 +18,7 @@ using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Util.Settings;
 
 namespace Voron.Debugging
 {
@@ -28,6 +30,7 @@ namespace Voron.Debugging
         public long NextPageNumber { get; set; }
         public int CountOfTrees { get; set; }
         public int CountOfTables { get; set; }
+        public VoronPathSetting TempPath { get; set; }
     }
 
     public class DetailedReportInput
@@ -41,6 +44,7 @@ namespace Voron.Debugging
         public List<Table> Tables;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool CalculateExactSizes { get; set; }
+        public VoronPathSetting TempPath { get; set; }
     }
 
     public unsafe class StorageReportGenerator
@@ -58,10 +62,13 @@ namespace Voron.Debugging
 
             var journals = GenerateJournalsReport(input.Journals);
 
+            var tempBuffers = GenerateTempBuffersReport(input.TempPath);
+
             return new StorageReport
             {
                 DataFile = dataFile,
                 Journals = journals,
+                TempFiles = tempBuffers,
                 CountOfTables = input.CountOfTables,
                 CountOfTrees = input.CountOfTrees
             };
@@ -95,6 +102,7 @@ namespace Voron.Debugging
             }
 
             var journals = GenerateJournalsReport(input.Journals);
+            var tempBuffers = GenerateTempBuffersReport(input.TempPath);
 
             return new DetailedStorageReport
             {
@@ -103,7 +111,8 @@ namespace Voron.Debugging
                 Tables = tables,
                 Journals = journals,
                 PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes),
-                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo
+                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo,
+                TempBuffers = tempBuffers,
             };
         }
 
@@ -125,6 +134,20 @@ namespace Voron.Debugging
             {
                 Number = journal.Number,
                 AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte
+            }).ToList();
+        }
+
+        private List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath)
+        {
+            return Directory.GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
+            {
+                var file = new FileInfo(filePath);
+
+                return new TempBufferReport
+                {
+                    Name = file.Name,
+                    AllocatedSpaceInBytes = file.Length
+                };
             }).ToList();
         }
 
