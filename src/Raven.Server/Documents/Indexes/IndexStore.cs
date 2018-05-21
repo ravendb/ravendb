@@ -1038,15 +1038,28 @@ namespace Raven.Server.Documents.Indexes
                         differenceBetweenNewestAndCurrentQueryingTime = lastItem.LastQueryingTime - item.LastQueryingTime;
                     }
                     else
-                        differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
+                    {
+                        if (item.LastQueryingTime > _documentDatabase.StartTime)
+                            differenceBetweenNewestAndCurrentQueryingTime = now - item.LastQueryingTime;
+                        else
+                            differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
+                    }
 
                     if (differenceBetweenNewestAndCurrentQueryingTime >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                     {
                         if (lastQuery >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                         {
-                            item.Index.SetState(IndexState.Idle);
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Changed index '{item.Index.Name}' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
+                            try
+                            {
+                                item.Index.SetState(IndexState.Idle);
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Changed index '{item.Index.Name}' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
+                            }
+                            catch (Exception e)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Failed to set state of '{item.Index.Name}' to {IndexState.Idle} when running idle operations", e);
+                            }
                         }
                     }
 

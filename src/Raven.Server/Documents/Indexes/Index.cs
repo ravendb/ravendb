@@ -1939,7 +1939,18 @@ namespace Raven.Server.Documents.Indexes
             AssertIndexState();
 
             if (State == IndexState.Idle)
-                SetState(IndexState.Normal);
+            {
+                try
+                {
+                    SetState(IndexState.Normal);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
+                            e);
+                }
+            }
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
@@ -2476,7 +2487,7 @@ namespace Raven.Server.Documents.Indexes
 
             var indexEtagBytes = stackalloc byte[length];
 
-            CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
             unchecked
             {
@@ -2488,11 +2499,12 @@ namespace Raven.Server.Documents.Indexes
         {
             var length = sizeof(long) * 4 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
-                         1; // isStale
+                         1 + // isStale
+                         1; // index state
             return length;
         }
 
-        protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale,
+        protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale, IndexState indexState,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
 
@@ -2516,6 +2528,8 @@ namespace Raven.Server.Documents.Indexes
             *(int*)indexEtagBytes = Definition.GetHashCode();
             indexEtagBytes += sizeof(int);
             *indexEtagBytes = isStale ? (byte)0 : (byte)1;
+            indexEtagBytes += sizeof(byte);
+            *indexEtagBytes = (byte)indexState;
         }
 
         public long GetIndexEtag()
