@@ -707,7 +707,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
-            if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.OpenSubclause();
             }
@@ -717,7 +717,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 value,
                 _insideExact);
 
-            if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
@@ -739,21 +739,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
-            if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.OpenSubclause();
-                
+
             }
             _documentQuery.WhereGreaterThanOrEqual(
                 fieldName,
                 value,
                 _insideExact);
-            if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
                 _documentQuery.CloseSubclause();
             }
+        }
+
+        private static bool ShouldExcludeNullTypes(Type memberType)
+        {
+            return memberType.IsValueType && Nullable.GetUnderlyingType(memberType) != null;
         }
 
         private void VisitLessThan(BinaryExpression expression)
@@ -768,7 +773,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
-            if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.OpenSubclause();
             }
@@ -777,7 +782,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 value,
                 _insideExact);
 
-             if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
@@ -797,7 +802,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
-            if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.OpenSubclause();
             }
@@ -805,7 +810,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldName,
                 value,
                 _insideExact);
-               if (memberType.IsValueType)
+            if (ShouldExcludeNullTypes(memberType))
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);

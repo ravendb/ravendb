@@ -4,6 +4,8 @@ using FastTests.Server.Documents.Queries.Parser;
 using SlowTests.Client;
 using SlowTests.Issues;
 using SlowTests.MailingList;
+using SlowTests.Server.Replication;
+using SlowTests.Tests.Faceted;
 
 namespace Tryouts
 {
@@ -14,10 +16,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new ParserTests())
+                using (var test = new FacetsWithParameters())
                 {
-                    test.ParseAndWriteAst(q: "(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", o:
-                        "{\"Type\":\"Or\",\"Left\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Equal\",\"Left\":\"Act\",\"Right\":\"Wait\"}},\"Right\":{\"Type\":\"Not\",\"Expression\":{\"Type\":\"Equal\",\"Left\":\"User\",\"Right\":\"Admin\"}}}");
+                    test.FacetShouldUseParameters_WithFacetBaseList();
                 }
             }
         }
