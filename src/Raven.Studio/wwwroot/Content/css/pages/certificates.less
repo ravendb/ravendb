@@ -1,5 +1,15 @@
 ﻿.certificates {
     .certificate-item {
+        .flex-horizontal {
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: @screen-lg-max) {
+            .certificate-name {
+                width: 100%;
+            }
+        }
+
         .thumbprint {
             font-size: 12px;
         }
