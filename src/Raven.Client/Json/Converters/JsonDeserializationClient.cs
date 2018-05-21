@@ -164,5 +164,7 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, FtpSettings> FtpSettings = GenerateJsonDeserializationRoutine<FtpSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, ClaimDomainResult> ClaimDomainResult = GenerateJsonDeserializationRoutine<ClaimDomainResult>();
+        internal static readonly Func<BlittableJsonReaderObject, ForceRenewResult> ForceRenewResult = GenerateJsonDeserializationRoutine<ForceRenewResult>();
+
     }
 }

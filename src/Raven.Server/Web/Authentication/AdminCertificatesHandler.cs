@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -785,14 +786,22 @@ namespace Raven.Server.Web.Authentication
 
             try
             {
-                Server.RefreshClusterCertificate(true);
+                var success = Server.RefreshClusterCertificate(true);
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(ForceRenewResult.Success));
+                    writer.WriteBool(success);
+                    writer.WriteEndObject();
+                }
+
+                return Task.CompletedTask;
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
             }
-
-            return NoContent();
         }
 
         [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin)]
