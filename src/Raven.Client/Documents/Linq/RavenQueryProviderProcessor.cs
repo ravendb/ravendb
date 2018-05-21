@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Linq
                                                 "All Binary Expressions inside a Where clause should be between a field and a constant value. " +
                                                 $"`{expression.Left}` and `{expression.Right}` are both fields.");
             }
-          
+
         }
 
         private void VisitAndAlso(BinaryExpression andAlso)
@@ -696,7 +696,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
-            if (memberType.IsValueType)
+            var memberTypeInfo = memberType.GetTypeInfo();
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.OpenSubclause();
             }
@@ -706,7 +707,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 value,
                 _insideExact);
 
-            if (memberType.IsValueType)
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
@@ -728,16 +729,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
-            if (memberType.IsValueType)
+            var memberTypeInfo = memberType.GetTypeInfo();
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.OpenSubclause();
-                
+
             }
             _documentQuery.WhereGreaterThanOrEqual(
                 fieldName,
                 value,
                 _insideExact);
-            if (memberType.IsValueType)
+
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
@@ -757,16 +760,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
-            if (memberType.IsValueType)
+            var memberTypeInfo = memberType.GetTypeInfo();
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.OpenSubclause();
             }
+
             _documentQuery.WhereLessThan(
                 fieldName,
                 value,
                 _insideExact);
 
-             if (memberType.IsValueType)
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
@@ -786,15 +791,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var value = GetValueFromExpression(expression.Right, memberType);
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
-            if (memberType.IsValueType)
+
+            var memberTypeInfo = memberType.GetTypeInfo();
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.OpenSubclause();
             }
+
             _documentQuery.WhereLessThanOrEqual(
                 fieldName,
                 value,
                 _insideExact);
-               if (memberType.IsValueType)
+
+            if (memberTypeInfo.IsValueType)
             {
                 _documentQuery.AndAlso();
                 _documentQuery.WhereNotEquals(fieldName, null, _insideExact);
@@ -1761,7 +1770,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (!(newExpression.Arguments[index] is MemberExpression memberExpression))
                 {
                     throw new InvalidOperationException($"Illegal expression of type {newExpression.Arguments[index].GetType()} " +
-                                                        $"in GroupBy clause : {newExpression.Arguments[index]}." +  Environment.NewLine +
+                                                        $"in GroupBy clause : {newExpression.Arguments[index]}." + Environment.NewLine +
                                                         "You cannot do computation in group by dynamic query, " +
                                                         "you can group on properties / fields only.");
                 }
