@@ -1038,7 +1038,12 @@ namespace Raven.Server.Documents.Indexes
                         differenceBetweenNewestAndCurrentQueryingTime = lastItem.LastQueryingTime - item.LastQueryingTime;
                     }
                     else
-                        differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
+                    {
+                        if (item.LastQueryingTime > _documentDatabase.StartTime)
+                            differenceBetweenNewestAndCurrentQueryingTime = now - item.LastQueryingTime;
+                        else
+                            differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
+                    }
 
                     if (differenceBetweenNewestAndCurrentQueryingTime >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                     {
