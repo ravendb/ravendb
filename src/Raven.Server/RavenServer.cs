@@ -1306,11 +1306,6 @@ namespace Raven.Server
                 return true;
             }
 
-            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection)
-            {
-                return true;
-            }
-
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
                 // check for the term          
