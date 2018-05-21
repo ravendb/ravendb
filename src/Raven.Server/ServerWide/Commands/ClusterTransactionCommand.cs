@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Extensions;
@@ -21,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands
         public string Database;
         public long DatabaseCommandsCount;
 
-        public class ClusterTransactionDataCommand
+        public class DatabaseCommand
         {
             public CommandType Type;
             public string Id;
@@ -29,14 +30,14 @@ namespace Raven.Server.ServerWide.Commands
             public string ChangeVector;
             public long Index;
 
-            public static ClusterTransactionDataCommand FromCommandData(BatchRequestParser.CommandData command)
+            public static DatabaseCommand FromCommandData(BatchRequestParser.CommandData command)
             {
                 if (command.IdPrefixed)
                 {
                     throw new NotSupportedException("Deleting by prefix is not supported on cluster transaction.");
                 }
 
-                return new ClusterTransactionDataCommand
+                return new DatabaseCommand
                 {
                     Id = command.Id,
                     ChangeVector = command.ChangeVector,
@@ -85,14 +86,14 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public List<ClusterTransactionDataCommand> ClusterCommands = new List<ClusterTransactionDataCommand>();
+        public List<DatabaseCommand> ClusterCommands = new List<DatabaseCommand>();
         public BlittableJsonReaderObject SerializedDatabaseCommands;
 
         [JsonDeserializationIgnore]
         public ClusterTransactionOptions Options;
 
         [JsonDeserializationIgnore]
-        public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
+        public readonly List<DatabaseCommand> DatabaseCommands = new List<DatabaseCommand>();
 
         public static Slice CommandsCountKey;
 
@@ -103,14 +104,14 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand() { }
 
-        public ClusterTransactionCommand(string database, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands, ClusterTransactionOptions options)
+        public ClusterTransactionCommand(string database, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands, ClusterTransactionOptions options = null)
         {
             Database = database;
             Options = options;
 
             foreach (var commandData in commandParsedCommands)
             {
-                var command = ClusterTransactionDataCommand.FromCommandData(commandData);
+                var command = DatabaseCommand.FromCommandData(commandData);
                 switch (commandData.Type)
                 {
                     case CommandType.PUT:
@@ -270,16 +271,44 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public class SingleClusterDatabaseCommand
+        public class SingleClusterDatabaseCommand : IDynamicJsonWithContext
         {
             public ClusterTransactionOptions Options;
             public BlittableJsonReaderArray Commands;
             public long Index;
             public long PreviousCount;
             public string Database;
+
+            public DynamicJsonValue ToJson(JsonOperationContext context)
+            {
+                var djv = new DynamicJsonValue
+                {
+                    // we don't serialize the database name and the options. They are irrelevant for the export.
+                    // Because we import to a completely different database.
+                    [nameof(Index)] = Index,
+                    [nameof(PreviousCount)] = PreviousCount,
+                };
+
+                if (Commands != null && Commands.Length > 0)
+                {
+                    var deserializedCommands = new List<DatabaseCommand>(Commands.Length);
+                    foreach (BlittableJsonReaderObject command in Commands)
+                    {
+                        deserializedCommands.Add(JsonDeserializationServer.ClusterDatabaseCommand(command));
+                    }
+                    djv[nameof(Commands)] = new DynamicJsonArray(deserializedCommands.Select(x => x.ToJson(context)));
+                }
+
+                return djv;
+            }
         }
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long fromIndex)
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(
+            TransactionOperationContext context, 
+            DocumentsOperationContext docContext,
+            string database, 
+            long fromIndex,
+            bool checkExecution = true)
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
@@ -298,6 +327,17 @@ namespace Raven.Server.ServerWide.Commands
                         yield break;
                     if (result.Index < fromIndex)
                         continue;
+
+                    if (checkExecution)
+                    {
+                        // we check if we already executed this transaction, by checking the RAFT element.
+                        var clusterCommands = ChangeVectorUtils.GetEtagById(docContext.LastDatabaseChangeVector, docContext.DocumentDatabase.DatabaseGroupId);
+                        if (clusterCommands >= result.PreviousCount + result.Commands.Length)
+                        {
+                            continue;
+                        }
+                    }
+
                     yield return result;
                 }
             }
@@ -350,14 +390,20 @@ namespace Raven.Server.ServerWide.Commands
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var djv = base.ToJson(context);
-            djv[nameof(ClusterCommands)] = new DynamicJsonArray(ClusterCommands.Select(x => x.ToJson(context)));
+            if (ClusterCommands.Count > 0)
+            {
+                djv[nameof(ClusterCommands)] = new DynamicJsonArray(ClusterCommands.Select(x => x.ToJson(context)));
+            }
             if (SerializedDatabaseCommands == null && DatabaseCommands.Count > 0)
             {
                 var databaseCommands = new DynamicJsonValue
                 {
                     [nameof(DatabaseCommands)] = new DynamicJsonArray(DatabaseCommands.Select(x => x.ToJson(context))),
-                    [nameof(Options)] = Options.ToJson(),
                 };
+                if (Options != null)
+                {
+                    databaseCommands[nameof(Options)] = Options.ToJson();
+                }
                 SerializedDatabaseCommands = context.ReadObject(databaseCommands, "read database commands");
             }
             djv[nameof(SerializedDatabaseCommands)] = SerializedDatabaseCommands;

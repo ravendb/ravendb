@@ -115,6 +115,12 @@ namespace Raven.Server.Documents
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
+                if (flags.Contain(DocumentFlags.FromClusterTransaction) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                {
+                    var index = ChangeVectorUtils.GetEtagById(context.LastDatabaseChangeVector, _documentDatabase.DatabaseGroupId);
+                    changeVector = $"RAFT:{index}-{_documentDatabase.DatabaseGroupId}";
+                }
+
                 if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
                 {
                     if (string.IsNullOrEmpty(result.ChangeVector))

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
@@ -25,6 +26,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities);
         IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange);
         IDisposable GetCounterValues(out IEnumerable<CounterDetail> counters);
+        IDisposable GetPendingClusterTransactions(out IEnumerable<ClusterTransactionCommand.SingleClusterDatabaseCommand> transaction);
         long SkipType(DatabaseItemType type, Action<long> onSkipped);
     }
 

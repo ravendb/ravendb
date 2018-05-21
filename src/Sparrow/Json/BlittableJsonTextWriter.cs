@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Extensions;
+using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
@@ -135,6 +136,11 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return Encodings.Utf8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
+        }
+
+        public void WriteIDynamicJsonWithContext(IDynamicJsonWithContext obj)
+        {
+            WriteObject(_context.ReadObject(obj.ToJson(_context), "read IDynamicJsonWithContext"));
         }
 
         public void WriteObject(BlittableJsonReaderObject obj)

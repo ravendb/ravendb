@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Smuggler
             Identities = new Counts();
             Indexes = new Counts();
             CompareExchange = new Counts();
+            PendingClusterTransactions = new Counts();
             Counters = new Counts();
         }
 
@@ -109,8 +110,8 @@ namespace Raven.Client.Documents.Smuggler
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
             public override Counts CompareExchange => _result.CompareExchange;
+            public override Counts PendingClusterTransactions => _result.PendingClusterTransactions;
             public override Counts Counters => _result.Counters;
-
 
             public override DynamicJsonValue ToJson()
             {
@@ -155,6 +156,8 @@ namespace Raven.Client.Documents.Smuggler
         
         public virtual Counts CompareExchange { get; set; }
 
+        public virtual Counts PendingClusterTransactions { get; set; }
+
         public virtual Counts Counters { get; set; }
 
         public virtual DynamicJsonValue ToJson()
@@ -169,7 +172,8 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
-                [nameof(Counters)] = Counters.ToJson()
+                [nameof(Counters)] = Counters.ToJson(),
+                [nameof(PendingClusterTransactions)] = PendingClusterTransactions.ToJson()
             };
         }
 

@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Smuggler
         LegacyDocumentDeletions = 1 << 9,
         LegacyAttachmentDeletions = 1 << 10,
         DatabaseRecord = 1 << 11,
-        Counters = 1 << 12
+        Counters = 1 << 12,
+        PendingClusterTransactions = 1 << 13
     }
 }

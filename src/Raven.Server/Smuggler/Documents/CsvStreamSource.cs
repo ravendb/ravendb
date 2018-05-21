@@ -10,6 +10,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -349,6 +350,12 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
             compareExchange = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
+            return new DisposableAction(() => { });
+        }
+
+        public IDisposable GetPendingClusterTransactions(out IEnumerable<ClusterTransactionCommand.SingleClusterDatabaseCommand> transaction)
+        {
+            transaction = Enumerable.Empty<ClusterTransactionCommand.SingleClusterDatabaseCommand>();
             return new DisposableAction(() => { });
         }
 

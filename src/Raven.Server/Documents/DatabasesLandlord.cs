@@ -183,7 +183,7 @@ namespace Raven.Server.Documents
                     var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
                     var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
                     var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
-                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))
+                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, docContext, database.Name, first))
                     {
                         var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
                         database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>
@@ -206,6 +206,13 @@ namespace Raven.Server.Documents
                                         Array = mergedCommands.Reply,
                                         IndexTask = indexTask,
                                     };
+
+                                    if (mergedCommands.Options?.TaskId == null)
+                                    {
+                                        database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                                        return;
+                                    }
+
                                     database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
                                     return;
                                 }
@@ -505,6 +512,15 @@ namespace Raven.Server.Documents
             try
             {
                 var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
+                task.ContinueWith(t =>
+                {
+                    if (t.IsCompletedSuccessfully)
+                    {
+                        // we don't care about the raft index so we pass 0. 
+                        NotifyPendingClusterTransaction(databaseName, t, 0);
+                    }
+                });
+
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                     task.Start(); // the semaphore will be released here at the end of the task

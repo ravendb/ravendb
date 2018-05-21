@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -16,6 +15,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -27,7 +27,6 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
-using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -83,6 +82,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context)
         {
+
             return new DatabaseCompareExchangeActions(_database, context);
         }
 
@@ -91,11 +91,16 @@ namespace Raven.Server.Smuggler.Documents
             return new CounterActions(_database);
         }
 
+        public IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand> PendingClusterTransactions()
+        {
+            return new DatabasePendingClusterTransacinsActions(_database);
+        }
+
         public IIndexActions Indexes()
         {
             return new DatabaseIndexActions(_database);
         }
-
+        
         private class DatabaseIndexActions : IIndexActions
         {
             private readonly DocumentDatabase _database;
@@ -254,11 +259,62 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private class DatabasePendingClusterTransacinsActions : IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand>
+        {
+            private readonly DocumentDatabase _database;
+            private readonly List<ClusterTransactionCommand> _commands = new List<ClusterTransactionCommand>();
+
+            public DatabasePendingClusterTransacinsActions(DocumentDatabase database)
+            {
+                _database = database;
+            }
+
+            public void WriteValue(ClusterTransactionCommand.SingleClusterDatabaseCommand value)
+            {
+                const int batchSize = 1024;
+
+                var command = new ClusterTransactionCommand
+                {
+                    Database = _database.Name,
+                    Options = value.Options,
+                };
+
+                foreach (BlittableJsonReaderObject blittableCommand in value.Commands)
+                {
+                    command.DatabaseCommands.Add(JsonDeserializationServer.ClusterDatabaseCommand(blittableCommand));
+                }
+
+                command.DatabaseCommandsCount = command.DatabaseCommands.Count;
+                _commands.Add(command);
+
+                if (_commands.Count < batchSize)
+                   return;
+
+                SendTransactionCommands();
+            }
+
+            public void Dispose()
+            {
+                if (_commands.Count == 0)
+                    return;
+
+                SendTransactionCommands();
+            }
+
+            private void SendTransactionCommands()
+            {
+                var batch = new ClusterTransactionBatchCommand(_commands);
+                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(batch));
+                _commands.Clear();
+            }
+        }
+
         private class DatabaseCompareExchangeActions : IKeyValueActions<BlittableJsonReaderObject>
         {
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeCommands = new List<AddOrUpdateCompareExchangeCommand>();
+
             public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context)
             {
                 _database = database;
@@ -268,12 +324,14 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                    _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
+                // we don't need to pass a context here, since no result is expected.
 
-                    if (_compareExchangeCommands.Count < batchSize)
-                        return;
+                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
 
-                    SendCommands(_context);
+                if (_compareExchangeCommands.Count < batchSize)
+                    return;
+
+                SendCommands();
             }
 
             public void Dispose()
@@ -281,12 +339,12 @@ namespace Raven.Server.Smuggler.Documents
                 if (_compareExchangeCommands.Count == 0)
                     return;
 
-                SendCommands(_context);
+                SendCommands();
             }
 
-            private void SendCommands(JsonOperationContext context)
+            private void SendCommands()
             {
-                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context)));
+                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, _context)));
 
                 _compareExchangeCommands.Clear();
             }

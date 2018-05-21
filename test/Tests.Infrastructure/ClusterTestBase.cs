@@ -321,6 +321,16 @@ namespace Tests.Infrastructure
             await mre.WaitAsync().ConfigureAwait(false);
         }
 
+        protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
+        {
+            var mre = new AsyncManualResetEvent();
+            serverToDispose.AfterDisposal += () => mre.Set();
+            serverToDispose.Dispose();
+            await mre.WaitAsync().ConfigureAwait(false);
+
+            Servers.Remove(serverToDispose);
+        }
+
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();

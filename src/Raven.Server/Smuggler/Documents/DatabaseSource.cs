@@ -42,8 +42,11 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Identities,
             DatabaseItemType.CompareExchange,
             DatabaseItemType.Counters,
+            DatabaseItemType.PendingClusterTransactions,
             DatabaseItemType.None
         };
+
+        private DatabaseSmugglerOptions _options;
 
         public DatabaseSource(DocumentDatabase database, long startDocumentEtag)
         {
@@ -54,6 +57,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
             _currentTypeIndex = 0;
+            _options = options;
             _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             _disposeTransaction = _context.OpenReadTransaction();
 
@@ -244,6 +248,18 @@ namespace Raven.Server.Smuggler.Documents
                 compareExchange = _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _database.Name,
                     CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
 
+                return scope.Delay();
+            }
+        }
+
+        public IDisposable GetPendingClusterTransactions(out IEnumerable<ClusterTransactionCommand.SingleClusterDatabaseCommand> transaction)
+        {
+            using (var scope = new DisposableScope())
+            {
+                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+                // if we export the transaction without having the document, we will not check if the transaction was already applied.
+                transaction = ClusterTransactionCommand.ReadCommandsBatch(context, _context, _database.Name, 0, _options.OperateOnTypes.HasFlag(DatabaseItemType.Documents));
                 return scope.Delay();
             }
         }

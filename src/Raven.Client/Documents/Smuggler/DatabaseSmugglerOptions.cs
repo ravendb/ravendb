@@ -7,9 +7,8 @@ namespace Raven.Client.Documents.Smuggler
         public const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |
                                                               DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
                                                               DatabaseItemType.Conflicts |
-                                                              DatabaseItemType.DatabaseRecord |
-                                                              DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
-                                                              DatabaseItemType.Counters;
+                                                              DatabaseItemType.DatabaseRecord | DatabaseItemType.PendingClusterTransactions |
+                                                              DatabaseItemType.Identities | DatabaseItemType.CompareExchange | DatabaseItemType.Counters;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

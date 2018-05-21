@@ -85,6 +85,8 @@ namespace Raven.Client.Documents.Session
             _storeCompareExchange = null;
         }
 
+        public bool HasCommands => _deleteCompareExchange != null || _storeCompareExchange != null;
+
         protected Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key)
         {
             return _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key));

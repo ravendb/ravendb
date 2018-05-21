@@ -137,6 +137,16 @@ namespace Raven.Server.ServerWide
                             leader?.SetStateOf(index, errors);
                         }
                         break;
+                    case nameof(ClusterTransactionBatchCommand):
+                        if (cmd.TryGet(nameof(ClusterTransactionBatchCommand.TransactionBatch), out BlittableJsonReaderArray transactions) == false)
+                        {
+                            throw new InvalidDataException($"'{nameof(ClusterTransactionBatchCommand.TransactionBatch)}' is missing in '{nameof(ClusterTransactionBatchCommand)}'.");
+                        }
+                        foreach (BlittableJsonReaderObject transaction in transactions)
+                        {
+                            Apply(context, transaction, index, leader, serverStore);
+                        }
+                        break;
                     case nameof(CleanUpClusterStateCommand):
                         ClusterStateCleanUp(context, cmd, index);
                         break;
@@ -1140,7 +1150,8 @@ namespace Raven.Server.ServerWide
         private static unsafe string ReadCompareExchangeKey(TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)UniqueItems.Key, out var size);
-            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 4);
+            // we need to read only the key from the format: 'databaseName/key'
+            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 1);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)
