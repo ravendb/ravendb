@@ -52,7 +52,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        private class ForceRenewCertCommand : RavenCommand<ClaimDomainResult>
+        private class ForceRenewCertCommand : RavenCommand<ForceRenewResult>
         {
             public ForceRenewCertCommand(DocumentConventions conventions, JsonOperationContext context)
             {
@@ -68,6 +68,13 @@ namespace SlowTests.Authentication
                 {
                     Method = HttpMethod.Post
                 };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+                Result = JsonDeserializationClient.ForceRenewResult(response);
             }
         }
 
