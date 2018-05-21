@@ -61,15 +61,8 @@ namespace Raven.Client.Documents
         {
             var queryInspector = (IRavenQueryInspector)source;
             var conventions = queryInspector.Session.Conventions;
-            var idPrefix = conventions.GetCollectionName(typeof(TInclude));
-            if (idPrefix != null)
-            {
-                idPrefix = conventions.TransformTypeCollectionNameToDocumentIdPrefix(idPrefix);
-                idPrefix += conventions.IdentityPartsSeparator;
-            }
 
-            var id = path.ToPropertyPath() + "(" + idPrefix + ")";
-            return source.Include(id);
+            return Include(source, IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), conventions));
         }
 
         /// <summary>
