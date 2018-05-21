@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -46,6 +49,18 @@ namespace Raven.Client.Documents.Session
                 result.Addition = result.Addition.Substring(1, result.Addition.Length - 2);
             }
             return result;
+        }
+
+        public static string GetPrefixedIncludePath<TInclude>(string basePath, DocumentConventions conventions)
+        {
+            var idPrefix = conventions.GetCollectionName(typeof(TInclude));
+            if (idPrefix != null)
+            {
+                idPrefix = conventions.TransformTypeCollectionNameToDocumentIdPrefix(idPrefix);
+                idPrefix += conventions.IdentityPartsSeparator;
+            }
+
+            return basePath + "(" + idPrefix + ")";
         }
 
         public static void Include(BlittableJsonReaderObject document, string include, Action<string> loadId)

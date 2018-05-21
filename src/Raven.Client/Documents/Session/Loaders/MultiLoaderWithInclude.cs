@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path)
         {
-            return Include(path.ToPropertyPath());
+            return Include(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _session.Conventions));
         }
 
         /// <summary>
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
-            return Include(path.ToPropertyPath());
+            return Include(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _session.Conventions));
         }
 
         /// <summary>
