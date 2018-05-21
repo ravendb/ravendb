@@ -32,7 +32,7 @@ namespace StressTests
                 Product sampleProduct;
                 using (var session = store.OpenSession(DbNumToDbName[0]))
                 {
-                    sampleProduct = session.Load<Product>("products/1");
+                    sampleProduct = session.Load<Product>("products/1-A");
                 }
                 Console.WriteLine("Starting load on the system");
                 var timeToSpin = TimeSpan.FromMinutes(5);
