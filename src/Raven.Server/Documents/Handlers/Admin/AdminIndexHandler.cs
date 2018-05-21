@@ -19,6 +19,17 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task Put()
         {
+            await PutInternal(validatedAsAdmin:true);
+        }
+
+        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser)]
+        public async Task PutJavaScript()
+        {
+            await PutInternal(validatedAsAdmin: false);
+        }
+
+        private async Task PutInternal(bool validatedAsAdmin)
+        {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var createdIndexes = new List<string>();
@@ -41,14 +52,20 @@ namespace Raven.Server.Documents.Handlers.Admin
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                         throw new ArgumentException("Index must have a 'Maps' fields");
 
-					if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                    indexDefinition.Type = indexDefinition.DetectStaticIndexType();
+
+                    // C# index using a non-admin endpoint
+                    if (indexDefinition.Type.IsJavaScript() == false && validatedAsAdmin == false)
+                    {
+                        throw new UnauthorizedAccessException($"Index {indexDefinition.Name} is a C# index but was sent through a non-admin endpoint using REST api, this is not allowed.");
+                    }
+
+                    if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         throw new ArgumentException(
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    indexDefinition.Type = indexDefinition.DetectStaticIndexType();
-                   
                     var index = await Database.IndexStore.CreateIndex(indexDefinition);
                     createdIndexes.Add(index.Name);
                 }
@@ -71,7 +88,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
         }
-        
+
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Stop()
         {

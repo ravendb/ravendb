@@ -30,6 +30,7 @@ namespace Raven.Client.Documents.Operations.Indexes
         private class PutIndexesCommand : RavenCommand<PutIndexResult[]>
         {
             private readonly BlittableJsonReaderObject[] _indexToAdd;
+            private bool _allJavaScriptIndexes;
 
             public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinition[] indexesToAdd)
             {
@@ -41,8 +42,13 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(context));
 
                 _indexToAdd = new BlittableJsonReaderObject[indexesToAdd.Length];
+                _allJavaScriptIndexes = true;
                 for (var i = 0; i < indexesToAdd.Length; i++)
                 {
+                    //We validate on the server that it is indeed a javascript index.
+                    if (indexesToAdd[i].Type.IsJavaScript() == false)
+                        _allJavaScriptIndexes = false;
+
                     if (indexesToAdd[i].Name == null)
                         throw new ArgumentNullException(nameof(IndexDefinition.Name));
                     _indexToAdd[i] = EntityToBlittable.ConvertCommandToBlittable(indexesToAdd[i], context);
@@ -51,7 +57,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/indexes";
+                url = $"{node.Url}/databases/{node.Database}" + (_allJavaScriptIndexes? "/indexes":"/admin/indexes");
 
                 var request = new HttpRequestMessage
                 {
