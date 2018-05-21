@@ -16,6 +16,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config
@@ -327,16 +328,20 @@ namespace Raven.Server.Config
                         .OrderBy(x => x.Order)
                         .First();
 
-                    if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly && 
-                        ResourceType==ResourceType.Database)
+                    if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly &&
+                        ResourceType == ResourceType.Database)
                         continue;
 
                     var configurationKey = configEntry.Key;
 
+                    var createdDirectory = false;
                     try
                     {
                         if (Directory.Exists(path) == false)
+                        {
                             Directory.CreateDirectory(path);
+                            createdDirectory = true;
+                        }
 
                         File.WriteAllText(fullPath, string.Empty);
                         File.Delete(fullPath);
@@ -347,6 +352,11 @@ namespace Raven.Server.Config
                             results = new Dictionary<string, KeyValuePair<string, string>>();
 
                         results[configurationKey] = new KeyValuePair<string, string>(path, e.Message);
+                    }
+                    finally
+                    {
+                        if (createdDirectory)
+                            IOExtensions.DeleteDirectory(path);
                     }
                 }
             }

@@ -16,7 +16,7 @@ namespace Raven.Server.Web.Studio
     public class StudioTasksHandler : RequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
-        [RavenAction("/studio-tasks/full-data-direcory", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/studio-tasks/full-data-directory", "GET", AuthorizationStatus.ValidUser)]
         public Task FullDataDirectory()
         {
             var path = GetStringQueryString("path", required: false);
