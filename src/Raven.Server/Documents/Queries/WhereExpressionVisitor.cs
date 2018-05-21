@@ -45,6 +45,12 @@ namespace Raven.Server.Documents.Queries
                 VisitMethodTokens(me.Name, me.Arguments, parameters);
                 return;
             }
+
+            if(expression is NegatedExpression ne)
+            {
+                Visit(ne.Expression, parameters);
+                return;
+            }
             
             if (!(expression is BinaryExpression be))
             {
@@ -68,11 +74,6 @@ namespace Raven.Server.Documents.Queries
                     return;
                 case OperatorType.And:                
                 case OperatorType.Or:
-                    Visit(be.Left, parameters);
-                    Visit(be.Right, parameters);
-                    break;
-                case OperatorType.AndNot:
-                case OperatorType.OrNot:
                     Visit(be.Left, parameters);
                     Visit(be.Right, parameters);
                     break;

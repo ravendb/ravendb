@@ -483,8 +483,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
             var negate = Scanner.TryScan("NOT");
             var type = found == "OR"
-                ? (negate ? OperatorType.OrNot : OperatorType.Or)
-                : (negate ? OperatorType.AndNot : OperatorType.And);
+                ? OperatorType.Or
+                : OperatorType.And;
 
             _state = NextTokenOptions.Parenthesis;
 
@@ -495,18 +495,20 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (parenthesis == false)
             {
+                if (negate)
+                {
+                    right = NegateExpressionWithoutParenthesis(right);
+                }
+
                 // if the other arg isn't parenthesis, use operator precedence rules
                 // to re-write the query
                 switch (type)
                 {
                     case OperatorType.And:
-                    case OperatorType.AndNot:
                         if (right is BinaryExpression rightOp)
                         {
                             switch (rightOp.Operator)
                             {
-                                case OperatorType.AndNot:
-                                case OperatorType.OrNot:
                                 case OperatorType.Or:
                                 case OperatorType.And:
 
@@ -518,11 +520,43 @@ namespace Raven.Server.Documents.Queries.Parser
                         break;
                 }
             }
+            else if (negate)
+            {
+                right = new NegatedExpression(right);
+            }
 
-
-            op = new BinaryExpression(op, right, type);
+            op = new BinaryExpression(op, right, type)
+            {
+                Parenthesis = parenthesis
+            };
 
             return true;
+        }
+
+        private QueryExpression NegateExpressionWithoutParenthesis(QueryExpression expr)
+        {
+            bool ShouldRecurse(BinaryExpression e)
+            {
+                if (e.Parenthesis)
+                    return false;
+
+                return e.Operator == OperatorType.And ||
+                       e.Operator == OperatorType.Or;
+            }
+
+            if (expr is BinaryExpression be && ShouldRecurse(be))
+            {
+                var result = be;
+
+                while (be.Left is BinaryExpression nested && ShouldRecurse(nested))
+                {
+                    be = nested;
+                }
+                be.Left = new NegatedExpression(be.Left);
+
+                return result;
+            }
+            return new NegatedExpression(expr);
         }
 
         private bool Parenthesis(out QueryExpression op)

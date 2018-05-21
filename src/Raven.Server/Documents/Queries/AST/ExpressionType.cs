@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Queries.AST
         In,
         Value,
         Method,
-        True
+        True,
+        Negated
     }
 }
