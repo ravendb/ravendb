@@ -1,7 +1,11 @@
 using System;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Queries.Parser;
 using SlowTests.Client;
+using SlowTests.Issues;
 using SlowTests.MailingList;
+using SlowTests.Server.Replication;
+using SlowTests.Tests.Faceted;
 
 namespace Tryouts
 {
@@ -12,9 +16,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new Severin_null_data_time())
+                using (var test = new FacetsWithParameters())
                 {
-                    test.QueryDateCompareTest();
+                    test.FacetShouldUseParameters_WithFacetBaseList();
                 }
             }
         }

@@ -111,9 +111,7 @@ namespace Raven.Server.Documents.Queries
                 switch (where.Operator)
                 {
                     case OperatorType.And:
-                    case OperatorType.AndNot:
                     case OperatorType.Or:
-                    case OperatorType.OrNot:
                         var leftExpression = FindMoreLikeThisExpression(where.Left);
                         if (leftExpression != null)
                             return leftExpression;
@@ -255,22 +253,28 @@ namespace Raven.Server.Documents.Queries
                             throw new NotSupportedException("Should not happen!");
                         }
                     case OperatorType.And:
-                    case OperatorType.AndNot:
-                        var andPrefix = where.Operator == OperatorType.AndNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                         return LuceneQueryHelper.And(
                             ToLuceneQuery(serverContext, documentsContext, query, where.Left, metadata, indexDef, parameters, analyzer, factories, exact),
                             LucenePrefixOperator.None,
                             ToLuceneQuery(serverContext, documentsContext, query, where.Right, metadata, indexDef, parameters, analyzer, factories, exact),
-                            andPrefix);
+                            LucenePrefixOperator.None);
                     case OperatorType.Or:
-                    case OperatorType.OrNot:
-                        var orPrefix = where.Operator == OperatorType.OrNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                         return LuceneQueryHelper.Or(
                             ToLuceneQuery(serverContext, documentsContext, query, where.Left, metadata, indexDef, parameters, analyzer, factories, exact),
                             LucenePrefixOperator.None,
                             ToLuceneQuery(serverContext, documentsContext, query, where.Right, metadata, indexDef, parameters, analyzer, factories, exact),
-                            orPrefix);
+                            LucenePrefixOperator.None);
                 }
+            }
+            if(expression is NegatedExpression ne)
+            {
+                var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression, 
+                    metadata, indexDef, parameters, analyzer, factories, exact);
+                return new BooleanQuery
+                {
+                    {inner,  Occur.MUST_NOT},
+                    {new MatchAllDocsQuery(), Occur.SHOULD}
+                };
             }
             if (expression is BetweenExpression be)
             {

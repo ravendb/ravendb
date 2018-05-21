@@ -123,6 +123,13 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.AppendLine();
         }
 
+        public override void VisitNegatedExpresson(NegatedExpression expr)
+        {
+            _sb.Append("NOT (");
+            VisitExpression(expr.Expression);
+            _sb.Append(")");
+        }
+
         public override void VisitCompoundWhereExpression(BinaryExpression where)
         {
             EnsureSpace();
@@ -135,14 +142,8 @@ namespace Raven.Server.Documents.Queries.AST
                 case OperatorType.And:
                     _sb.Append(" AND ");
                     break;
-                case OperatorType.AndNot:
-                    _sb.Append(" AND NOT ");
-                    break;
                 case OperatorType.Or:
                     _sb.Append(" OR ");
-                    break;
-                case OperatorType.OrNot:
-                    _sb.Append(" OR NOT ");
                     break;
                 default:
                     InvalidOperatorTypeForWhere(where);

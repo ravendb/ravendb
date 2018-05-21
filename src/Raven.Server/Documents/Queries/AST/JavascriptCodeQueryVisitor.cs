@@ -66,6 +66,13 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
+        public override void VisitNegatedExpresson(NegatedExpression expr)
+        {
+            _sb.Append("!(");
+            VisitExpression(expr.Expression);
+            _sb.Append(")");
+        }
+
         public override void VisitCompoundWhereExpression(BinaryExpression @where)
         {
             _sb.Append("(");
@@ -75,24 +82,15 @@ namespace Raven.Server.Documents.Queries.AST
             switch (where.Operator)
             {
                 case OperatorType.And:
-                case OperatorType.AndNot:
                     _sb.Append(" && ");
                     break;
-                case OperatorType.OrNot:
                 case OperatorType.Or:
                     _sb.Append(" || ");
                     break;
             }
 
-            var not = where.Operator == OperatorType.OrNot || where.Operator == OperatorType.AndNot;
-
-            if (not)
-                _sb.Append("!(");
             
             VisitExpression(where.Right);
-
-            if (not)
-                _sb.Append(")");
             
             _sb.Append(")");
         }
