@@ -176,7 +176,11 @@ namespace SlowTests.Authentication
 
                 await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
-                mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2));
+                Assert.True(command.Result.Success, "ForceRenewCertCommand returned false");
+
+                var result = mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2));
+
+                Assert.True(result, "Waited too long for the cluster cert to be replaced");
 
                 Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
             }
