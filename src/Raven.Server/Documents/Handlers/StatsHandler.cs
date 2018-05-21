@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
 
-                var sizeOnDiskInBytes = Database.GetSizeOnDiskInBytes();
+                var size = Database.GetSizeOnDisk();
 
                 var stats = new DatabaseStatistics
                 {
@@ -32,10 +32,11 @@ namespace Raven.Server.Documents.Handlers
                     CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
                     CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context),
                     CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
-                    SizeOnDisk = new Size(sizeOnDiskInBytes),
+                    SizeOnDisk = size.Data,
                     NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations,
-                    CountOfCounters = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context)
-            };
+                    CountOfCounters = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context),
+                    TempBuffersSizeOnDisk = size.TempBuffers,
+                };
 
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;

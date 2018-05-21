@@ -478,7 +478,7 @@ namespace Raven.Server.Documents
             if (envs.Any(x => x.Environment == null))
                 return null;
 
-            var size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
+            var size = GetSizeOnDisk();
             var databaseInfo = new DynamicJsonValue
             {
                 [nameof(DatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
@@ -489,8 +489,13 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
                 [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
                 {
-                    [nameof(Size.HumaneSize)] = size.HumaneSize,
-                    [nameof(Size.SizeInBytes)] = size.SizeInBytes
+                    [nameof(Size.HumaneSize)] = size.Data.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = size.Data.SizeInBytes
+                },
+                [nameof(DatabaseInfo.TempBuffersSize)] = new DynamicJsonValue
+                {
+                    [nameof(Size.HumaneSize)] = size.TempBuffers.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = size.TempBuffers.SizeInBytes
                 },
                 [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrorCount()),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
@@ -891,13 +896,14 @@ namespace Raven.Server.Documents
             return index != actual;
         }
 
-        public long GetSizeOnDiskInBytes()
+        public (Size Data, Size TempBuffers) GetSizeOnDisk()
         {
             var storageEnvironments = GetAllStoragesEnvironment();
             if (storageEnvironments == null)
-                return 0;
+                return (new Size(0), new Size(0));
 
-            long sizeOnDiskInBytes = 0;
+            long dataInBytes = 0;
+            long tempBuffersInBytes = 0;
             foreach (var environment in storageEnvironments)
             {
                 if (environment == null)
@@ -915,7 +921,10 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    sizeOnDiskInBytes += GetSizeOnDisk(environment, tx);
+                    var sizeOnDisk = GetSizeOnDisk(environment, tx);
+
+                    dataInBytes += sizeOnDisk.DataInBytes;
+                    tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes;
                 }
                 finally
                 {
@@ -923,7 +932,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            return sizeOnDiskInBytes;
+            return (new Size(dataInBytes), new Size(tempBuffersInBytes));
         }
 
         public IEnumerable<MountPointUsage> GetMountPointsUsage()
@@ -957,14 +966,14 @@ namespace Raven.Server.Documents
                     var diskSpaceResult = DiskSpaceChecker.GetFreeDiskSpace(fullPath, drives);
                     if (diskSpaceResult == null)
                         continue;
-
-                    var sizeOnDiskInBytes = GetSizeOnDisk(environment, tx);
-                    if (sizeOnDiskInBytes == 0)
+                    
+                    var sizeOnDisk = GetSizeOnDisk(environment, tx);
+                    if (sizeOnDisk.DataInBytes == 0)
                         continue;
 
-                    yield return new MountPointUsage
+                    var usage = new MountPointUsage
                     {
-                        UsedSpace = sizeOnDiskInBytes,
+                        UsedSpace = sizeOnDisk.DataInBytes,
                         DiskSpaceResult = new DiskSpaceResult
                         {
                             DriveName = diskSpaceResult.DriveName,
@@ -973,6 +982,35 @@ namespace Raven.Server.Documents
                             TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
                         }
                     };
+
+                    var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetFreeDiskSpace(environment.Environment.Options.TempPath.FullPath, drives);
+
+                    if (tempBuffersDiskSpaceResult == null)
+                    {
+                        yield return usage;
+                    }
+                    else if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
+                    {
+                        usage.UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes;
+
+                        yield return usage;
+                    }
+                    else
+                    {
+                        yield return usage;
+
+                        yield return new MountPointUsage
+                        {
+                            UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
+                            DiskSpaceResult = new DiskSpaceResult
+                            {
+                                DriveName = tempBuffersDiskSpaceResult.DriveName,
+                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
+                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                            }
+                        };
+                    }
                 }
                 finally
                 {
@@ -981,14 +1019,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static long GetSizeOnDisk(StorageEnvironmentWithType environment, Transaction tx)
+        private static (long DataInBytes, long TempBuffersInBytes) GetSizeOnDisk(StorageEnvironmentWithType environment, Transaction tx)
         {
             var storageReport = environment.Environment.GenerateReport(tx);
             if (storageReport == null)
-                return 0;
+                return (0, 0);
 
             var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-            return storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+            return (storageReport.DataFile.AllocatedSpaceInBytes + journalSize, storageReport.TempFiles.Sum(x => x.AllocatedSpaceInBytes));
         }
 
         public DatabaseRecord ReadDatabaseRecord()

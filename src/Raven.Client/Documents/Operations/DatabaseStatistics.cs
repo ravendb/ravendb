@@ -94,6 +94,8 @@ namespace Raven.Client.Documents.Operations
 
         public Size SizeOnDisk { get; set; }
 
+        public Size TempBuffersSizeOnDisk { get; set; }
+
         public int NumberOfTransactionMergerQueueOperations { get; set; }
     }
 
