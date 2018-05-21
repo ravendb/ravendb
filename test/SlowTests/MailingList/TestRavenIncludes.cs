@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -9,7 +10,7 @@ namespace SlowTests.MailingList
     public class TestRavenIncludes : RavenTestBase
     {
         [Fact]
-        public void CanIncludeRelatedDocuments()
+        public async Task CanIncludeRelatedDocuments()
         {
             using (var store = GetDocumentStore())
             {
@@ -27,12 +28,41 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var sampleData = session.Query<SampleData, SampleData_Index>()
-                                            .Include<SampleData, IncludedData>(x => x.IncludedId)
-                                            .Customize(customization => customization.WaitForNonStaleResults())
-                                            .Single(x => x.Name == name);
+                        .Include<SampleData, IncludedData>(x => x.IncludedId)
+                        .Customize(customization =>
+                        {
+                            customization.WaitForNonStaleResults();
+                            customization.NoCaching();
+                        })
+                        .Single(x => x.Name == name);
                     //// This works, but by issuing another query
                     //session.Load<IncludedData>(sampleData.IncludedIdWithPrefix);
                     // This doesn't work, since the document isn't included
+                    Assert.True(session.Advanced.IsLoaded(sampleData.IncludedIdWithEntityName), "Included data should be loaded");
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var sampleData = await session.Query<SampleData, SampleData_Index>()
+                        .Include<SampleData, IncludedData>(x => x.IncludedId)
+                        .Customize(customization =>
+                        {
+                            customization.WaitForNonStaleResults();
+                            customization.NoCaching();
+                        })
+                        .SingleAsync(x => x.Name == name);
+                    //// This works, but by issuing another query
+                    //session.Load<IncludedData>(sampleData.IncludedIdWithPrefix);
+                    // This doesn't work, since the document isn't included
+                    Assert.True(session.Advanced.IsLoaded(sampleData.IncludedIdWithEntityName), "Included data should be loaded");
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var sampleData = await session.Include<SampleData, IncludedData>(x => x.IncludedId)
+                        .LoadAsync("sampleDatas/1-A");
+
+                    Assert.NotNull(sampleData);
                     Assert.True(session.Advanced.IsLoaded(sampleData.IncludedIdWithEntityName), "Included data should be loaded");
                 }
             }
