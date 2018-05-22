@@ -677,15 +677,15 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteCounter(CounterDetail counterDetail)
             {
                 AddToBatch(counterDetail);
-                HandleBatchOfDocumentsIfNecessary();
+                HandleBatchOfCountersIfNecessary();
             }
 
             public void Dispose()
             {
-                FinishBatchOfDocuments();
+                FinishBatchOfCounters();
             }
 
-            private void HandleBatchOfDocumentsIfNecessary()
+            private void HandleBatchOfCountersIfNecessary()
             {
                 if (_batchSize < _maxBatchSize)
                     return;
@@ -700,7 +700,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (prevCommand != null)
                 {                   
-                    prevCommandTask.GetAwaiter().GetResult();                  
+                    AsyncHelpers.RunSync(() => prevCommandTask);
                 }
 
                 _cmd = new CountersHandler.ExecuteCounterBatchCommand(_database)
@@ -711,7 +711,7 @@ namespace Raven.Server.Smuggler.Documents
                 _batchSize = 0;
             }
 
-            private void FinishBatchOfDocuments()
+            private void FinishBatchOfCounters()
             {
                 if (_prevCommand != null)
                 {
