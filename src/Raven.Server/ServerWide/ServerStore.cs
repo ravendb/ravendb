@@ -239,6 +239,14 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
+                    if (e is WebSocketException && 
+                        e.InnerException?.InnerException?.Message != null && 
+                        e.InnerException.InnerException.Message.Contains("A certificate is required to complete client authentication"))
+                    {
+                        // TODO: remove this when we update to .net core v2.1
+                        return;
+                    }
+
                     if (Logger.IsInfoEnabled)
                     {
                         Logger.Info("Error during receiving topology updates from the leader", e);
