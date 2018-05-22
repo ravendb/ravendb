@@ -8,7 +8,7 @@ namespace FastTests.Server.Documents.Revisions
 {
     public class RevisionsHelper
     {
-        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long minimumRevisionsToKeep = 123)
+        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long minimumRevisionsToKeep = 123, bool includeCountersSnapshot = false)
         {
             var configuration = new RevisionsConfiguration
             {
@@ -16,6 +16,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     Disabled = false,
                     MinimumRevisionsToKeep = 5,
+                    IncludeCountersSnapshot = includeCountersSnapshot
                 },
                 Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                 {

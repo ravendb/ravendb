@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Handlers
                                         ? DocumentFlags.HasCounters
                                         : DocumentFlags.None;
 
-                            _database.DocumentsStorage.Put(context, kvp.Key, null, data, flags: flags); 
+                            _database.DocumentsStorage.Put(context, kvp.Key, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
                         }
                     }
 

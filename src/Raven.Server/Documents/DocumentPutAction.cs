@@ -99,18 +99,21 @@ namespace Raven.Server.Documents
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
-                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    if ((nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                     {
-                        if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                        if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
+                            (oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                         {
                             flags |= DocumentFlags.HasAttachments;
                         }
-                        if ((oldFlags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+
+                        if ((nonPersistentFlags & NonPersistentDocumentFlags.ByCountersUpdate) != NonPersistentDocumentFlags.ByCountersUpdate &&
+                            (oldFlags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
                         {
                             flags |= DocumentFlags.HasCounters;
                         }
                     }
+
                 }
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
@@ -491,7 +494,8 @@ namespace Raven.Server.Documents
             }
 
             if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication &&
+                (nonPersistentFlags & NonPersistentDocumentFlags.ByCountersUpdate) != NonPersistentDocumentFlags.ByCountersUpdate)
             {
                 if (oldDoc != null &&
                     oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&

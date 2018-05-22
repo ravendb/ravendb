@@ -437,6 +437,102 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public async Task CanGetCountersSnapshotInRevisions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, includeCountersSnapshot: true);
+                using (var session = store.OpenAsyncSession())
+                {
+                    // revision 1
+                    await session.StoreAsync(new Company(), "companies/1-A");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company = await session.LoadAsync<Company>("companies/1-A");
+
+                    // revision 2
+                    company.Name = "HR";
+                    await session.SaveChangesAsync();
+
+                    // revision 3
+                    session.Advanced.Counters.Increment(company, "Likes", 100);
+                    await session.SaveChangesAsync();
+
+                    // no revision for this one
+                    session.Advanced.Counters.Increment(company, "Likes", 50);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("companies/1-A");
+                    Assert.Equal(3, companiesRevisions.Count);
+                    var metadatas = companiesRevisions.Select(c => session.Advanced.GetMetadataFor(c)).ToList();
+
+                    Assert.Equal("HR", companiesRevisions[0].Name);
+
+                    var revisionCounters = (IMetadataDictionary)metadatas[0][Constants.Documents.Metadata.RevisionCounters];
+                    Assert.Equal(1, revisionCounters.Count);
+                    Assert.Equal(100L, revisionCounters["Likes"]);
+
+                    Assert.Equal("HR", companiesRevisions[1].Name);
+                    Assert.False(metadatas[1].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
+
+                    Assert.Null(companiesRevisions[2].Name);
+                    Assert.False(metadatas[1].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
+
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company = await session.LoadAsync<Company>("companies/1-A");
+
+                    // revision 4
+                    company.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+
+                    // revision 5
+                    session.Advanced.Counters.Increment(company, "Dislikes", 20);
+                    await session.SaveChangesAsync();
+
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("companies/1-A");
+                    Assert.Equal(5, companiesRevisions.Count);
+                    var metadatas = companiesRevisions.Select(c => session.Advanced.GetMetadataFor(c)).ToList();
+
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                    var revisionCounters = (IMetadataDictionary)metadatas[0][Constants.Documents.Metadata.RevisionCounters];
+                    Assert.Equal(2, revisionCounters.Count);
+                    Assert.Equal(150L, revisionCounters["Likes"]);
+                    Assert.Equal(20L, revisionCounters["Dislikes"]);
+
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    revisionCounters = (IMetadataDictionary)metadatas[1][Constants.Documents.Metadata.RevisionCounters];
+                    Assert.Equal(1, revisionCounters.Count);
+                    Assert.Equal(150L, revisionCounters["Likes"]);
+
+                    Assert.Equal("HR", companiesRevisions[2].Name);
+                    revisionCounters = (IMetadataDictionary)metadatas[2][Constants.Documents.Metadata.RevisionCounters];
+                    Assert.Equal(1, revisionCounters.Count);
+                    Assert.Equal(100L, revisionCounters["Likes"]);
+
+                    Assert.Equal("HR", companiesRevisions[3].Name);
+                    Assert.False(metadatas[3].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
+                    
+                    Assert.Null(companiesRevisions[4].Name);
+                    Assert.False(metadatas[4].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
+
+                }
+            }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
