@@ -8,15 +8,15 @@ namespace Raven.Client.Documents.Session
     {
         protected Explanations Explanations;
 
-        protected ExplanationToken Explanation;
+        protected ExplanationToken ExplanationToken;
 
         public void Explain(ExplanationOptions options, out Explanations explanations)
         {
-            if (Explanation != null)
+            if (ExplanationToken != null)
                 throw new InvalidOperationException($"Duplicate '{nameof(Explain)}' method calls are forbidden.");
 
             var optionsParameterName = options != null ? AddQueryParameter(options) : null;
-            Explanation = ExplanationToken.Create(optionsParameterName);
+            ExplanationToken = ExplanationToken.Create(optionsParameterName);
             Explanations = explanations = new Explanations();
         }
     }

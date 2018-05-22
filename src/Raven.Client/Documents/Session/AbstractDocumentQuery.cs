@@ -1118,7 +1118,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildInclude(StringBuilder queryText)
         {
-            if (Includes.Count == 0 && Highlightings.Count == 0 && Explanation == null)
+            if (Includes.Count == 0 && HighlightingTokens.Count == 0 && ExplanationToken == null)
                 return;
 
             queryText.Append(" include ");
@@ -1148,7 +1148,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 }
             }
 
-            foreach (var token in Highlightings)
+            foreach (var token in HighlightingTokens)
             {
                 if (first == false)
                     queryText.Append(",");
@@ -1157,13 +1157,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 token.WriteTo(queryText);
             }
 
-            if (Explanation != null)
+            if (ExplanationToken != null)
             {
                 if (first == false)
                     queryText.Append(",");
                 first = false;
 
-                Explanation.WriteTo(queryText);
+                ExplanationToken.WriteTo(queryText);
             }
         }
 

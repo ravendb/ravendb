@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        protected LinkedList<HighlightingToken> Highlightings = new LinkedList<HighlightingToken>();
+        protected LinkedList<HighlightingToken> HighlightingTokens = new LinkedList<HighlightingToken>();
 
         protected QueryHighlightings QueryHighlightings = new QueryHighlightings();
 
@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Session
 
             var optionsParameterName = options != null ? AddQueryParameter(options) : null;
 
-            Highlightings.AddLast(HighlightingToken.Create(fieldName, fragmentLength, fragmentCount, optionsParameterName));
+            HighlightingTokens.AddLast(HighlightingToken.Create(fieldName, fragmentLength, fragmentCount, optionsParameterName));
         }
     }
 }
