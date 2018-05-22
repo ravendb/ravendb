@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,7 @@ using Raven.Client.Json;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Raven.Client.Util;
 using static System.String;
 
 namespace Raven.Server.Documents.Handlers
@@ -21,12 +23,13 @@ namespace Raven.Server.Documents.Handlers
         private StreamWriter _writer;
         private CsvWriter _csvWriter;
         private (string, string)[] _properties;
-        private const string FileName = "export.csv";
         private bool writeHeader = true;
-        public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null)
+        public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
         {
+            csvFileName = $"{csvFileName}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv"; 
+            
             _response = response;
-            _response.Headers["Content-Disposition"] = $"attachment; filename=\"{FileName}\"; filename*=UTF-8''{FileName}";
+            _response.Headers["Content-Disposition"] = $"attachment; filename=\"{csvFileName}\"; filename*=UTF-8''{csvFileName}";
             _writer = new StreamWriter(stream, Encoding.UTF8);
             _csvWriter = new CsvWriter(_writer);
             _context = context;
