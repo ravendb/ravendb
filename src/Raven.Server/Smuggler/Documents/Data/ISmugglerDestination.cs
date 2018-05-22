@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -24,6 +25,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IKeyValueActions<long> Identities();
         IKeyValueActions<BlittableJsonReaderObject> CompareExchange(JsonOperationContext context);
         ICounterActions Counters();
+        IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand> PendingClusterTransactions();
     }
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
@@ -54,6 +56,11 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface IKeyValueActions<in T> : IDisposable
     {
         void WriteKeyValue(string key, T value);
+    }
+
+    public interface IValueActions<in T> : IDisposable
+    {
+        void WriteValue(T value);
     }
 
     public interface IDatabaseRecordActions : IDisposable

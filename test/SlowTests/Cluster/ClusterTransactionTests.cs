@@ -1,13 +1,16 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -57,6 +60,119 @@ namespace SlowTests.Cluster
             }
         }
 
+        [Fact]
+        public async Task CanImportExportAndBackupClusterTransactions()
+        {
+            var file = Path.GetTempFileName();
+            var file2 = Path.GetTempFileName();
+
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            var db = GetDatabaseName();
+            await CreateDatabaseInCluster(db, 3, leader.WebUrl);
+
+            var user1 = new User()
+            {
+                Name = "Karmel"
+            };
+            var user2 = new User()
+            {
+                Name = "Oren"
+            };
+            var user3 = new User()
+            {
+                Name = "Indych"
+            };
+
+            using (var leaderStore = new DocumentStore()
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = db,
+            }.Initialize())
+            {
+                // we kill one server so we would not clean the pending cluster transactions.
+                await DisposeAndRemoveServer(Servers.First(s => s != leader));
+
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
+                    await session.StoreAsync(user1, "foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar2");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user1);
+
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user2);
+                    await session.StoreAsync(user2, "foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar3");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user2);
+
+                    session.Advanced.SetTransactionMode(TransactionMode.SingleNode);
+                    await session.StoreAsync(user3, "foo/bar");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user3);
+
+                    var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
+                    Assert.Equal(user2.Name, user.Name);
+                    user = await session.LoadAsync<User>("foo/bar");
+                    Assert.Equal(user3.Name, user.Name);
+                }
+
+                await leaderStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                {
+                    OperateOnTypes = DatabaseItemType.PendingClusterTransactions
+                }, file);
+                await leaderStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file2);
+            }
+
+            // verify execution of the pending cluster transaction in the new database
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user1, "foo/bar");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user1);
+
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                    {
+                        OperateOnTypes = ~DatabaseItemType.PendingClusterTransactions
+                    }, file);
+                    var user = await session.LoadAsync<User>("foo/bar");
+                    session.Advanced.Evict(user);
+                    Assert.Equal(user1.Name, user.Name);
+
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var database = await GetDatabase(store.Database);
+                    var index = database.RachisLogIndexNotifications.LastModifiedIndex;
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index + 1, TimeSpan.FromSeconds(15));
+
+                    user = await session.LoadAsync<User>("foo/bar");
+                    Assert.Equal(user2.Name, user.Name);
+                }
+            }
+
+            // verify importing of documents with FromCluster flag
+            using (var store = GetDocumentStore())
+            {
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file2);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var database = await GetDatabase(store.Database);
+                    var user = await session.LoadAsync<User>("foo/bar2");
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.Equal($"RAFT:1-{database.DatabaseGroupId}", changeVector);
+                    session.Advanced.Evict(user);
+
+                    user = await session.LoadAsync<User>("foo/bar3");
+                    changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.Equal($"RAFT:2-{database.DatabaseGroupId}", changeVector);
+                }
+            }
+        }
+
         public class UniqueUser
         {
             public string Id { get; set; }
@@ -75,7 +191,6 @@ namespace SlowTests.Cluster
             {
                 Name = "Indych"
             };
-
 
             using (var store = GetDocumentStore())
             using (var session = store.OpenAsyncSession(new SessionOptions

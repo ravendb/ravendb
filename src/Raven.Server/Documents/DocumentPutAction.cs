@@ -115,6 +115,17 @@ namespace Raven.Server.Documents
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
+                if (flags.Contain(DocumentFlags.FromClusterTransaction) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                {
+                    // we import document that was last changed by a transaction.
+                    if (context.LastDatabaseChangeVector == null)
+                    {
+                        context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
+                    }
+                    var index = ChangeVectorUtils.GetEtagById(context.LastDatabaseChangeVector, _documentDatabase.DatabaseGroupId);
+                    changeVector = $"RAFT:{index + 1}-{_documentDatabase.DatabaseGroupId}";
+                }
+
                 if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
                 {
                     if (string.IsNullOrEmpty(result.ChangeVector))

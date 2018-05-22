@@ -125,9 +125,12 @@ namespace Raven.Client.Documents.Smuggler
             // as the previous files can hold indexes and identities which were deleted and shouldn't be imported
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
-                                     ~(DatabaseItemType.Indexes | DatabaseItemType.CompareExchange | DatabaseItemType.Identities);
+                                     ~(DatabaseItemType.Indexes | ClusterStateMachineImportOptions);
             return oldOperateOnTypes;
         }
+
+        internal static DatabaseItemType ClusterStateMachineImportOptions =>
+            DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.PendingClusterTransactions;
 
         public async Task<Operation> ImportAsync(DatabaseSmugglerImportOptions options, string fromFile, CancellationToken cancellationToken = default)
         {

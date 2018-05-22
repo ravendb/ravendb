@@ -18,6 +18,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -96,6 +97,11 @@ namespace Raven.Server.Smuggler.Documents
         public ICounterActions Counters()
         {
             return new StreamCounterActions(_writer, nameof(DatabaseItemType.Counters));
+        }
+
+        public IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand> PendingClusterTransactions()
+        {
+            return new StreamJsonValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand>(_writer, _context, nameof(DatabaseItemType.PendingClusterTransactions));
         }
 
         public IIndexActions Indexes()
@@ -587,6 +593,25 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteStream(stream);
             }
 
+        }
+
+        private class StreamJsonValueActions<T> : StreamActionsBase, IValueActions<T> where T : IDynamicJsonWithContext
+        {
+            private readonly DocumentsOperationContext _context;
+
+            public StreamJsonValueActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string name)
+                : base(writer, name)
+            {
+                _context = context;
+            }
+
+            public void WriteValue(T value)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+                Writer.WriteObject(_context.ReadObject(value.ToJson(_context), "write pending transaction"));
+            }
         }
 
         private class StreamKeyValueActions<T> : StreamActionsBase, IKeyValueActions<T>

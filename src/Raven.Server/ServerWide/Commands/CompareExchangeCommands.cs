@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public static string GetActualKey(string database, string key)
         {
-            return ("db/" + database + "/" + key).ToLowerInvariant();
+            return (database + "/" + key).ToLowerInvariant();
         }
 
         protected CompareExchangeCommandBase() { }

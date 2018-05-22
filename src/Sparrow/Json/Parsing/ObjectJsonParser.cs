@@ -16,6 +16,11 @@ namespace Sparrow.Json.Parsing
         DynamicJsonValue ToJson();
     }
 
+    public interface IDynamicJsonWithContext
+    {
+        DynamicJsonValue ToJson(JsonOperationContext context);
+    }
+
     public class DynamicJsonValue
     {
         public const string TypeFieldName = "$type";

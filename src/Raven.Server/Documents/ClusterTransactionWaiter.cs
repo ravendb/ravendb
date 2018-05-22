@@ -32,6 +32,10 @@ namespace Raven.Server.Documents
         public void SetResult(string id, long index, object result)
         {
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+
+            if (id == null)
+                return;
+
             if (_results.TryGetValue(id, out var task))
             {
                 task.SetResult(result);
@@ -41,6 +45,10 @@ namespace Raven.Server.Documents
         public void SetException(string id, long index, Exception e)
         {
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+
+            if (id == null)
+                return;
+
             if (_results.TryGetValue(id, out var task))
             {
                 task.SetException(e);

@@ -478,6 +478,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             _backupResult.Identities.ReadCount = snapshotSmugglerResult.Identities.ReadCount;
             _backupResult.CompareExchange.Processed = true;
             _backupResult.CompareExchange.ReadCount = snapshotSmugglerResult.CompareExchange.ReadCount;
+            _backupResult.PendingClusterTransactions.Processed = true;
+            _backupResult.PendingClusterTransactions.ReadCount = snapshotSmugglerResult.PendingClusterTransactions.ReadCount;
         }
 
         private void AddInfo(string message, Action<IOperationProgress> onProgress)

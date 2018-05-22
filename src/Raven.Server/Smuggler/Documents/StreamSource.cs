@@ -11,10 +11,13 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -225,6 +228,43 @@ namespace Raven.Server.Smuggler.Documents
             return null;
         }
 
+        public IDisposable GetPendingClusterTransactions(out IEnumerable<ClusterTransactionCommand.SingleClusterDatabaseCommand> transaction)
+        {
+            using (var scope = new DisposableScope())
+            {
+                transaction = InternalGetPendingClusterTransactions(scope);
+                return scope.Delay();
+            }
+        }
+
+        private IEnumerable<ClusterTransactionCommand.SingleClusterDatabaseCommand> InternalGetPendingClusterTransactions(DisposableScope scope)
+        {
+            foreach (BlittableJsonReaderObject reader in ReadArray(disposableScope: scope))
+            {
+                scope.EnsureDispose(reader);
+                if (reader.TryGet(nameof(ClusterTransactionCommand.SingleClusterDatabaseCommand.Commands), out BlittableJsonReaderArray commandsArray) == false)
+                {
+                    _result.PendingClusterTransactions.ErroredCount++;
+                    _result.AddWarning("Could not read cluster transaction entry.");
+
+                    continue;
+                }
+
+                reader.TryGet(nameof(ClusterTransactionCommand.SingleClusterDatabaseCommand.Index), out long index);
+                reader.TryGet(nameof(ClusterTransactionCommand.SingleClusterDatabaseCommand.PreviousCount), out long prevCount);
+                reader.TryGet(nameof(ClusterTransactionCommand.SingleClusterDatabaseCommand.Options), out BlittableJsonReaderObject options);
+
+                yield return new ClusterTransactionCommand.SingleClusterDatabaseCommand
+                {
+                    Database = _database.Name,
+                    Commands = commandsArray,
+                    Index = index,
+                    Options = options != null ? JsonDeserializationServer.ClusterTransactionOptions(options) : null,
+                    PreviousCount = prevCount
+                };
+            }
+        }
+
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
         {
             parser.SetBuffer(value.Buffer, value.Size);
@@ -242,8 +282,8 @@ namespace Raven.Server.Smuggler.Documents
                     using (reader)
                     {
 
-                        if (reader.TryGet("Key", out string key) == false ||
-                            reader.TryGet("Value", out LazyStringValue value) == false)
+                        if (reader.TryGet(nameof(AddOrUpdateCompareExchangeCommand.Key), out string key) == false ||
+                            reader.TryGet(nameof(AddOrUpdateCompareExchangeCommand.Value), out LazyStringValue value) == false)
                         {
                             _result.CompareExchange.ErroredCount++;
                             _result.AddWarning("Could not read compare exchange entry.");
@@ -265,7 +305,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         private IEnumerable<CounterDetail> InternalGetCounterValues()
-        {           
+        {
             foreach (var reader in ReadArray())
             {
                 using (reader)
@@ -290,7 +330,7 @@ namespace Raven.Server.Smuggler.Documents
                     };
 
                 }
-            }        
+            }
         }
 
 
@@ -310,6 +350,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                 case DatabaseItemType.Counters:
+                case DatabaseItemType.PendingClusterTransactions:
                     return SkipArray(onSkipped);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
@@ -519,7 +560,7 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
+        private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null, DisposableScope disposableScope = null)
         {
             if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -570,7 +611,14 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                builder.Dispose();
+                if (disposableScope != null)
+                {
+                    disposableScope.EnsureDispose(builder);
+                }
+                else
+                {
+                    builder.Dispose();
+                }
             }
         }
 
@@ -1064,6 +1112,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.DatabaseRecord), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.DatabaseRecord;
+
+            if (type.Equals(nameof(DatabaseItemType.PendingClusterTransactions), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.PendingClusterTransactions;
 
             if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase) ||
                 type.Equals("Results", StringComparison.OrdinalIgnoreCase)) // reading from stream/docs endpoint

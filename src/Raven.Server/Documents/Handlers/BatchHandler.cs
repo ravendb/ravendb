@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Handlers
                 var dbGrpId = Database.DatabaseGroupId;
                 var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
 
-                if (Options.WaitForIndexesTimeout != null)
+                if (Options?.WaitForIndexesTimeout != null)
                 {
                     ModifiedCollections = new HashSet<string>();
                 }
@@ -451,7 +451,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         _count++;
                         var changeVector = $"RAFT:{_count}-{dbGrpId}";
-                        var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
+                        var cmd = JsonDeserializationServer.ClusterDatabaseCommand(blittableCommand);
 
                         switch (cmd.Type)
                         {
@@ -549,7 +549,7 @@ namespace Raven.Server.Documents.Handlers
                     : Database.DocumentsStorage.ExtractCollectionName(context, item.Tombstone.Collection);
             }
 
-            private CollectionName GetFirstConflictCollection(DocumentsOperationContext context, ClusterTransactionCommand.ClusterTransactionDataCommand cmd)
+            private CollectionName GetFirstConflictCollection(DocumentsOperationContext context, ClusterTransactionCommand.DatabaseCommand cmd)
             {
                 var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, cmd.Id);
                 if (conflicts.Count == 0)

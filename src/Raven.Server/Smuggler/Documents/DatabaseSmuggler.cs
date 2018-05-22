@@ -15,6 +15,8 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -170,6 +172,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Counters:
                     counts = ProcessCounters(result);
                     break;
+                case DatabaseItemType.PendingClusterTransactions:
+                    counts = ProcessPendingClusterTransactions(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -184,7 +189,7 @@ namespace Raven.Server.Smuggler.Documents
             result.AddInfo($"Finished processing {type}. {counts}");
             _onProgress.Invoke(result.Progress);
         }
-
+        
         private void SkipType(DatabaseItemType type, SmugglerResult result, bool ensureStepProcessed = true)
         {
             result.AddInfo($"Skipping '{type}' processing.");
@@ -219,6 +224,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Counters:
                     counts = result.Counters;
+                    break;
+                case DatabaseItemType.PendingClusterTransactions:
+                    counts = result.PendingClusterTransactions;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
@@ -603,6 +611,33 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Counters;
+        }
+
+        private SmugglerProgressBase.Counts ProcessPendingClusterTransactions(SmugglerResult result)
+        {
+            using (_source.GetPendingClusterTransactions(out var transactions))
+            using (var actions = _destination.PendingClusterTransactions())
+            {
+                foreach (var transaction in transactions)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.PendingClusterTransactions.ReadCount++;
+                    try
+                    {
+                        actions.WriteValue(transaction);
+                    }
+                    catch (Exception e)
+                    {
+                        result.PendingClusterTransactions.ErroredCount++;
+                        result.AddError(
+                            "Could not write pending cluster transaction. " +
+                            $"Index: {transaction.Index}, Number of commands: {transaction.Commands.Length}. " +
+                            $"Due to: {e.Message}");
+                    }
+                }
+            }
+
+            return result.PendingClusterTransactions;
         }
 
         private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)

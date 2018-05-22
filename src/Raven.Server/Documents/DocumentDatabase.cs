@@ -621,7 +621,7 @@ namespace Raven.Server.Documents
                         var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                         {
                             AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                            OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
+                            OperateOnTypes = Client.Documents.Smuggler.DatabaseSmuggler.ClusterStateMachineImportOptions
                         };
                         var smuggler = new DatabaseSmuggler(this,
                             smugglerSource,
