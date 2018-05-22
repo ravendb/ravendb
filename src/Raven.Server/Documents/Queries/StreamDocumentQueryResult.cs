@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
@@ -32,7 +33,12 @@ namespace Raven.Server.Documents.Queries
 
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
+        }
+
+        public override void AddExplanation(ExplanationResult explanationResult)
+        {
+            throw new NotSupportedException();
         }
 
         public override void HandleException(Exception e)
@@ -61,6 +67,7 @@ namespace Raven.Server.Documents.Queries
 
         public override bool SupportsInclude => false;
         public override bool SupportsHighlighting => false;
+        public override bool SupportsExplanations => false;
 
         public void Flush()// intentionally not using Disposable here, because we need better error handling
         {

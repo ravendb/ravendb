@@ -29,9 +29,6 @@ namespace Raven.Client.Documents.Queries
 #if FEATURE_SHOW_TIMINGS
                 hasher.Write(ShowTimings);
 #endif
-#if FEATURE_EXPLAIN_SCORES
-                hasher.Write(ExplainScores);
-#endif
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
                 hasher.Write(Start);
                 hasher.Write(PageSize);
@@ -69,13 +66,6 @@ namespace Raven.Client.Documents.Queries
         /// Allow to skip duplicate checking during queries
         /// </summary>
         public bool SkipDuplicateChecking { get; set; }
-
-#if FEATURE_EXPLAIN_SCORES
-        /// <summary>
-        /// Whatever a query result should contain an explanation about how docs scored against query
-        /// </summary>
-        public bool ExplainScores { get; set; }
-#endif
 
 #if FEATURE_SHOW_TIMINGS
         /// <summary>

@@ -132,13 +132,6 @@ namespace Raven.Client.Documents.Session
         protected bool ShowQueryTimings;
 #endif
 
-#if FEATURE_EXPLAIN_SCORES
-        /// <summary>
-        /// Determine if scores of query results should be explained
-        /// </summary>
-        protected bool ShouldExplainScores;
-#endif
-
         public bool IsDistinct => SelectTokens.First?.Value is DistinctToken;
 
         /// <summary>
@@ -189,7 +182,7 @@ namespace Raven.Client.Documents.Session
             LoadTokens = loadTokens;
 
             TheSession = session;
-            AfterQueryExecuted(UpdateStatsAndHighlightings);
+            AfterQueryExecuted(UpdateStatsHighlightingsAndExplanations);
 
             _conventions = session == null ? new DocumentConventions() : session.Conventions;
             _linqPathProvider = new LinqPathProvider(_conventions);
@@ -1077,9 +1070,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 #if FEATURE_SHOW_TIMINGS
                 ShowTimings = ShowQueryTimings,
 #endif
-#if FEATURE_EXPLAIN_SCORES
-                ExplainScores = ShouldExplainScores
-#endif
             };
 
             if (PageSize != null)
@@ -1128,7 +1118,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildInclude(StringBuilder queryText)
         {
-            if (Includes.Count == 0 && Highlightings.Count == 0)
+            if (Includes.Count == 0 && Highlightings.Count == 0 && Explanation == null)
                 return;
 
             queryText.Append(" include ");
@@ -1165,6 +1155,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 first = false;
 
                 token.WriteTo(queryText);
+            }
+
+            if (Explanation != null)
+            {
+                if (first == false)
+                    queryText.Append(",");
+                first = false;
+
+                Explanation.WriteTo(queryText);
             }
         }
 
@@ -1264,10 +1263,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             SelectTokens.AddFirst(DistinctToken.Instance);
         }
 
-        private void UpdateStatsAndHighlightings(QueryResult queryResult)
+        private void UpdateStatsHighlightingsAndExplanations(QueryResult queryResult)
         {
             QueryStats.UpdateQueryStats(queryResult);
             QueryHighlightings.Update(queryResult);
+            Explanations?.Update(queryResult);
         }
 
         private void BuildSelect(StringBuilder writer)

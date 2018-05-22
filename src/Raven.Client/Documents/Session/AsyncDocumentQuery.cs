@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Util;
@@ -722,14 +723,19 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-#if FEATURE_EXPLAIN_SCORES
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> ExplainScores()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Explain(out Explanations explanations)
         {
-            ShouldExplainScores = true;
+            Explain(null, out explanations);
             return this;
         }
-#endif
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Explain(ExplanationOptions options, out Explanations explanations)
+        {
+            Explain(options, out explanations);
+            return this;
+        }
 
         /// <inheritdoc />
         Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
@@ -897,9 +903,8 @@ namespace Raven.Client.Documents.Session
 #if FEATURE_SHOW_TIMINGS
                 ShowQueryTimings = ShowQueryTimings,
 #endif
-#if FEATURE_EXPLAIN_SCORES
-                ShouldExplainScores = ShouldExplainScores,
-#endif
+                Explanations = Explanations,
+                Explanation = Explanation,
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator
             };

@@ -7,6 +7,23 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryValidator
     {
+        public static void ValidateExplanations(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
+        {
+            if (arguments.Count > 1)
+                throw new InvalidQueryException("Method 'explanations()' expects zero or one argument(s) to be provided", queryText, parameters);
+
+            for (var i = 0; i < arguments.Count; i++)
+            {
+                switch (arguments[i])
+                {
+                    case ValueExpression _:
+                        break;
+                    default:
+                        throw new InvalidQueryException($"Method 'explanations()' expects value token as an argument at index {i}, got {arguments[0]} type", queryText, parameters);
+                }
+            }
+        }
+
         public static void ValidateHighlight(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
         {
             if (arguments.Count < 3 || arguments.Count > 4)

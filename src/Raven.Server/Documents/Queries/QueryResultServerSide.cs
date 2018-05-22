@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Queries.Explanation;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -16,6 +17,8 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings);
 
+        public abstract void AddExplanation(ExplanationResult explanationResult);
+
         public abstract void HandleException(Exception e);
 
         public abstract bool SupportsExceptionHandling { get; }
@@ -23,6 +26,8 @@ namespace Raven.Server.Documents.Queries
         public abstract bool SupportsInclude { get; }
 
         public abstract bool SupportsHighlighting { get; }
+
+        public abstract bool SupportsExplanations { get; }
 
         public bool NotModified { get; protected set; }
     }

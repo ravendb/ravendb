@@ -22,7 +22,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -32,6 +31,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -1970,6 +1970,12 @@ namespace Raven.Server.Documents.Indexes
             if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
                 throw new NotSupportedException("Highlighting is not supported by this type of query.");
 
+            if (resultToFill.SupportsExplanations == false && query.Metadata.HasExplanations)
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
+            if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
             using (var marker = MarkQueryAsRunning(query, token))
             {
                 var queryDuration = Stopwatch.StartNew();
@@ -2020,7 +2026,7 @@ namespace Raven.Server.Documents.Indexes
                             var skippedResults = new Reference<int>();
 
                             var fieldsToFetch = new FieldsToFetch(query, Definition);
-                            IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings)> documents;
+                            IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
                                 DocumentDatabase.DocumentsStorage, documentsContext,
@@ -2070,6 +2076,9 @@ namespace Raven.Server.Documents.Indexes
 
                                     if (document.Highlightings != null)
                                         resultToFill.AddHighlightings(document.Highlightings);
+
+                                    if (document.Explanation != null)
+                                        resultToFill.AddExplanation(document.Explanation);
 
                                     includeDocumentsCommand.Gather(document.Result);
                                 }
