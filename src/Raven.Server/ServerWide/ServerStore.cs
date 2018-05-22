@@ -1403,11 +1403,13 @@ namespace Raven.Server.ServerWide
                             continue;
                         }
 
-
                         if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
                             continue;
 
                         if (idleDbInstance.Changes.Connections.Values.Any(x => x.IsDisposed == false && x.IsChangesConnectionOriginatedFromStudio == false))
+                            continue;
+
+                        if (idleDbInstance.Operations.HasActive)
                             continue;
 
                         DatabasesLandlord.UnloadDirectly(db);
