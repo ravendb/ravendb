@@ -112,7 +112,7 @@
                         <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
                     <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: queryStats">
+                        data-bind="click: exportCsv, enable: totalResults()">
                         <i class="icon-csv-export"></i> <span>Export CSV</span>
                     </button>
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
