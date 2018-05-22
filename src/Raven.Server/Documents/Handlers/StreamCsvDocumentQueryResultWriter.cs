@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
         
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
         {
-            csvFileName = $"{csvFileName} {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.csv"; 
+            csvFileName = $"{csvFileName}_{SystemTime.UtcNow.ToString("yyyyMMdd:HHmm", CultureInfo.InvariantCulture)}.csv";  
            
             _response = response;
             _response.Headers["Content-Disposition"] = $"attachment; filename=\"{csvFileName}\"; filename*=UTF-8''{csvFileName}";
