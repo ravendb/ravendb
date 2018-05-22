@@ -275,10 +275,10 @@ namespace Raven.Client.Documents.Changes
             {
                 confirmation.Value.TrySetCanceled();
             }
-            
-            _client?.Dispose();
 
             _cts.Cancel();
+
+            _client?.Dispose();
 
             _counters.Clear();
 
