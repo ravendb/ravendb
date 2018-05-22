@@ -59,7 +59,7 @@ namespace Raven.Client.ServerWide.Operations.Migration
             {
                 var rempDir = Path.GetTempPath();
                 
-                OutputFilePath = tmpFile = Path.Combine(rempDir, $"export-{DatabaseRecord.DatabaseName}-{SystemTime.UtcNow:HH_mm_ss.ffff_MM-dd-yyyy}.ravendump");
+                OutputFilePath = tmpFile = Path.Combine(rempDir, $"export-{DatabaseRecord.DatabaseName}-{SystemTime.UtcNow:yyyyMMdd_HHmmss}.ravendump");
             }
 
             sb.Append($"{EnsureStringsAreQuoted(DataDirectory)} {EnsureStringsAreQuoted(OutputFilePath)}");
