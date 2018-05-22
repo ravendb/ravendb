@@ -23,7 +23,7 @@ function CheckPrerequisites () {
     $nodeVersion = node --version
     CheckLastExitCode
 
-    if ($($nodeVersion -match '^v?[6789]') -eq $False) {
+    if ($($nodeVersion -match '^v?[6789]|1\d') -eq $False) {
         throw "Incompatible Node.js version. Must be 6 or later."
     }
 
