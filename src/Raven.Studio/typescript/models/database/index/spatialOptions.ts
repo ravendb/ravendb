@@ -11,6 +11,8 @@ class spatialOptions {
     units = ko.observable<Raven.Client.Documents.Indexes.Spatial.SpatialUnits>();
     
     precision: KnockoutComputed<string>;
+    showPrecision: KnockoutComputed<boolean>;
+
     availableStrategies = ko.observableArray<string>();
     canSpecifyUnits: KnockoutComputed<boolean>;
     canSpecifyTreeLevel: KnockoutComputed<boolean>;
@@ -50,6 +52,10 @@ class spatialOptions {
 
         this.validationGroup = ko.validatedObservable({
             maxTreeLevel: this.maxTreeLevel
+        });
+
+        this.showPrecision = ko.pureComputed(() => {
+            return this.strategy() !== 'BoundingBox';
         });
     }
 
