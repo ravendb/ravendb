@@ -896,7 +896,7 @@ namespace Raven.Client.Documents.Session
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
-                Highlightings = Highlightings,
+                HighlightingTokens = HighlightingTokens,
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
@@ -904,7 +904,7 @@ namespace Raven.Client.Documents.Session
                 ShowQueryTimings = ShowQueryTimings,
 #endif
                 Explanations = Explanations,
-                Explanation = Explanation,
+                ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator
             };
