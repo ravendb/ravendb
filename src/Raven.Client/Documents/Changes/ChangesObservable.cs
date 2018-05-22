@@ -5,7 +5,7 @@ using Sparrow.Collections;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class ChangesObservable<T, TConnectionState> : IChangesObservable<T> where TConnectionState : IChangesConnectionState
+    internal class ChangesObservable<T, TConnectionState> : IChangesObservable<T> where TConnectionState : IChangesConnectionState<T>
     {
         private readonly TConnectionState _connectionState;
         private readonly Func<T, bool> _filter;
@@ -21,12 +21,18 @@ namespace Raven.Client.Documents.Changes
 
         public IDisposable Subscribe(IObserver<T> observer)
         {
+            _connectionState.OnChangeNotification += Send;
+            _connectionState.OnError += Error;
+
             _connectionState.Inc();
             _subscribers.TryAdd(observer);
             return new DisposableAction(() =>
             {
                 _connectionState.Dec();
                 _subscribers.TryRemove(observer);
+
+                _connectionState.OnChangeNotification -= Send;
+                _connectionState.OnError -= Error;
             });
         }
 

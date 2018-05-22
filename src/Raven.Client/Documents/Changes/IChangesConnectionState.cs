@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal interface IChangesConnectionState : IDisposable
+    internal interface IChangesConnectionState<out T> : IDisposable
     {
         void Inc();
 
@@ -12,5 +12,9 @@ namespace Raven.Client.Documents.Changes
         void Error(Exception e);
 
         Task EnsureSubscribedNow();
+
+        event Action<T> OnChangeNotification;
+
+        event Action<Exception> OnError;
     }
 }
