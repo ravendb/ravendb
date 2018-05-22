@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
-            private Dictionary<string, List<CounterOperation>> _dictionary;
+            private readonly Dictionary<string, List<CounterOperation>> _dictionary;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
@@ -93,10 +93,8 @@ namespace Raven.Server.Documents.Handlers
                         {
                             case CounterOperationType.Increment:
                                 LoadDocument();
-
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, kvp.Key,
                                     operation.CounterName, operation.Delta);
-
                                 GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                                
                                 break;
@@ -109,6 +107,7 @@ namespace Raven.Server.Documents.Handlers
                                 LoadDocument();
                                  _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
                                     operation.CounterName, operation.ChangeVector, operation.Delta);
+                                LastChangeVector = operation.ChangeVector;
                                 break;
                             case CounterOperationType.None:
                                 break;
