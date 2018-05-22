@@ -244,7 +244,7 @@ namespace Raven.Server.Smuggler.Documents
                 scope.EnsureDispose(reader);
                 if (reader.TryGet(nameof(ClusterTransactionCommand.SingleClusterDatabaseCommand.Commands), out BlittableJsonReaderArray commandsArray) == false)
                 {
-                    _result.CompareExchange.ErroredCount++;
+                    _result.PendingClusterTransactions.ErroredCount++;
                     _result.AddWarning("Could not read cluster transaction entry.");
 
                     continue;
@@ -305,7 +305,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         private IEnumerable<CounterDetail> InternalGetCounterValues()
-        {           
+        {
             foreach (var reader in ReadArray())
             {
                 using (reader)
@@ -330,7 +330,7 @@ namespace Raven.Server.Smuggler.Documents
                     };
 
                 }
-            }        
+            }
         }
 
 
@@ -349,7 +349,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
-				case DatabaseItemType.Counters:
+                case DatabaseItemType.Counters:
                 case DatabaseItemType.PendingClusterTransactions:
                     return SkipArray(onSkipped);
                 case DatabaseItemType.DatabaseRecord:

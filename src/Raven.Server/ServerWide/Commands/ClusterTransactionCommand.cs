@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -308,7 +309,7 @@ namespace Raven.Server.ServerWide.Commands
             DocumentsOperationContext docContext,
             string database, 
             long fromIndex,
-            bool checkExecution = true)
+            bool skipIfExecuted)
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
@@ -328,10 +329,11 @@ namespace Raven.Server.ServerWide.Commands
                     if (result.Index < fromIndex)
                         continue;
 
-                    if (checkExecution)
+                    if (skipIfExecuted)
                     {
                         // we check if we already executed this transaction, by checking the RAFT element.
-                        var clusterCommands = ChangeVectorUtils.GetEtagById(docContext.LastDatabaseChangeVector, docContext.DocumentDatabase.DatabaseGroupId);
+                        var global = DocumentsStorage.GetDatabaseChangeVector(docContext);
+                        var clusterCommands = ChangeVectorUtils.GetEtagById(global, docContext.DocumentDatabase.DatabaseGroupId);
                         if (clusterCommands >= result.PreviousCount + result.Commands.Length)
                         {
                             continue;

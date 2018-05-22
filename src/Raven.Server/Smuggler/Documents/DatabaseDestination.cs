@@ -93,7 +93,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand> PendingClusterTransactions()
         {
-            return new DatabasePendingClusterTransacinsActions(_database);
+            return new DatabasePendingClusterTransactionsActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -259,12 +259,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class DatabasePendingClusterTransacinsActions : IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand>
+        private class DatabasePendingClusterTransactionsActions : IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand>
         {
             private readonly DocumentDatabase _database;
             private readonly List<ClusterTransactionCommand> _commands = new List<ClusterTransactionCommand>();
 
-            public DatabasePendingClusterTransacinsActions(DocumentDatabase database)
+            public DatabasePendingClusterTransactionsActions(DocumentDatabase database)
             {
                 _database = database;
             }
@@ -304,7 +304,7 @@ namespace Raven.Server.Smuggler.Documents
             private void SendTransactionCommands()
             {
                 var batch = new ClusterTransactionBatchCommand(_commands);
-                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(batch));
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(batch));
                 _commands.Clear();
             }
         }
@@ -344,7 +344,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands()
             {
-                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, _context)));
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, _context)));
 
                 _compareExchangeCommands.Clear();
             }

@@ -64,6 +64,7 @@ namespace SlowTests.Cluster
         public async Task CanImportExportAndBackupClusterTransactions()
         {
             var file = Path.GetTempFileName();
+            var file2 = Path.GetTempFileName();
 
             var leader = await CreateRaftClusterAndGetLeader(3);
             var db = GetDatabaseName();
@@ -98,11 +99,13 @@ namespace SlowTests.Cluster
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
                     await session.StoreAsync(user1, "foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar2");
                     await session.SaveChangesAsync();
                     session.Advanced.Evict(user1);
 
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user2);
                     await session.StoreAsync(user2, "foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar3");
                     await session.SaveChangesAsync();
                     session.Advanced.Evict(user2);
 
@@ -121,8 +124,10 @@ namespace SlowTests.Cluster
                 {
                     OperateOnTypes = DatabaseItemType.PendingClusterTransactions
                 }, file);
+                await leaderStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file2);
             }
 
+            // verify execution of the pending cluster transaction in the new database
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -146,6 +151,24 @@ namespace SlowTests.Cluster
 
                     user = await session.LoadAsync<User>("foo/bar");
                     Assert.Equal(user2.Name, user.Name);
+                }
+            }
+
+            // verify importing of documents with FromCluster flag
+            using (var store = GetDocumentStore())
+            {
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file2);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var database = await GetDatabase(store.Database);
+                    var user = await session.LoadAsync<User>("foo/bar2");
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.Equal($"RAFT:1-{database.DatabaseGroupId}", changeVector);
+                    session.Advanced.Evict(user);
+
+                    user = await session.LoadAsync<User>("foo/bar3");
+                    changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.Equal($"RAFT:2-{database.DatabaseGroupId}", changeVector);
                 }
             }
         }

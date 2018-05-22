@@ -101,7 +101,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand> PendingClusterTransactions()
         {
-            return new StreamJsonValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand>(_writer, nameof(DatabaseItemType.PendingClusterTransactions));
+            return new StreamJsonValueActions<ClusterTransactionCommand.SingleClusterDatabaseCommand>(_writer, _context, nameof(DatabaseItemType.PendingClusterTransactions));
         }
 
         public IIndexActions Indexes()
@@ -597,10 +597,12 @@ namespace Raven.Server.Smuggler.Documents
 
         private class StreamJsonValueActions<T> : StreamActionsBase, IValueActions<T> where T : IDynamicJsonWithContext
         {
+            private readonly DocumentsOperationContext _context;
 
-            public StreamJsonValueActions(BlittableJsonTextWriter writer, string name)
+            public StreamJsonValueActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string name)
                 : base(writer, name)
             {
+                _context = context;
             }
 
             public void WriteValue(T value)
@@ -608,7 +610,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (First == false)
                     Writer.WriteComma();
                 First = false;
-                Writer.WriteIDynamicJsonWithContext(value);
+                Writer.WriteObject(_context.ReadObject(value.ToJson(_context), "write pending transaction"));
             }
         }
 

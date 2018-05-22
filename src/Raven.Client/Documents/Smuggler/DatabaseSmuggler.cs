@@ -129,7 +129,7 @@ namespace Raven.Client.Documents.Smuggler
             return oldOperateOnTypes;
         }
 
-        public static DatabaseItemType ClusterStateMachineImportOptions =>
+        internal static DatabaseItemType ClusterStateMachineImportOptions =>
             DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.PendingClusterTransactions;
 
         public async Task<Operation> ImportAsync(DatabaseSmugglerImportOptions options, string fromFile, CancellationToken cancellationToken = default)

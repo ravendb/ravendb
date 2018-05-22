@@ -183,7 +183,9 @@ namespace Raven.Server.Documents
                     var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
                     var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
                     var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
-                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, docContext, database.Name, first))
+
+                    // we don't skip, since we need to report back the results. 
+                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, docContext, database.Name, first, skipIfExecuted: false))
                     {
                         var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
                         database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>
@@ -207,17 +209,11 @@ namespace Raven.Server.Documents
                                         IndexTask = indexTask,
                                     };
 
-                                    if (mergedCommands.Options?.TaskId == null)
-                                    {
-                                        database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                                        return;
-                                    }
-
-                                    database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
+                                    database.ClusterTransactionWaiter.SetResult(mergedCommands.Options?.TaskId, index, result);
                                     return;
                                 }
 
-                                database.ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
+                                database.ClusterTransactionWaiter.SetException(mergedCommands.Options?.TaskId, index, t.Exception);
                             }
                             catch (Exception e)
                             {

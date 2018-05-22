@@ -138,11 +138,6 @@ namespace Sparrow.Json
             return Encodings.Utf8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
         }
 
-        public void WriteIDynamicJsonWithContext(IDynamicJsonWithContext obj)
-        {
-            WriteObject(_context.ReadObject(obj.ToJson(_context), "read IDynamicJsonWithContext"));
-        }
-
         public void WriteObject(BlittableJsonReaderObject obj)
         {
             if (obj == null)
