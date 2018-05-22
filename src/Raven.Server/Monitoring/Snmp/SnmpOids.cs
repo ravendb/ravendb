@@ -166,11 +166,14 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Database up-time")]
             public const string UpTime = "5.2.{0}.1.12";
 
+            [Description("Indicates if database is loaded")]
+            public const string Loaded = "5.2.{0}.1.13";
+
             [Description("Number of rehabs")]
             public const string Rehabs = "5.2.{0}.1.14";
 
-            [Description("Indicates if database is loaded")]
-            public const string Loaded = "5.2.{0}.1.13";
+            [Description("Number of performance hints")]
+            public const string PerformanceHints = "5.2.{0}.1.15";
 
             [Description("Documents storage allocated size in MB")]
             public const string DocumentsStorageAllocatedSize = "5.2.{0}.2.1";
