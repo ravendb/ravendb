@@ -264,12 +264,39 @@ namespace SlowTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert2);
 
                 Assert.Equal(2, database.NotificationCenter.GetAlertCount());
+                Assert.Equal(0, database.NotificationCenter.GetPerformanceHintCount());
 
                 database.NotificationCenter.Dismiss(alert1.Id);
                 Assert.Equal(1, database.NotificationCenter.GetAlertCount());
+                Assert.Equal(0, database.NotificationCenter.GetPerformanceHintCount());
 
                 database.NotificationCenter.Dismiss(alert2.Id);
                 Assert.Equal(0, database.NotificationCenter.GetAlertCount());
+                Assert.Equal(0, database.NotificationCenter.GetPerformanceHintCount());
+            }
+        }
+
+        [Fact]
+        public void Can_get_performance_hint_count()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var hint1 = GetSamplePerformanceHint();
+                var hint2 = GetSamplePerformanceHint(customSource: "different-key-will-force-different-id");
+
+                database.NotificationCenter.Add(hint1);
+                database.NotificationCenter.Add(hint2);
+
+                Assert.Equal(0, database.NotificationCenter.GetAlertCount());
+                Assert.Equal(2, database.NotificationCenter.GetPerformanceHintCount());
+
+                database.NotificationCenter.Dismiss(hint1.Id);
+                Assert.Equal(0, database.NotificationCenter.GetAlertCount());
+                Assert.Equal(1, database.NotificationCenter.GetPerformanceHintCount());
+
+                database.NotificationCenter.Dismiss(hint2.Id);
+                Assert.Equal(0, database.NotificationCenter.GetAlertCount());
+                Assert.Equal(0, database.NotificationCenter.GetPerformanceHintCount());
             }
         }
 
@@ -508,6 +535,11 @@ namespace SlowTests.Server.NotificationCenter
                 NotificationSeverity.Info,
                 key: customKey ?? "Key",
                 details: new ExceptionDetails(new Exception("Error message")));
+        }
+
+        private static PerformanceHint GetSamplePerformanceHint(string customSource = null)
+        {
+            return PerformanceHint.Create("db", "title", "message", PerformanceHintType.None, NotificationSeverity.Info, source: customSource);
         }
 
         private class PersistableResult : IOperationResult

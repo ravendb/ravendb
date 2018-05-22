@@ -133,6 +133,11 @@ namespace Raven.Server.NotificationCenter
             return _notificationsStorage.GetAlertCount();
         }
 
+        public long GetPerformanceHintCount()
+        {
+            return _notificationsStorage.GetPerformanceHintCount();
+        }
+
         public void Dismiss(string id)
         {
             _notificationsStorage.Delete(id);

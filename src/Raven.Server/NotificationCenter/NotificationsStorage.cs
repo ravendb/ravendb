@@ -239,6 +239,16 @@ namespace Raven.Server.NotificationCenter
 
         public long GetAlertCount()
         {
+            return GetNotificationCount(nameof(NotificationType.AlertRaised));
+        }
+
+        public long GetPerformanceHintCount()
+        {
+            return GetNotificationCount(nameof(NotificationType.PerformanceHint));
+        }
+
+        private long GetNotificationCount(string notificationType)
+        {
             var count = 0;
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -251,7 +261,7 @@ namespace Raven.Server.NotificationCenter
 
                     var typeLsv = (LazyStringValue)type;
 
-                    if (typeLsv.CompareTo(nameof(NotificationType.AlertRaised)) == 0)
+                    if (typeLsv.CompareTo(notificationType) == 0)
                         count++;
                 }
             }
