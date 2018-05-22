@@ -110,9 +110,6 @@ namespace Raven.Client.Documents.Changes
                 counter,
                 notification => string.Equals(notification.Name, indexName, StringComparison.OrdinalIgnoreCase));
 
-            counter.OnIndexChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
             return taskedObservable;
         }
 
@@ -136,9 +133,6 @@ namespace Raven.Client.Documents.Changes
                 counter,
                 notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
 
-            counter.OnDocumentChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
             return taskedObservable;
         }
 
@@ -149,9 +143,6 @@ namespace Raven.Client.Documents.Changes
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
                 notification => true);
-
-            counter.OnDocumentChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
         }
@@ -164,9 +155,6 @@ namespace Raven.Client.Documents.Changes
                 counter,
                 notification => notification.OperationId == operationId);
 
-            counter.OnOperationStatusChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
             return taskedObservable;
         }
 
@@ -177,9 +165,6 @@ namespace Raven.Client.Documents.Changes
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
                 counter,
                 notification => true);
-
-            counter.OnOperationStatusChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
         }
@@ -192,9 +177,6 @@ namespace Raven.Client.Documents.Changes
                 counter,
                 notification => true);
 
-            counter.OnIndexChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
             return taskedObservable;
         }
 
@@ -205,9 +187,6 @@ namespace Raven.Client.Documents.Changes
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
                 notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
-
-            counter.OnDocumentChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
         }
@@ -222,9 +201,6 @@ namespace Raven.Client.Documents.Changes
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
                 notification => string.Equals(collectionName, notification.CollectionName, StringComparison.OrdinalIgnoreCase));
-
-            counter.OnDocumentChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
         }
@@ -245,9 +221,6 @@ namespace Raven.Client.Documents.Changes
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
                 notification => string.Equals(typeName, notification.TypeName, StringComparison.OrdinalIgnoreCase));
-
-            counter.OnDocumentChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
         }
