@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -241,6 +242,8 @@ namespace Raven.Server.Documents.Revisions
 
             try
             {
+                if ((nonPersistentFlags & NonPersistentDocumentFlags.ByCountersUpdate) == NonPersistentDocumentFlags.ByCountersUpdate)
+                    return configuration.IncludeCountersSnapshot;
                 if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
                     return true;
                 if (existingDocument == null)
@@ -276,6 +279,8 @@ namespace Raven.Server.Documents.Revisions
 
             if (collectionName == null)
                 collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document);
+            if (configuration == null)
+                configuration = GetRevisionsConfiguration(collectionName.Name);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
@@ -296,6 +301,27 @@ namespace Raven.Server.Documents.Revisions
                         }
                     }
                 }
+
+                if (configuration.IncludeCountersSnapshot &&
+                    document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counterNames))
+                {
+                    var countersSnapshot = counterNames.ToDictionary(c => c.ToString(), 
+                        c => _documentsStorage.CountersStorage.GetCounterValue(context, id, c.ToString()).GetValueOrDefault());
+
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.RevisionCounters] = countersSnapshot.ToJson()
+                    };
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    document.Modifications = new DynamicJsonValue(document)
+                    {
+                        [Constants.Documents.Metadata.Key] = metadata
+                    };
+
+                    document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
+                
 
                 if (fromReplication)
                 {
@@ -364,9 +390,6 @@ namespace Raven.Server.Documents.Revisions
                         // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
                         return;
                 }
-
-                if (configuration == null)
-                    configuration = GetRevisionsConfiguration(collectionName.Name);
 
                 DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
             }
