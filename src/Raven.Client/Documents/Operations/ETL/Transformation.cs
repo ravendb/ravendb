@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Operations.ETL
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
 
+        private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
+
         private string[] _collections;
 
         public string Name { get; set; }
@@ -29,7 +31,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public bool HasLoadAttachment { get; private set; }
 
-        public virtual bool Validate(ref List<string> errors)
+        public virtual bool Validate(ref List<string> errors, bool isRavenEtl)
         {
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));
@@ -53,7 +55,13 @@ namespace Raven.Client.Documents.Operations.ETL
                 var collections = GetCollectionsFromScript();
 
                 if (collections == null || collections.Length == 0)
-                    errors.Add($"No `loadTo[CollectionName]` method call found in '{Name}' script");
+                    errors.Add($"No `loadTo<{(isRavenEtl ? "Collection" : "Table")}Name>` method call found in '{Name}' script");
+
+                if (Legacy_ReplicateToMethodRegex.Matches(Script).Count > 0)
+                {
+                    errors.Add($"Found `replicateTo<TableName>` method in '{Name}' script which is not supported. " +
+                               "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>` instead.");
+                }
 
                 HasLoadAttachment = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
             }

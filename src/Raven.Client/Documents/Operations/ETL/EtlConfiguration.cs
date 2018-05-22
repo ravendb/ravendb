@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
             foreach (var script in Transforms)
             {
-                script.Validate(ref errors);
+                script.Validate(ref errors, this is RavenEtlConfiguration);
 
                 if (uniqueNames.Add(script.Name) == false)
                     errors.Add($"Script name '{script.Name}' name is already defined. The script names need to be unique");
