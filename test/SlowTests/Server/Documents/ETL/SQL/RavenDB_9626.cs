@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
-    public class RavenDB_9626
+    public class RavenDB_9626 : NoDisposalNeeded
     {
         [Fact]
         public void Error_if_script_does_not_contain_any_loadTo_method_and_uses_legacy_replicateTo()
