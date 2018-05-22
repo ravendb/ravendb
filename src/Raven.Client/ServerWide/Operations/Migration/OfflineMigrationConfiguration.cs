@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using Raven.Client.Util;
 
 namespace Raven.Client.ServerWide.Operations.Migration
 {
@@ -57,7 +58,8 @@ namespace Raven.Client.ServerWide.Operations.Migration
             if (OutputFilePath == null)
             {
                 var rempDir = Path.GetTempPath();
-                OutputFilePath = tmpFile = Path.Combine(rempDir, "export.ravendump");
+                
+                OutputFilePath = tmpFile = Path.Combine(rempDir, $"export-{DatabaseRecord.DatabaseName}-{SystemTime.UtcNow:HH_mm_ss.ffff_MM-dd-yyyy}.ravendump");
             }
 
             sb.Append($"{EnsureStringsAreQuoted(DataDirectory)} {EnsureStringsAreQuoted(OutputFilePath)}");
