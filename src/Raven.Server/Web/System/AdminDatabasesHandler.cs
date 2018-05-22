@@ -1189,6 +1189,7 @@ namespace Raven.Server.Web.System
                         {
                             // send some initial progess so studio can open details 
                             result.AddInfo("Starting migration");
+                            result.AddInfo($"Path of temporary export file: {tmpFile}");
                             onProgress(overallProgress);
 
                             while (true)
