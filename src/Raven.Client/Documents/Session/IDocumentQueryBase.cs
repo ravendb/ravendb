@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
@@ -549,12 +550,15 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf Distinct();
 
-#if FEATURE_EXPLAIN_SCORES
         /// <summary>
         ///     Adds explanations of scores calculated for queried documents to the query result
         /// </summary>
-        TSelf ExplainScores();
-#endif
+        TSelf Explain(out Explanations explanations);
+
+        /// <summary>
+        ///     Adds explanations of scores calculated for queried documents to the query result
+        /// </summary>
+        TSelf Explain(ExplanationOptions options, out Explanations explanations);
 
         /// <summary>
         ///     Specifies a fuzziness factor to the single word term in the last where clause

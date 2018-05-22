@@ -50,15 +50,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-#if FEATURE_EXPLAIN_SCORES
-            if (query.ExplainScores)
-            {
-                writer.WritePropertyName(nameof(query.ExplainScores));
-                writer.WriteBool(query.ExplainScores);
-                writer.WriteComma();
-            }
-#endif
-
 #if FEATURE_SHOW_TIMINGS
             if (query.ShowTimings)
             {

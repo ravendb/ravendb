@@ -31,14 +31,14 @@ namespace Raven.Client.Documents.Queries
         public Dictionary<string, Dictionary<string, string[]>> Highlightings { get; set; }
 
         /// <summary>
+        /// Explanations (if requested).
+        /// </summary>
+        public Dictionary<string, string[]> Explanations { get; set; }
+
+        /// <summary>
         /// The duration of actually executing the query server side
         /// </summary>
         public long DurationInMs { get; set; }
-
-        /// <summary>
-        /// Explanations of document scores (if requested).
-        /// </summary>
-        public Dictionary<string, string> ScoreExplanations { get; set; }
 
         /// <summary>
         /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Queries
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
                 Highlightings = Highlightings?.ToDictionary(pair => pair.Key, x => new Dictionary<string, string[]>(x.Value)),
-                ScoreExplanations = ScoreExplanations?.ToDictionary(x => x.Key, x => x.Value),
+                Explanations = Explanations?.ToDictionary(x => x.Key, x => x.Value),
                 TimingsInMs = TimingsInMs?.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = LastQueryTime,
                 DurationInMs = DurationInMs,

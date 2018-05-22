@@ -275,6 +275,25 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
 
+            if (result.Explanations != null)
+            {
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(result.Explanations));
+                writer.WriteStartObject();
+                var first = true;
+                foreach (var kvp in result.Explanations)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                   writer.WriteArray(kvp.Key, kvp.Value);
+                }
+
+                writer.WriteEndObject();
+            }
+
             writer.WriteEndObject();
             return numberOfResults;
 
@@ -478,12 +497,6 @@ namespace Raven.Server.Json
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
         {
             writer.WriteStartObject();
-
-#if FEATURE_EXPLAIN_SCORES
-            writer.WritePropertyName(nameof(query.ExplainScores));
-            writer.WriteBool(query.ExplainScores);
-            writer.WriteComma();
-#endif
 
             writer.WritePropertyName(nameof(query.PageSize));
             writer.WriteInteger(query.PageSize);

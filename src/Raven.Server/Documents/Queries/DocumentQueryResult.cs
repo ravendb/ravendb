@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Documents.Queries.Explanation;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -10,6 +11,8 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsInclude => true;
 
         public override bool SupportsHighlighting => true;
+
+        public override bool SupportsExplanations => true;
 
         public override bool SupportsExceptionHandling => false;
 
@@ -41,9 +44,28 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        public override void AddExplanation(ExplanationResult explanation)
+        {
+            if (Explanations == null)
+                Explanations = new Dictionary<string, string[]>();
+
+            if (Explanations.TryGetValue(explanation.Key, out var result) == false)
+                Explanations[explanation.Key] = new[] { CreateExplanation(explanation.Explanation) };
+            else
+            {
+                Array.Resize(ref result, result.Length + 1);
+                result[result.Length - 1] = CreateExplanation(explanation.Explanation);
+            }
+        }
+
         public override void HandleException(Exception e)
         {
             throw new NotSupportedException();
+        }
+
+        private static string CreateExplanation(Lucene.Net.Search.Explanation explanation)
+        {
+            return explanation.ToString();
         }
     }
 }

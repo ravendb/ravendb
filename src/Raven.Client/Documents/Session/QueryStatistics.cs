@@ -90,12 +90,6 @@ namespace Raven.Client.Documents.Session
             LastQueryTime = qr.LastQueryTime;
             ResultSize = qr.ResultSize;
             ResultEtag = qr.ResultEtag;
-            ScoreExplanations = qr.ScoreExplanations;
         }
-
-        /// <summary>
-        /// Gets or sets explanations of document scores 
-        /// </summary>
-        public Dictionary<string, string> ScoreExplanations { get; set; }
     }
 }

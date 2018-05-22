@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Util;
@@ -55,14 +56,19 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-#if FEATURE_EXPLAIN_SCORES
         /// <inheritdoc />
-        public IDocumentQuery<T> ExplainScores()
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Explain(out Explanations explanations)
         {
-            ShouldExplainScores = true;
+            Explain(null, out explanations);
             return this;
         }
-#endif
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Explain(ExplanationOptions options, out Explanations explanations)
+        {
+            Explain(options, out explanations);
+            return this;
+        }
 
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
@@ -894,9 +900,8 @@ namespace Raven.Client.Documents.Session
 #if FEATURE_SHOW_TIMINGS
                 ShowQueryTimings = ShowQueryTimings,
 #endif
-#if FEATURE_EXPLAIN_SCORES
-                ShouldExplainScores = ShouldExplainScores,
-#endif
+                Explanations = Explanations,
+                Explanation = Explanation,
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator
             };

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
@@ -79,6 +80,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasHighlightings { get; private set; }
 
+        public bool HasExplanations { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
@@ -104,6 +107,8 @@ namespace Raven.Server.Documents.Queries
         public SelectField[] SelectFields;
 
         public HighlightingField[] Highlightings;
+
+        public ExplanationField Explanation;
 
         public readonly ulong CacheKey;
 
@@ -337,6 +342,18 @@ namespace Raven.Server.Documents.Queries
 
                                 highlightings.Add(CreateHighlightingField(me, parameters));
                                 break;
+                            case MethodType.Explanation:
+                                if (IsCollectionQuery)
+                                    throw new InvalidQueryException("Collection queries cannot return explanations.", QueryText, parameters);
+
+                                if (HasExplanations)
+                                    throw new InvalidQueryException("Query cannot include duplicate explanations.", QueryText, parameters);
+
+                                QueryValidator.ValidateExplanations(me.Arguments, QueryText, parameters);
+
+                                Explanation = CreateExplanationField(me);
+                                HasExplanations = true;
+                                break;
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
                         }
@@ -351,6 +368,19 @@ namespace Raven.Server.Documents.Queries
 
             if (HasHighlightings)
                 Highlightings = highlightings?.ToArray();
+        }
+
+        private static ExplanationField CreateExplanationField(MethodExpression expression)
+        {
+            var result = new ExplanationField();
+
+            if (expression.Arguments.Count == 1)
+            {
+                var ve = (ValueExpression)expression.Arguments[0];
+                result.AddOptions(ve.Token, ve.Value);
+            }
+
+            return result;
         }
 
         private HighlightingField CreateHighlightingField(MethodExpression expression, BlittableJsonReaderObject parameters)

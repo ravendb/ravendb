@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
-using Raven.Client.Documents.Session;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 
@@ -80,29 +76,8 @@ namespace Raven.Server.Documents.Queries.Suggestions
             if (_optionsAsStringOrParameterName == null)
                 return null;
 
-            BlittableJsonReaderObject optionsJson;
+            var options = FieldOptionsHelper.GetOptions<SuggestionOptions>(_optionsAsStringOrParameterName, _optionsType, parameters, context);
 
-            if (_optionsType == AST.ValueTokenType.Parameter)
-            {
-                if (parameters == null)
-                    throw new ArgumentNullException(nameof(parameters));
-
-                if (parameters.TryGetMember(_optionsAsStringOrParameterName, out var optionsObject) == false)
-                    throw new InvalidOperationException($"Parameter '{_optionsAsStringOrParameterName}' containing '{nameof(SuggestionOptions)}' was not present in the list of parameters.");
-
-                optionsJson = optionsObject as BlittableJsonReaderObject;
-
-                if (optionsJson == null)
-                    throw new InvalidOperationException($"Parameter '{_optionsAsStringOrParameterName}' should contain JSON object.");
-            }
-            else if (_optionsType == AST.ValueTokenType.String)
-            {
-                optionsJson = IndexReadOperation.ParseJsonStringIntoBlittable(_optionsAsStringOrParameterName, context);
-            }
-            else
-                throw new InvalidOperationException($"Unknown options type '{_optionsType}'.");
-
-            var options = (SuggestionOptions)EntityToBlittable.ConvertToEntity(typeof(SuggestionOptions), "suggestion/options", optionsJson, DocumentConventions.Default);
             if (_optionsType == AST.ValueTokenType.String)
                 _options = options;
 
@@ -120,8 +95,7 @@ namespace Raven.Server.Documents.Queries.Suggestions
 
         public void AddOptions(string optionsAsStringOrParameterName, ValueTokenType type)
         {
-            if (type != AST.ValueTokenType.String && type != AST.ValueTokenType.Parameter)
-                throw new InvalidOperationException($"{nameof(FacetOptions)} can only be passed as JSON string or as a parameter pointing to JSON object, but was '{type}'.");
+            FieldOptionsHelper.ValidateOptions<SuggestionOptions>(optionsAsStringOrParameterName, type);
 
             _optionsAsStringOrParameterName = optionsAsStringOrParameterName;
             _optionsType = type;

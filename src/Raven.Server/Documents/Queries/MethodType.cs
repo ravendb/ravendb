@@ -35,6 +35,8 @@
 
         Highlight,
 
+        Explanation,
+
         Unknown,
     }
 }
