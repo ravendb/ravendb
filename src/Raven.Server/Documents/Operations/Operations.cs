@@ -241,6 +241,8 @@ namespace Raven.Server.Documents.Operations
 
         public ICollection<Operation> GetActive() => _active.Values;
 
+        public bool HasActive => _active.Count > 0;
+
         public class Operation
         {
             private readonly TimeSpan _throttleTime = TimeSpan.FromSeconds(1);
