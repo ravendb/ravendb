@@ -53,7 +53,7 @@
     .database-item {
         padding-left: 30px;
         position: relative;
-        
+
         .state-remote {
             background-color: #43495e;
         }
@@ -170,13 +170,23 @@
     }
 
     .properties-container {
-        align-content: flex-start;
-        align-items: center;
-        overflow: hidden;
         flex-grow: 1;
         min-height: 52px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        justify-items: stretch;
+
+        @media (min-width: @screen-lg) {
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            grid-auto-flow: column;
+        }
+
 
         .properties-item {
+            &.item-last-backup {
+                grid-column-start: 2;
+            }
 
             .set-size {
                 padding: 0px 10px;
