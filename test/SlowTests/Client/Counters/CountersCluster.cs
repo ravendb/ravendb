@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -19,8 +21,13 @@ namespace SlowTests.Client.Counters
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var dbName = GetDatabaseName();
-            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
-
+            var db = await CreateDatabaseInCluster(new DatabaseRecord(dbName)
+            {
+                Settings =
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = "Experimental"
+                }
+            }, 3, leader.WebUrl);
             var stores = db.Servers.Select(s => new DocumentStore
             {
                 Database = dbName,
@@ -77,7 +84,13 @@ namespace SlowTests.Client.Counters
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var dbName = GetDatabaseName();
-            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+            var db = await CreateDatabaseInCluster(new DatabaseRecord(dbName)
+            {
+                Settings =
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = "Experimental"
+                }
+            }, 3, leader.WebUrl);
 
             var stores = db.Servers.Select(s => new DocumentStore
                 {
