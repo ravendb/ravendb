@@ -112,6 +112,9 @@ class editExternalReplicationTask extends viewModelBase {
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
 
+        // Open the 'Create new conn. str.' area if no connection strings are yet defined 
+        this.ravenEtlConnectionStringsDetails.subscribe((value) => { this.createNewConnectionString(!value.length) }); 
+        
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
