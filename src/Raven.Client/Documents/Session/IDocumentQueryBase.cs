@@ -553,12 +553,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Adds explanations of scores calculated for queried documents to the query result
         /// </summary>
-        TSelf Explain(out Explanations explanations);
+        TSelf IncludeExplanations(out Explanations explanations);
 
         /// <summary>
         ///     Adds explanations of scores calculated for queried documents to the query result
         /// </summary>
-        TSelf Explain(ExplanationOptions options, out Explanations explanations);
+        TSelf IncludeExplanations(ExplanationOptions options, out Explanations explanations);
 
         /// <summary>
         ///     Specifies a fuzziness factor to the single word term in the last where clause

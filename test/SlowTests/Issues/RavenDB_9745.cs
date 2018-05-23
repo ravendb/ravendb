@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                     var companies = session
                         .Advanced
                         .DocumentQuery<Company>()
-                        .Explain(out var explanations)
+                        .IncludeExplanations(out var explanations)
                         .Search(x => x.Name, "Micro*")
                         .ToList();
 
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     var results = session
                         .Advanced
                         .DocumentQuery<Companies_ByName.Result, Companies_ByName>()
-                        .Explain(new ExplanationOptions
+                        .IncludeExplanations(new ExplanationOptions
                         {
                             GroupKey = "Key"
                         }, out var explanations)
