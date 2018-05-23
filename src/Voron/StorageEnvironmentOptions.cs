@@ -332,10 +332,10 @@ namespace Voron
                 if (Directory.Exists(_basePath.FullPath) == false)
                     Directory.CreateDirectory(_basePath.FullPath);
 
-                if (Equals(_basePath, tempPath) == false && Directory.Exists(TempPath.FullPath) == false)
+                if (Equals(_basePath, TempPath) == false && Directory.Exists(TempPath.FullPath) == false)
                     Directory.CreateDirectory(TempPath.FullPath);
 
-                if (Equals(_journalPath, tempPath) == false && Directory.Exists(_journalPath.FullPath) == false)
+                if (Equals(_journalPath, TempPath) == false && Directory.Exists(_journalPath.FullPath) == false)
                     Directory.CreateDirectory(_journalPath.FullPath);
 
                 _dataPager = new Lazy<AbstractPager>(() =>
