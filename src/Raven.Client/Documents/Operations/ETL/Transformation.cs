@@ -9,11 +9,14 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string LoadTo = "loadTo";
 
         internal const string LoadAttachment = "loadAttachment";
+
+        internal const string AddAttachment = "addAttachment";
         
         internal const string AttachmentMarker = "$attachment/";
         
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
+        private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
 
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
 
@@ -29,9 +32,9 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string Script { get; set; }
 
-        public bool HasLoadAttachment { get; private set; }
+        public bool IsHandlingAttachments { get; private set; }
 
-        public virtual bool Validate(ref List<string> errors, bool isRavenEtl)
+        public virtual bool Validate(ref List<string> errors, EtlType type)
         {
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));
@@ -55,15 +58,31 @@ namespace Raven.Client.Documents.Operations.ETL
                 var collections = GetCollectionsFromScript();
 
                 if (collections == null || collections.Length == 0)
-                    errors.Add($"No `loadTo<{(isRavenEtl ? "Collection" : "Table")}Name>` method call found in '{Name}' script");
+                {
+                    string targetName;
+                    switch (type)
+                    {
+                        case EtlType.Raven:
+                            targetName = "Collection";
+                            break;
+                        case EtlType.Sql:
+                            targetName = "Table";
+                            break;
+                        default:
+                            throw new ArgumentException($"Unknown ETL type: {type}");
+
+                    }
+
+                    errors.Add($"No `loadTo<{targetName}Name>()` method call found in '{Name}' script");
+                }
 
                 if (Legacy_ReplicateToMethodRegex.Matches(Script).Count > 0)
                 {
-                    errors.Add($"Found `replicateTo<TableName>` method in '{Name}' script which is not supported. " +
-                               "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>` instead.");
+                    errors.Add($"Found `replicateTo<TableName>()` method in '{Name}' script which is not supported. " +
+                               "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>()` instead.");
                 }
 
-                HasLoadAttachment = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
+                IsHandlingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0 || AddAttachmentMethodRegex.Matches(Script).Count > 0;
             }
 
             return errors.Count == 0;
