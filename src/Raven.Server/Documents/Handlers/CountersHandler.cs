@@ -13,6 +13,9 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -82,6 +85,9 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
+                if (_database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    ThrowFeaturesAvailabilyException();
+
                 foreach (var kvp in _dictionary)
                 {
                     Document doc = null;
@@ -264,6 +270,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
+            if (Database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                ThrowFeaturesAvailabilyException();
+
             var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
             var counters = GetStringValuesQueryString("counter", required: false);
@@ -364,6 +373,12 @@ namespace Raven.Server.Documents.Handlers
         private static void ThrowInvalidDocumentWithNoMetadata(Document doc)
         {
             throw new InvalidOperationException("Cannot increment counters for " + doc + " because the document has no metadata. Should not happen ever");
+        }
+        private static void ThrowFeaturesAvailabilyException()
+        {
+            throw new FeaturesAvailabilityException(
+                "Can not use Counters, as this is an experimental feature and the Database does not support experimental features. " +
+                $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
     }
 }

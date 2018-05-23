@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -433,6 +435,30 @@ namespace SlowTests.Client.Counters
 
                 }
 
+            }
+        }
+
+        [Fact]
+        public void CreatingCounterWithFeaturesAvailabilitySetToStableWillThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = null; // by default we should have Stable features
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1-A");
+                    session.SaveChanges();
+                }
+                var e = Assert.Throws<RavenException>(() => store.Counters.Increment("users/1-A", "Likes"));
+                Assert.Contains(
+                    "Can not use Counters, as this is an experimental feature and the Database does not support experimental features. " +
+                    "Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
+                    e.Message);
             }
         }
 

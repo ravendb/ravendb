@@ -534,7 +534,7 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
-        public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
+        public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
         {
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore()
