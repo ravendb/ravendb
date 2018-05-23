@@ -441,7 +441,6 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
             private HashSet<string> _attachmentStreamsAlreadyExported;
-            private HashSet<string> _countersAlreadyExported;
 
             public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
                 : base(writer, propertyName)

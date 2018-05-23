@@ -145,6 +145,7 @@ select project(d)
                             BlittableJsonReaderObject thing;
 
                             Assert.True(list.TryTake(out thing, 5000));
+                            Assert.NotNull(thing);
                             dynamic dynamicThing = new DynamicBlittableJson(thing);
                             Assert.Equal("ThingNo4", dynamicThing.Name);
 

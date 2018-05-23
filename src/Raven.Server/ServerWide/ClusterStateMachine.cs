@@ -1440,7 +1440,7 @@ namespace Raven.Server.ServerWide
                         {
                             tcpClient.Client.Disconnect(false);
                         }
-                        catch (ObjectDisposedException ode)
+                        catch (ObjectDisposedException)
                         {
                             //Happens, we don't really care at this point
                         }
