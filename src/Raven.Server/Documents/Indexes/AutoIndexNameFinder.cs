@@ -35,8 +35,8 @@ namespace Raven.Server.Documents.Indexes
             if (fields == null)
                 throw new ArgumentNullException(nameof(fields));
 
-            collection = 
-                string.Equals(collection, Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase) 
+            collection =
+                string.Equals(collection, Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase)
                     ? "AllDocs" : collection;
 
             if (fields.Count == 0)
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes
 
                 return collectionOnly;
             }
-            
+
             var combinedFields = string.Join("And", fields.Select(GetName).OrderBy(x => x));
 
             string formattableString = $"Auto/{collection}/By{combinedFields}";
@@ -68,6 +68,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (x.HasQuotedName)
                 name = $"'{name}'";
+
+            if (x.GroupByArrayBehavior == GroupByArrayBehavior.ByContent)
+                name = AutoIndexField.GetGroupByArrayContentAutoIndexFieldName(name);
 
             if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
             {

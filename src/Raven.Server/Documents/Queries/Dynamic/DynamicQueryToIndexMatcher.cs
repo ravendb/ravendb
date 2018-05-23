@@ -243,6 +243,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
+                    if (groupByField.GroupByArrayBehavior != indexField.GroupByArrayBehavior)
+                    {
+                        explanations?.Add(new Explanation(indexName,
+                            $"The following group by field {indexField.Name} is grouping by '{indexField.GroupByArrayBehavior}', while the query needs to perform '{groupByField.GroupByArrayBehavior}' grouping"));
+
+                        return DynamicQueryMatchType.Failure;
+                    }
+
                     if (groupByField.IsSpecifiedInWhere == false)
                         continue;
 

@@ -159,6 +159,9 @@ namespace Raven.Server.Documents.Indexes
             if (options.Spatial != null)
                 field.Spatial = new AutoSpatialOptions(options.Spatial);
 
+            field.Aggregation = options.Aggregation;
+            field.GroupByArrayBehavior = options.GroupByArrayBehavior;
+
             return field;
         }
 
@@ -266,6 +269,11 @@ namespace Raven.Server.Documents.Indexes
         public static string GetExactAutoIndexFieldName(string name)
         {
             return $"exact({name})";
+        }
+
+        public static string GetGroupByArrayContentAutoIndexFieldName(string name)
+        {
+            return $"array({name})";
         }
     }
 }
