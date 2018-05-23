@@ -1173,9 +1173,9 @@ pre {
 
 .properties-container {
     @media (min-width: @screen-sm) {
-        display: flex;
-        flex-wrap: wrap;
-        align-content: center;
+        display: grid;
+        justify-items: stretch;
+        grid-template-columns: 1fr 1fr;
     }
 
     .toggle {
@@ -1243,28 +1243,8 @@ pre {
         position: relative;
         height: 36px;
         flex-wrap: nowrap;
-        width: 100%;
-
-        @media (min-width: @screen-sm) {
-            max-width: 300px;
-            min-width: 100px;
-            width: 49%;
-
-            &.grow-2 {
-                flex-grow: 2;
-                width: 100%;
-                max-width: 600px;
-                min-width: 200px;
-            }
-        }
-
-        @media (min-width: @screen-lg) {
-            width: 32%;
-
-            &.grow-2 {
-                width: 64%;
-            }
-        }
+        min-width: 250px;
+        flex-grow: 1;
 
         .dropdown-menu {
             //width: 100%;
@@ -1335,11 +1315,6 @@ pre {
         &:not(.value-only) {
             .properties-value {
                 & .set-size {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
                     width: 100%;
                     padding-right: 20px;
                     text-align: left;
