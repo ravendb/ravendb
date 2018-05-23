@@ -28,6 +28,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -1002,15 +1003,25 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
-            AsyncHelpers.RunSync(HandleUnusedAutoIndexes);
-            AsyncHelpers.RunSync(DeleteSurpassedAutoIndexes);
+            DatabaseRecord record;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+
+            if (record.Topology.Members[0] != _serverStore.NodeTag)
+                return;
+
+            AsyncHelpers.RunSync(RunIdleOperationsAsync);
+        }
+
+        private async Task RunIdleOperationsAsync()
+        {
+            await HandleUnusedAutoIndexes();
+            await DeleteSurpassedAutoIndexes();
         }
 
         private async Task DeleteSurpassedAutoIndexes()
         {
-            if (_serverStore.IsLeader() == false)
-                return;
-
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
 
             var indexesToRemove = new HashSet<string>();
@@ -1054,17 +1065,22 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var indexName in indexesToRemove)
             {
-                await TryDeleteIndexIfExists(indexName);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Deleted index '{indexName}' because it is surpassed.");
+                try
+                {
+                    await TryDeleteIndexIfExists(indexName);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Deleted index '{indexName}' because it is surpassed.");
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Could not delete surpassed index '{indexName}'.", e);
+                }
             }
         }
 
         private async Task HandleUnusedAutoIndexes()
         {
-            if (_serverStore.IsLeader() == false)
-                return;
-
             var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
             var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
             var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
@@ -1134,9 +1150,17 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
-                        await TryDeleteIndexIfExists(item.Index.Name);
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Deleted index '{item.Index.Name}' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                        try
+                        {
+                            await TryDeleteIndexIfExists(item.Index.Name);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Deleted index '{item.Index.Name}' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Could not delete idle index '{item.Index.Name}'.", e);
+                        }
                     }
                 }
             }
