@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
@@ -22,12 +23,14 @@ namespace Raven.Server.Utils
     {
         private const int BitsPerByte = 8; 
 
-        public static byte[] CreateSelfSignedCertificate(string commonNameValue, string issuerName)
+        public static byte[] CreateSelfSignedCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
-            CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName);
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes);
+            CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log);
             var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes);
+            log?.AppendLine($"Successfully loaded X509Certificate2 using certBytes with length: {certBytes.Length} ");
             selfSignedCertificateBasedOnPrivateKey.Verify();
+            log?.AppendLine($"Successfully verified chain for X509Certificate2: {Environment.NewLine}{selfSignedCertificateBasedOnPrivateKey}");
             return certBytes;
         }
 
@@ -121,8 +124,11 @@ namespace Raven.Server.Utils
             bool isClientCertificate,
             bool isCaCertificate,
             int yearsUntilExpiration,
-            out byte[] certBytes)
+            out byte[] certBytes, 
+            StringBuilder log = null)
         {
+            log?.AppendLine("CreateSelfSignedCertificateBasedOnPrivateKey:");
+
             // Generating Random Numbers
             var random = GetSeededSecureRandom();
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", key.PrivateKey, random);
@@ -152,12 +158,15 @@ namespace Raven.Server.Utils
             // Serial Number
             var serialNumber = new BigInteger(20 * BitsPerByte, random);
             certificateGenerator.SetSerialNumber(serialNumber);
+            log?.AppendLine($"serialNumber = {serialNumber}");
 
             // Issuer and Subject Name
-         
+
             X509Name subjectDN = new X509Name("CN=" + commonNameValue);
             certificateGenerator.SetIssuerDN(issuer);
             certificateGenerator.SetSubjectDN(subjectDN);
+            log?.AppendLine($"issuerDN = {issuer}");
+            log?.AppendLine($"subjectDN = {subjectDN}");
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
@@ -166,8 +175,9 @@ namespace Raven.Server.Utils
             DateTime notAfter = yearsUntilExpiration == 0 ? DateTime.UtcNow.Date.AddMonths(3) : notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
-
-
+            log?.AppendLine($"notBefore = {notBefore}");
+            log?.AppendLine($"notAfter = {notAfter}");
+            
             var subjectKeyPair = GetRsaKey();
 
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
@@ -176,17 +186,27 @@ namespace Raven.Server.Utils
             var store = new Pkcs12Store();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
+            var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
+
+            log?.AppendLine($"certificateEntry.Certificate = {certificateEntry.Certificate}");
+
             store.SetCertificateEntry(friendlyName, certificateEntry);
-            store.SetKeyEntry(friendlyName, new AsymmetricKeyEntry(subjectKeyPair.Private), new[] { certificateEntry });
+            store.SetKeyEntry(friendlyName, keyEntry, new[] { certificateEntry });
             var stream = new MemoryStream();
             store.Save(stream, new char[0], random);
+            log?.AppendLine($"stream.Length = {stream.Length}");
+            log?.AppendLine($"stream.Position = {stream.Position}");
+
             certBytes = stream.ToArray();
+
+            log?.AppendLine($"certBytes.Length = {certBytes.Length}");
         }
 
         public static void CreateCertificateAuthorityCertificate(string commonNameValue, 
             out (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) ca,
-            out X509Name name)
+            out X509Name name, StringBuilder log = null)
         {
+            log?.AppendLine("CreateCertificateAuthorityCertificate:");
             var random = GetSeededSecureRandom();
 
             // The Certificate Generator
@@ -194,6 +214,7 @@ namespace Raven.Server.Utils
 
             // Serial Number
             BigInteger serialNumber = new BigInteger(20 * BitsPerByte, random);
+            log?.AppendLine($"serialNumber = {serialNumber}");
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
@@ -201,13 +222,16 @@ namespace Raven.Server.Utils
             X509Name issuerDN = subjectDN;
             certificateGenerator.SetIssuerDN(issuerDN);
             certificateGenerator.SetSubjectDN(subjectDN);
+            log?.AppendLine($"issuerDN = {issuerDN}");
+            log?.AppendLine($"subjectDN = {subjectDN}");
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
             DateTime notAfter = notBefore.AddYears(2);
-
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
+            log?.AppendLine($"notBefore = {notBefore}");
+            log?.AppendLine($"notAfter = {notAfter}");
 
             var subjectKeyPair = new AsymmetricCipherKeyPair(
                 PublicKeyFactory.CreateKey(caKeyPair.Value.Public),

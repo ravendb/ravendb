@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -130,16 +131,29 @@ namespace FastTests
                 if (_selfSignedCertFileName != null)
                     return _selfSignedCertFileName;
 
+                var log = new StringBuilder();
                 byte[] certBytes;
                 try
                 {
-                    certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
+                    certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer", log);
                 }
                 catch (Exception e)
                 {
-                    throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'.", e);
+                    throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
 
+                try
+                {
+                    new X509Certificate2(certBytes);
+                }
+                catch (Exception e)
+                {
+                    throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
+                }
+
+                if (certBytes.Length == 0)
+                    throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
+                
                 string tempFileName = null;
                 try
                 {
