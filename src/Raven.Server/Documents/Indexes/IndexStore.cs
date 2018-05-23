@@ -23,6 +23,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -146,7 +147,6 @@ namespace Raven.Server.Documents.Indexes
                 .Select(x =>
                 {
                     var field = AutoIndexField.Create(x.Key, x.Value);
-                    field.Aggregation = x.Value.Aggregation;
 
                     Debug.Assert(x.Value.GroupByArrayBehavior == GroupByArrayBehavior.NotApplicable);
 
@@ -174,8 +174,6 @@ namespace Raven.Server.Documents.Indexes
                     .Select(x =>
                     {
                         var field = AutoIndexField.Create(x.Key, x.Value);
-                        field.Aggregation = x.Value.Aggregation;
-                        field.GroupByArrayBehavior = x.Value.GroupByArrayBehavior;
 
                         return field;
                     })
@@ -960,7 +958,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                var alreadyFaulted = _indexes.TryGetByName(name, out var i) && 
+                var alreadyFaulted = _indexes.TryGetByName(name, out var i) &&
                                      i is FaultyInMemoryIndex;
 
                 index?.Dispose();
@@ -971,8 +969,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = autoIndexDefinition != null 
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition)) 
+                var fakeIndex = autoIndexDefinition != null
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition))
                     : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
@@ -1005,6 +1003,61 @@ namespace Raven.Server.Documents.Indexes
         public void RunIdleOperations()
         {
             AsyncHelpers.RunSync(HandleUnusedAutoIndexes);
+            AsyncHelpers.RunSync(DeleteSurpassedAutoIndexes);
+        }
+
+        private async Task DeleteSurpassedAutoIndexes()
+        {
+            if (_serverStore.IsLeader() == false)
+                return;
+
+            var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
+
+            var indexesToRemove = new HashSet<string>();
+
+            foreach (var index in _indexes)
+            {
+                if (index.Type.IsAuto() == false)
+                    continue;
+
+                if (indexesToRemove.Contains(index.Name))
+                    continue;
+
+                var collection = index.Collections.First();
+
+                var query = DynamicQueryMapping.Create(index);
+
+                foreach (var indexToCheck in _indexes.GetForCollection(collection))
+                {
+                    if (index.Type != indexToCheck.Type)
+                        continue;
+
+                    if (index == indexToCheck)
+                        continue;
+
+                    if (indexesToRemove.Contains(indexToCheck.Name))
+                        continue;
+
+                    var definitionToCheck = (AutoIndexDefinitionBase)indexToCheck.Definition;
+
+                    var result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck);
+                    if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
+                    {
+                        indexesToRemove.Add(index.Name);
+                        break;
+                    }
+                }
+            }
+
+            if (indexesToRemove.Count == 0)
+                return;
+
+            foreach (var indexName in indexesToRemove)
+            {
+                await TryDeleteIndexIfExists(indexName);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Deleted index '{indexName}' because it is surpassed.");
+            }
         }
 
         private async Task HandleUnusedAutoIndexes()

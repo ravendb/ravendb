@@ -225,6 +225,55 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return result;
         }
 
+        public static DynamicQueryMapping Create(Index index)
+        {
+            if (index.Type.IsAuto() == false)
+                throw new InvalidOperationException();
+
+            var mapping = new DynamicQueryMapping
+            {
+                ForCollection = index.Collections.First(),
+                MapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal)
+            };
+
+            var definition = (AutoIndexDefinitionBase)index.Definition;
+
+            foreach (var field in definition.MapFields)
+            {
+                var autoField = (AutoIndexField)field.Value;
+
+                mapping.MapFields[field.Key] = DynamicQueryMappingItem.Create(
+                            new QueryFieldName(autoField.Name, autoField.HasQuotedName),
+                            autoField.Aggregation,
+                            isFullTextSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Search),
+                            isExactSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Exact),
+                            hasHighlighting: autoField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
+                            spatial: autoField.Spatial);
+            }
+
+            if (index.Type.IsMapReduce())
+            {
+                mapping.IsGroupBy = true;
+
+                var mapReduceDefinition = (AutoMapReduceIndexDefinition)definition;
+
+                mapping.GroupByFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal);
+
+                foreach (var field in mapReduceDefinition.GroupByFields)
+                {
+                    var autoField = field.Value;
+                    mapping.GroupByFields[field.Key] = DynamicQueryMappingItem.CreateGroupBy(
+                        new QueryFieldName(autoField.Name, autoField.HasQuotedName),
+                        autoField.GroupByArrayBehavior,
+                        isSpecifiedInWhere: true,
+                        isFullTextSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Search),
+                        isExactSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Exact));
+                }
+            }
+
+            return mapping;
+        }
+
         private static Dictionary<string, DynamicQueryMappingItem> CreateGroupByFields(IndexQueryServerSide query, Dictionary<string, DynamicQueryMappingItem> mapFields)
         {
             var groupByFields = query.Metadata.GroupBy;

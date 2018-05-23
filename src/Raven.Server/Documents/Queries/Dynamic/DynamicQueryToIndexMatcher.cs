@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return prioritizedResults[0];
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, List<Explanation> explanations = null)
+        internal DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -249,6 +249,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
+                    if (groupByField.GroupByArrayBehavior != indexField.GroupByArrayBehavior)
+                    {
+                        explanations?.Add(new Explanation(indexName,
+                            $"The following group by field {indexField.Name} is grouping by '{indexField.GroupByArrayBehavior}', while the query needs to perform '{groupByField.GroupByArrayBehavior}' grouping"));
+
+                        return DynamicQueryMatchType.Failure;
+                    }
+
                     if (groupByField.IsSpecifiedInWhere == false)
                         continue;
 
