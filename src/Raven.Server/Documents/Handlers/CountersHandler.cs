@@ -104,11 +104,11 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case CounterOperationType.Put:
                                 LoadDocument();
-                                var cv = _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
+                                // intentionally not setting LastChangeVector, we never use it for
+                                // replication and it isn't meaningful in that scenario. Put can only ever be called
+                                // for replication.
+                                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
                                     operation.CounterName, operation.ChangeVector, operation.Delta);
-                                // set LastChangeVector only if this is an update
-                                if (cv != null)                               
-                                    LastChangeVector = cv;
                                 break;
                             case CounterOperationType.None:
                                 break;
