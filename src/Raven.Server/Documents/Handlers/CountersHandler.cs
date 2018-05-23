@@ -95,8 +95,7 @@ namespace Raven.Server.Documents.Handlers
                                 LoadDocument();
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, kvp.Key,
                                     operation.CounterName, operation.Delta);
-                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
-                               
+                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);                               
                                 break;
                             case CounterOperationType.Delete:
                                 LoadDocument();
@@ -105,9 +104,11 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case CounterOperationType.Put:
                                 LoadDocument();
-                                 _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
+                                var cv = _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
                                     operation.CounterName, operation.ChangeVector, operation.Delta);
-                                LastChangeVector = operation.ChangeVector;
+                                // set LastChangeVector only if this is an update
+                                if (cv != null)                               
+                                    LastChangeVector = cv;
                                 break;
                             case CounterOperationType.None:
                                 break;

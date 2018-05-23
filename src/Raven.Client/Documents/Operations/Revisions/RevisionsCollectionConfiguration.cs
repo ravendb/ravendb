@@ -13,15 +13,12 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public bool PurgeOnDelete { get; set; }
 
-        public bool IncludeCountersSnapshot { get; set; }
-
         protected bool Equals(RevisionsCollectionConfiguration other)
         {
-            return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep && 
-                MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep && 
-                Disabled == other.Disabled && 
-                PurgeOnDelete == other.PurgeOnDelete &&
-                IncludeCountersSnapshot == other.IncludeCountersSnapshot;
+            return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep &&
+                   MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep &&
+                   Disabled == other.Disabled &&
+                   PurgeOnDelete == other.PurgeOnDelete;
         }
 
         public override bool Equals(object obj)
@@ -51,8 +48,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 [nameof(Disabled)] = Disabled,
                 [nameof(MinimumRevisionsToKeep)] = MinimumRevisionsToKeep,
                 [nameof(MinimumRevisionAgeToKeep)] = MinimumRevisionAgeToKeep,
-                [nameof(PurgeOnDelete)] = PurgeOnDelete,
-                [nameof(IncludeCountersSnapshot)] = IncludeCountersSnapshot
+                [nameof(PurgeOnDelete)] = PurgeOnDelete
             };
         }
     }
