@@ -12,7 +12,6 @@ import timeHelpers = require("common/timeHelpers");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 import indexErrorDetails = require("viewmodels/database/indexes/indexErrorDetails");
 import generalUtils = require("common/generalUtils");
-import index = require("../../../models/database/index/index");
 
 type indexNameAndCount = {
     indexName: string;
@@ -172,8 +171,11 @@ class indexErrors extends viewModelBase {
 
         if (this.searchText()) {
             const searchText = this.searchText().toLowerCase();
-            filteredItems = filteredItems.filter(error => error.Document.toLowerCase().includes(searchText) ||
-                error.Error.toLowerCase().includes(searchText));
+            
+            filteredItems = filteredItems.filter((error) => {
+                return (error.Document && error.Document.toLowerCase().includes(searchText)) ||
+                       error.Error.toLowerCase().includes(searchText)
+           })
         }
         
         // save copy used for details viewer
@@ -195,7 +197,7 @@ class indexErrors extends viewModelBase {
     }
 
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
-        return _.flatMap(indexErrors, value => {
+        const mappedItems = _.flatMap(indexErrors, value => {
             return value.Errors.map((error: Raven.Client.Documents.Indexes.IndexingError) =>
                 ({
                     Timestamp: error.Timestamp,
@@ -205,6 +207,8 @@ class indexErrors extends viewModelBase {
                     IndexName: value.Name
                 } as IndexErrorPerDocument));
         });
+        
+        return _.orderBy(mappedItems, [x => x.Timestamp], ["desc"]);
     }
 
     private onStatsChanged(stats: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
