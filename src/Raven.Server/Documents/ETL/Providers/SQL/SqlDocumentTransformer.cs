@@ -43,6 +43,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             base.Initalize();
 
+            SingleRun.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadAttachment));
+
             SingleRun.ScriptEngine.SetValue("varchar",
                 new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
 
@@ -72,8 +74,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-
-                if (_transformation.HasLoadAttachment && 
+                if (_transformation.IsHandlingAttachments && 
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId,
@@ -91,6 +92,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Columns = columns
             });
+        }
+
+        private JsValue LoadAttachment(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || args[0].IsString() == false)
+                throw new InvalidOperationException($"{Transformation.AddAttachment}(name) must have a single string argument");
+
+            return Transformation.AttachmentMarker + args[0].AsString();
         }
 
         private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
