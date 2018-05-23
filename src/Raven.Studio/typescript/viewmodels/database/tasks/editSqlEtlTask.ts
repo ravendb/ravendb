@@ -154,6 +154,9 @@ class editSqlEtlTask extends viewModelBase {
         this.initDirtyFlag();
 
         this.newConnectionString(connectionStringSqlEtlModel.empty());
+
+        // Open the 'Create new conn. str.' area if no connection strings are yet defined 
+        this.sqlEtlConnectionStringsNames.subscribe((value) => { this.createNewConnectionString(!value.length) });
     }
     
     private initDirtyFlag() {
