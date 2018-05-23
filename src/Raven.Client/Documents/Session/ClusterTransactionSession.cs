@@ -28,6 +28,8 @@ namespace Raven.Client.Documents.Session
         private Dictionary<string, long> _deleteCompareExchange;
         public Dictionary<string, long> DeleteCompareExchange => _deleteCompareExchange;
 
+        internal bool HasCommands => _deleteCompareExchange != null || _storeCompareExchange != null;
+
         protected ClusterTransactionOperationsBase(InMemoryDocumentSessionOperations session)
         {
             if (session.TransactionMode != TransactionMode.ClusterWide)

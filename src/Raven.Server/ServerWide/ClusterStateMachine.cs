@@ -1140,7 +1140,8 @@ namespace Raven.Server.ServerWide
         private static unsafe string ReadCompareExchangeKey(TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)UniqueItems.Key, out var size);
-            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 4);
+            // we need to read only the key from the format: 'databaseName/key'
+            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 1);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)

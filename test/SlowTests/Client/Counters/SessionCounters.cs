@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -170,7 +171,13 @@ namespace SlowTests.Client.Counters
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("newDatabase")));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("newDatabase")
+                {
+                    Settings =
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = "Experimental"
+                    }
+                }));
 
                 using (var session = store.OpenSession("newDatabase"))
                 {

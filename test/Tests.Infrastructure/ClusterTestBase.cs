@@ -321,6 +321,12 @@ namespace Tests.Infrastructure
             await mre.WaitAsync().ConfigureAwait(false);
         }
 
+        protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
+        {
+            await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
+            Servers.Remove(serverToDispose);
+        }
+
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();
@@ -534,7 +540,7 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
-        public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
+        public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
         {
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore()

@@ -785,7 +785,7 @@ more responsive application.
         {
             ClusterTransactionOperationsBase clusterTransactionOperations = GetClusterSession();
 
-            if (clusterTransactionOperations == null)
+            if (clusterTransactionOperations == null || clusterTransactionOperations.HasCommands == false)
                 return;
 
             if (TransactionMode != TransactionMode.ClusterWide)

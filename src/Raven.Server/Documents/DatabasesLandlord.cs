@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -170,7 +171,6 @@ namespace Raven.Server.Documents
                 }
                 return;
             }
-
             try
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
@@ -178,50 +178,7 @@ namespace Raven.Server.Documents
                 using (serverContext.OpenReadTransaction())
                 using (docContext.OpenReadTransaction())
                 {
-                    var global = DocumentsStorage.GetDatabaseChangeVector(docContext);
-                    var dbGrpId = database.DatabaseGroupId;
-                    var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
-                    var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
-                    var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
-                    foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))
-                    {
-                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
-                        database.TxMerger.Enqueue(mergedCommands).ContinueWith(t =>
-                        {
-                            try
-                            {
-                                if (t.IsCompletedSuccessfully)
-                                {
-                                    var options = mergedCommands.Options;
-                                    Task indexTask = null;
-                                    if (options?.WaitForIndexesTimeout != null)
-                                    {
-                                        indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
-                                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                                    }
-
-                                    var result = new BatchHandler.ClusterTransactionCompletionResult
-                                    {
-                                        Array = mergedCommands.Reply,
-                                        IndexTask = indexTask,
-                                    };
-                                    database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
-                                    return;
-                                }
-
-                                database.ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
-                            }
-                            catch (Exception e)
-                            {
-                                // nothing we can do
-                                if (_logger.IsInfoEnabled)
-                                {
-                                    _logger.Info($"Failed to notify about transaction completion for database '{databaseName}'.", e);
-                                }
-                            }
-                        });
-                    }
+                    ExecutePendingClusterTransactions(database, index, docContext, serverContext);
                 }
             }
             catch (Exception e)
@@ -232,6 +189,69 @@ namespace Raven.Server.Documents
                     _logger.Info($"Failed enqueue cluster transaction command for database: '{databaseName}'", e);
                 }
             }
+        }
+
+        public List<Task> ExecutePendingClusterTransactions(
+            DocumentDatabase database, 
+            long index, 
+            DocumentsOperationContext docContext,
+            TransactionOperationContext serverContext)
+        {
+            var transactionsTasks = new List<Task>();
+            var global = DocumentsStorage.GetDatabaseChangeVector(docContext);
+            var dbGrpId = database.DatabaseGroupId;
+            var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
+            var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
+            var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
+
+            foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))
+            {
+                var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
+                var task = database.TxMerger.Enqueue(mergedCommands);
+                transactionsTasks.Add(task);
+                task.ContinueWith(t =>
+                {
+                    try
+                    {
+                        if (t.IsCompletedSuccessfully)
+                        {
+                            var options = mergedCommands.Options;
+                            Task indexTask = null;
+                            if (options?.WaitForIndexesTimeout != null)
+                            {
+                                indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
+                                    options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                                    mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                            }
+
+                            var result = new BatchHandler.ClusterTransactionCompletionResult
+                            {
+                                Array = mergedCommands.Reply,
+                                IndexTask = indexTask,
+                            };
+                            database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
+                            return;
+                        }
+
+                        database.ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
+                    }
+                    catch (Exception e)
+                    {
+                        // nothing we can do
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info($"Failed to notify about transaction completion for database '{database.Name}'.", e);
+                        }
+                    }
+                });
+            }
+
+            if (transactionsTasks.Count == 0)
+            {
+                database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+            }
+
+            return transactionsTasks;
         }
 
         public bool ShouldDeleteDatabase(string dbName, DatabaseRecord record)
