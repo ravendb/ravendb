@@ -57,16 +57,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Explain(out Explanations explanations)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.IncludeExplanations(out Explanations explanations)
         {
-            Explain(null, out explanations);
+            IncludeExplanations(null, out explanations);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Explain(ExplanationOptions options, out Explanations explanations)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.IncludeExplanations(ExplanationOptions options, out Explanations explanations)
         {
-            Explain(options, out explanations);
+            IncludeExplanations(options, out explanations);
             return this;
         }
 

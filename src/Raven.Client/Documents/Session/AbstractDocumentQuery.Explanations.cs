@@ -10,10 +10,10 @@ namespace Raven.Client.Documents.Session
 
         protected ExplanationToken ExplanationToken;
 
-        public void Explain(ExplanationOptions options, out Explanations explanations)
+        public void IncludeExplanations(ExplanationOptions options, out Explanations explanations)
         {
             if (ExplanationToken != null)
-                throw new InvalidOperationException($"Duplicate '{nameof(Explain)}' method calls are forbidden.");
+                throw new InvalidOperationException($"Duplicate '{nameof(IncludeExplanations)}' method calls are forbidden.");
 
             var optionsParameterName = options != null ? AddQueryParameter(options) : null;
             ExplanationToken = ExplanationToken.Create(optionsParameterName);
