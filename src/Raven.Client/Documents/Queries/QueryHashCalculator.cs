@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(float? f)
         {
-            if (f == null)
+            if (f != null)
                 Write(f.Value);
             else
                 Write("null-float");
@@ -55,7 +55,6 @@ namespace Raven.Client.Documents.Queries
             else
                 Write("null-int");
         }
-
 
         public void Write(int i)
         {
@@ -191,7 +190,7 @@ namespace Raven.Client.Documents.Queries
                     WriteParameterValue(enumerator.Current);
                     hadValues = true;
                 }
-                if(hadValues == false)
+                if (hadValues == false)
                 {
                     Write("empty-enumerator");
                 }
