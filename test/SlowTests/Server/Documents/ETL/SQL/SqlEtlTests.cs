@@ -565,7 +565,7 @@ undefined();
 
 var nameArr = this.StepName.split('.'); loadToOrders({});");
 
-                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(30));
+                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(60));
                 if (condition == false)
                 {
                     var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
