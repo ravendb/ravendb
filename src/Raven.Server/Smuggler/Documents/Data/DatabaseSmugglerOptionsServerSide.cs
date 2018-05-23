@@ -19,6 +19,8 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
 
+        public bool ExecutePendingClusterTransactions = false;
+
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {
             var result = new DatabaseSmugglerOptionsServerSide();

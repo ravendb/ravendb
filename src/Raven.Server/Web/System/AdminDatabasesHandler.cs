@@ -178,7 +178,7 @@ namespace Raven.Server.Web.System
 
                 databaseRecord.Topology.ReplicationFactor++;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
-
+                
                 await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -439,7 +439,7 @@ namespace Raven.Server.Web.System
                     }
                     waitingTasks.Remove(task);
                     if (waitingTasks.Count == 1) // only the timeout task is left
-                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was suposed to reside on, threw an exception.", task.Exception);
+                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", task.Exception);
                 }
             }
             finally
