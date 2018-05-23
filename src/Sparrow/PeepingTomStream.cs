@@ -14,7 +14,7 @@ namespace Sparrow
         private int _pos;
         private readonly Stream _stream;
         private bool _firstWindow = true;
-        private JsonOperationContext.ReturnBuffer _returnedBuffer;
+        public JsonOperationContext.ReturnBuffer _returnedBuffer; // TODO: return to private after solving RavenDB-10561
 
         public PeepingTomStream(Stream stream, JsonOperationContext context)
         {
