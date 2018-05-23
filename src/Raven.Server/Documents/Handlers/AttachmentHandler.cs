@@ -152,8 +152,31 @@ namespace Raven.Server.Documents.Handlers
                 AttachmentDetails result;
                 using (var streamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
                 using (var stream = streamsTempFile.StartNewStream())
-                {
-                    var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), stream, Database.DatabaseShutdown);
+                {                    
+                    Stream requestBodyStream = RequestBodyStream();
+                    string hash;
+                    try
+                    {
+                        hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, requestBodyStream, stream, Database.DatabaseShutdown);
+                    }
+                    catch (Exception)
+                    {
+                        try
+                        {
+                            // if we failed to read the entire request body stream, we might leave
+                            // data in the pipe still, this will cause us to read and discard the 
+                            // rest of the attachment stream and return the actual error to the caller
+                            requestBodyStream.CopyTo(Stream.Null);
+                        }
+                        catch (Exception)
+                        {
+                            // we tried, but we can't clean the request, so let's just kill
+                            // the connection
+                            HttpContext.Abort();
+                        }
+                        throw;
+                    }
+
                     var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                     var cmd = new MergedPutAttachmentCommand
