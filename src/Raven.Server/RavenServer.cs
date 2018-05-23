@@ -890,8 +890,8 @@ namespace Raven.Server
 
         private void StartSnmp()
         {
-            _snmpWatcher = new SnmpWatcher(this);
-            _snmpWatcher.Execute();
+            SnmpWatcher = new SnmpWatcher(this);
+            SnmpWatcher.Execute();
         }
 
         public TcpListenerStatus StartTcpListener()
@@ -1273,7 +1273,7 @@ namespace Raven.Server
         public readonly ScriptRunnerCache AdminScripts;
 
         private TcpListenerStatus _tcpListenerStatus;
-        private SnmpWatcher _snmpWatcher;
+        public SnmpWatcher SnmpWatcher;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
         private Logger _tcpAuditLog;
