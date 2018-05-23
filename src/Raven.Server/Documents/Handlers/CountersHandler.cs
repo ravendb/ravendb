@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
-            private Dictionary<string, List<CounterOperation>> _dictionary;
+            private readonly Dictionary<string, List<CounterOperation>> _dictionary;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
@@ -93,12 +93,9 @@ namespace Raven.Server.Documents.Handlers
                         {
                             case CounterOperationType.Increment:
                                 LoadDocument();
-
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, kvp.Key,
                                     operation.CounterName, operation.Delta);
-
-                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
-                               
+                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);                               
                                 break;
                             case CounterOperationType.Delete:
                                 LoadDocument();
@@ -107,8 +104,11 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case CounterOperationType.Put:
                                 LoadDocument();
-                                 _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
+                                var cv = _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
                                     operation.CounterName, operation.ChangeVector, operation.Delta);
+                                // set LastChangeVector only if this is an update
+                                if (cv != null)                               
+                                    LastChangeVector = cv;
                                 break;
                             case CounterOperationType.None:
                                 break;
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
                                         ? DocumentFlags.HasCounters
                                         : DocumentFlags.None;
 
-                            _database.DocumentsStorage.Put(context, kvp.Key, null, data, flags: flags); 
+                            _database.DocumentsStorage.Put(context, kvp.Key, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
                         }
                     }
 

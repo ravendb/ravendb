@@ -15,7 +15,7 @@ namespace FastTests.Server.Documents.Revisions
                 Default = new RevisionsCollectionConfiguration
                 {
                     Disabled = false,
-                    MinimumRevisionsToKeep = 5,
+                    MinimumRevisionsToKeep = 5
                 },
                 Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                 {

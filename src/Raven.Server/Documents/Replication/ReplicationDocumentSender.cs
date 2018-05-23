@@ -211,36 +211,9 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 lastTransactionMarker = item.TransactionMarker;
 
-                                if (_parent._inLegacyMode)
+                                if (_parent._legacyReplicationMode == LegacyReplicationMode.V40)
                                 {
-                                    if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)                                       
-                                    {
-                                        // the other side doesn't support counters, stopping replication
-                                        var message = $"{_parent.Node.FromString()} found an item of type `Counter` to replicate to {_parent.Destination.FromString()}, " +
-                                                      "while we are in legacy mode (downgraded our replication version to match the destination). " +
-                                                      $"Can't send Counters in legacy mode, destination {_parent.Destination.FromString()} does not support Counters feature. " +
-                                                      "Stopping replication. " + item;
-
-                                        if (_log.IsInfoEnabled)
-                                            _log.Info(message);
-
-                                        throw new LegacyReplicationViolationException(message);
-                                    }
-
-                                    if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
-                                        item.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
-                                    {
-                                        // the other side doesn't support cluster transactions, stopping replication
-                                        var message = $"{_parent.Node.FromString()} found a document {item.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
-                                                      "while we are in legacy mode (downgraded our replication version to match the destination). " +
-                                                      $"Can't use Cluster Transactions legacy mode, destination {_parent.Destination.FromString()} does not support this feature. " +
-                                                      "Stopping replication.";
-
-                                        if (_log.IsInfoEnabled)
-                                            _log.Info(message);
-
-                                        throw new LegacyReplicationViolationException(message);
-                                    }
+                                    AssertLegalReplicationItemInLegacyMode(item);
                                 }
 
                                 // Include the attachment's document which is right after its latest attachment.
@@ -349,6 +322,38 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void AssertLegalReplicationItemInLegacyMode(ReplicationBatchItem item)
+        {
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
+            {
+                // the other side doesn't support counters, stopping replication
+                var message = $"{_parent.Node.FromString()} found an item of type `Counter` to replicate to {_parent.Destination.FromString()}, " +
+                              "while we are in legacy mode (downgraded our replication version to match the destination). " +
+                              $"Can't send Counters in legacy mode, destination {_parent.Destination.FromString()} does not support Counters feature. " +
+                              "Stopping replication. " + item;
+
+                if (_log.IsInfoEnabled)
+                    _log.Info(message);
+
+                throw new LegacyReplicationViolationException(message);
+            }
+
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
+                item.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
+            {
+                // the other side doesn't support cluster transactions, stopping replication
+                var message = $"{_parent.Node.FromString()} found a document {item.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
+                              "while we are in legacy mode (downgraded our replication version to match the destination). " +
+                              $"Can't use Cluster Transactions legacy mode, destination {_parent.Destination.FromString()} does not support this feature. " +
+                              "Stopping replication.";
+
+                if (_log.IsInfoEnabled)
+                    _log.Info(message);
+
+                throw new LegacyReplicationViolationException(message);
+            }
+        }
+
         private TimeSpan GetDelayReplication()
         {
             TimeSpan delayReplicationFor = TimeSpan.Zero;
@@ -427,7 +432,8 @@ namespace Raven.Server.Documents.Replication
             }
 
 
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && _parent._inLegacyMode)
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && 
+                _parent._legacyReplicationMode == LegacyReplicationMode.V40)
             {
                 // skip counter tombstones in legacy mode
                 skippedReplicationItemsInfo.Update(item);

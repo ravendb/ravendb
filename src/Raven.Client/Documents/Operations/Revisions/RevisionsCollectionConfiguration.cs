@@ -15,10 +15,10 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         protected bool Equals(RevisionsCollectionConfiguration other)
         {
-            return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep && 
-                MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep && 
-                   Disabled == other.Disabled && 
-                PurgeOnDelete == other.PurgeOnDelete;
+            return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep &&
+                   MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep &&
+                   Disabled == other.Disabled &&
+                   PurgeOnDelete == other.PurgeOnDelete;
         }
 
         public override bool Equals(object obj)

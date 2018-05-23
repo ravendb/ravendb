@@ -74,8 +74,8 @@ namespace Raven.Server.Documents.Replication
         private OutgoingReplicationStatsAggregator _lastStats;
         private readonly TcpConnectionInfo _connectionInfo;
 
-        internal bool _inLegacyMode;
 
+        internal LegacyReplicationMode _legacyReplicationMode;
 
         public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
@@ -374,7 +374,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (LegacyReplicationViolationException e)
             {
-                LegacyReplicationViolationException(e);
+                HandleLegacyReplicationViolationException(e);
             }
             catch (Exception e)
             {
@@ -405,7 +405,7 @@ namespace Raven.Server.Documents.Replication
                 Failed?.Invoke(this, e);
             }
 
-            void LegacyReplicationViolationException(LegacyReplicationViolationException e)
+            void HandleLegacyReplicationViolationException(LegacyReplicationViolationException e)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"LegacyReplicationViolationException occurred on replication thread ({FromToString}). " +
@@ -532,11 +532,11 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (_inLegacyMode == false &&
+                        if (_legacyReplicationMode == LegacyReplicationMode.None &&
                             headerResponse.Version == TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion)
                         {
                             // Downgrade replication version to match the other side
-                            _inLegacyMode = true;
+                            _legacyReplicationMode = LegacyReplicationMode.V40;
                             if (_log.IsInfoEnabled)
                                 _log.Info($"{Node.FromString()} downgraded it's replication version " +
                                           $"to {TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion}, in order to match the replication version of " +
