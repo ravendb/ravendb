@@ -1,13 +1,16 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -27,7 +30,7 @@ namespace SlowTests.Cluster
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
             using (var leaderStore = new DocumentStore()
             {
-                Urls = new []{leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = db,
             }.Initialize())
             {
@@ -39,7 +42,7 @@ namespace SlowTests.Cluster
                 {
                     Name = "Indych"
                 };
-                
+
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
@@ -52,6 +55,78 @@ namespace SlowTests.Cluster
                     var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
                     Assert.Equal(user1.Name, user.Name);
                     user = await session.LoadAsync<User>("foo/bar");
+                    Assert.Equal(user3.Name, user.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanImportExportAndBackupWithClusterTransactions()
+        {
+            var file = Path.GetTempFileName();
+
+            var leader = await CreateRaftClusterAndGetLeader(3);
+
+            var user1 = new User()
+            {
+                Name = "Karmel"
+            };
+            var user2 = new User()
+            {
+                Name = "Oren"
+            };
+            var user3 = new User()
+            {
+                Name = "Indych"
+            };
+
+            using (var store = GetDocumentStore(new Options { Server = leader }))
+            {
+                // we kill one server so we would not clean the pending cluster transactions.
+                await DisposeAndRemoveServer(Servers.First(s => s != leader));
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
+                    await session.StoreAsync(user1, "foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar2");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user1);
+
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user2);
+                    await session.StoreAsync(user2, "foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar3");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user2);
+
+                    session.Advanced.SetTransactionMode(TransactionMode.SingleNode);
+                    await session.StoreAsync(user3, "foo/bar");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user3);
+
+                    var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
+                    Assert.Equal(user2.Name, user.Name);
+                    user = await session.LoadAsync<User>("foo/bar");
+                    Assert.Equal(user3.Name, user.Name);
+                }
+
+                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+            }
+
+            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2}))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user1, "foo/bar");
+                    await session.SaveChangesAsync();
+                    session.Advanced.Evict(user1);
+
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var user = await session.LoadAsync<User>("foo/bar");
+                    session.Advanced.Evict(user);
                     Assert.Equal(user3.Name, user.Name);
                 }
             }
@@ -76,7 +151,6 @@ namespace SlowTests.Cluster
                 Name = "Indych"
             };
 
-
             using (var store = GetDocumentStore())
             using (var session = store.OpenAsyncSession(new SessionOptions
             {
@@ -96,7 +170,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact] 
+        [Fact]
         public async Task ResolveInFavorOfClusterTransaction()
         {
             var user1 = new User()
@@ -160,10 +234,10 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
                 await SetupReplicationAsync(store1, store2);
-                
+
                 // 1. at first we will resolve to the local, since both are form cluster transaction
                 Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Indych"));
-                
+
                 // 2. after the resolution the document is stripped from the cluster transaction flag
                 using (var session = store1.OpenAsyncSession(new SessionOptions
                 {
@@ -173,7 +247,7 @@ namespace SlowTests.Cluster
                     await session.StoreAsync(user1, "users/1");
                     await session.SaveChangesAsync();
                 }
-                
+
                 // 3. so in the next conflict we will be overwriting it.
                 Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
             }
@@ -284,7 +358,7 @@ namespace SlowTests.Cluster
                     {
                         TransactionMode = TransactionMode.ClusterWide
                     }))
-                    { 
+                    {
                         mre2.Set();
                         mre1.WaitOne();
                         session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user3);
@@ -354,7 +428,7 @@ namespace SlowTests.Cluster
 
                 var task1 = Task.Run(async () => await AddUser(leaderStore, email, userId));
                 var task2 = Task.Run(async () => await AddUser(leaderStore, email, userId));
-                var task3 = Task.Run(async() =>
+                var task3 = Task.Run(async () =>
                 {
                     using (var session = leaderStore.OpenAsyncSession())
                     {
@@ -388,7 +462,7 @@ namespace SlowTests.Cluster
             try
             {
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                    {TransactionMode = TransactionMode.ClusterWide}))
+                { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var user = new UniqueUser
                     {
@@ -401,7 +475,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
             }
-            catch(ConcurrencyException)
+            catch (ConcurrencyException)
             {
                 return 1;
             }
@@ -435,7 +509,7 @@ namespace SlowTests.Cluster
                 var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende"));
                 Assert.Equal(user1.Name, user.Value.Name);
 
-                var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(new [] { "usernames/ayende" , "usernames/karmel" , "usernames/grisha" });
+                var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(new[] { "usernames/ayende", "usernames/karmel", "usernames/grisha" });
                 Assert.Equal(3, values.Count);
                 Assert.Equal(user.Index, values["usernames/ayende"].Index);
             }
@@ -450,7 +524,7 @@ namespace SlowTests.Cluster
                 TransactionMode = TransactionMode.ClusterWide
             }))
             {
-                session.Advanced.Attachments.Store("asd", "test", new MemoryStream(new byte[] {1, 2, 3, 4}));
+                session.Advanced.Attachments.Store("asd", "test", new MemoryStream(new byte[] { 1, 2, 3, 4 }));
                 await Assert.ThrowsAsync<NotSupportedException>(async () => await session.SaveChangesAsync());
             }
         }

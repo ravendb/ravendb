@@ -15,6 +15,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -58,6 +59,9 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerResult Execute(bool ensureStepsProcessed = true)
         {
             var result = _result ?? new SmugglerResult();
+
+            CompletePendingTransactions(result);
+
             using (_patcher?.Initialize())
             using (_source.Initialize(_options, result, out long buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
@@ -77,6 +81,66 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 return result;
+            }
+        }
+
+        private void CompletePendingTransactions(SmugglerResult result)
+        {
+            // If we export documents from a database, 
+            // we should wait for all the pending transactions to be completed first.
+            var shouldExecute = _options.ExecutePendingClusterTransactions ||
+                                (_options.OperateOnTypes.HasFlag(DatabaseItemType.Documents) && _source is DatabaseSource);
+            if (shouldExecute == false)
+            {
+                return;
+            }
+
+            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
+            using (serverContext.OpenReadTransaction())
+            using (docContext.OpenReadTransaction())
+            {
+                var transactionTasks = _database.ServerStore.DatabasesLandlord.ExecutePendingClusterTransactions(_database, 0, docContext,serverContext);
+                if (transactionTasks.Count == 0)
+                    return;
+
+                result.AddInfo($"Has to processing {transactionTasks.Count} cluster transactions before the export can take place.");
+                _onProgress.Invoke(result.Progress);
+
+                for (var index = 0; index < transactionTasks.Count; index++)
+                {
+                    var task = transactionTasks[index];
+
+                    _token.ThrowIfCancellationRequested();
+                    while (task.IsCompleted == false)
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        if (task.Wait((int)TimeSpan.FromSeconds(10).TotalMilliseconds, _token) == false)
+                        {
+                            _token.ThrowIfCancellationRequested();
+                            result.AddInfo($"Processing cluster transaction {index}.");
+                            _onProgress.Invoke(result.Progress);
+                        }
+                    }
+
+                    if (task.IsCompletedSuccessfully)
+                    {
+                        result.AddInfo($"Cluster transaction {index} out of {transactionTasks.Count} is completed.");
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    if (task.IsCanceled)
+                    {
+                        result.AddInfo($"Cluster transaction {index} was canceled.");
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    if (task.IsFaulted)
+                    {
+                        _result.AddError($"Cluster transaction {index} is faulted: {task.Exception}.");
+                        _onProgress.Invoke(result.Progress);
+                    }
+                }
             }
         }
 
