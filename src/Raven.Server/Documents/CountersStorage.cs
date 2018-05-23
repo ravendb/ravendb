@@ -145,7 +145,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public string PutCounterFromReplication(DocumentsOperationContext context, string documentId, string name, string changeVector, long value)
+        public void PutCounterFromReplication(DocumentsOperationContext context, string documentId, string name, string changeVector, long value)
         {
             if (context.Transaction == null)
             {
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents
                         var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
 
                         if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                            return null;
+                            return;
                     }
 
                     // if tombstone exists, remove it
@@ -198,8 +198,6 @@ namespace Raven.Server.Documents
                         CounterName = name,
                         Type = DocumentChangeTypes.Counter
                     });
-
-                    return changeVector;
                 }
             }
         }
