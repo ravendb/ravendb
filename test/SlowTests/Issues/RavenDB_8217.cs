@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_8217 : RavenTestBase
     {
-        [Fact]
+        [NonLinuxFact]
         public async Task CanGetProperErrorForIndexCreationFailure()
         {
             using (var store = GetDocumentStore(new Options
@@ -33,7 +34,6 @@ namespace SlowTests.Issues
                             "from u in docs select new { u.Name}"
                         }
                     })));
-
                     Assert.Contains(Constants.DatabaseFilename, e.ToString()); // we want to ensure that the failure to create the db is here.
                 }
             }
