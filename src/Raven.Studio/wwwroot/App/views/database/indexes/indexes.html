@@ -60,7 +60,8 @@
                                 </div>
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
-                                            data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), 
+                                                       css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="icon-lock"></i><span>Set lock mode...</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
@@ -252,8 +253,9 @@
                     <span class="properties-label">Mode:</span>
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: $root.globalIndexingStatus() === 'Running' &&
-                                !_.includes($root.spinners.localLockChanges(), name)">
+                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) },
+                                           enable: $root.globalIndexingStatus() === 'Running' && !_.includes($root.spinners.localLockChanges(), name) && 
+                                                   type !== 'AutoMap' && type !== 'AutoMapReduce'">
                             <span data-bind="visible: lockMode() === 'Unlock'">
                                 <i class="icon-unlock"></i><span>Unlocked</span>
                             </span>
