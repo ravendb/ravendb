@@ -81,7 +81,9 @@ namespace Raven.Database.FileSystem
 
                 storage = CreateTransactionalStorage(configuration);
 
-                sigGenerator = new SigGenerator();
+                if (config.FileSystem.DisableRDC == false)
+                    sigGenerator = new SigGenerator();
+
                 fileLockManager = new FileLockManager();			        
    
                 BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
