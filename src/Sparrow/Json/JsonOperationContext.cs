@@ -121,7 +121,7 @@ namespace Sparrow.Json
             public int Valid, Used;
             public byte* Pointer;
 
-            public GCHandle _handle; // TODO: return to private after solving RavenDB-10561
+            private GCHandle _handle;
             private bool _disposed;
 
             public void Dispose()
@@ -374,7 +374,7 @@ namespace Sparrow.Json
 
         public struct ReturnBuffer : IDisposable
         {
-            public  ManagedPinnedBuffer _buffer; // TODO: return to private after solving RavenDB-10561
+            private  ManagedPinnedBuffer _buffer;
             private readonly JsonOperationContext _parent;
 
             public ReturnBuffer(ManagedPinnedBuffer buffer, JsonOperationContext parent)
