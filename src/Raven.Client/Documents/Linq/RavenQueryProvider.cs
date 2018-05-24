@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Session;
@@ -31,18 +32,22 @@ namespace Raven.Client.Documents.Linq
         private readonly QueryStatistics _queryStatistics;
         private readonly LinqQueryHighlightings _highlightings;
         private readonly bool _isMapReduce;
+        private DocumentConventions _conventions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
         /// </summary>
         public RavenQueryProvider(
+#if FEATURE_HIGHLIGHTING
+            QueryHighlightings highlightings,
+#endif
             IDocumentQueryGenerator queryGenerator,
             string indexName,
             string collectionName,
             Type originalQueryType,
             QueryStatistics queryStatistics,
             LinqQueryHighlightings highlightings,
-            bool isMapReduce)
+            bool isMapReduce, DocumentConventions conventions)
         {
             FieldsToFetch = new HashSet<FieldToFetch>();
             OriginalQueryType = originalQueryType;
@@ -53,6 +58,7 @@ namespace Raven.Client.Documents.Linq
             _queryStatistics = queryStatistics;
             _highlightings = highlightings;
             _isMapReduce = isMapReduce;
+            _conventions = conventions;
         }
 
         /// <summary>
@@ -99,7 +105,8 @@ namespace Raven.Client.Documents.Linq
                 OriginalQueryType,
                 _queryStatistics,
                 _highlightings,
-                _isMapReduce);
+                _isMapReduce,
+                _conventions);
 
             ravenQueryProvider.Customize(_customizeQuery);
 
@@ -291,8 +298,9 @@ namespace Raven.Client.Documents.Linq
                 _indexName,
                 _collectionName,
                 FieldsToFetch,
-                _isMapReduce,
-                OriginalQueryType);
+                _isMapReduce, 
+                OriginalQueryType, 
+                _conventions);
         }
 
         /// <summary>
