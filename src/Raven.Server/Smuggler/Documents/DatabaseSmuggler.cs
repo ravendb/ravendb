@@ -602,6 +602,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
+                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
                     actions.WriteDocument(item, result.Documents);
@@ -787,6 +788,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (tombstone.LowerId == null)
                         ThrowInvalidData();
 
+                    tombstone.Flags = tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                     actions.WriteTombstone(tombstone, result.Tombstones);
 
                     result.Tombstones.LastEtag = tombstone.Etag;
