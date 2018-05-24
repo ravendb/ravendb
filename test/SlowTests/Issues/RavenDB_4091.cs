@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     progresses.Add(progress);
                 };
 
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
                 Assert.NotEmpty(progresses);
 
