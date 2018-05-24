@@ -34,7 +34,11 @@ namespace Raven.Tests.Issues
             {
                 server.SystemDatabase.Indexes.PutIndex(IndexName, new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
+                    Map = "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }",
+                    Indexes =
+                    {
+                        { "Query", FieldIndexing.Analyzed }
+                    }
                 });
 
                 using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
