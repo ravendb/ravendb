@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Rachis;
@@ -19,7 +20,7 @@ using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class ClusterDatabaseMaintenance : ReplicationTestBase
+    public class ClusterDatabaseMaintenance : ClusterTestBase
     {
         private class User
         {
@@ -237,7 +238,10 @@ namespace RachisTests.DatabaseCluster
             //DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
             var databaseName = "MoveToPassiveWhenRefusedConnectionFromAllNodes";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0, customSettings: new Dictionary<string, string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "600"
+            });
 
             using (var store = new DocumentStore
             {
@@ -259,7 +263,9 @@ namespace RachisTests.DatabaseCluster
                 var nodeTag = Servers[1].ServerStore.NodeTag;
                 // kill the process and remove the node from topology
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                await leader.ServerStore.RemoveFromClusterAsync(nodeTag);
+
+                await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(nodeTag));
+
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     var val = await WaitForValueAsync(() =>
@@ -280,11 +286,20 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(clusterSize - 1, val);
                 }
                 // bring the node back to live and ensure that he moves to passive state
-                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
-                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
+                Servers[1] = GetNewServer(new Dictionary<string, string>
+                {
+                    {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0]},
+                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0]},
+                    {RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout), "600"}
+
+                }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+
+                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)), "1st assert");
                 // rejoin the node to the cluster
-                await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
-                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
+
+                await ActionWithLeader( (l) => l.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag));
+
+                Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)), "2nd assert");
             }
         }
 

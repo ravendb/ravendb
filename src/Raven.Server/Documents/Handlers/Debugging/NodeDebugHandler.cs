@@ -54,7 +54,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
             return Task.CompletedTask;
         }
-        
+
+        [RavenAction("/admin/debug/node/state-change-history", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task GetStateChangeHistory()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var history = new DynamicJsonArray(ServerStore.Engine.PrevStates.Select(s => s.ToString()));
+                context.Write(write, history);
+                write.Flush();
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/debug/node/ping", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task PingTest()
         {

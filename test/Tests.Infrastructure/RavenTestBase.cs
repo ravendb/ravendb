@@ -66,8 +66,8 @@ namespace FastTests
             if (await Task.WhenAll(tasks).WaitAsync(timeout))
                 return;
 
-            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " +
-                          " we got confirmations that it was applied only on to following servers: ";
+            var message = $"Timed out after {timeout} waiting for index {index} because out of {Servers.Count} servers" +
+                          " we got confirmations that it was applied only on the following servers: ";
 
             for (var i = 0; i < tasks.Count; i++)
             {

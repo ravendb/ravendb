@@ -745,11 +745,12 @@ namespace Raven.Server.Rachis
         
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
+            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+            
             // if leader / candidate, this remove them from play and revert to follower mode
             _engine.SetNewState(RachisState.Follower, this, _term,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
             _engine.LeaderTag = _connection.Source;
-            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             
             _debugRecorder.Record("Follower connection accepted");
 
