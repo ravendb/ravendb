@@ -65,7 +65,7 @@ namespace FastTests.Blittable
                     var totalRead = 0;
                     do
                     {
-                        int read;
+                        int read = -1;
                         do
                         {
                             var buffer = new byte[originalSize + offset];
@@ -79,6 +79,7 @@ namespace FastTests.Blittable
                     Assert.Equal(originalSize, totalRead);
 
                     var peepWindow = peeping.PeepInReadStream();
+
                     var length = peepWindow.Length;
 
                     Assert.True(length <= PeepingTomStream.BufferWindowSize);
