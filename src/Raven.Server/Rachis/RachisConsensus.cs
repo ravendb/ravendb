@@ -562,6 +562,11 @@ namespace Raven.Server.Rachis
             public string Reason;
             public long CurrentTerm;
             public DateTime When;
+
+            public override string ToString()
+            {
+                return $"{When:u} {Reason} {From}->{To} at term {CurrentTerm}";
+            }
         }
 
         private void SetNewStateInTx(TransactionOperationContext context,
@@ -765,8 +770,11 @@ namespace Raven.Server.Rachis
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info("Can't switch to candidate mode when not initialized with topology / not a voter");
+                            Log.Info("We are not a part of the cluster so moving to passive");
                         }
+
+                        SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive" );
+                        ctx.Commit();
                         return;
                     }
                     if (clusterTopology.Members.Count == 1)

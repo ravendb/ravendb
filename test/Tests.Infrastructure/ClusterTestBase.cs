@@ -146,6 +146,32 @@ namespace Tests.Infrastructure
             }
         }
 
+        protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act)
+        {
+            var retries = 5;
+            Exception err = null;
+            while (retries-- > 0)
+            {
+                if (retries != 4)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(500));
+                }
+                try
+                {
+                    var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
+                    if (leader == null)
+                        continue;
+                    await act(leader);
+                    return leader;
+                }
+                catch (Exception e) when (e is NotLeadingException)
+                {
+                    err = e;
+                }
+            }
+            throw new InvalidOperationException("Failed to get leader after 5 retries.", err);
+        }
+
         protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected)
         {
             var nodes = topology.AllNodes;
