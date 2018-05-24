@@ -27,17 +27,23 @@ namespace SlowTests.Issues
 
             using (var docStore = GetDocumentStore())
             {
-
-                docStore.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                docStore.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = IndexName,
                     Maps =
                     {
-                        "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
+                        "from doc in docs.People select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
+                    },
+                    Fields =
+                    {
+                        {
+                            "Query", new IndexFieldOptions
+                            {
+                                Indexing = FieldIndexing.Search
+                            }
+                        }
                     }
-                }
-            }))
-            ;
+                }));
 
                 using (var session = docStore.OpenSession())
                 {
@@ -58,11 +64,11 @@ namespace SlowTests.Issues
                         var queryResult = commands.Query(new IndexQuery { Query = $"FROM INDEX '{IndexName}'" }, false, true);
                         foreach (BlittableJsonReaderObject result in queryResult.Results)
                         {
-                            string q;
-                            if (result.TryGet("Query", out q))
-                            {
-                                Assert.False(q.Contains(Constants.Documents.Indexing.Fields.NullValue));
-                            }
+                            Assert.True(result.TryGet("Query", out object obj));
+
+                            var q = obj?.ToString();
+                            Assert.NotNull(q);
+                            Assert.False(q.Contains(Constants.Documents.Indexing.Fields.NullValue));
                         }
                     }
                 }
