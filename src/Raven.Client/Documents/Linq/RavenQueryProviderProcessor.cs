@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lambda2Js;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
@@ -107,7 +108,8 @@ namespace Raven.Client.Documents.Linq
             string collectionName,
             HashSet<FieldToFetch> fieldsToFetch,
             bool isMapReduce,
-            Type originalType)
+            Type originalType,
+            DocumentConventions conventions)
         {
             FieldsToFetch = fieldsToFetch;
             _newExpressionType = typeof(T);
@@ -119,6 +121,7 @@ namespace Raven.Client.Documents.Linq
             _highlightings = highlightings;
             _customizeQuery = customizeQuery;
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
+            _conventions = conventions;
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
             _loadAliasesMovedToOutputFuction = new HashSet<string>();
@@ -1835,6 +1838,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private bool _insideSelect;
         private readonly bool _isMapReduce;
         private readonly Type _originalQueryType;
+        private readonly DocumentConventions _conventions;
 
         private void VisitSelect(Expression operand)
         {
@@ -2368,8 +2372,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
             }
-
-            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extensions));
+            
+            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
+            {
+                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
+            });
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {

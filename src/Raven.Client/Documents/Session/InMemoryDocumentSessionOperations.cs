@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Lambda2Js;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -208,6 +209,11 @@ namespace Raven.Client.Documents.Session
             EntityToBlittable = new EntityToBlittable(this);
             SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.LastTransactionIndex);
             TransactionMode = options.TransactionMode;
+
+            _javascriptCompilationOptions = new JavascriptCompilationOptions
+            {
+                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_documentStore.Conventions)
+            };
         }
 
         /// <summary>
