@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return spatialField.CreateIndexableFields(shapeWkt);
         }
 
-        private static SpatialField GetOrCreateSpatialField(string name)
+        internal static SpatialField GetOrCreateSpatialField(string name)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");

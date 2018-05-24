@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Xunit;
@@ -285,6 +286,52 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        [Fact]
+        public void CanUseSpatialFields()
+        {
+            var kalab = 10;
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Spatial());
+                CanUseSpatialFieldsInternal(kalab, store, "Spatial");
+            }
+        }
+
+        [Fact]
+        public void CanUseDynamicSpatialFields()
+        {
+            var kalab = 10;
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new DynamicSpatial());
+                CanUseSpatialFieldsInternal(kalab, store, "DynamicSpatial");
+            }
+        }
+        private static void CanUseSpatialFieldsInternal(int kalab, DocumentStore store, string indexName)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Location
+                {
+                    Description = "Dor beach",
+                    Latitude = 32.61059534196809,
+                    Longitude = 34.918146686510454
+
+                });
+                session.Store(new Location
+                {
+                    Description = "Kfar Galim",
+                    Latitude = 32.76724701152615,
+                    Longitude = 34.957999421620116
+
+                });
+                session.SaveChanges();
+                WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
+                session.Query<Location>(indexName).Spatial("Location", criteria => criteria.WithinRadius(kalab, 32.56829122491778, 34.953954053921734)).Single(x => x.Description == "Dor beach");
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
@@ -543,6 +590,51 @@ map('Users', function (u){
                         {
                             @"map('Users', function (u){ return { Name: u.Name, Count: 1, Product: load(u.Product,'Products').Name};})",
                         },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class Location
+        {
+            public string Description { get; set; }
+            public double Longitude { get; set; }
+            public double Latitude { get; set; }
+        }
+
+        private class Spatial : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "Spatial",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Locations', function (l){ return { Description: l.Description, Location: createSpatialField(createSpatialPoint(l.Latitude, l.Longitude))}})",
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class DynamicSpatial : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "Spatial",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(createSpatialPoint(l.Latitude, l.Longitude)), $name:'Location', $options:{index: true, store: true}} }})",
+                    },
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
