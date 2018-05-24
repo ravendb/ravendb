@@ -76,8 +76,16 @@ namespace Raven.Database.Extensions
 
         public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)
         {
+            FieldIndexing? fieldIndexing;
+            return GetIndex(self, name, defaultIndex, out fieldIndexing);
+        }
+
+        public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex, out FieldIndexing? fieldIndexing)
+        {
+            fieldIndexing = null;
             if (self.Indexes == null)
                 return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
+
             FieldIndexing value;
             if (self.Indexes.TryGetValue(name, out value) == false)
             {
@@ -92,6 +100,9 @@ namespace Raven.Database.Extensions
                     return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
                 }
             }
+
+            fieldIndexing = value;
+
             switch (value)
             {
                 case FieldIndexing.No:

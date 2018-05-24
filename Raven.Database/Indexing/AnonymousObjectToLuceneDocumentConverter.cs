@@ -6,13 +6,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
-using Lucene.Net.Search;
-
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Linq;
@@ -106,7 +103,8 @@ namespace Raven.Database.Indexing
 
         private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO, Field.Index? analyzed = null)
         {
-            var fieldIndexingOptions = analyzed ?? indexDefinition.GetIndex(name, null);
+            FieldIndexing? fieldIndexing = null;
+            var fieldIndexingOptions = analyzed ?? indexDefinition.GetIndex(name, null, out fieldIndexing);
             var storage = indexDefinition.GetStorage(name, defaultStorage);
             var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
 
@@ -226,7 +224,7 @@ namespace Raven.Database.Indexing
 
                 foreach (var itemToIndex in itemsToIndex)
                 {
-                    if (!CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
+                    if (!CanCreateFieldsForNestedArray(itemToIndex, fieldIndexing))
                         continue;
 
                     multipleItemsSameFieldCount.Add(count++);
@@ -407,7 +405,7 @@ namespace Raven.Database.Indexing
             var fieldName = name + "_Range";
             var storage = indexDefinition.GetStorage(name, defaultStorage);
             var cacheKey = new FieldCacheKey(name, null, storage, termVector, multipleItemsSameFieldCount.ToArray());
-            
+
             NumericField numericField;
             if (numericFieldsCache.TryGetValue(cacheKey, out numericField) == false)
             {
@@ -537,7 +535,7 @@ namespace Raven.Database.Indexing
                 }
                 else // We are thinking it is possible to have collisions. This may not be true ever!
                 {
-                    if ( x.index == y.index &&
+                    if (x.index == y.index &&
                          x.store == y.store &&
                          x.termVector == y.termVector &&
                          string.Equals(x.name, y.name))
@@ -546,7 +544,7 @@ namespace Raven.Database.Indexing
                             return false;
 
                         int count = x.multipleItemsSameField.Length;
-                        for ( int i = 0; i < count; i++ )
+                        for (int i = 0; i < count; i++)
                         {
                             if (x.multipleItemsSameField[i] != y.multipleItemsSameField[i])
                                 return false;
@@ -575,10 +573,10 @@ namespace Raven.Database.Indexing
             private int _hashKey;
 
             // We can precalculate the hash code because all fields involved are readonly.
-            internal int HashKey 
+            internal int HashKey
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get 
+                get
                 {
                     if (_hashKey == 0)
                     {
@@ -621,7 +619,7 @@ namespace Raven.Database.Indexing
         private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
             var cacheKey = new FieldCacheKey(name, index, store, termVector, multipleItemsSameFieldCount.ToArray());
-            
+
             Field field;
             if (fieldsCache.TryGetValue(cacheKey, out field) == false)
                 fieldsCache[cacheKey] = field = new Field(name, value, store, index, termVector);
@@ -632,16 +630,12 @@ namespace Raven.Database.Indexing
             return field;
         }
 
-        private bool CanCreateFieldsForNestedArray(object value, Field.Index fieldIndexingOptions)
+        private static bool CanCreateFieldsForNestedArray(object value, FieldIndexing? fieldIndexing)
         {
-            if (!fieldIndexingOptions.IsAnalyzed())
+            if (fieldIndexing == FieldIndexing.Analyzed)
             {
-                return true;
-            }
-
-            if (value == null || value is DynamicNullObject)
-            {
-                return false;
+                if (value == null || value is DynamicNullObject)
+                    return false;
             }
 
             return true;
