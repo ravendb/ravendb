@@ -116,12 +116,6 @@ namespace Raven.Server.Documents
 
                 }
 
-                if (flags.Contain(DocumentFlags.FromClusterTransaction) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
-                {
-                    // if we import documents to a new database we strip them from the FromCluster flags.
-                    flags = flags.Strip(DocumentFlags.FromClusterTransaction);
-                }
-
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
                 if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)

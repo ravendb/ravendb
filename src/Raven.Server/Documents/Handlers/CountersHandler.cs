@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 if (_database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    ThrowFeaturesAvailabilyException();
+                    FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Counters");
 
                 foreach (var kvp in _dictionary)
                 {
@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Handlers
         public Task Get()
         {
             if (Database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                ThrowFeaturesAvailabilyException();
+                FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Counters");
 
             var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
@@ -373,12 +373,6 @@ namespace Raven.Server.Documents.Handlers
         private static void ThrowInvalidDocumentWithNoMetadata(Document doc)
         {
             throw new InvalidOperationException("Cannot increment counters for " + doc + " because the document has no metadata. Should not happen ever");
-        }
-        private static void ThrowFeaturesAvailabilyException()
-        {
-            throw new FeaturesAvailabilityException(
-                "Can not use Counters, as this is an experimental feature and the Database does not support experimental features. " +
-                $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
     }
 }
