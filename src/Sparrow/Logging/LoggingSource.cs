@@ -293,7 +293,7 @@ namespace Sparrow.Logging
             var state = _localState.Value;
             if (state.Generation != _generation)
             {
-                _localState.Value = GenerateThreadWriterState();
+                state = _localState.Value = GenerateThreadWriterState();
             }
 
             if (state.Free.Dequeue(out var item))
