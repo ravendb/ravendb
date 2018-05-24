@@ -25,6 +25,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -946,7 +947,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                var alreadyFaulted = _indexes.TryGetByName(name, out var i) && 
+                var alreadyFaulted = _indexes.TryGetByName(name, out var i) &&
                                      i is FaultyInMemoryIndex;
 
                 index?.Dispose();
@@ -957,8 +958,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = autoIndexDefinition != null 
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition)) 
+                var fakeIndex = autoIndexDefinition != null
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition))
                     : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
@@ -990,14 +991,19 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
+            DatabaseRecord record;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+
+            if (record.Topology.Members[0] != _serverStore.NodeTag)
+                return;
+
             AsyncHelpers.RunSync(HandleUnusedAutoIndexes);
         }
 
         private async Task HandleUnusedAutoIndexes()
         {
-            if (_serverStore.IsLeader() == false)
-                return;
-
             var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
             var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
             var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
