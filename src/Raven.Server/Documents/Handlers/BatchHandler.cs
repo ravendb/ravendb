@@ -18,14 +18,14 @@ using Raven.Server.Smuggler;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.Documents.Replication;
-using Voron.Exceptions;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Json;
 using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Config.Categories;
+using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
@@ -61,6 +61,9 @@ namespace Raven.Server.Documents.Handlers
 
                 if (command.IsClusterTransaction)
                 {
+                    if (Database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                        FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Cluster Transactions");
+
                     using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
                         // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
@@ -436,6 +439,9 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
+                if (Database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Cluster Transactions");
+
                 var global = DocumentsStorage.GetDatabaseChangeVector(context);
                 var dbGrpId = Database.DatabaseGroupId;
                 var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
