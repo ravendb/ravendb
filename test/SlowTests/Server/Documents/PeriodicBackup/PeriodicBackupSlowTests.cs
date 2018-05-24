@@ -473,7 +473,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName
+                    DatabaseName = databaseName,
+                    FeaturesAvailability = "Experimental"
                 }))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
@@ -561,7 +562,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = restoredDatabaseName
+                    DatabaseName = restoredDatabaseName,
+                    FeaturesAvailability = "Experimental"
                 }))
                 {
                     using (var session = store.OpenAsyncSession(restoredDatabaseName))
