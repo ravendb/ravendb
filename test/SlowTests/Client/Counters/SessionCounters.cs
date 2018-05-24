@@ -171,13 +171,7 @@ namespace SlowTests.Client.Counters
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("newDatabase")
-                {
-                    Settings =
-                    {
-                        [RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = "Experimental"
-                    }
-                }));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("newDatabase")));
 
                 using (var session = store.OpenSession("newDatabase"))
                 {

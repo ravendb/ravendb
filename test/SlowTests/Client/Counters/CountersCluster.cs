@@ -21,13 +21,7 @@ namespace SlowTests.Client.Counters
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var dbName = GetDatabaseName();
-            var db = await CreateDatabaseInCluster(new DatabaseRecord(dbName)
-            {
-                Settings =
-                {
-                    [RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = "Experimental"
-                }
-            }, 3, leader.WebUrl);
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
             var stores = db.Servers.Select(s => new DocumentStore
             {
                 Database = dbName,
@@ -84,13 +78,7 @@ namespace SlowTests.Client.Counters
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var dbName = GetDatabaseName();
-            var db = await CreateDatabaseInCluster(new DatabaseRecord(dbName)
-            {
-                Settings =
-                {
-                    [RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = "Experimental"
-                }
-            }, 3, leader.WebUrl);
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
 
             var stores = db.Servers.Select(s => new DocumentStore
                 {

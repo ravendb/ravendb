@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
@@ -141,7 +142,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         Core =
                         {
                             DataDirectory = new PathSetting(_restoreConfiguration.DataDirectory),
-                            RunInMemory = false
+                            RunInMemory = false,
                         }
                     }, _serverStore, addToInitLog))
                 {
