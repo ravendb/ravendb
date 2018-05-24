@@ -31,7 +31,8 @@ namespace Raven.Client.Documents.Commands.Batches
             for (var i = 0; i < commands.Count; i++)
             {
                 var command = commands[i];
-                _commands[i] = context.ReadObject(command.ToJson(conventions, context), "command");
+                var json = command.ToJson(conventions, context);
+                _commands[i] = context.ReadObject(json, "command");
 
                 if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {

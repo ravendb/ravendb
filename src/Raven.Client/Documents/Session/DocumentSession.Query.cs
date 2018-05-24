@@ -66,7 +66,8 @@ namespace Raven.Client.Documents.Session
 #if FEATURE_HIGHLIGHTING
                 highlightings,
 #endif
-                isMapReduce);
+                isMapReduce,
+                Conventions);
 
             var inspector = new RavenQueryInspector<T>();
             inspector.Init(
