@@ -235,8 +235,11 @@ namespace Raven.Server.Utils
 
         public static dynamic ToDynamicType(object value)
         {
+            if (value is DynamicNullObject)
+                return value;
+
             if (value == null)
-                return DynamicNullObject.Null;
+                return DynamicNullObject.ExplicitNull;
 
             BlittableJsonReaderArray jsonArray;
             var jsonObject = value as BlittableJsonReaderObject;
