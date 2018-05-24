@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 
@@ -29,6 +30,7 @@ namespace Raven.Client.Documents.Linq
         private string _collectionName;
         private InMemoryDocumentSessionOperations _session;
         private bool _isMapReduce;
+        private DocumentConventions _conventions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
@@ -45,6 +47,7 @@ namespace Raven.Client.Documents.Linq
             InMemoryDocumentSessionOperations session,
             bool isMapReduce)
         {
+            _conventions = session.Conventions;
             _provider = provider?.For<T>() ?? throw new ArgumentNullException(nameof(provider));
             _queryStats = queryStats;
 #if FEATURE_HIGHLIGHTING
@@ -157,7 +160,8 @@ namespace Raven.Client.Documents.Linq
                 _collectionName,
                 new HashSet<FieldToFetch>(_provider.FieldsToFetch),
                 _isMapReduce,
-                _provider.OriginalQueryType);
+                _provider.OriginalQueryType,
+                _conventions);
         }
 
         public string IndexName => _indexName;

@@ -175,11 +175,11 @@ namespace Raven.Client.Documents
         /// Project query results according to the specified type
         /// </summary>
         public static IRavenQueryable<TResult> ProjectInto<TResult>(this IQueryable queryable)
-        {
+        {            
             var ofType = queryable.OfType<TResult>();
             var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
             var ravenQueryInspector = (RavenQueryInspector<TResult>)results;
-
+            
             var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
             ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));
             return (IRavenQueryable<TResult>)results;

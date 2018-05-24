@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using Lambda2Js;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
@@ -21,9 +22,10 @@ namespace Raven.Client.Documents.Session
     {
         private int _valsCount;
         private int _customCount;
+        private readonly JavascriptCompilationOptions _javascriptCompilationOptions;            
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
-        {
+        {            
             var metadata = GetMetadataFor(entity);
             var id = metadata.GetString(Constants.Documents.Metadata.Id);
             Increment(id, path, valToAdd);
@@ -31,7 +33,7 @@ namespace Raven.Client.Documents.Session
 
         public void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd)
         {
-            var pathScript = path.CompileToJavascript();
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
 
             var patchRequest = new PatchRequest
             {
@@ -56,7 +58,7 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            var pathScript = path.CompileToJavascript();
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
 
             var patchRequest = new PatchRequest
             {
@@ -86,8 +88,8 @@ namespace Raven.Client.Documents.Session
             var extension = new JavascriptConversionExtensions.CustomMethods
             {
                 Suffix = _customCount++
-            };
-            var pathScript = path.CompileToJavascript();
+            };            
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
