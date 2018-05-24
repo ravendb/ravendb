@@ -81,9 +81,10 @@ namespace Sparrow
             // (because 'start' might point to a byte in a middle of set of bytes
             // representing single character, so 0x80 represent start of char in utf8)
             var originalStart = start;
-            while ((_bufferWindow.Buffer.Array[start] & 0x80) != 0)
+
+            for (var p = _bufferWindow.Pointer; (*(p + start) & 0x80) != 0; p++)
             {
-                start++;
+                start++;                
                 size--;
                 
                 // requested size doesn't contains utf8 character
@@ -93,7 +94,7 @@ namespace Sparrow
                 // looped through the entire buffer without utf8 character found
                 if (start == originalStart)
                     return new byte[0];
-                
+
                 if (start >= BufferWindowSize)
                     start = 0;
             }
