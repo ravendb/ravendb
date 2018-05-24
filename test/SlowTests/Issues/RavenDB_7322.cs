@@ -12,7 +12,8 @@ namespace SlowTests.Issues
     {
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
-        [Fact]
+        // In linux we might encounter Microsoft's VisualStudio assembly types, so we skip this test in linux, and rely on the windows tests result as good for linux too
+        [NonLinuxFact]
         public void TestClassesShouldNotInheritFromOtherTestClassesToNotMultiplyTests()
         {
             var classes = from assembly in GetAssemblies(typeof(RavenDB_7322).GetTypeInfo().Assembly)
