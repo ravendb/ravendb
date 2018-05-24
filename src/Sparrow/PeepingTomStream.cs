@@ -14,7 +14,7 @@ namespace Sparrow
         private int _pos;
         private readonly Stream _stream;
         private bool _firstWindow = true;
-        public JsonOperationContext.ReturnBuffer _returnedBuffer; // TODO: return to private after solving RavenDB-10561
+        private JsonOperationContext.ReturnBuffer _returnedBuffer;
 
         public PeepingTomStream(Stream stream, JsonOperationContext context)
         {
@@ -80,8 +80,9 @@ namespace Sparrow
             // search for the first byte which represent a single UTF charcter
             // (because 'start' might point to a byte in a middle of set of bytes
             // representing single character, so 0x80 represent start of char in utf8)
-            var originalStart = start;            
-            while ((_bufferWindow.Buffer.Array[start] & 0x80) != 0)
+            var originalStart = start;
+
+            for (var p = _bufferWindow.Pointer; (*(p + start) & 0x80) != 0; p++)
             {
                 start++;                
                 size--;
