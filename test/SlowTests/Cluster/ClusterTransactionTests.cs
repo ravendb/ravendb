@@ -28,11 +28,10 @@ namespace SlowTests.Cluster
             var leader = await CreateRaftClusterAndGetLeader(3);
             var db = GetDatabaseName();
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
-            using (var leaderStore = new DocumentStore()
+            using (var leaderStore = GetDocumentStore(new Options
             {
-                Urls = new[] { leader.WebUrl },
-                Database = db,
-            }.Initialize())
+                Server = leader
+            }))
             {
                 var user1 = new User()
                 {
@@ -417,20 +416,20 @@ namespace SlowTests.Cluster
             var leader = await CreateRaftClusterAndGetLeader(3);
             var db = GetDatabaseName();
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
-            using (var leaderStore = new DocumentStore()
+
+            using (var store = GetDocumentStore(new Options
             {
-                Urls = new[] { leader.WebUrl },
-                Database = db,
-            }.Initialize())
+                Server = leader
+            }))
             {
                 var email = "grisha@ayende.com";
                 var userId = $"users/{email}";
 
-                var task1 = Task.Run(async () => await AddUser(leaderStore, email, userId));
-                var task2 = Task.Run(async () => await AddUser(leaderStore, email, userId));
+                var task1 = Task.Run(async () => await AddUser(store, email, userId));
+                var task2 = Task.Run(async () => await AddUser(store, email, userId));
                 var task3 = Task.Run(async () =>
                 {
-                    using (var session = leaderStore.OpenAsyncSession())
+                    using (var session = store.OpenAsyncSession())
                     {
                         while (true)
                         {
