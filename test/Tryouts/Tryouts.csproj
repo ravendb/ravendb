@@ -23,6 +23,7 @@
     <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
     <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />
+    <ProjectReference Include="..\StressTests\StressTests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
