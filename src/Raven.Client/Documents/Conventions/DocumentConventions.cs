@@ -38,8 +38,6 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions Default = new DocumentConventions();
 
-        public Func<MemberInfo, string> PropertyNameConverter = info => info.Name;
-
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
@@ -167,6 +165,17 @@ namespace Raven.Client.Documents.Conventions
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
         private bool? _useCompression;
+        private Func<MemberInfo, string> _propertyNameConverter;
+
+        public Func<MemberInfo, string> PropertyNameConverter
+        {
+            get => _propertyNameConverter;
+            set
+            {
+                AssertNotFrozen();
+                _propertyNameConverter = value;
+            }
+        }
 
         public TimeSpan? RequestTimeout
         {

@@ -126,7 +126,13 @@ namespace Raven.Client.Documents.Indexes
         private void OutMember(Expression instance, MemberInfo member, Type exprType)
         {
             var isId = false;
-            var name = _conventions.PropertyNameConverter(member) ?? GetPropertyName(member.Name, exprType);
+
+            string name = null;
+            if (_conventions.PropertyNameConverter != null)
+                name = _conventions.PropertyNameConverter(member);
+
+            if (string.IsNullOrWhiteSpace(name))
+                name = GetPropertyName(member.Name, exprType);
 
             if (TranslateToDocumentId(instance, member, exprType))
             {
