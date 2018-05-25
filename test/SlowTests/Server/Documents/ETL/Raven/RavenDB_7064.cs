@@ -147,5 +147,56 @@ loadToPeople(person);
                 }
             }
         }
+
+        [Fact]
+        public void Can_use_get_attachments()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script:
+                    @"
+var attachments = getAttachments();
+
+for (var i = 0; i < attachments.length; i++) {
+    addAttachment(this, attachments[i].Name);
+    this.LastName = this.LastName + attachments[i].Name;
+}
+
+loadToUsers(this);
+"                   
+);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe",
+                        LastName = "",
+                    }, "users/1");
+
+                    session.Advanced.Attachments.Store("users/1", "photo1.jpg", new MemoryStream(new byte[] {1}));
+                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] {2}));
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                AssertAttachments(dest, new []
+                {
+                    ("users/1", "photo1.jpg", new byte[] {1}, false),
+                    ("users/1", "photo2.jpg", new byte[] {2}, false),
+                });
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.Equal("photo1.jpgphoto2.jpg", user.LastName);
+                }
+            }
+        }
     }
 }
