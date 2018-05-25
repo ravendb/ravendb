@@ -158,7 +158,7 @@ namespace SlowTests.MailingList
                                         Quantity = g.Select(x => x.Quantity).FirstOrDefault(),
                                         Total = g.Where(x => x.Total != null).Select(x => x.Total).FirstOrDefault(),
                                         InStock = g.Where(x => x.InStock != null).Select(x => x.InStock).FirstOrDefault(),
-                                        Delta = g.Select(x => x.Total - x.InStock)
+                                        Delta = g.Select(x => x.Total - x.InStock).FirstOrDefault()
                                     };
 
                 Store(x => x.Id, FieldStorage.Yes);
