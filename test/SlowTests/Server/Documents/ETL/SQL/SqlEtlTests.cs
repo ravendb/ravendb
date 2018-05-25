@@ -718,6 +718,76 @@ loadToOrders(orderData);
         }
 
         [Fact]
+        public async Task Should_error_if_attachment_doesnt_exist()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Orders]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [Name] [nvarchar](255) NULL,
+    [Pic] [varbinary](max) NULL
+)
+");
+
+                var attachmentBytes = new byte[] { 1, 2, 3 };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order(), "orders/1-A");
+                    await session.StoreAsync(new Order(), "orders/2-A");
+                    await session.StoreAsync(new Order(), "orders/3-A");
+
+                    await session.SaveChangesAsync();
+                }
+
+                store.Operations.Send(new PutAttachmentOperation("orders/1-A", "abc.jpg", new MemoryStream(attachmentBytes), "image/png"));
+                store.Operations.Send(new PutAttachmentOperation("orders/2-A", "photo.jpg", new MemoryStream(attachmentBytes), "image/png"));
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                SetupSqlEtl(store, @"
+var orderData = {
+    Id: id(this),
+    Name: 'photo.jpg',
+    Pic: loadAttachment('photo.jpg')
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SqlConnection())
+                {
+                    con.ConnectionString = GetConnectionString(store);
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(1, dbCommand.ExecuteScalar());
+                    }
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/2-A'";
+
+                        var sqlDataReader = dbCommand.ExecuteReader();
+
+                        Assert.True(sqlDataReader.Read());
+                        var stream = sqlDataReader.GetStream(0);
+
+                        var bytes = stream.ReadData();
+
+                        Assert.Equal(attachmentBytes, bytes);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public async Task LoadingMultipleAttachments()
         {
             using (var store = GetDocumentStore())
@@ -798,7 +868,7 @@ for (var i = 0; i < attachments.length; i++)
         }
 
         [Fact]
-        public async Task LoadingNonExistingAttachmentWillStoreNull()
+        public async Task CanSkipSettingFieldIfAttachmentDoesntExist()
         {
             using (var store = GetDocumentStore())
             {
@@ -819,9 +889,10 @@ CREATE TABLE [dbo].[Orders]
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
                 SetupSqlEtl(store, @"
+
 var orderData = {
     Id: id(this),
-    Pic: loadAttachment('non-existing')
+    // Pic: loadAttachment('non-existing') // skip loading non existing attachment
 };
 
 loadToOrders(orderData);
@@ -836,11 +907,13 @@ loadToOrders(orderData);
 
                     using (var dbCommand = con.CreateCommand())
                     {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(1, dbCommand.ExecuteScalar());
+
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
-
-
+                        
                         Assert.True(sqlDataReader.Read());
                         Assert.True(sqlDataReader.IsDBNull(0));
                     }

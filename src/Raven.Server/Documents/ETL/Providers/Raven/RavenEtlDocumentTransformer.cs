@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachment, AttachmentType.Document, null);
 
                         if (attachmentData == null)
-                            throw new InvalidOperationException($"Document '{Current.DocumentId}' doesn't have attachment named '{attachment}'");
+                            ThrowNoSuchAttachment(Current.DocumentId, attachment);
 
                         transformationCommands.Add(new PutAttachmentCommandData(id, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
                             null));
@@ -97,8 +97,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
                 else
                 {
-                    throw new InvalidOperationException(
-                        $"Document '{Current.DocumentId}' doesn't have any attachment while the script tried to add the following ones: {string.Join(' ', addedAttachments)}");
+                    ThrowNoAttachments(Current.DocumentId, addedAttachments);
                 }
             }
 

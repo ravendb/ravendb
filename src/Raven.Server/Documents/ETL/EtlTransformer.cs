@@ -110,6 +110,17 @@ namespace Raven.Server.Documents.ETL
             throw new ArgumentException($"{parameterName} parameter is mandatory");
         }
 
+        protected void ThrowNoSuchAttachment(string documentId, string attachmentName)
+        {
+            throw new InvalidOperationException($"Document '{documentId}' doesn't have attachment named '{attachmentName}'");
+        }
+
+        protected void ThrowNoAttachments(string documentId, IEnumerable<string> attachmentNames)
+        {
+            throw new InvalidOperationException(
+                $"Document '{documentId}' doesn't have any attachment while the script tried to add the following ones: {string.Join(' ', attachmentNames)}");
+        }
+
         public void Dispose()
         {
             _returnRun.Dispose();
