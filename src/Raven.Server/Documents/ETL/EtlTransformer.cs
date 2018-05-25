@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using Jint.Native;
 using Jint.Runtime.Interop;
+using Raven.Client;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -31,6 +33,7 @@ namespace Raven.Server.Documents.ETL
             _returnRun = Database.Scripts.GetScriptRunner(_key, true, out SingleRun);
             if (SingleRun == null)
                 return;
+
             SingleRun.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadToFunctionTranslator));
 
             for (var i = 0; i < LoadToDestinations.Length; i++)
@@ -39,8 +42,10 @@ namespace Raven.Server.Documents.ETL
                 var clrFunctionInstance = new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => LoadToFunctionTranslator(collection, value, values));
                 SingleRun.ScriptEngine.SetValue(Transformation.LoadTo + collection, clrFunctionInstance);
             }
+
+            SingleRun.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(SingleRun.ScriptEngine, GetAttachments));
         }
-        
+
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
         {
             if (args.Length != 2)
@@ -50,7 +55,7 @@ namespace Raven.Server.Documents.ETL
                 throw new InvalidOperationException("loadTo(name, obj) first argument must be a string");
             if (args[1].IsObject() == false)
                 throw new InvalidOperationException("loadTo(name, obj) second argument must be an object");
-            
+
             using (var result = new ScriptRunnerResult(SingleRun, args[1].AsObject()))
                 LoadToFunction(args[0].AsString(), result);
 
@@ -69,6 +74,27 @@ namespace Raven.Server.Documents.ETL
                 LoadToFunction(name, result);
 
             return self;
+        }
+
+        private JsValue GetAttachments(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 0)
+                throw new InvalidOperationException("getAttachments() must be called without any argument");
+
+            if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
+            {
+                return SingleRun.ScriptEngine.Array.Construct(Array.Empty<JsValue>());;
+            }
+
+            var attachments = new JsValue[attachmentsBlittableArray.Length];
+
+            for (int i = 0; i < attachmentsBlittableArray.Length; i++)
+            {
+                attachments[i] = (JsValue)SingleRun.Translate(Context, attachmentsBlittableArray[i]);
+            }
+
+            return SingleRun.ScriptEngine.Array.Construct(attachments);;
         }
 
         protected abstract string[] LoadToDestinations { get; }
