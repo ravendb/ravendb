@@ -48,7 +48,6 @@ class ongoingTaskEtlTransformationModel {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                HasLoadAttachment: false,
                 Name: "",
                 Script: ""
             }, true, false);
@@ -59,7 +58,6 @@ class ongoingTaskEtlTransformationModel {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
             Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
             Disabled: false,
-            HasLoadAttachment: false,
             Name: this.name(),
             Script: this.script()
         }
