@@ -47,6 +47,8 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _run = true;
 
+        private long _lastSurpassedAutoIndexesDatabaseRecordEtag;
+
         public readonly IndexIdentities Identities = new IndexIdentities();
 
         public Logger Logger => _logger;
@@ -1003,25 +1005,31 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
+            long etag;
             DatabaseRecord record;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
 
             if (record.Topology.Members[0] != _serverStore.NodeTag)
                 return;
 
-            AsyncHelpers.RunSync(RunIdleOperationsAsync);
+            AsyncHelpers.RunSync(() => RunIdleOperationsAsync(etag));
         }
 
-        private async Task RunIdleOperationsAsync()
+        private async Task RunIdleOperationsAsync(long databaseRecordEtag)
         {
             await HandleUnusedAutoIndexes();
-            await DeleteSurpassedAutoIndexes();
+            await DeleteSurpassedAutoIndexes(databaseRecordEtag);
         }
 
-        private async Task DeleteSurpassedAutoIndexes()
+        private async Task DeleteSurpassedAutoIndexes(long databaseRecordEtag)
         {
+            if (_lastSurpassedAutoIndexesDatabaseRecordEtag >= databaseRecordEtag)
+                return;
+
+            _lastSurpassedAutoIndexesDatabaseRecordEtag = databaseRecordEtag;
+
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
 
             var indexesToRemove = new HashSet<string>();
