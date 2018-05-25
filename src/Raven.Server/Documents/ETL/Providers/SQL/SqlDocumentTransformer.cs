@@ -79,7 +79,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 {
                     var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId,
                         attachmentName, AttachmentType.Document, Current.Document.ChangeVector);
-                    var attachmentStream = attachment?.Stream ?? Stream.Null;
+
+                    if (attachment == null)
+                        ThrowNoSuchAttachment(Current.DocumentId, attachmentName);
+
+                    var attachmentStream = attachment.Stream;
 
                     sqlColumn.Type = 0;
                     sqlColumn.Value = attachmentStream;
