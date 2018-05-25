@@ -253,7 +253,22 @@ namespace Raven.Database.Indexing
                         throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
 
                     if (indexImplementation != null)
+                    {
                         indexImplementation.Dispose();
+
+                        // index disposal just closed the lucene directory, let's try to reopen it
+                        try
+                        {
+                            luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried, forceFullExistingIndexCheck: forceFullIndexCheck);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (log.IsWarnEnabled)
+                                log.Warn("Could not reopen index lucene directory after disposing index instance. Will reset the index", ex);
+
+                            luceneDirectory = null;
+                        }
+                    }
 
                     if (recoveryTried == false && luceneDirectory != null && configuration.Indexing.SkipRecoveryOnStartup == false)
                     {
