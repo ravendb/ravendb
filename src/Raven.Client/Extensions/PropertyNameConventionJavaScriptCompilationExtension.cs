@@ -1,12 +1,10 @@
-﻿using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Reflection;
+﻿using System.Reflection;
 using Lambda2Js;
 using Raven.Client.Documents.Conventions;
 
 namespace Raven.Client.Extensions
 {
-    public class PropertyNameConventionJSMetadataProvider : JavascriptMetadataProvider
+    internal class PropertyNameConventionJSMetadataProvider : JavascriptMetadataProvider
     {
         private readonly DocumentConventions _conventions;
 
@@ -21,11 +19,14 @@ namespace Raven.Client.Extensions
         }
 
         public override IJavascriptMemberMetadata GetMemberMetadata(MemberInfo memberInfo)
-        {          
-            var name = _conventions.PropertyNameConverter(memberInfo);
-            return string.IsNullOrWhiteSpace(name) ? 
-                new MemberMetadata{ MemberName = memberInfo.Name } : 
-                new MemberMetadata{ MemberName = name };
+        {
+            string name = null;
+            if (_conventions.PropertyNameConverter != null)
+                name = _conventions.PropertyNameConverter(memberInfo);
+
+            return string.IsNullOrWhiteSpace(name) ?
+                new MemberMetadata { MemberName = memberInfo.Name } :
+                new MemberMetadata { MemberName = name };
         }
     }
 }
