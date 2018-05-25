@@ -58,6 +58,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMappingItem(name, AggregationOperation.None, groupByArrayBehavior, false, false, false, null);
         }
 
+        public static DynamicQueryMappingItem CreateGroupBy(QueryFieldName name, GroupByArrayBehavior groupByArrayBehavior, bool isSpecifiedInWhere, bool isFullTextSearch, bool isExactSearch)
+        {
+            return new DynamicQueryMappingItem(name, AggregationOperation.None, groupByArrayBehavior, isSpecifiedInWhere: isSpecifiedInWhere, isFullTextSearch: isFullTextSearch, isExactSearch: isExactSearch, spatial: null);
+        }
+
         public void SetAggregation(AggregationOperation aggregation)
         {
             AggregationOperation = aggregation;
