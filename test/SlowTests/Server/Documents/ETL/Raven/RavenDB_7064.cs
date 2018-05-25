@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_7064 : BasicRavenEtlTests
+    public class RavenDB_7064 : EtlTestBase
     {
         [Fact]
         public void Should_handle_attachments()
@@ -195,6 +195,59 @@ loadToUsers(this);
                     var user = session.Load<User>("users/1");
 
                     Assert.Equal("photo1.jpgphoto2.jpg", user.LastName);
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_error_if_attachment_doesnt_exist()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script:
+                    @"
+addAttachment(this, 'photo.jpg');
+
+loadToUsers(this);
+"                   
+                );
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe"
+                    }, "users/1");
+
+                    session.Store(new User()
+                    {
+                        Name = "Doe"
+                    }, "users/2");
+
+                    session.Store(new User()
+                    {
+                        Name = "Foo"
+                    }, "users/3");
+                    
+                    session.Advanced.Attachments.Store("users/1", "abc.jpg", new MemoryStream(new byte[] {1}));
+                    session.Advanced.Attachments.Store("users/2", "photo.jpg", new MemoryStream(new byte[] {1}));
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                AssertAttachments(dest, new []
+                {
+                    ("users/2", "photo.jpg", new byte[] {1}, false)
+                });
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Null(session.Load<User>("users/1"));
+                    Assert.Null(session.Load<User>("users/3"));
                 }
             }
         }

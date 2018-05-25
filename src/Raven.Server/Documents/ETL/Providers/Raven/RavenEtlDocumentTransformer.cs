@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             base.Initalize();
 
-            SingleRun.ScriptEngine.SetValue(Transformation.AddAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment));
+            SingleRun?.ScriptEngine.SetValue(Transformation.AddAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -75,22 +75,34 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var transformResult = Context.ReadObject(transformed, id);
 
-            _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
+            var transformationCommands = new List<ICommandData>();
 
-            if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+            transformationCommands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
+
+            if (_transformation.IsHandlingAttachments && _addedAttachments != null && _addedAttachments.TryGetValue(document.Instance, out var addedAttachments))
             {
-                if (_addedAttachments.TryGetValue(document.Instance, out var addedAttachments))
+                if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                 {
                     foreach (var attachment in addedAttachments)
                     {
                         var attachmentData =
                             Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachment, AttachmentType.Document, null);
 
-                        _commands.Add(new PutAttachmentCommandData(id, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
+                        if (attachmentData == null)
+                            throw new InvalidOperationException($"Document '{Current.DocumentId}' doesn't have attachment named '{attachment}'");
+
+                        transformationCommands.Add(new PutAttachmentCommandData(id, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
                             null));
                     }
                 }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Document '{Current.DocumentId}' doesn't have any attachment while the script tried to add the following ones: {string.Join(' ', addedAttachments)}");
+                }
             }
+
+            _commands.AddRange(transformationCommands);
         }
 
         private JsValue AddAttachment(JsValue self, JsValue[] args)
