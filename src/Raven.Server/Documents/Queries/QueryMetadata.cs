@@ -1491,7 +1491,16 @@ namespace Raven.Server.Documents.Queries
                 AutoSpatialOptions fieldOptions = null;
                 QueryFieldName fieldName;
                 if (_metadata.IsDynamic == false)
-                    fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                {
+                    if (arguments.Count == 0)
+                        throw new InvalidQueryException($"Method {methodName}() expects at least one argument to be passed", QueryText, parameters);
+
+                    var argument = arguments[0];
+                    if (argument is FieldExpression == false && argument is ValueExpression == false)
+                        throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a field name when static index is queried", QueryText, parameters);
+
+                    fieldName = ExtractFieldNameFromArgument(argument, methodName, parameters, QueryText);
+                }
                 else
                 {
                     if (!(arguments[0] is MethodExpression spatialExpression))

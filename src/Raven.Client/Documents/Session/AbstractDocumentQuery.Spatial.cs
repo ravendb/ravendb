@@ -57,6 +57,8 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public void Spatial(DynamicSpatialField dynamicField, SpatialCriteria criteria)
         {
+            AssertIsDynamicQuery(dynamicField, nameof(Spatial));
+
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, null);
@@ -82,6 +84,8 @@ namespace Raven.Client.Documents.Session
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
+            AssertIsDynamicQuery(field, nameof(OrderByDistance));
+
             OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude);
         }
 
@@ -96,6 +100,8 @@ namespace Raven.Client.Documents.Session
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
+
+            AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
             OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt);
         }
@@ -112,6 +118,8 @@ namespace Raven.Client.Documents.Session
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
+            AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
+
             OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude);
         }
 
@@ -127,6 +135,8 @@ namespace Raven.Client.Documents.Session
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
+            AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
+
             OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt);
         }
 
@@ -134,6 +144,12 @@ namespace Raven.Client.Documents.Session
         public void OrderByDistanceDescending(string fieldName, string shapeWkt)
         {
             OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt)));
+        }
+        
+        private void AssertIsDynamicQuery(DynamicSpatialField dynamicField, string methodName)
+        {
+            if (FromToken.IsDynamic == false)
+                throw new InvalidOperationException($"Cannot execute query method '{methodName}'. Field '{dynamicField.ToField(EnsureValidFieldName)}' cannot be used when static index '{FromToken.IndexName}' is queried. Dynamic spatial fields can only be used with dynamic queries, for static index queries please use valid spatial fields defined in index definition.");
         }
     }
 }
