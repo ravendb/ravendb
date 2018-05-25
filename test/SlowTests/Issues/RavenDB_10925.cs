@@ -12,7 +12,7 @@ namespace SlowTests.Issues
     public class RavenDB_10925 : RavenTestBase
     {
         [Fact]
-        public async Task SurpassedAutoMapWillBeDeleted()
+        public async Task SurpassedAutoMapWillBeDeletedOrMerged()
         {
             using (var store = GetDocumentStore())
             {
@@ -106,22 +106,29 @@ namespace SlowTests.Issues
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
                     }));
 
-                database.IndexStore.RunIdleOperations();
+                database.IndexStore.RunIdleOperations(); // it will merge the i5
 
                 indexes = database
                     .IndexStore
                     .GetIndexes()
                     .ToList();
 
-                Assert.Equal(3, indexes.Count);
+                Assert.Equal(2, indexes.Count);
                 Assert.Contains(i0, indexes);
-                Assert.Contains(i4, indexes);
-                Assert.Contains(i5, indexes);
+
+                var merged = indexes.Single(x => x != i0);
+                var definition = (AutoIndexDefinitionBase)merged.Definition;
+
+                var nameField = (AutoIndexField)definition.MapFields["Name"];
+                Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Exact | AutoFieldIndexing.Search | AutoFieldIndexing.Highlighting, nameField.Indexing);
+
+                var cityField = (AutoIndexField)definition.MapFields["City"];
+                Assert.Equal(AutoFieldIndexing.Default, cityField.Indexing);
             }
         }
 
         [Fact]
-        public async Task SurpassedAutoMapReduceWillBeDeleted()
+        public async Task SurpassedAutoMapReduceWillBeDeletedOrMerged()
         {
             using (var store = GetDocumentStore())
             {
@@ -176,7 +183,10 @@ namespace SlowTests.Issues
                     {
                         AutoIndexField.Create("Count", new AutoIndexDefinition.AutoIndexFieldOptions()),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                        AutoIndexField.Create("State", new AutoIndexDefinition.AutoIndexFieldOptions())
+                        AutoIndexField.Create("State", new AutoIndexDefinition.AutoIndexFieldOptions()
+                        {
+                            Indexing = AutoFieldIndexing.Exact
+                        })
                     },
                     new[]
                     {
@@ -197,6 +207,52 @@ namespace SlowTests.Issues
                 Assert.Contains(i0, indexes);
                 Assert.Contains(i2, indexes);
                 Assert.Contains(i3, indexes);
+
+                var i4 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
+                    "Companies",
+                    new[]
+                    {
+                        AutoIndexField.Create("Count", new AutoIndexDefinition.AutoIndexFieldOptions()),
+                        AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
+                        AutoIndexField.Create("State", new AutoIndexDefinition.AutoIndexFieldOptions
+                        {
+                            Indexing = AutoFieldIndexing.Search
+                        })
+                    },
+                    new[]
+                    {
+                        AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions
+                        {
+                            GroupByArrayBehavior = GroupByArrayBehavior.ByContent
+                        })
+                    }));
+
+                database.IndexStore.RunIdleOperations(); // i4 should be merged
+
+                indexes = database
+                    .IndexStore
+                    .GetIndexes()
+                    .ToList();
+
+                Assert.Equal(3, indexes.Count);
+                Assert.Contains(i0, indexes);
+                Assert.Contains(i2, indexes);
+
+                var merged = indexes.Single(x => x != i0 && x != i2);
+                var definition = (AutoMapReduceIndexDefinition)merged.Definition;
+
+                var countField = (AutoIndexField)definition.MapFields["Count"];
+                Assert.Equal(AutoFieldIndexing.Default, countField.Indexing);
+
+                var cityField = (AutoIndexField)definition.MapFields["City"];
+                Assert.Equal(AutoFieldIndexing.Default, cityField.Indexing);
+
+                var stateField = (AutoIndexField)definition.MapFields["State"];
+                Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Exact | AutoFieldIndexing.Search, stateField.Indexing);
+
+                var nameField = definition.GroupByFields["Name"];
+                Assert.Equal(AutoFieldIndexing.Default, nameField.Indexing);
+                Assert.Equal(GroupByArrayBehavior.ByContent, nameField.GroupByArrayBehavior);
             }
         }
     }
