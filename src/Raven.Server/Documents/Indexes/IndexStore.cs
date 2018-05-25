@@ -1020,10 +1020,10 @@ namespace Raven.Server.Documents.Indexes
         private async Task RunIdleOperationsAsync(long databaseRecordEtag)
         {
             await HandleUnusedAutoIndexes();
-            await DeleteSurpassedAutoIndexes(databaseRecordEtag);
+            await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag);
         }
 
-        private async Task DeleteSurpassedAutoIndexes(long databaseRecordEtag)
+        private async Task DeleteOrMergeSurpassedAutoIndexes(long databaseRecordEtag)
         {
             if (_lastSurpassedAutoIndexesDatabaseRecordEtag >= databaseRecordEtag)
                 return;
@@ -1033,6 +1033,7 @@ namespace Raven.Server.Documents.Indexes
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
 
             var indexesToRemove = new HashSet<string>();
+            var indexesToExtend = new Dictionary<string, DynamicQueryMapping>();
 
             foreach (var index in _indexes)
             {
@@ -1063,13 +1064,42 @@ namespace Raven.Server.Documents.Indexes
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
                         indexesToRemove.Add(index.Name);
+                        indexesToExtend.Remove(index.Name);
                         break;
+                    }
+
+                    if (result.MatchType == DynamicQueryMatchType.Partial)
+                    {
+                        if (indexesToExtend.TryGetValue(index.Name, out var mapping) == false)
+                            indexesToExtend[index.Name] = mapping = DynamicQueryMapping.Create(index);
+
+                        mapping.ExtendMappingBasedOn(definitionToCheck);
                     }
                 }
             }
 
-            if (indexesToRemove.Count == 0)
+            if (indexesToRemove.Count == 0 && indexesToExtend.Count == 0)
                 return;
+            
+            foreach (var kvp in indexesToExtend)
+            {
+                var definition = kvp.Value.CreateAutoIndexDefinition();
+
+                if (string.Equals(definition.Name, kvp.Key, StringComparison.Ordinal))
+                    continue;
+
+                try
+                {
+                    await CreateIndex(definition);
+
+                    indexesToRemove.Add(kvp.Key);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Could not create extended index '{definition.Name}'.", e);
+                }
+            }
 
             foreach (var indexName in indexesToRemove)
             {
