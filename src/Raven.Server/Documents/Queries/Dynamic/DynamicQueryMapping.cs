@@ -113,30 +113,49 @@ namespace Raven.Server.Documents.Queries.Dynamic
             switch (definitionOfExistingIndex)
             {
                 case AutoMapIndexDefinition def:
-                    Update(MapFields, def.MapFields);
+                    Update(MapFields, def.MapFields, isGroupBy: false);
                     break;
                 case AutoMapReduceIndexDefinition def:
-                    Update(MapFields, def.MapFields);
-                    Update(GroupByFields, def.GroupByFields);
+                    Update(MapFields, def.MapFields, isGroupBy: false);
+                    Update(GroupByFields, def.GroupByFields, isGroupBy: true);
                     break;
             }
 
-            void Update<T>(Dictionary<string, DynamicQueryMappingItem> mappingFields, Dictionary<string, T> indexFields) where T : IndexFieldBase
+            void Update<T>(Dictionary<string, DynamicQueryMappingItem> fields, Dictionary<string, T> indexFields, bool isGroupBy) where T : IndexFieldBase
             {
                 foreach (var f in indexFields.Values)
                 {
                     var indexField = f.As<AutoIndexField>();
 
-                    if (mappingFields.TryGetValue(indexField.Name, out var queryField))
+                    if (fields.TryGetValue(indexField.Name, out var queryField))
                     {
-                        mappingFields[queryField.Name] = DynamicQueryMappingItem.Create(queryField.Name, queryField.AggregationOperation,
-                            isFullTextSearch: queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
-                            isExactSearch: queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
-                            spatial: queryField.Spatial ?? indexField.Spatial);
+                        var isFullTextSearch = queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search);
+                        var isExactSearch = queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact);
+
+                        var field = isGroupBy == false
+                            ? DynamicQueryMappingItem.Create(
+                                queryField.Name,
+                                queryField.AggregationOperation,
+                                isFullTextSearch: isFullTextSearch,
+                                isExactSearch: isExactSearch,
+                                spatial: queryField.Spatial ?? indexField.Spatial)
+                            : DynamicQueryMappingItem.CreateGroupBy(
+                                queryField.Name,
+                                queryField.GroupByArrayBehavior,
+                                isSpecifiedInWhere: queryField.IsSpecifiedInWhere,
+                                isFullTextSearch: isFullTextSearch,
+                                isExactSearch: isExactSearch);
+
+                        fields[queryField.Name] = field;
                     }
                     else
                     {
-                        mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(new QueryFieldName(indexField.Name, indexField.HasQuotedName), indexField.Aggregation,
+                        if (isGroupBy)
+                            throw new InvalidOperationException("Cannot create new GroupBy field when extending mapping");
+
+                        fields.Add(indexField.Name, DynamicQueryMappingItem.Create(
+                            new QueryFieldName(indexField.Name, indexField.HasQuotedName),
+                            indexField.Aggregation,
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
                             spatial: indexField.Spatial));
