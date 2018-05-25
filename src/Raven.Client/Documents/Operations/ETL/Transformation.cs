@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string Script { get; set; }
 
-        public bool IsHandlingAttachments { get; private set; }
+        internal bool IsHandlingAttachments { get; private set; }
 
         public virtual bool Validate(ref List<string> errors, EtlType type)
         {
