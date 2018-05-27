@@ -64,7 +64,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Indicates what set of features should be available")]
         [DefaultValue(FeaturesAvailability.Stable)]
-        [ConfigurationEntry("Features.Availability", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Features.Availability", ConfigurationEntryScope.ServerWideOnly)]
         public FeaturesAvailability FeaturesAvailability { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)

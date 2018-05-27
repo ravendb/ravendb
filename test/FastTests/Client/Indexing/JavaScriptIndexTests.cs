@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Xunit;
 
 namespace FastTests.Client.Indexing
@@ -15,17 +16,13 @@ namespace FastTests.Client.Indexing
         [Fact]
         public void CreatingJavaScriptIndexWithFeaturesAvailabilitySetToStableWillThrow()
         {
-            using (var store = GetDocumentStore(new Options
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = null; // by default we should have Stable features
-                }
-            }))
-            {
+                Server.Configuration.Core.FeaturesAvailability = FeaturesAvailability.Stable;
                 var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersByName()));
                 Assert.Contains(
-                    "Database does not support 'JavaScript' indexes. Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
+                    "Server does not support 'JavaScript' indexes. Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
                     e.Message);
             }
         }

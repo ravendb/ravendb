@@ -360,8 +360,8 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            if (_documentDatabase.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable && definition.Type.IsJavaScript())
-                throw new IndexCreationException($"Could not create index '{definition.Name}'. Database does not support 'JavaScript' indexes. Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+            if (_serverStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable && definition.Type.IsJavaScript())
+                throw new IndexCreationException($"Could not create index '{definition.Name}'. Server does not support 'JavaScript' indexes. Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
 
             ValidateIndexName(definition.Name, isStatic: true);
             definition.RemoveDefaultValues();
