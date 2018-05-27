@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
@@ -302,6 +303,7 @@ namespace FastTests
                 configuration.Replication.RetryReplicateAfter = new TimeSetting(3, TimeUnit.Seconds);
                 configuration.Cluster.AddReplicaTimeout = new TimeSetting(10, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
+                configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
 
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
