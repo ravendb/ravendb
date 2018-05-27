@@ -226,15 +226,12 @@ function groupBy(lambda) {
     return reduce;
 }
 
-function createSpatialPoint(lat, lng) {
-    return { Lat: lat, Lng: lng};
+function createSpatialField(wkt) {    
+    return { $spatial: wkt }   
 }
 
-function createSpatialField(field) {
-    if (typeof field === 'string') {
-        return { $spatial: { Type: 'Wkt', Wkt: field} }
-        };
-    return { $spatial: { Type: 'Coordinates', Coordinates: field} };
+function createSpatialField(lat, lng) {    
+    return { $spatial: {Lng:lng, Lat:lat} }   
 }
 ";
 

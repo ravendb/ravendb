@@ -611,7 +611,7 @@ map('Users', function (u){
                     Name = "Spatial",
                     Maps = new HashSet<string>
                     {
-                        @"map('Locations', function (l){ return { Description: l.Description, Location: createSpatialField(createSpatialPoint(l.Latitude, l.Longitude))}})",
+                        @"map('Locations', function (l){ return { Description: l.Description, Location: createSpatialField(l.Latitude, l.Longitude)}})",
                     },
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
@@ -630,7 +630,7 @@ map('Users', function (u){
                     Name = "Spatial",
                     Maps = new HashSet<string>
                     {
-                        @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(createSpatialPoint(l.Latitude, l.Longitude)), $name:'Location', $options:{index: true, store: true}} }})",
+                        @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(l.Latitude, l.Longitude), $name:'Location', $options:{index: true, store: true}} }})",
                     },
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
