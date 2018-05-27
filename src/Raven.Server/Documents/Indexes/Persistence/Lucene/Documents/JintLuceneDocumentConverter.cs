@@ -1,22 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Object;
-using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Json.Converters;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Json;
 using Sparrow.Json;
-using Spatial4n.Core.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -72,13 +66,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 object value;
                 if (obj.IsObject() && obj.IsArray() == false)
                 {
-                    //Note that for dynamic fields 'field.Name' will contain the real name of the field and not 'property'
+                    //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' witht the actual property name 
+                    //so we must use field.Name and not property from this point on.
                     var val = TryDetectDynamicFieldCreation(property, obj.AsObject(), field);
                     if (val != null)
                     {
-                        if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out var dynamicSpatial))
+                        if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
                         {
-                            obj = val;
+                            obj = val; //Here we populate the dynamic spatial field that will be handled below.
                         }
                         else
                         {
@@ -90,38 +85,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     if (obj.AsObject().TryGetValue("$spatial", out var inner))
                     {
-                        if (inner.IsObject() == false)
-                        {
-                            throw new InvalidSpatialArgument($"Property {field.Name} is a spatial field but its value is not a valid spatial value.");
-                        }
 
-                        var sf = inner.AsObject();
-                        if (sf.TryGetValue("Type", out var type) == false || type.IsString() == false)
+                        SpatialField spatialField;
+                        IEnumerable<AbstractField> spatial;
+                        if (inner.IsString())
                         {
-                            throw new InvalidSpatialArgument($"Property {field.Name} is a spatial field but it doesn't have a valid type.");
+                         
+                            spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                            spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
                         }
-
-                        SpatialField spatialField = null;
-                        IEnumerable<AbstractField> spatial = null;
-                        switch (type.AsString())
+                        else if (inner.IsObject() && inner.AsObject().TryGetValue("Lat", out var lat)
+                                                  && lat.IsNumber() && inner.AsObject().TryGetValue("Lng", out var lng) && lng.IsNumber())
                         {
-                            case "Coordinates":
-                                if (sf.TryGetValue("Coordinates", out var coordinates) == false || coordinates.IsObject() == false)
-                                    throw new InvalidSpatialArgument($"Property {field.Name} is a spatial field of Coordinates type but has invalid or missing Coordinates field.");
-                                var coordinatesObj = coordinates.AsObject();
-                                if (coordinatesObj.TryGetValue("Lat", out var lat) == false || coordinatesObj.TryGetValue("Lng", out var lng) == false)
-                                    throw new InvalidSpatialArgument($"Property {field.Name} is a spatial field of Coordinates type but missing Lat and Lng fields.");
-                                if (lat.IsNumber() == false || lng.IsNumber() == false)
-                                    throw new InvalidSpatialArgument($"Property {field.Name} is a spatial field of Coordinates type but its Lat and Lng fields are not numbers.");
-                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
-                                break;
-                            case "Wkt":
-                                if (sf.TryGetValue("Wkt", out var wkt) == false || wkt.IsString() == false)
-                                    throw new InvalidSpatialArgument($"Property {field.Name} is a spatial field of Wkt type but has a missing or invalid Wkt field.");
-                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = StaticIndexBase.CreateSpatialField(spatialField, wkt.AsString());
-                                break;
+                            spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                            spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                        }
+                        else
+                        {
+                           continue; //Ignoring bad spatial field 
                         }
                         newFields += GetRegularFields(instance, field, spatial, indexContext, nestedArray: false);                        
 
