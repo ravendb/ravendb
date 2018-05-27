@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint.Native;
+using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -17,15 +19,25 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData>
     {
+        private readonly Transformation _transformation;
         private readonly ScriptInput _script;
         private readonly List<ICommandData> _commands = new List<ICommandData>();
+        private Dictionary<JsValue, HashSet<string>> _addedAttachments = null;
 
-        public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, ScriptInput script) 
+        public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
             : base(database, context, script.Transformation)
         {
+            _transformation = transformation;
             _script = script;
 
             LoadToDestinations = _script.Transformation == null ? new string[0] : _script.LoadToCollections;
+        }
+
+        public override void Initalize()
+        {
+            base.Initalize();
+
+            SingleRun?.ScriptEngine.SetValue(Transformation.AddAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -34,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
-            
+
             string id;
             var loadedToDifferentCollection = false;
 
@@ -49,7 +61,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
-            
+
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
                 metadata.Put(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
 
@@ -63,7 +75,52 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var transformResult = Context.ReadObject(transformed, id);
 
-            _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
+            var transformationCommands = new List<ICommandData>();
+
+            transformationCommands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
+
+            if (_transformation.IsHandlingAttachments && _addedAttachments != null && _addedAttachments.TryGetValue(document.Instance, out var addedAttachments))
+            {
+                if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                {
+                    foreach (var attachment in addedAttachments)
+                    {
+                        var attachmentData =
+                            Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachment, AttachmentType.Document, null);
+
+                        if (attachmentData == null)
+                            ThrowNoSuchAttachment(Current.DocumentId, attachment);
+
+                        transformationCommands.Add(new PutAttachmentCommandData(id, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
+                            null));
+                    }
+                }
+                else
+                {
+                    ThrowNoAttachments(Current.DocumentId, addedAttachments);
+                }
+            }
+
+            _commands.AddRange(transformationCommands);
+        }
+
+        private JsValue AddAttachment(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 2 || args[1].IsString() == false)
+                throw new InvalidOperationException($"{Transformation.AddAttachment}(obj, name) must have two arguments");
+
+            if (_addedAttachments == null)
+                _addedAttachments = new Dictionary<JsValue, HashSet<string>>();
+
+            if (_addedAttachments.TryGetValue(args[0], out var attachments) == false)
+            {
+                attachments = new HashSet<string>();
+                _addedAttachments.Add(args[0], attachments);
+            }
+
+            attachments.Add(args[1].AsString());
+
+            return self;
         }
 
         private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
@@ -92,7 +149,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         ApplyDeleteCommands(item, OperationType.Put);
                     }
 
-                    SingleRun.Run(Context, Context, "execute", new object[] {Current.Document}).Dispose();
+                    SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
                 }
                 else
                 {
@@ -147,7 +204,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
-                    if (operation == OperationType.Delete)
+                    if (operation == OperationType.Delete || _transformation.IsHandlingAttachments)
                         _commands.Add(new DeleteCommandData(item.DocumentId, null));
                 }
                 else

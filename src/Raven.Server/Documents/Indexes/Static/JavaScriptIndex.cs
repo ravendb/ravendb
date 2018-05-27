@@ -49,6 +49,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             });
             _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
+
             _engine.Execute(Code);
 
             if (definition.AdditionalSources != null)
@@ -223,7 +224,19 @@ function groupBy(lambda) {
         reduce.aggregateBy = reduceFunction;
     }
     return reduce;
-}";
+}
+
+function createSpatialPoint(lat, lng) {
+    return { Lat: lat, Lng: lng};
+}
+
+function createSpatialField(field) {
+    if (typeof field === 'string') {
+        return { $spatial: { Type: 'Wkt', Wkt: field} }
+        };
+    return { $spatial: { Type: 'Coordinates', Coordinates: field} };
+}
+";
 
         private IndexDefinition _definitions;
         private Engine _engine;

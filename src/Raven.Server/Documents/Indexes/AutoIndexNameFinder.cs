@@ -69,6 +69,9 @@ namespace Raven.Server.Documents.Indexes
             if (x.HasQuotedName)
                 name = $"'{name}'";
 
+            if (x.GroupByArrayBehavior == GroupByArrayBehavior.ByContent)
+                name = AutoIndexField.GetGroupByArrayContentAutoIndexFieldName(name);
+
             if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
             {
                 if (x.Spatial != null)

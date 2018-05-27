@@ -26,11 +26,10 @@ namespace SlowTests.Cluster
         public async Task CanCreateClusterTransactionRequest()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
-            var db = GetDatabaseName();
-            await CreateDatabaseInCluster(db, 3, leader.WebUrl);
             using (var leaderStore = GetDocumentStore(new Options
             {
-                Server = leader
+                Server = leader,
+                ReplicationFactor = 3
             }))
             {
                 var user1 = new User()
@@ -414,12 +413,11 @@ namespace SlowTests.Cluster
         public async Task CreateUniqueUser()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
-            var db = GetDatabaseName();
-            await CreateDatabaseInCluster(db, 3, leader.WebUrl);
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = leader
+                Server = leader,
+                ReplicationFactor = 3
             }))
             {
                 var email = "grisha@ayende.com";

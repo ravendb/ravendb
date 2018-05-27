@@ -624,7 +624,9 @@ namespace Raven.Server.Documents.Handlers
 
                 _disposables.Clear();
 
+                DocumentsStorage.PutOperationResults? lastPutResult = null;
                 var counterBatch = new CounterBatch();
+
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
                     var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
@@ -632,6 +634,7 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Type)
                     {
                         case CommandType.PUT:
+
                             DocumentsStorage.PutOperationResults putResult;
                             try
                             {
@@ -662,6 +665,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                             AddPutResult(putResult);
+                            lastPutResult = putResult;
                             break;
                         case CommandType.PATCH:
                             try
@@ -716,13 +720,27 @@ namespace Raven.Server.Documents.Handlers
                             var stream = attachmentStream.Stream;
                             _disposables.Add(stream);
 
-                            var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
+                            var docId = cmd.Id;
+
+                            if (docId[docId.Length - 1] == '/')
+                            {
+                                // attachment sent by Raven ETL, only prefix is defined
+
+                                if (lastPutResult == null)
+                                    ThrowUnexpectedOrderOfRavenEtlCommands();
+
+                                Debug.Assert(lastPutResult.Value.Id.StartsWith(docId));
+
+                                docId = lastPutResult.Value.Id;
+                            }
+
+                            var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
                                 cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
                             LastChangeVector = attachmentPutResult.ChangeVector;
 
                             if (_documentsToUpdateAfterAttachmentChange == null)
                                 _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
+                            _documentsToUpdateAfterAttachmentChange.Add(docId);
 
                             Reply.Add(new DynamicJsonValue
                             {
@@ -816,6 +834,10 @@ namespace Raven.Server.Documents.Handlers
                 public Stream Stream;
             }
 
+            private void ThrowUnexpectedOrderOfRavenEtlCommands()
+            {
+                throw new InvalidOperationException($"Unexpected order of commands sent by Raven ETL. {CommandType.AttachmentPUT} needs to be preceded by {CommandType.PUT}");
+            }
         }
 
         private class WaitForIndexItem

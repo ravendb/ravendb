@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Patch
             _instance = instance;
         }
 
+        public JsValue Instance => _instance;
+
         public void Set(string name, string value)
         {
             ((BlittableObjectInstance)_instance.AsObject()).Put(name, value, false);

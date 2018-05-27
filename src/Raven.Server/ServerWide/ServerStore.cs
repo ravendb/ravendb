@@ -223,15 +223,16 @@ namespace Raven.Server.ServerWide
                                         if (notification == null)
                                             break;
 
-                                        if (notification.TryGet("Id",out string id) && id != nameof(ClusterTopologyChanged))
+                                        if (notification.TryGet(nameof(ClusterTopologyChanged.Type), out NotificationType notificationType) == false ||
+                                            notificationType != NotificationType.ClusterTopologyChanged)
                                             continue;
 
                                         var topologyNotification = JsonDeserializationServer.ClusterTopologyChanged(notification);
-                                        if (topologyNotification != null && topologyNotification.Type == NotificationType.ClusterTopologyChanged)
-                                        {
-                                            topologyNotification.NodeTag = _engine.Tag;
-                                            NotificationCenter.Add(topologyNotification);
-                                        }
+                                        if (topologyNotification == null)
+                                            continue;
+
+                                        topologyNotification.NodeTag = _engine.Tag;
+                                        NotificationCenter.Add(topologyNotification);
                                     }
                                 }
                             }

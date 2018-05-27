@@ -115,31 +115,50 @@ namespace Raven.Server.Documents.Queries.Dynamic
             switch (definitionOfExistingIndex)
             {
                 case AutoMapIndexDefinition def:
-                    Update(MapFields, def.MapFields);
+                    Update(MapFields, def.MapFields, isGroupBy: false);
                     break;
                 case AutoMapReduceIndexDefinition def:
-                    Update(MapFields, def.MapFields);
-                    Update(GroupByFields, def.GroupByFields);
+                    Update(MapFields, def.MapFields, isGroupBy: false);
+                    Update(GroupByFields, def.GroupByFields, isGroupBy: true);
                     break;
             }
 
-            void Update<T>(Dictionary<string, DynamicQueryMappingItem> mappingFields, Dictionary<string, T> indexFields) where T : IndexFieldBase
+            void Update<T>(Dictionary<string, DynamicQueryMappingItem> fields, Dictionary<string, T> indexFields, bool isGroupBy) where T : IndexFieldBase
             {
                 foreach (var f in indexFields.Values)
                 {
                     var indexField = f.As<AutoIndexField>();
 
-                    if (mappingFields.TryGetValue(indexField.Name, out var queryField))
+                    if (fields.TryGetValue(indexField.Name, out var queryField))
                     {
-                        mappingFields[queryField.Name] = DynamicQueryMappingItem.Create(queryField.Name, queryField.AggregationOperation,
-                            isFullTextSearch: queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
-                            isExactSearch: queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
-                            hasHighlighting: queryField.HasHighlighting || indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
-                            spatial: queryField.Spatial ?? indexField.Spatial);
+                        var isFullTextSearch = queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search);
+                        var isExactSearch = queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact);
+
+                        var field = isGroupBy == false
+                            ? DynamicQueryMappingItem.Create(
+                                queryField.Name,
+                                queryField.AggregationOperation,
+                                isFullTextSearch: isFullTextSearch,
+                                isExactSearch: isExactSearch,
+                                hasHighlighting: queryField.HasHighlighting || indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
+                                spatial: queryField.Spatial ?? indexField.Spatial)
+                            : DynamicQueryMappingItem.CreateGroupBy(
+                                queryField.Name,
+                                queryField.GroupByArrayBehavior,
+                                isSpecifiedInWhere: queryField.IsSpecifiedInWhere,
+                                isFullTextSearch: isFullTextSearch,
+                                isExactSearch: isExactSearch);
+
+                        fields[queryField.Name] = field;
                     }
                     else
                     {
-                        mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(new QueryFieldName(indexField.Name, indexField.HasQuotedName), indexField.Aggregation,
+                        if (isGroupBy)
+                            throw new InvalidOperationException("Cannot create new GroupBy field when extending mapping");
+
+                        fields.Add(indexField.Name, DynamicQueryMappingItem.Create(
+                            new QueryFieldName(indexField.Name, indexField.HasQuotedName),
+                            indexField.Aggregation,
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
                             hasHighlighting: indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
@@ -223,6 +242,55 @@ namespace Raven.Server.Documents.Queries.Dynamic
             result.MapFields = mapFields;
 
             return result;
+        }
+
+        public static DynamicQueryMapping Create(Index index)
+        {
+            if (index.Type.IsAuto() == false)
+                throw new InvalidOperationException();
+
+            var mapping = new DynamicQueryMapping
+            {
+                ForCollection = index.Collections.First(),
+                MapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal)
+            };
+
+            var definition = (AutoIndexDefinitionBase)index.Definition;
+
+            foreach (var field in definition.MapFields)
+            {
+                var autoField = (AutoIndexField)field.Value;
+
+                mapping.MapFields[field.Key] = DynamicQueryMappingItem.Create(
+                            new QueryFieldName(autoField.Name, autoField.HasQuotedName),
+                            autoField.Aggregation,
+                            isFullTextSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Search),
+                            isExactSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Exact),
+                            hasHighlighting: autoField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
+                            spatial: autoField.Spatial);
+            }
+
+            if (index.Type.IsMapReduce())
+            {
+                mapping.IsGroupBy = true;
+
+                var mapReduceDefinition = (AutoMapReduceIndexDefinition)definition;
+
+                mapping.GroupByFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal);
+
+                foreach (var field in mapReduceDefinition.GroupByFields)
+                {
+                    var autoField = field.Value;
+                    mapping.GroupByFields[field.Key] = DynamicQueryMappingItem.CreateGroupBy(
+                        new QueryFieldName(autoField.Name, autoField.HasQuotedName),
+                        autoField.GroupByArrayBehavior,
+                        isSpecifiedInWhere: true,
+                        isFullTextSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Search),
+                        isExactSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Exact));
+                }
+            }
+
+            return mapping;
         }
 
         private static Dictionary<string, DynamicQueryMappingItem> CreateGroupByFields(IndexQueryServerSide query, Dictionary<string, DynamicQueryMappingItem> mapFields)

@@ -23,10 +23,12 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -44,6 +46,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _initialized;
 
         private bool _run = true;
+
+        private long _lastSurpassedAutoIndexesDatabaseRecordEtag;
 
         public readonly IndexIdentities Identities = new IndexIdentities();
 
@@ -146,7 +150,6 @@ namespace Raven.Server.Documents.Indexes
                 .Select(x =>
                 {
                     var field = AutoIndexField.Create(x.Key, x.Value);
-                    field.Aggregation = x.Value.Aggregation;
 
                     Debug.Assert(x.Value.GroupByArrayBehavior == GroupByArrayBehavior.NotApplicable);
 
@@ -174,8 +177,6 @@ namespace Raven.Server.Documents.Indexes
                     .Select(x =>
                     {
                         var field = AutoIndexField.Create(x.Key, x.Value);
-                        field.Aggregation = x.Value.Aggregation;
-                        field.GroupByArrayBehavior = x.Value.GroupByArrayBehavior;
 
                         return field;
                     })
@@ -960,7 +961,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                var alreadyFaulted = _indexes.TryGetByName(name, out var i) && 
+                var alreadyFaulted = _indexes.TryGetByName(name, out var i) &&
                                      i is FaultyInMemoryIndex;
 
                 index?.Dispose();
@@ -971,8 +972,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = autoIndexDefinition != null 
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition)) 
+                var fakeIndex = autoIndexDefinition != null
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition))
                     : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
@@ -1004,14 +1005,120 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
-            AsyncHelpers.RunSync(HandleUnusedAutoIndexes);
+            long etag;
+            DatabaseRecord record;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
+
+            if (record.Topology.Members[0] != _serverStore.NodeTag)
+                return;
+
+            AsyncHelpers.RunSync(() => RunIdleOperationsAsync(etag));
+        }
+
+        private async Task RunIdleOperationsAsync(long databaseRecordEtag)
+        {
+            await HandleUnusedAutoIndexes();
+            await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag);
+        }
+
+        private async Task DeleteOrMergeSurpassedAutoIndexes(long databaseRecordEtag)
+        {
+            if (_lastSurpassedAutoIndexesDatabaseRecordEtag >= databaseRecordEtag)
+                return;
+
+            _lastSurpassedAutoIndexesDatabaseRecordEtag = databaseRecordEtag;
+
+            var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
+
+            var indexesToRemove = new HashSet<string>();
+            var indexesToExtend = new Dictionary<string, DynamicQueryMapping>();
+
+            foreach (var index in _indexes)
+            {
+                if (index.Type.IsAuto() == false)
+                    continue;
+
+                if (indexesToRemove.Contains(index.Name))
+                    continue;
+
+                var collection = index.Collections.First();
+
+                var query = DynamicQueryMapping.Create(index);
+
+                foreach (var indexToCheck in _indexes.GetForCollection(collection))
+                {
+                    if (index.Type != indexToCheck.Type)
+                        continue;
+
+                    if (index == indexToCheck)
+                        continue;
+
+                    if (indexesToRemove.Contains(indexToCheck.Name))
+                        continue;
+
+                    var definitionToCheck = (AutoIndexDefinitionBase)indexToCheck.Definition;
+
+                    var result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck);
+                    if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
+                    {
+                        indexesToRemove.Add(index.Name);
+                        indexesToExtend.Remove(index.Name);
+                        break;
+                    }
+
+                    if (result.MatchType == DynamicQueryMatchType.Partial)
+                    {
+                        if (indexesToExtend.TryGetValue(index.Name, out var mapping) == false)
+                            indexesToExtend[index.Name] = mapping = DynamicQueryMapping.Create(index);
+
+                        mapping.ExtendMappingBasedOn(definitionToCheck);
+                    }
+                }
+            }
+
+            if (indexesToRemove.Count == 0 && indexesToExtend.Count == 0)
+                return;
+            
+            foreach (var kvp in indexesToExtend)
+            {
+                var definition = kvp.Value.CreateAutoIndexDefinition();
+
+                if (string.Equals(definition.Name, kvp.Key, StringComparison.Ordinal))
+                    continue;
+
+                try
+                {
+                    await CreateIndex(definition);
+
+                    indexesToRemove.Add(kvp.Key);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Could not create extended index '{definition.Name}'.", e);
+                }
+            }
+
+            foreach (var indexName in indexesToRemove)
+            {
+                try
+                {
+                    await TryDeleteIndexIfExists(indexName);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Deleted index '{indexName}' because it is surpassed.");
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Could not delete surpassed index '{indexName}'.", e);
+                }
+            }
         }
 
         private async Task HandleUnusedAutoIndexes()
         {
-            if (_serverStore.IsLeader() == false)
-                return;
-
             var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
             var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
             var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
@@ -1081,9 +1188,17 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
-                        await TryDeleteIndexIfExists(item.Index.Name);
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Deleted index '{item.Index.Name}' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                        try
+                        {
+                            await TryDeleteIndexIfExists(item.Index.Name);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Deleted index '{item.Index.Name}' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Could not delete idle index '{item.Index.Name}'.", e);
+                        }
                     }
                 }
             }

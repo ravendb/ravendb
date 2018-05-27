@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
         {
-            return new RavenEtlDocumentTransformer(Database, context, _script);
+            return new RavenEtlDocumentTransformer(Transformation, Database, context, _script);
         }
 
         protected override void LoadInternal(IEnumerable<ICommandData> items, JsonOperationContext context)

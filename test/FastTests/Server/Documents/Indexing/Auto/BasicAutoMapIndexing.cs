@@ -107,7 +107,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x=>x.Name.Length)
+                    .OrderBy(x => x.Name.Length)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
@@ -339,7 +339,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
-   
+
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
 #if FEATURE_TEST_INDEX
@@ -877,8 +877,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [
-            Fact]
+        [Fact]
         public void Errors()
         {
             using (var database = CreateDocumentDatabase())
@@ -933,12 +932,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index0 = database.IndexStore.GetIndex(index0.Name);
                 Assert.Null(index0);
 
-                var index1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }));
+                var index1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Companies", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }));
                 var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Age", Storage = FieldStorage.No } }));
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    await index1.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
+                    await index1.Query(new IndexQueryServerSide("FROM Companies"), context, OperationCancelToken.None); // last querying time
                 }
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
@@ -960,7 +959,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    await index1.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
+                    await index1.Query(new IndexQueryServerSide("FROM Companies"), context, OperationCancelToken.None); // last querying time
                 }
 
                 database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
@@ -1039,7 +1038,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index2 = await database.IndexStore.CreateIndex(definition2);
                 Assert.NotNull(index1);
                 Assert.NotNull(index2);
-                
+
             }
         }
 
@@ -1092,7 +1091,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, alerts.Count);
 
                     var readAlert = alerts[0].Json;
-                    
+
                     Assert.Equal(AlertType.IndexStore_IndexCouldNotBeOpened.ToString(), readAlert[nameof(AlertRaised.AlertType)].ToString());
                     Assert.Contains(indexName, readAlert[nameof(AlertRaised.Message)].ToString());
                 }
@@ -1123,7 +1122,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
                 Assert.True(Directory.Exists(indexStoragePath));
-                
+
                 IOExtensions.DeleteDirectory(Path.Combine(indexStoragePath, "Journals"));
 
                 await ModifyDatabaseSettings(dbName, record =>
