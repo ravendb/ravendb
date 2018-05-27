@@ -35,10 +35,9 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ProxyServer_should_work()
         {
-            var port = GetPort();
             int serverPort = 10000;
-            using (var proxy = new ProxyServer(ref serverPort, port))
-            using (var server = GetNewServer(GetServerSettingsForPort(false, out var _, port)))
+            using (var server = GetNewServer(GetServerSettingsForPort(false, out var _)))
+            using (var proxy = new ProxyServer(ref serverPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2])))
             {
                 Servers.Add(server);
 
