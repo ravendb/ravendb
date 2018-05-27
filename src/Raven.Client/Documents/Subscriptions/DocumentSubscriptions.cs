@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Subscriptions
                 else
                     criteria.Query = "from " + collectionName;
                 criteria.Query += " as doc";
-            }
+            }            
             if (predicate != null)
             {
                 var script = predicate.CompileToJavascript(
@@ -113,13 +113,14 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.MathSupport.Instance,
                         new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                        new JavascriptConversionExtensions.SubscriptionsWrappedConstantSupport(_store.Conventions),
                         new JavascriptConversionExtensions.ConstSupport(_store.Conventions),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0], "this"),
                         JavascriptConversionExtensions.DateTimeSupport.Instance,
                         JavascriptConversionExtensions.InvokeSupport.Instance,
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
-                        JavascriptConversionExtensions.StringSupport.Instance
+                        JavascriptConversionExtensions.StringSupport.Instance                        
                     ));
 
                 criteria.Query = $"declare function predicate() {{ return {script} }}{Environment.NewLine}" +
