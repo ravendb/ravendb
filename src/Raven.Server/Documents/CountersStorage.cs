@@ -33,7 +33,7 @@ namespace Raven.Server.Documents
 
         public static readonly string CountersTombstones = "Counters.Tombstones";
 
-        private static readonly TableSchema CountersSchema = new TableSchema()
+        private static readonly TableSchema CountersSchema = new TableSchema
         {
             TableType = (byte)TableType.Counters
         };
@@ -96,26 +96,26 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CountersEtagSlice], 0, 0))
             {
-                yield return TableValueToCounterDetail(context, result);
+                yield return TableValueToCounterDetail(context, result.Reader);
             }
         }
 
-        private static CounterDetail TableValueToCounterDetail(DocumentsOperationContext context, Table.TableValueHolder tvh)
+        public static CounterDetail TableValueToCounterDetail(JsonOperationContext context, TableValueReader tvr)
         {
-            var (doc, name) = ExtractDocIdAndName(context, tvh);
+            var (doc, name) = ExtractDocIdAndName(context, tvr);
 
             return new CounterDetail
             {
                 DocumentId = doc,
                 CounterName = name,
-                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
-                TotalValue = TableValueToLong((int)CountersTable.Value, ref tvh.Reader)
+                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr),
+                TotalValue = TableValueToLong((int)CountersTable.Value, ref tvr)
             };
         }
 
-        private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndName(DocumentsOperationContext context, Table.TableValueHolder result)
+        private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndName(JsonOperationContext context, TableValueReader tvr)
         {
-            var p = result.Reader.Read((int)CountersTable.CounterKey, out var size);
+            var p = tvr.Read((int)CountersTable.CounterKey, out var size);
             Debug.Assert(size > DbIdAsBase64Size + 2 /* record separators */);
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
@@ -125,13 +125,13 @@ namespace Raven.Server.Documents
             }
 
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = ExtractCounterName(context, result);
+            var name = ExtractCounterName(context, tvr);
             return (doc, name);
         }
 
         private static ReplicationBatchItem CreateReplicationBatchItem(DocumentsOperationContext context, Table.TableValueHolder result)
         {
-            var (doc, name) = ExtractDocIdAndName(context, result);
+            var (doc, name) = ExtractDocIdAndName(context, result.Reader);
 
             return new ReplicationBatchItem
             {
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents
                 var prev = string.Empty;
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    var current = ExtractCounterName(context, result.Value);
+                    var current = ExtractCounterName(context, result.Value.Reader);
 
                     if (prev.Equals(current))
                     {
@@ -327,9 +327,9 @@ namespace Raven.Server.Documents
             return (Encoding.UTF8.GetString(changeVector, size), *(long*)pCounterDbValue);
         }
 
-        private static LazyStringValue ExtractCounterName(DocumentsOperationContext context, Table.TableValueHolder tableValueHolder)
+        private static LazyStringValue ExtractCounterName(JsonOperationContext context, TableValueReader tvr)
         {
-            return TableValueToId(context, (int)CountersTable.Name, ref tableValueHolder.Reader);
+            return TableValueToId(context, (int)CountersTable.Name, ref tvr);
 
         }
 
@@ -502,7 +502,5 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             return table.NumberOfEntries;
         }
-
-
     }
 }
