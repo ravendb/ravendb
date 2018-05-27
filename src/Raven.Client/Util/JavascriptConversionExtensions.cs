@@ -13,6 +13,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Util
 {
@@ -909,7 +910,7 @@ namespace Raven.Client.Util
                         writer.Write("))");
                     }
                     else
-                    {
+                    {                        
                         writer.Write(parameter);
                     }
                 }
@@ -1279,6 +1280,138 @@ namespace Raven.Client.Util
             }
         }
 
+        public class SubscriptionsWrappedConstantSupport : JavascriptConversionExtension
+        {            
+            private readonly List<string> _projectionParameters;
+            private readonly DocumentConventions _conventions;
+
+            public SubscriptionsWrappedConstantSupport(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+            }
+
+            private static bool IsWrapedConstatntExpression(Expression expression)
+            {
+                while (expression is MemberExpression memberExpression)
+                {
+                    expression = memberExpression.Expression;
+                }
+
+                return expression is ConstantExpression;
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MemberExpression memberExpression) ||
+                    IsWrapedConstatntExpression(memberExpression) == false)
+                    return;
+
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
+                var writer = context.GetWriter();
+                using (writer.Operation(JavascriptOperationTypes.Literal))
+                {
+                    if (value == null)
+                    {
+                        context.PreventDefault();
+                        writer.Write("null");
+                        return;
+                    }
+                    
+                    Type valueType = value.GetType();
+
+                    if (memberExpression.Type == typeof(DateTime))
+                    {
+                        context.PreventDefault();
+                        var dateTime = (DateTime)value;
+                        writer.Write("new Date(Date.parse(\"");
+                        writer.Write(dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc));
+                        writer.Write("\"))");
+                        return;
+                    }
+
+                    // Type.IsEnum is unavailable in .netstandard1.3
+                    if (valueType.GetTypeInfo().IsEnum)
+                    {
+                        context.PreventDefault();
+                        if (_conventions.SaveEnumsAsIntegers == false)
+                        {                            
+                            writer.Write("\"");
+                            writer.Write(value);
+                            writer.Write("\"");                         
+                        }
+                        else
+                        {                            
+                            writer.Write((int)value);                            
+                        }
+
+                        return;
+                    }                    
+
+                    if (valueType.IsArray || LinqMethodsSupport.IsCollection(valueType))
+                    {
+                        var arr = value as object[] ?? (value as IEnumerable<object>)?.ToArray();
+                        if (arr == null)
+                            return;
+
+                        context.PreventDefault();
+
+                        writer.Write("[");
+
+                        for (var i = 0; i < arr.Length; i++)
+                        {
+                            if (i != 0)
+                                writer.Write(", ");
+                            if (arr[i] is string || arr[i] is char)
+                            {
+                                writer.Write("\"");
+                                writer.Write(arr[i]);
+                                writer.Write("\"");
+                            }
+
+                            else
+                            {
+                                writer.Write(arr[i]);
+                            }
+
+                        }
+                        writer.Write("]");
+
+                        return;
+                    }
+
+                    context.PreventDefault();
+
+                    // if we have a number, write the value without quatation
+                    if (_numericTypes.Contains(valueType) || _numericTypes.Contains(Nullable.GetUnderlyingType(valueType)))
+                    {
+                        writer.Write(value);
+                    }
+                    else
+                    {
+                        writer.Write("\"");
+                        writer.Write(value);
+                        writer.Write("\"");                        
+                    }                    
+                }
+            }
+
+            private static HashSet<Type> _numericTypes = new HashSet<Type>
+            {
+                typeof(Byte),
+                typeof(SByte),
+                typeof(Int16),
+                typeof(UInt16),
+                typeof(Int32),
+                typeof(UInt32),
+                typeof(Int64),
+                typeof(UInt64),
+                typeof(double),
+                typeof(decimal),
+                typeof(System.Numerics.BigInteger),
+
+            };
+        }
+
         public class ConstSupport : JavascriptConversionExtension
         {
             private readonly DocumentConventions _conventions;
@@ -1296,26 +1429,29 @@ namespace Raven.Client.Util
                 var writer = context.GetWriter();
                 using (writer.Operation(nodeAsConst))
                 {
-                    if (nodeAsConst.Value == null)
+                    object nodeValue = nodeAsConst.Value;
+                    Type nodeType = nodeAsConst.Type;
+
+                    if (nodeValue == null)
                     {
                         context.PreventDefault();
                         writer.Write("null");
                         return;
-                    }
+                    }                    
 
                     // Type.IsEnum is unavailable in .netstandard1.3
-                    if (nodeAsConst.Type.GetTypeInfo().IsEnum
+                    if (nodeType.GetTypeInfo().IsEnum
                         && _conventions.SaveEnumsAsIntegers == false)
                     {
                         context.PreventDefault();
                         writer.Write("\"");
-                        writer.Write(nodeAsConst.Value);
+                        writer.Write(nodeValue);
                         writer.Write("\"");
                     }
 
-                    if (nodeAsConst.Type.IsArray || LinqMethodsSupport.IsCollection(nodeAsConst.Type))
+                    if (nodeType.IsArray || LinqMethodsSupport.IsCollection(nodeType))
                     {
-                        var arr = nodeAsConst.Value as object[] ?? (nodeAsConst.Value as IEnumerable<object>)?.ToArray();
+                        var arr = nodeValue as object[] ?? (nodeValue as IEnumerable<object>)?.ToArray();
                         if (arr == null)
                             return;
 
