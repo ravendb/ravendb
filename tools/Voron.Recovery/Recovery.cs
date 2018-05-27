@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
@@ -16,6 +17,7 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.Smuggler.Documents;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -97,17 +99,21 @@ namespace Voron.Recovery
                 using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
                 using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
                 using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
+                using (var destinationStreamCounters = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-5-Counters" + Path.GetExtension(_output))))
                 using (var gZipStreamDocuments = new GZipStream(destinationStreamDocuments, CompressionMode.Compress, true))
                 using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
                 using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
+                using (var gZipStreamCounters = new GZipStream(destinationStreamCounters, CompressionMode.Compress, true))
                 using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
                 using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
                 using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
                 using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
+                using (var countersWriter = new BlittableJsonTextWriter(context, gZipStreamCounters))
                 {
                     WriteSmugglerHeader(documentsWriter, 40018, "Docs");
                     WriteSmugglerHeader(revisionsWriter, 40018, nameof(DatabaseItemType.RevisionDocuments));
                     WriteSmugglerHeader(conflictsWriter, 40018, nameof(DatabaseItemType.Conflicts));
+                    WriteSmugglerHeader(countersWriter, 40018, nameof(DatabaseItemType.Counters));
 
                     while (mem < eof)
                     {
@@ -198,7 +204,7 @@ namespace Voron.Recovery
                                                 ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
                                                 break;
                                             }
-                                            totalSize += streamPageHeader->ChunkSize;                                        
+                                            totalSize += streamPageHeader->ChunkSize;
                                             var dataStart = (byte*)nextPage + PageHeader.SizeOf;
                                             _attachmentChunks.Add(((IntPtr)dataStart, (int)streamPageHeader->ChunkSize));
                                             rc = Sodium.crypto_generichash_update(hashStatePtr, dataStart, (ulong)streamPageHeader->ChunkSize);
@@ -227,7 +233,7 @@ namespace Voron.Recovery
                                             if (valid == false)
                                             {
                                                 break;
-                                            }                                        
+                                            }
 
                                         }
                                         if (valid == false)
@@ -258,7 +264,7 @@ namespace Voron.Recovery
                                 }
 
                                 else if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter,
-                                    conflictsWriter, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
+                                    conflictsWriter, countersWriter, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
                                 {
 
                                     mem += numberOfPages * _pageSize;
@@ -335,7 +341,7 @@ namespace Voron.Recovery
                                     continue;
 
                                 if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,
-                                        conflictsWriter, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
+                                        conflictsWriter, countersWriter, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
                                     break;
                             }
                             mem += _pageSize;
@@ -359,20 +365,22 @@ namespace Voron.Recovery
 
                     documentsWriter.WriteEndArray();
                     conflictsWriter.WriteEndArray();
-                    revisionsWriter.WriteEndArray();                
+                    revisionsWriter.WriteEndArray();
+                    countersWriter.WriteEndArray();
                     documentsWriter.WriteEndObject();
                     conflictsWriter.WriteEndObject();
                     revisionsWriter.WriteEndObject();
-
+                    countersWriter.WriteEndObject();
 
                     if (_logger.IsOperationsEnabled)
                     {
                         _logger.Operations(Environment.NewLine +
                             $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds." + Environment.NewLine +
-                            $"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments. " + Environment.NewLine + 
+                            $"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments. " + Environment.NewLine +
+                            $"Discovered a total of {_numberOfCountersRetrieved:#,#;00} counters. " + Environment.NewLine +
                             $"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
                     }
-                
+
                 }
                 if (_cancellationRequested)
                     return RecoveryStatus.CancellationRequested;
@@ -646,7 +654,7 @@ namespace Voron.Recovery
         }
 
         private bool Write(byte* mem, int sizeInBytes, BlittableJsonTextWriter documentsWriter, BlittableJsonTextWriter revisionsWriter, 
-            BlittableJsonTextWriter conflictsWritet, JsonOperationContext context, long startOffest, byte tableType)
+            BlittableJsonTextWriter conflictsWriter, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffest, byte tableType)
         {
             switch ((TableType)tableType)
             {
@@ -657,9 +665,63 @@ namespace Voron.Recovery
                 case TableType.Revisions:
                     return WriteRevision(mem, sizeInBytes, revisionsWriter, context, startOffest);
                 case TableType.Conflicts:
-                    return WriteConflict(mem, sizeInBytes, conflictsWritet, context, startOffest);
+                    return WriteConflict(mem, sizeInBytes, conflictsWriter, context, startOffest);
+                case TableType.Counters:
+                    return WriteCounter(mem, sizeInBytes, countersWriter, context, startOffest);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tableType), tableType, null);
+            }
+        }
+
+        private bool WriteCounter(byte* mem, int sizeInBytes, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffest)
+        {
+            try
+            {
+                var tvr = new TableValueReader(mem, sizeInBytes);
+
+                if (_counterWritten)
+                    countersWriter.WriteComma();
+
+                _counterWritten = false;
+
+                CounterDetail counter = null;
+                try
+                {
+                    counter = CountersStorage.TableValueToCounterDetail(context, tvr);
+                    if (counter == null)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to convert table value to counter at position {GetFilePosition(startOffest, mem)}");
+                        return false;
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Found invalid counter item at position={GetFilePosition(startOffest, mem)} with document Id={counter?.DocumentId ?? "null"} and name={counter?.CounterName ?? "null"}{Environment.NewLine}{e}");
+                    return false;
+                }
+
+                context.Write(countersWriter, new DynamicJsonValue
+                {
+                    [nameof(DocumentItem.CounterItem.DocId)] = counter.DocumentId,
+                    [nameof(DocumentItem.CounterItem.Name)] = counter.CounterName,
+                    [nameof(DocumentItem.CounterItem.ChangeVector)] = counter.ChangeVector,
+                    [nameof(DocumentItem.CounterItem.Value)] = counter.TotalValue
+                });
+
+                _counterWritten = true;
+                _numberOfCountersRetrieved++;
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Found counter item with document Id={counter.DocumentId} and name={counter.CounterName}");
+                _lastRecoveredDocumentKey = counter.DocumentId + SpecialChars.RecordSeparator + counter.CounterName;
+                return true;
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Unexpected exception while writing counter item at position {GetFilePosition(startOffest, mem)}: {e}");
+                return false;
             }
         }
 
@@ -858,11 +920,13 @@ namespace Voron.Recovery
         private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrieved;
+        private long _numberOfCountersRetrieved;
         private readonly int _initialContextSize;
         private readonly int _initialContextLongLivedSize;
         private bool _documentWritten;
         private bool _revisionWritten;
         private bool _conflictWritten;
+        private bool _counterWritten;
         private StorageEnvironmentOptions _option;
         private readonly int _progressIntervalInSec;
         private bool _cancellationRequested;
