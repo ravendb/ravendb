@@ -85,8 +85,8 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                if (_database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Counters");
+                if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    ThrowFeaturesAvailabilyException();
 
                 foreach (var kvp in _dictionary)
                 {
@@ -270,8 +270,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
-            if (Database.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Counters");
+            if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                ThrowFeaturesAvailabilyException();
 
             var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
@@ -373,6 +373,12 @@ namespace Raven.Server.Documents.Handlers
         private static void ThrowInvalidDocumentWithNoMetadata(Document doc)
         {
             throw new InvalidOperationException("Cannot increment counters for " + doc + " because the document has no metadata. Should not happen ever");
+        }
+        private static void ThrowFeaturesAvailabilyException()
+        {
+            throw new FeaturesAvailabilityException(
+                "Can not use Counters, as this is an experimental feature and the server does not support experimental features. " +
+                $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
     }
 }
