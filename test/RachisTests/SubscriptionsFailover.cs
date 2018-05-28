@@ -25,6 +25,7 @@ using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Threading;
 using Xunit.Sdk;
 
 
@@ -261,19 +262,15 @@ namespace RachisTests
 
             var uniqueRevisions = new HashSet<string>();
             var uniqueDocs = new HashSet<string>();
-
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
-
-            var defaultDatabase = "DistributedRevisionsSubscription";
-
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore(new Options
             {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
+                Server = leader,
+                ReplicationFactor = nodesAmount
+            }))
             {
+                var defaultDatabase = store.Database;
+
                 await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
@@ -284,7 +281,6 @@ namespace RachisTests
                 GenerateDistributedRevisionsData(defaultDatabase);
 
                 var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>().ConfigureAwait(false);
-
                 var subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
@@ -306,7 +302,7 @@ namespace RachisTests
                             continueMre.Reset();
                             ackSent.Set();
                         }
-
+                        ackSent.Defer();
                         await continueMre.WaitAsync();
                     }
                     catch (Exception)
@@ -314,70 +310,93 @@ namespace RachisTests
 
                     }
                 };
-
-                var task = subscription.Run(b =>
+                var run = true;
+                var task = Task.Run(()=>
                 {
-                    foreach (var item in b.Items)
+                    while (run)
                     {
-                        var x = item.Result;
                         try
                         {
-
-                            if (x == null)
+                            subscription.Run(b =>
                             {
-
-                            }
-                            else if (x.Previous == null)
-                            {
-                                if (uniqueDocs.Add(x.Current.Id))
-                                    docsCount++;
-                                if (uniqueRevisions.Add(x.Current.Name))
-                                    revisionsCount++;
-                            }
-                            else if (x.Current == null)
-                            {
-
-                            }
-                            else
-                            {
-                                if (x.Current.Age > x.Previous.Age)
+                                foreach (var item in b.Items)
                                 {
-                                    if (uniqueRevisions.Add(x.Current.Name))
-                                        revisionsCount++;
+                                    var x = item.Result;
+                                    try
+                                    {
+
+                                        if (x == null)
+                                        {
+
+                                        }
+                                        else if (x.Previous == null)
+                                        {
+                                            if (uniqueDocs.Add(x.Current.Id))
+                                                docsCount++;
+                                            if (uniqueRevisions.Add(x.Current.Name))
+                                                revisionsCount++;
+                                        }
+                                        else if (x.Current == null)
+                                        {
+
+                                        }
+                                        else
+                                        {
+                                            if (x.Current.Age > x.Previous.Age)
+                                            {
+                                                if (uniqueRevisions.Add(x.Current.Name))
+                                                    revisionsCount++;
+                                            }
+                                        }
+
+                                        reachedMaxDocCountMre.Defer();
+
+                                        if (docsCount == nodesAmount && revisionsCount == Math.Pow(nodesAmount, 2))
+                                            reachedMaxDocCountMre.Set();
+                                    }
+                                    catch (Exception)
+                                    {
+
+                                    }
                                 }
-                            }
-
-                            if (docsCount == nodesAmount && revisionsCount == Math.Pow(nodesAmount, 2))
-                                reachedMaxDocCountMre.Set();
+                            });
                         }
-                        catch (Exception)
+                        catch
                         {
-
+                            //
                         }
                     }
                 });
 
-                expectedRevisionsCount = nodesAmount + 2;
-                continueMre.Set();
+                try
+                {
+                    expectedRevisionsCount = nodesAmount + 2;
+                    continueMre.Set();
 
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (1st assert)");
-                ackSent.Reset(true);
+                    Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (1st assert)");
+                    ackSent.Reset(true);
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
-                continueMre.Set();
-                expectedRevisionsCount += 2;
-                
+                    await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false);
 
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (2nd assert)");
-                ackSent.Reset(true);
-                continueMre.Set();
+                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
+                    continueMre.Set();
+                    expectedRevisionsCount += 2;
 
-                expectedRevisionsCount = (int)Math.Pow(nodesAmount, 2);
-                if (nodesAmount == 5)
-                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
-                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
+                    Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (2nd assert)");
+                    ackSent.Reset(true);
+                    continueMre.Set();
 
+                    expectedRevisionsCount = (int)Math.Pow(nodesAmount, 2);
+                    if (nodesAmount == 5)
+                        await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+
+                    Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
+                }
+                finally
+                {
+                    run = false;
+                }
             }
         }
 
@@ -813,5 +832,6 @@ namespace RachisTests
                     throw new ThrowsException(typeof(T));
             }
         }
+
     }
 }

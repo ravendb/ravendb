@@ -16,9 +16,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RachisTests.DatabaseCluster.ClusterDatabaseMaintenance())
+                    using (var test = new RachisTests.SubscriptionsFailover())
                     {
-                        await test.MoveToPassiveWhenRefusedConnectionFromAllNodes();
+                        await test.DistributedRevisionsSubscription(5);
                     }
                 }
                 catch (Exception e)
