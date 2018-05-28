@@ -1626,11 +1626,6 @@ namespace Raven.Server.Documents.Indexes
 
                 if (Definition.LockMode == mode)
                     return;
-
-                if (Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce || Type == IndexType.Faulty)
-                {
-                    throw new InvalidOperationException("'Lock Mode' can't be set for Auto-Indexes (or Faulty indexes).");
-                }
                 
                 if (_logger.IsInfoEnabled)
                     _logger.Info(
