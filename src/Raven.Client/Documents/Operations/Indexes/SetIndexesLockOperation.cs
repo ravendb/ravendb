@@ -43,11 +43,10 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private void FilterAutoIndexes()
         {
-            _parameters.IndexNames = _parameters.IndexNames.Where(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase) == false).ToArray();
-            
-            if (_parameters.IndexNames.Length == 0)
+            // Check for auto-indexes - we do not set lock for auto-indexes
+            if (_parameters.IndexNames.Any(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidOperationException("'Lock Mode' can't be set for Auto-Indexes.");
+                throw new InvalidOperationException("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.");
             }
         }
 

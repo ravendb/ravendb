@@ -524,15 +524,17 @@ class indexes extends viewModelBase {
             .done(can => {
                 if (can) {
                     eventsCollector.default.reportEvent("index", "set-lock-mode-selected", lockModeString);
-
-                    this.spinners.globalLockChanges(true);
            
                     const indexes = this.getSelectedIndexes().filter(index => index.type !== "AutoMap" && index.type !== "AutoMapReduce");
 
-                    new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase(),lockModeStrForTitle)
-                        .execute()
-                        .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
-                        .always(() => this.spinners.globalLockChanges(false));
+                    if (indexes.length) {
+                        this.spinners.globalLockChanges(true);
+                        
+                        new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase(), lockModeStrForTitle)
+                            .execute()
+                            .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
+                            .always(() => this.spinners.globalLockChanges(false));
+                    }
                 }
             });
     }
