@@ -147,7 +147,7 @@ function extractSettings(contents) {
 
         if (possibleConfigurationEntry) {
             if (configurationEntry) {
-                throw new Error("Expected field name. Got another ConfigurationEntry attribute: " + possibleConfigurationEntry + ". Previous: " + configurationEntry);
+                continue; // we support multiple ConfigurationEntryAttributes now, but the first one is the 'main key'
             }
             configurationEntry = possibleConfigurationEntry;
 
