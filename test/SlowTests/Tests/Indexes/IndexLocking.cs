@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public void set_auto_index_lock_mode()
+        public void SetLockModeForAutoIndex()
         {
             using (var store = GetDocumentStore())
             {
@@ -59,12 +59,42 @@ namespace SlowTests.Tests.Indexes
                 Assert.Equal(IndexLockMode.Unlock, index.LockMode);
                 
                 var exception = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore)));
-                Assert.Equal("'Lock Mode' can't be set for Auto-Indexes.", exception.Message);
+                Assert.Equal("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.", exception.Message);
                 Assert.Equal(IndexLockMode.Unlock, index.LockMode);
                 
                 exception = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedError)));
-                Assert.Equal("'Lock Mode' can't be set for Auto-Indexes.", exception.Message);
+                Assert.Equal("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.", exception.Message);
                 Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+            }
+        }
+        
+        [Fact]
+        public async Task SetLockModeForStaticIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // create static-index
+                var staticIndex = new IndexSample
+                {
+                    Conventions = new DocumentConventions()
+                };
+                staticIndex.Execute(store);
+
+                var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
+                Assert.Equal(1, indexes.Length);
+
+                var index = indexes[0];
+                
+                var stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
+                Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+
+                store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore));
+                stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
+                Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
+                
+                store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedError));
+                stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
+                Assert.Equal(IndexLockMode.LockedError, stats.LockMode);
             }
         }
         
@@ -109,14 +139,16 @@ namespace SlowTests.Tests.Indexes
                 SetIndexesLockOperation.Parameters indexesParams = new SetIndexesLockOperation.Parameters();
                 indexesParams.Mode = IndexLockMode.LockedIgnore;
                 indexesParams.IndexNames = new string[] { autoIndex.Name, staticIndex.Name };
-                store.Maintenance.Send(new SetIndexesLockOperation(indexesParams));
+                
+                var exception = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new SetIndexesLockOperation(indexesParams)));
+                Assert.Equal("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.", exception.Message);
                 
                 indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
                 autoIndex = indexes[0];
                 staticIndex = indexes[1];
                 
-                Assert.Equal(IndexLockMode.Unlock, autoIndex.LockMode); // auto-index is not expected to change
-                Assert.Equal(IndexLockMode.LockedIgnore, staticIndex.LockMode); // static-index is expected to change
+                Assert.Equal(IndexLockMode.Unlock, autoIndex.LockMode); 
+                Assert.Equal(IndexLockMode.Unlock, staticIndex.LockMode); 
             }
         }
 
