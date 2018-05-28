@@ -1111,7 +1111,7 @@ namespace Raven.Server.Utils.Cli
             _reader = textReader;
             _consoleColoring = consoleColoring;
 
-            var parentProcessId = server.Configuration.Testing.ParentProcessId;
+            var parentProcessId = server.Configuration.Embedded.ParentProcessId;
             if (parentProcessId != null)
             {
                 void OnParentProcessExit(object o, EventArgs e)
