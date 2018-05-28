@@ -35,7 +35,6 @@ namespace Sparrow.Json
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
-        private List<GCHandle> _pinnedObjects;        
         private List<string> _normalNumbersStringBuffers = new List<string>(5);
         private string _hugeNumbersBuffer;
 
@@ -329,16 +328,6 @@ namespace Sparrow.Json
                     }
 
                     _managedBuffers = null;
-                }
-
-                if (_pinnedObjects != null)
-                {
-                    foreach (var pinnedObject in _pinnedObjects)
-                    {
-                        pinnedObject.Free();
-                    }
-
-                    _pinnedObjects = null;
                 }
             });
 
@@ -1268,18 +1257,6 @@ namespace Sparrow.Json
             throw new InvalidOperationException(
                 $"UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Thread name: {Thread.CurrentThread.Name}");
 #endif
-        }
-
-        public IntPtr PinObjectAndGetAddress(object obj)
-        {
-            var handle = GCHandle.Alloc(obj, GCHandleType.Pinned);
-
-            if (_pinnedObjects == null)
-                _pinnedObjects = new List<GCHandle>();
-
-            _pinnedObjects.Add(handle);
-
-            return handle.AddrOfPinnedObject();
         }
 
         public AvoidOverAllocationScope AvoidOverAllocation()

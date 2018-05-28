@@ -29,7 +29,12 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var reduceValue = input.GetField(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName).GetBinaryValue(state);
 
-            var result = new BlittableJsonReaderObject((byte*)_context.PinObjectAndGetAddress(reduceValue), reduceValue.Length, _context);
+            var allocation = _context.GetMemory(reduceValue.Length);
+
+            UnmanagedWriteBuffer buffer = new UnmanagedWriteBuffer(_context, allocation);
+            buffer.Write(reduceValue, 0, reduceValue.Length);
+
+            var result = new BlittableJsonReaderObject(allocation.Address, reduceValue.Length, _context, buffer);
 
             return new Document
             {
