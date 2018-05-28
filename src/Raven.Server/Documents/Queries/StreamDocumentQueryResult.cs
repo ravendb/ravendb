@@ -25,7 +25,8 @@ namespace Raven.Server.Documents.Queries
             if (_anyWrites == false)
                 StartResponseIfNeeded();
 
-            _writer.AddResult(result);
+            using (result.Data)
+                _writer.AddResult(result);
             _token.Delay();
         }
 
