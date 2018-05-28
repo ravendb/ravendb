@@ -65,29 +65,35 @@ namespace Voron.Recovery
             try
             {
                 var sw = new Stopwatch();
-                StorageEnvironment se = null;
                 sw.Start();
+                byte* mem = null;
                 if (_copyOnWrite)
                 {
                     Console.WriteLine("Recovering journal files, this may take a while...");
+                    StorageEnvironment se = null;
+                    bool optionOwnsPagers = _option.OwnsPagers;
                     try
                     {
-
+                        _option.OwnsPagers = false;
                         se = new StorageEnvironment(_option);
+                        mem = se.Options.DataPager.AcquirePagePointer(null, 0);
                         Console.WriteLine(
                             $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
                     }
                     catch (Exception e)
                     {
+                        se?.Dispose();
                         Console.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
                     }
                     finally
                     {
-                        se?.Dispose();
+                        _option.OwnsPagers = optionOwnsPagers;
                     }
                 }
-                _option = StorageEnvironmentOptions.ForPath(Path.GetDirectoryName(_datafile));            
-                var mem = Pager.AcquirePagePointer(null, 0);
+                if (mem == null)
+                {
+                    mem = Pager.AcquirePagePointer(null, 0);
+                }
                 long startOffset = (long)mem;
                 var fi = new FileInfo(_datafile);
                 var fileSize = fi.Length;
