@@ -15,7 +15,7 @@ using Jint.Runtime.Descriptors;
 using Sparrow.Json;
 using Sparrow;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide;
 using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -45,12 +45,14 @@ namespace Raven.Server.Documents.Indexes.Static
             ReduceKeyProcessor _xKey, _yKey;
             private BlittableJsonReaderObject _lastUsedBlittable;
             private BlittableJsonReaderObject _lastUsedBucket;
+            private ByteStringContext _allocator;
 
-            public GroupBykeyComparer(JavaScriptReduceOperation parent)
+            public GroupBykeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator)
             {
                 _parent = parent;
-                _xKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), CurrentIndexingScope.Current.UnmanagedBuffersPool);
-                _yKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), CurrentIndexingScope.Current.UnmanagedBuffersPool);
+                _allocator = allocator;
+                _xKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), buffersPool);
+                _yKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), buffersPool);
                 _xKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _yKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _lastUsedBlittable = null;
@@ -82,9 +84,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
 
                     if (xCalCulated == false)
-                        _xKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, xVal);
+                        _xKey.Process(_allocator, xVal);
                     if (yCalculated == false)
-                        _yKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, yVal);
+                        _yKey.Process(_allocator, yVal);
                 }
 
                 var xBuffer = _xKey.GetBuffer();
@@ -103,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var field in _parent._groupByFields)
                 {
                     var xHasField = obj.TryGet(field, out object xVal);
-                    _yKey.Process(CurrentIndexingScope.Current.IndexContext.Allocator, xVal);
+                    _yKey.Process(_allocator, xVal);
                 }
 
                 _lastUsedBlittable = obj;
@@ -164,7 +166,19 @@ namespace Raven.Server.Documents.Indexes.Static
         private void EnsureGroupItemCreated()
         {
             if (_groupedItems == null)
-                _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupBykeyComparer(this));
+            {
+                if (_bufferPool == null)
+                {
+                    _bufferPool = CurrentIndexingScope.Current.UnmanagedBuffersPool;
+                }
+
+                if (_byteStringContext == null)
+                {
+                    _byteStringContext = CurrentIndexingScope.Current.IndexContext.Allocator;
+                }
+
+                _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupBykeyComparer(this, _bufferPool, _byteStringContext));
+            }
         }
 
         private JsValue ConstructValues(List<BlittableJsonReaderObject> values)
@@ -226,6 +240,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private string[] _groupByFields;
         private bool _singleField;
+        private UnmanagedBuffersPoolWithLowMemoryHandling _bufferPool;
+        private ByteStringContext _byteStringContext;
 
         internal string[] GetReduceFieldsNames()
         {
@@ -278,6 +294,16 @@ namespace Raven.Server.Documents.Indexes.Static
             _groupByFields = cur.ToArray();
 
             return _groupByFields;
+        }
+
+        public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
+        {
+            _bufferPool = bufferPool;
+        }
+
+        public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
+        {
+            _byteStringContext = byteStringContext;
         }
     }
 }

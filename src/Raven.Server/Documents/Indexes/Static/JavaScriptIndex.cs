@@ -13,6 +13,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide;
+using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -239,5 +242,21 @@ function createSpatialField(lat, lng) {
         private Engine _engine;
 
         public JavaScriptReduceOperation ReduceOperation { get; }
+
+        public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
+        {
+            if (ReduceOperation != null)
+            {
+                ReduceOperation.SetBufferPoolForTestingPurposes(bufferPool);
+            }
+        }
+
+        public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
+        {
+            if (ReduceOperation != null)
+            {
+                ReduceOperation.SetAllocatorForTestingPurposes(byteStringContext);
+            }
+        }
     }
 }
