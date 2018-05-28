@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -34,7 +35,6 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-
         [Fact]
         public void set_auto_index_lock_mode()
         {
@@ -48,23 +48,75 @@ namespace SlowTests.Tests.Indexes
                     });
                     session.SaveChanges();
                 }
+                
                 QueryStatistics statistics;
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<Person>().Customize(x => x.WaitForNonStaleResults()).Statistics(out statistics).Where(x => x.Name == "Vasia").ToList();
                 }
 
-                store.Maintenance.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.Unlock));
                 var index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+                
+                var exception = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore)));
+                Assert.Equal("'Lock Mode' can't be set for Auto-Indexes.", exception.Message);
+                Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+                
+                exception = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedError)));
+                Assert.Equal("'Lock Mode' can't be set for Auto-Indexes.", exception.Message);
+                Assert.Equal(IndexLockMode.Unlock, index.LockMode);
+            }
+        }
+        
+        [Fact]
+        public async Task SetLockModeForStaticAndAutoIndexes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person()
+                    {
+                        Name = "Danielle"
+                    });
+                    session.SaveChanges();
+                }
+                
+                QueryStatistics statistics;
+                
+                // create auto-index
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Person>().Customize(x => x.WaitForNonStaleResults()).Statistics(out statistics).Where(x => x.Name == "Danielle").ToList();
+                }
+                
+                // create static-index
+                var index = new IndexSample
+                {
+                    Conventions = new DocumentConventions()
+                };
+                index.Execute(store);
+                
+                var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
+                Assert.Equal(2, indexes.Length);
 
-                store.Maintenance.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedError));
-                index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
-                Assert.Equal(IndexLockMode.LockedError, index.LockMode);
-
-                store.Maintenance.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedIgnore));
-                index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
-                Assert.Equal(IndexLockMode.LockedIgnore, index.LockMode);
+                var autoIndex = indexes[0];
+                var staticIndex = indexes[1];
+                
+                Assert.Equal(IndexLockMode.Unlock, autoIndex.LockMode);
+                Assert.Equal(IndexLockMode.Unlock, staticIndex.LockMode);
+                
+                SetIndexesLockOperation.Parameters indexesParams = new SetIndexesLockOperation.Parameters();
+                indexesParams.Mode = IndexLockMode.LockedIgnore;
+                indexesParams.IndexNames = new string[] { autoIndex.Name, staticIndex.Name };
+                store.Maintenance.Send(new SetIndexesLockOperation(indexesParams));
+                
+                indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
+                autoIndex = indexes[0];
+                staticIndex = indexes[1];
+                
+                Assert.Equal(IndexLockMode.Unlock, autoIndex.LockMode); // auto-index is not expected to change
+                Assert.Equal(IndexLockMode.LockedIgnore, staticIndex.LockMode); // static-index is expected to change
             }
         }
 
