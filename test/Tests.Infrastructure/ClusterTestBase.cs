@@ -36,15 +36,7 @@ namespace Tests.Infrastructure
                 Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {currentProcess.Id}.");
         }
 
-        private const int PortRangeStart = 9000;
         private const int ElectionTimeoutInMs = 300;
-        private static int _numberOfPortRequests;
-
-        internal static int GetPort()
-        {
-            var portRequest = Interlocked.Increment(ref _numberOfPortRequests);
-            return PortRangeStart - (portRequest % 500);
-        }
 
         protected readonly ConcurrentBag<IDisposable> _toDispose = new ConcurrentBag<IDisposable>();
 
@@ -432,16 +424,19 @@ namespace Tests.Infrastructure
 
                 if (useSsl)
                 {
-                    serverUrl = UseFiddlerUrl($"https://127.0.0.1:{GetPort()}");
+                    serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
                     SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
-                    serverUrl = UseFiddlerUrl($"http://127.0.0.1:{GetPort()}");
+                    serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
                     customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
                 }
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
+                var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
+                var prefix = useSsl ? "https" : "http";
+                serverUrl = UseFiddlerUrl($"{prefix}://127.0.0.1:{port}");
                 Servers.Add(server);
                 clustersServers.Add(server);
 
@@ -483,13 +478,11 @@ namespace Tests.Infrastructure
             for (var i = 0; i < numberOfNodes; i++)
             {
                 string serverUrl;
-                int port = GetPort();
-                var customSettings = GetServerSettingsForPort(useSsl, out serverUrl, port);
+                var customSettings = GetServerSettingsForPort(useSsl, out serverUrl);
 
                 int proxyPort = 10000;
-                ProxyServer proxy;
-                proxy = new ProxyServer(ref proxyPort, port, delay);
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
+                var proxy = new ProxyServer(ref proxyPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl()), delay);
                 serversToProxies.Add(server, proxy);
 
                 if (Servers.Any(s => s.WebUrl.Equals(server.WebUrl, StringComparison.OrdinalIgnoreCase)) == false)
@@ -527,19 +520,18 @@ namespace Tests.Infrastructure
         }
 
 
-        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl, int? port = null)
+        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl)
         {
             var customSettings = new Dictionary<string, string>();
 
-            port = port ?? GetPort();
             if (useSsl)
             {
-                serverUrl = UseFiddlerUrl($"https://127.0.0.1:{port}");
+                serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
                 SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
-                serverUrl = UseFiddlerUrl($"http://127.0.0.1:{port}");
+                serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
                 customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
             }
             return customSettings;
