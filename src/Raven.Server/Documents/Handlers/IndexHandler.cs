@@ -500,6 +500,15 @@ namespace Raven.Server.Documents.Handlers
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-lock");
                 var parameters = JsonDeserializationServer.Parameters.SetIndexLockParameters(json);
 
+                if (parameters.IndexNames == null || parameters.IndexNames.Length == 0)
+                    throw new ArgumentNullException(nameof(parameters.IndexNames));
+                
+                // Apply setLock only for static indexes
+                parameters.IndexNames = parameters.IndexNames.Where(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase) == false).ToArray();
+                
+                if (parameters.IndexNames.Length == 0)
+                    throw new InvalidOperationException("'Lock Mode' is not set for Auto-Indexes");
+                
                 foreach (var name in parameters.IndexNames)
                 {
                     await Database.IndexStore.SetLock(name, parameters.Mode);

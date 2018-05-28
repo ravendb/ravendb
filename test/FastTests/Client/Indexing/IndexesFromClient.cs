@@ -149,12 +149,14 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                 Assert.Equal(IndexPriority.Normal, stats.Priority);
 
-                await store.Maintenance.SendAsync(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore));
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => store.Maintenance.SendAsync(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore)));
+                Assert.Equal("'Lock Mode' can't be set for Auto-Indexes.", exception.Message);
+                
                 await store.Maintenance.SendAsync(new SetIndexesPriorityOperation(index.Name, IndexPriority.Low));
 
                 stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
 
-                Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
+                Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                 Assert.Equal(IndexPriority.Low, stats.Priority);
             }
         }
