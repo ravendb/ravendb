@@ -503,11 +503,11 @@ namespace Raven.Server.Documents.Handlers
                 if (parameters.IndexNames == null || parameters.IndexNames.Length == 0)
                     throw new ArgumentNullException(nameof(parameters.IndexNames));
                 
-                // Apply setLock only for static indexes
-                parameters.IndexNames = parameters.IndexNames.Where(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase) == false).ToArray();
-                
-                if (parameters.IndexNames.Length == 0)
-                    throw new InvalidOperationException("'Lock Mode' is not set for Auto-Indexes");
+                // Check for auto-indexes - we do not set lock for auto-indexes
+                if (parameters.IndexNames.Any(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new InvalidOperationException("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.");
+                }
                 
                 foreach (var name in parameters.IndexNames)
                 {
