@@ -97,8 +97,16 @@ namespace Raven.Server.Config.Categories
                 var configuredValueSet = false;
                 var setDefaultValueOfNeeded = true;
 
-                foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
+                ConfigurationEntryAttribute previousAttribute = null;
+
+                foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(order => order.Order))
                 {
+                    if (previousAttribute != null && previousAttribute.Scope != entry.Scope)
+                    {
+                        throw new InvalidOperationException($"All ConfigurationEntryAttribute for {property.Name} must have the same Scope");
+                    }
+
+                    previousAttribute = entry;
                     var settingValue = getSetting(entry.Key);
                     if (type != ResourceType.Server && entry.Scope == ConfigurationEntryScope.ServerWideOnly && settingValue.CurrentValue != null)
                         throw new InvalidOperationException($"Configuration '{entry.Key}' can only be set at server level.");

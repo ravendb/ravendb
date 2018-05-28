@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
@@ -23,12 +25,14 @@ namespace Raven.Server.Web.System
 
                 foreach (var categoryProperty in configurationProperty.PropertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
-                    var configurationEntryAttribute = categoryProperty.GetCustomAttribute<ConfigurationEntryAttribute>();
-                    if (configurationEntryAttribute == null || configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase)
-                        continue;
+                    foreach (var configurationEntryAttribute in categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>())
+                    {
+                        if(configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase)
+                            continue;
 
-                    Array.Resize(ref keys, keys.Length + 1);
-                    keys[keys.Length - 1] = configurationEntryAttribute.Key;
+                        Array.Resize(ref keys, keys.Length + 1);
+                        keys[keys.Length - 1] = configurationEntryAttribute.Key;
+                    }
                 }
             }
 
