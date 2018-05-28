@@ -10,6 +10,7 @@ namespace Sparrow
     {
         private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         private CancellationToken _token;
+        private int _defer = 0;
 
         public AsyncManualResetEvent()
         {
@@ -67,6 +68,11 @@ namespace Sparrow
             return new FrozenAwaiter(_tcs, this);
         }
 
+        public void Defer()
+        {
+            Interlocked.Exchange(ref _defer, 1);
+        }
+
         public struct FrozenAwaiter
         {
             private readonly TaskCompletionSource<bool> _tcs;
@@ -83,18 +89,39 @@ namespace Sparrow
             {
                 return _tcs.Task;
             }
-
-
+            
             [Pure]
             public async Task<bool> WaitAsync(TimeSpan timeout)
             {
                 var waitAsync = _tcs.Task;
-                _parent._token.ThrowIfCancellationRequested();
-                var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);
-                if (_parent._token != CancellationToken.None)
-                    return result == waitAsync && !_parent._token.IsCancellationRequested;
+                while (true)
+                {
+                    _parent._token.ThrowIfCancellationRequested();
+                    var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);
 
-                return result == waitAsync;
+                    if (Interlocked.Exchange(ref _parent._defer, 0) == 1)
+                    {
+                        if (result == waitAsync)
+                        {
+                            if (_parent._token != CancellationToken.None)
+                            {
+                                return _parent._token.IsCancellationRequested == false;
+                            }
+
+                            return true;
+                        }
+
+                        continue;
+                    }
+
+                    if (_parent._token != CancellationToken.None)
+                    {
+                        return result == waitAsync && _parent._token.IsCancellationRequested == false;
+                    }
+
+                    return result == waitAsync;
+                }
+                
             }
         }
 
@@ -113,6 +140,9 @@ namespace Sparrow
                 if ((tcs.Task.IsCompleted == false && force == false) ||
 #pragma warning disable 420
                     Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously), tcs) == tcs)
+                {
+                    _defer = 0; // don't care about concurrency here.
+                }
 #pragma warning restore 420
                     return;
             }

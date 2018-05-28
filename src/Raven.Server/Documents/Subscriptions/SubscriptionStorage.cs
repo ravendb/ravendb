@@ -11,8 +11,10 @@ using Sparrow.Logging;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 
@@ -64,13 +66,53 @@ namespace Raven.Server.Documents.Subscriptions
                 Disabled = disabled ?? false
             };
 
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+            var (index, _) = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"New Subscription with index {etag} was created");
+                _logger.Info($"New Subscription with index {index} was created");
 
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-            return etag;
+            await WaitForCreationOnResponsibleNode(command, index);
+
+            return index;
+        }
+
+        private async Task WaitForCreationOnResponsibleNode(PutSubscriptionCommand command, long index)
+        {
+            await _db.ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+            using (_db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                DatabaseRecord record;
+                SubscriptionGeneralDataAndStats subscription;
+                ClusterTopology clusterTopology;
+
+                using (ctx.OpenReadTransaction())
+                {
+                    record = _db.ServerStore.Cluster.ReadDatabase(ctx, _db.Name);
+                    subscription = _db.SubscriptionStorage.GetSubscription(ctx, command.SubscriptionId ?? index, command.SubscriptionName, false);
+                    clusterTopology = _db.ServerStore.GetClusterTopology(ctx);
+                }
+                
+                // new subscription, so there wasn't a previous responsible node.
+                var node = record.Topology.WhoseTaskIsIt(_db.ServerStore.CurrentRachisState, subscription, getLastReponsibleNode: null);
+                if (node != _db.ServerStore.NodeTag)
+                {
+                    var nodeUrl = clusterTopology.GetUrlFromTag(node);
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _db.ServerStore.Server.Certificate?.Certificate))
+                    {
+                        requestExecutor.DefaultTimeout = TimeSpan.FromSeconds(5);
+
+                        var waitCommand = new WaitForRaftIndexCommand(index);
+                        try
+                        {
+                            await requestExecutor.ExecuteAsync(waitCommand, ctx);
+                        }
+                        catch
+                        {
+                           // tried to wait, but something went wrong. We don't care since the state of the subscription is already managed. 
+                        }
+                    }
+                }
+            }
         }
 
         public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)
@@ -252,7 +294,7 @@ namespace Raven.Server.Documents.Subscriptions
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, name));
 
             if (subscriptionBlittable == null)
-                throw new SubscriptionDoesNotExistException($"Subscripiton with name {name} was not found in server store");
+                throw new SubscriptionDoesNotExistException($"Subscription with name {name} was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
             var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
