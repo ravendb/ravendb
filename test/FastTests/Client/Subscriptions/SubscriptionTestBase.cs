@@ -9,6 +9,8 @@ namespace FastTests.Client.Subscriptions
         {
             public string Id { get; set; }
             public string Name { get; set; }
+            public Thing OtherDoc { get; set; }
+
         }
 
         protected async Task CreateDocuments(DocumentStore store, int amount)
