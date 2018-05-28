@@ -167,9 +167,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return value;
         }
 
-        [ThreadStatic]
-        private static JsValue[] _oneItemArray;
-
         private object GetValue(JsValue jsValue)
         {
             if (jsValue.IsNull())
@@ -205,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
             else if (jsValue.IsObject())
             {
-                return StringifyObject(jsValue);
+                return JavaScriptIndexUtils.StringifyObject(jsValue);
             }
             
             ThrowInvalidObject(jsValue);
@@ -228,20 +225,5 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private static object StringifyObject(JsValue jsValue)
-        {
-            if (_oneItemArray == null)
-                _oneItemArray = new JsValue[1];
-            _oneItemArray[0] = jsValue;
-            try
-            {
-                // json string of the object
-                return jsValue.AsObject().Engine.Json.Stringify(JsValue.Null, _oneItemArray);
-            }
-            finally
-            {
-                _oneItemArray[0] = null;
-            }
-        }
     }
 }

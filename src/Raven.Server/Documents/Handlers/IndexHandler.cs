@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Jint.Native;
+using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -16,8 +17,11 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Extensions;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -793,21 +797,79 @@ namespace Raven.Server.Documents.Handlers
                 var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
                 using (context.OpenReadTransaction())
                 {
-                    foreach(var collection in collections)
+                    foreach (var collection in collections)
                     {
-                        docsPerCollection.Add(collection, Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, pageSize).Select(d => new DynamicBlittableJson(d)).ToList());
+                        docsPerCollection.Add(collection,
+                            Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, pageSize).Select(d => new DynamicBlittableJson(d)).ToList());
                     }
-                    
+
+                    var mapRes = new List<ObjectInstance>();
                     //all maps
-                    foreach(var ListOfFunctions in compiledIndex.Maps)
+                    foreach (var ListOfFunctions in compiledIndex.Maps)
                     {
                         //multi maps per collection
-                        foreach(var mapFunc in ListOfFunctions.Value)
+                        foreach (var mapFunc in ListOfFunctions.Value)
                         {
-                            var mapRes = mapFunc(docsPerCollection[ListOfFunctions.Key]); //TODO: need to populate Lucene Document here using the convertor
-                        }                    
+                            foreach (var res in mapFunc(docsPerCollection[ListOfFunctions.Key]))
+                            {
+                                mapRes.Add((ObjectInstance)res);
+                            }                                                       
+                        }
                     }
-                    //TODO: if this is just a map index we can return the Lucene documets if this is a map reduce index we need to aggregate the results
+                    var first = true;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("MapResults");
+                            writer.WriteStartArray();
+                            foreach (var mapResult in mapRes)
+                            {
+                                if (JavaScriptIndexUtils.StringifyObject(mapResult) is JsString jsStr)
+                                {
+                                    if (first == false)
+                                    {
+                                        writer.WriteComma();
+                                    }
+                                    writer.WriteString(jsStr.ToString());
+                                    first = false;
+                                }
+                                
+                            }
+                            writer.WriteEndArray();
+                        if (indexDefinition.Reduce != null)
+                        {
+                            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
+                            {
+                                compiledIndex.SetBufferPoolForTestingPurposes(bufferPool);
+                                compiledIndex.SetAllocatorForTestingPurposes(context.Allocator);
+                                first = true;
+                                writer.WritePropertyName("ReduceResults");
+                                writer.WriteStartArray();
+                                
+                                var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine,mr))));
+                                
+                                foreach (JsValue reduceResult in reduceResults)
+                                {
+                                    if (JavaScriptIndexUtils.StringifyObject(reduceResult) is JsString jsStr)
+                                    {
+                                        if (first == false)
+                                        {
+                                            writer.WriteComma();
+                                        }
+
+                                        writer.WriteString(jsStr.ToString());
+                                        first = false;
+                                    }
+
+                                }
+                            }
+
+                            writer.WriteEndArray();
+                        }
+                        writer.WriteEndObject();
+                    }                    
+
                 }
             }
         }
