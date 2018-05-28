@@ -172,6 +172,7 @@ namespace Raven.Server.Utils
             certBytes = stream.ToArray();
 
             log?.AppendLine($"certBytes.Length = {certBytes.Length}");
+            log?.AppendLine($"certBytes in base64 = {Convert.ToBase64String(certBytes)}");
         }
 
         public static void CreateCertificateAuthorityCertificate(string commonNameValue, 
