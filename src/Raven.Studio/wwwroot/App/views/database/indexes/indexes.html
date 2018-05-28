@@ -249,13 +249,12 @@
                         </ul>
                     </div>
                 </div>
-                <div class="properties-item mode">
+                <div class="properties-item mode" data-bind="css: { 'hidden': type === 'AutoMap' || type === 'AutoMapReduce' }">
                     <span class="properties-label">Mode:</span>
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) },
-                                           enable: $root.globalIndexingStatus() === 'Running' && !_.includes($root.spinners.localLockChanges(), name) && 
-                                                   type !== 'AutoMap' && type !== 'AutoMapReduce'">
+                                           enable: $root.globalIndexingStatus() === 'Running' && !_.includes($root.spinners.localLockChanges(), name)">
                             <span data-bind="visible: lockMode() === 'Unlock'">
                                 <i class="icon-unlock"></i><span>Unlocked</span>
                             </span>
