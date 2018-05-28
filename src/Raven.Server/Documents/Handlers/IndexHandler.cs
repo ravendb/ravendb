@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -759,6 +760,59 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
 
         }
+
+        [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser)]
+        public async Task TestJavaScriptIndex()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "TestJavaScriptIndex");
+                if (input.TryGet("Definition", out BlittableJsonReaderObject index) == false)
+                    ThrowRequiredPropertyNameInRequest("Definition");
+
+                var indexDefinition = JsonDeserializationServer.IndexDefinition(index);
+
+                if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                    throw new ArgumentException("Index must have a 'Maps' fields");
+
+                indexDefinition.Type = indexDefinition.DetectStaticIndexType();
+
+                if (indexDefinition.Type.IsJavaScript() == false)
+                    throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
+
+                if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException(
+                        $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
+                }
+
+                var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration);
+
+                var pageSize = GetIntValueQueryString("pageSize", false) ?? defaultPageSizeForTestingJavaScriptIndex;
+                var collections = new HashSet<string>(compiledIndex.Maps.Keys);
+                var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
+                using (context.OpenReadTransaction())
+                {
+                    foreach(var collection in collections)
+                    {
+                        docsPerCollection.Add(collection, Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, pageSize).Select(d => new DynamicBlittableJson(d)).ToList());
+                    }
+                    
+                    //all maps
+                    foreach(var ListOfFunctions in compiledIndex.Maps)
+                    {
+                        //multi maps per collection
+                        foreach(var mapFunc in ListOfFunctions.Value)
+                        {
+                            var mapRes = mapFunc(docsPerCollection[ListOfFunctions.Key]); //TODO: need to populate Lucene Document here using the convertor
+                        }                    
+                    }
+                    //TODO: if this is just a map index we can return the Lucene documets if this is a map reduce index we need to aggregate the results
+                }
+            }
+        }
+
+        private static readonly int defaultPageSizeForTestingJavaScriptIndex = 10;
 
         private async Task<bool> SendDataOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveIndexingPerformanceCollector collector, MemoryStream ms, int timeToWait)
         {
