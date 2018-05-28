@@ -314,48 +314,22 @@ namespace RachisTests
 
                     }
                 };
-
-                var task = subscription.Run(b =>
+                var started = new AsyncManualResetEvent();
+                for (int i = 0; i < 10; i++)
                 {
-                    foreach (var item in b.Items)
+                    var task = subscription.Run(b =>
                     {
-                        var x = item.Result;
-                        try
-                        {
+                        started.Set();
+                        HandleSubscriptionBatch(nodesAmount, b, uniqueDocs, ref docsCount, uniqueRevisions, reachedMaxDocCountMre, ref revisionsCount);
+                    });
 
-                            if (x == null)
-                            {
+                    await Task.WhenAny(task, started.WaitAsync());
 
-                            }
-                            else if (x.Previous == null)
-                            {
-                                if (uniqueDocs.Add(x.Current.Id))
-                                    docsCount++;
-                                if (uniqueRevisions.Add(x.Current.Name))
-                                    revisionsCount++;
-                            }
-                            else if (x.Current == null)
-                            {
+                    if (started.IsSet)
+                        break;
 
-                            }
-                            else
-                            {
-                                if (x.Current.Age > x.Previous.Age)
-                                {
-                                    if (uniqueRevisions.Add(x.Current.Name))
-                                        revisionsCount++;
-                                }
-                            }
-
-                            if (docsCount == nodesAmount && revisionsCount == Math.Pow(nodesAmount, 2))
-                                reachedMaxDocCountMre.Set();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                    }
-                });
+                    Assert.IsType<SubscriptionDoesNotExistException>(task.Exception.InnerException);
+                }
 
                 expectedRevisionsCount = nodesAmount + 2;
                 continueMre.Set();
@@ -378,6 +352,45 @@ namespace RachisTests
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
 
+            }
+        }
+
+        private static void HandleSubscriptionBatch(int nodesAmount, SubscriptionBatch<Revision<User>> b, HashSet<string> uniqueDocs, ref int docsCount, HashSet<string> uniqueRevisions,
+            AsyncManualResetEvent reachedMaxDocCountMre, ref int revisionsCount)
+        {
+            foreach (var item in b.Items)
+            {
+                var x = item.Result;
+                try
+                {
+                    if (x == null)
+                    {
+                    }
+                    else if (x.Previous == null)
+                    {
+                        if (uniqueDocs.Add(x.Current.Id))
+                            docsCount++;
+                        if (uniqueRevisions.Add(x.Current.Name))
+                            revisionsCount++;
+                    }
+                    else if (x.Current == null)
+                    {
+                    }
+                    else
+                    {
+                        if (x.Current.Age > x.Previous.Age)
+                        {
+                            if (uniqueRevisions.Add(x.Current.Name))
+                                revisionsCount++;
+                        }
+                    }
+
+                    if (docsCount == nodesAmount && revisionsCount == Math.Pow(nodesAmount, 2))
+                        reachedMaxDocCountMre.Set();
+                }
+                catch (Exception)
+                {
+                }
             }
         }
 
