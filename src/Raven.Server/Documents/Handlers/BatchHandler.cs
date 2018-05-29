@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
                 if (command.IsClusterTransaction)
                 {
                     if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                        FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Cluster Transactions");
+                        FeaturesAvailabilityException.Throw("Cluster Transactions");
 
                     using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.ThrowFeaturesAvailabilyException("Cluster Transactions");
+                    FeaturesAvailabilityException.Throw("Cluster Transactions");
 
                 var global = DocumentsStorage.GetDatabaseChangeVector(context);
                 var dbGrpId = Database.DatabaseGroupId;
