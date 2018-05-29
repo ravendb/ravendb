@@ -579,6 +579,18 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, int start, int take, Reference<int> totalCount)
+        {
+            var listOfIds = new List<Slice>();
+            foreach (var id in ids)
+            {
+                Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice slice);
+                listOfIds.Add(slice);
+            }
+
+            return GetDocuments(context, listOfIds, start, take, totalCount);
+        }
+
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, int start, int take, Reference<int> totalCount)
         {
             foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
