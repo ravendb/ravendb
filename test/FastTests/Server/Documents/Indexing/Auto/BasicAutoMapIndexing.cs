@@ -1032,16 +1032,20 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
 
                 var index1 = await database.IndexStore.CreateIndex(definition1);
-                index1.SetLock(IndexLockMode.LockedIgnore);
-
+                
+                var exception =  Assert.Throws<NotSupportedException>(() => index1.SetLock(IndexLockMode.LockedIgnore));
+                Assert.StartsWith("'Lock Mode' can't be set for the Auto-Index", exception.Message);
+                
                 await database.IndexStore.CreateIndex(definition2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
-                index1.SetLock(IndexLockMode.LockedError);
+                exception =  Assert.Throws<NotSupportedException>(() => index1.SetLock(IndexLockMode.LockedError));
+                Assert.StartsWith("'Lock Mode' can't be set for the Auto-Index", exception.Message);
+                
                 var index2 = await database.IndexStore.CreateIndex(definition2);
+                
                 Assert.NotNull(index1);
                 Assert.NotNull(index2);
-
             }
         }
 
