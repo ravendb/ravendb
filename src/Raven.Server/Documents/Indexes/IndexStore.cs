@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -156,9 +157,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 var result = new AutoMapIndexDefinition(definition.Collection, mapFields);
 
-                if (definition.LockMode.HasValue)
-                    result.LockMode = definition.LockMode.Value;
-
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
 
@@ -178,8 +176,6 @@ namespace Raven.Server.Documents.Indexes
                     .ToArray();
 
                 var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields);
-                if (definition.LockMode.HasValue)
-                    result.LockMode = definition.LockMode.Value;
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -300,7 +296,6 @@ namespace Raven.Server.Documents.Indexes
             }
 
             CreateIndexInternal(index);
-
         }
 
         private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
@@ -1251,11 +1246,10 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            var faultyInMemoryIndex = index as FaultyInMemoryIndex;
-            if (faultyInMemoryIndex != null)
+            if (index.Type == IndexType.Faulty || index.Type.IsAuto())
             {
-                faultyInMemoryIndex.SetLock(mode); // this will throw proper exception
-                return;
+                index.SetLock(mode);  // this will throw proper exception
+                return; 
             }
 
             var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);

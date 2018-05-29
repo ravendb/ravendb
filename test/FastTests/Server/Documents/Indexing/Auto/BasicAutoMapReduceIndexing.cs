@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -257,10 +258,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
                 Assert.NotNull(index);
 
-                var task = Task.WhenAll(database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError),
-                    database.IndexStore.SetPriority(index.Name, IndexPriority.High));
+                var task1 = database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError);
+                var task2 = database.IndexStore.SetPriority(index.Name, IndexPriority.High);
                 index.SetState(IndexState.Disabled);
-                await task;
+                var task = Task.WhenAll(task1, task2);
+                
+                await Assert.ThrowsAsync<NotSupportedException>(async () => await task);
+                Assert.StartsWith("'Lock Mode' can't be set for the Auto-Index", task1.Exception.InnerException.Message);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
@@ -311,7 +315,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default, definition.GroupByFields["Location"].Indexing);
                 Assert.Equal(GroupByArrayBehavior.ByContent, definition.GroupByFields["Location"].GroupByArrayBehavior);
 
-                Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.High, indexes[1].Definition.Priority);
                 Assert.Equal(IndexState.Disabled, indexes[1].State);
             }
