@@ -1624,6 +1624,11 @@ namespace Raven.Server.Documents.Indexes
             if (Definition.LockMode == mode)
                 return;
 
+            if (Type.IsAuto())
+            {
+                throw new NotSupportedException($"'Lock Mode' can't be set for the Auto-Index '{Name}'.");
+            }
+            
             using (DrainRunningQueries())
             {
                 AssertIndexState(assertState: false);
