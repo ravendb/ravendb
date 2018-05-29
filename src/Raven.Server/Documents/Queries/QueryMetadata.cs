@@ -60,7 +60,16 @@ namespace Raven.Server.Documents.Queries
             Build(parameters);
 
             CanCache = cacheKey != 0;
+
+            IsOptimizedSortOnly = IsCollectionQuery == false
+                                  && WhereFields.Count == 0
+                                  && OrderBy?.Length == 1
+                                  && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
+                                  && HasExplanations == false
+                                  && HasHighlightings == false;
         }
+
+        public readonly bool IsOptimizedSortOnly;
 
         public readonly bool IsDistinct;
 
