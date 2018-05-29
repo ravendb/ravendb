@@ -774,6 +774,8 @@ namespace Raven.Server.Documents.Handlers
                 if (input.TryGet("Definition", out BlittableJsonReaderObject index) == false)
                     ThrowRequiredPropertyNameInRequest("Definition");
 
+                input.TryGet("Ids", out BlittableJsonReaderArray ids);
+
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(index);
 
                 if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
@@ -784,23 +786,40 @@ namespace Raven.Server.Documents.Handlers
                 if (indexDefinition.Type.IsJavaScript() == false)
                     throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
 
-                if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new ArgumentException(
-                        $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
-                }
-
                 var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration);
 
-                var pageSize = GetIntValueQueryString("pageSize", false) ?? defaultPageSizeForTestingJavaScriptIndex;
+                var inputSize = GetIntValueQueryString("inputSize", false) ?? defaultInputSizeForTestingJavaScriptIndex;
                 var collections = new HashSet<string>(compiledIndex.Maps.Keys);
                 var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
                 using (context.OpenReadTransaction())
                 {
-                    foreach (var collection in collections)
+                    if (ids == null)
                     {
-                        docsPerCollection.Add(collection,
-                            Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, pageSize).Select(d => new DynamicBlittableJson(d)).ToList());
+                        foreach (var collection in collections)
+                        {
+                            docsPerCollection.Add(collection,
+                                Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, inputSize).Select(d => new DynamicBlittableJson(d)).ToList());
+                        }
+                    }
+                    else
+                    {
+                        var listOfIds = ids.Select(x => x.ToString());
+                        var _ = new Reference<int>
+                        {
+                            Value = 0
+                        };
+                        var docs = Database.DocumentsStorage.GetDocuments(context, listOfIds, 0, int.MaxValue, _);
+                        foreach (var doc in docs)
+                        {
+                            if (doc.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionStr))
+                            {
+                                if (docsPerCollection.TryGetValue(collectionStr, out var listOfDocs) == false)
+                                {
+                                    listOfDocs = docsPerCollection[collectionStr] = new List<DynamicBlittableJson>();
+                                }
+                                listOfDocs.Add(new DynamicBlittableJson(doc));
+                            }                            
+                        }
                     }
 
                     var mapRes = new List<ObjectInstance>();
@@ -810,10 +829,13 @@ namespace Raven.Server.Documents.Handlers
                         //multi maps per collection
                         foreach (var mapFunc in ListOfFunctions.Value)
                         {
-                            foreach (var res in mapFunc(docsPerCollection[ListOfFunctions.Key]))
+                            if (docsPerCollection.TryGetValue(ListOfFunctions.Key, out var docs))
                             {
-                                mapRes.Add((ObjectInstance)res);
-                            }                                                       
+                                foreach (var res in mapFunc(docs))
+                                {
+                                    mapRes.Add((ObjectInstance)res);
+                                }
+                            }                                                                                 
                         }
                     }
                     var first = true;
@@ -874,7 +896,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static readonly int defaultPageSizeForTestingJavaScriptIndex = 10;
+        private static readonly int defaultInputSizeForTestingJavaScriptIndex = 10;
 
         private async Task<bool> SendDataOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveIndexingPerformanceCollector collector, MemoryStream ms, int timeToWait)
         {
