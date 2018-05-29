@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
             public override int Execute(DocumentsOperationContext context)
             {
                 if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    ThrowFeaturesAvailabilyException();
+                    FeaturesAvailabilityException.Throw("Counters");
 
                 foreach (var kvp in _dictionary)
                 {
@@ -160,6 +160,8 @@ namespace Raven.Server.Documents.Handlers
 
                             if (doc.TryGetMetadata(out metadata) == false)
                                 ThrowInvalidDocumentWithNoMetadata(doc);
+                            if (doc.Flags.HasFlag(DocumentFlags.Artificial))
+                                ThrowArtificialDocument(doc);
                         }
                         catch (DocumentConflictException)
                         {
@@ -174,11 +176,6 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 return CountersDetail.Counters.Count;
-            }
-
-            private static void ThrowInvalidBatchOperationType(CounterOperation operation)
-            {
-                throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
             }
 
             private void UpdateDocumentCounters(BlittableJsonReaderObject metadata, List<CounterOperation> countersOperations)
@@ -265,13 +262,24 @@ namespace Raven.Server.Documents.Handlers
             {
                 throw new CounterDocumentMissingException($"There is no document '{docId}' (or it has been deleted), cannot operate on counters of a missing document");
             }
+
+            private static void ThrowArtificialDocument(Document doc)
+            {
+                throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
+                                                    "Cannot put Counters on artificial documents.");
+            }
+
+            private static void ThrowInvalidBatchOperationType(CounterOperation operation)
+            {
+                throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
+            }
         }
 
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
             if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                ThrowFeaturesAvailabilyException();
+                FeaturesAvailabilityException.Throw("Counters");
 
             var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
@@ -374,11 +382,6 @@ namespace Raven.Server.Documents.Handlers
         {
             throw new InvalidOperationException("Cannot increment counters for " + doc + " because the document has no metadata. Should not happen ever");
         }
-        private static void ThrowFeaturesAvailabilyException()
-        {
-            throw new FeaturesAvailabilityException(
-                "Can not use Counters, as this is an experimental feature and the server does not support experimental features. " +
-                $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
-        }
+
     }
 }

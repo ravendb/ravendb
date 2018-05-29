@@ -140,6 +140,8 @@ namespace Raven.Server.Documents
                 var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
                 if (hasDoc == false)
                     throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
+                if (TableValueToFlags((int)DocumentsTable.Flags, ref tvr).HasFlag(DocumentFlags.Artificial))
+                    throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))

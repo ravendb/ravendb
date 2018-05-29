@@ -3,9 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -456,6 +456,70 @@ namespace SlowTests.Client.Counters
                     "Can not use Counters, as this is an experimental feature and the server does not support experimental features. " +
                     "Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
                     e.Message);
+            }
+        }
+
+        private class UsersByAge : AbstractIndexCreationTask<User, UsersByAgeResult>
+        {
+            public UsersByAge()
+            {
+                Map = users => from user in users
+                    select new
+                    {
+                        Age = user.Age,
+                        Count = 1
+                    };
+
+                Reduce = results => from result in results
+                    group result by result.Age  into g
+                    select new
+                    {
+                        Age = g.Key,
+                        Count = g.Sum(x => x.Count)
+                    };
+
+                OutputReduceToCollection = "UsersByAgeResult";
+            }
+        }
+
+        private class UsersByAgeResult
+        {
+            public int Age { get; set; }
+            public int Count { get; set; }
+        }
+
+        [Fact]
+        public void ShouldThrowOnAttemptToAddCounterToArtificailDoc()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new UsersByAge().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    session.Store(new User
+                    {
+                        Age = 21
+                    }, "users/1-A");
+                    session.Store(new User
+                    {
+                        Age = 32
+                    }, "users/2-A");
+                    session.Store(new User
+                    {
+                        Age = 32
+                    }, "users/3-A");
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var artificialDocs = session.Advanced.LoadStartingWith<UsersByAgeResult>("UsersByAgeResult");
+                    Assert.Equal(2, artificialDocs.Length);
+                    session.Advanced.Counters.Increment(artificialDocs[0], "Likes");
+
+                    var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    Assert.Contains("Cannot put Counters on artificial documents", ex.Message);
+                }
             }
         }
 
