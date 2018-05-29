@@ -153,7 +153,7 @@ namespace Raven.Client.Documents.Session
         void WhereEndsWith(string fieldName, object value);
 
         /// <summary>
-        ///   Matches fields where the value is between the specified start and end, exclusive
+        ///   Matches fields where the value is between the specified start and end, inclusive
         /// </summary>
         void WhereBetween(string fieldName, object start, object end, bool exact = false);
 
