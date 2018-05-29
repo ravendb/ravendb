@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using System;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -29,9 +30,9 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 staticIndex.LockMode = LockMode;
             }
 
-            if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
+            if (record.AutoIndexes.ContainsKey(IndexName))
             {
-                autoIndex.LockMode = LockMode;
+                throw new InvalidOperationException($"'Lock Mode' can't be set for the Auto-Index '{IndexName}'.");
             }
 
             return null;
