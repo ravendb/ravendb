@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (jsValue.IsNumber())
                 return jsValue.AsNumber();
             if (jsValue.IsDate())
-                return jsValue.AsDate();
+                return jsValue.AsDate().ToDateTime();
             //object wrapper is an object so it must come before the object
             if (jsValue is ObjectWrapper ow)
             {
