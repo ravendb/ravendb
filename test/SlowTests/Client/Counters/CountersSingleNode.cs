@@ -453,7 +453,7 @@ namespace SlowTests.Client.Counters
                 }
                 var e = Assert.Throws<RavenException>(() => store.Counters.Increment("users/1-A", "Likes"));
                 Assert.Contains(
-                    "Can not use Counters, as this is an experimental feature and the server does not support experimental features. " +
+                    "Can not use 'Counters', as this is an experimental feature and the server does not support experimental features. " +
                     "Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
                     e.Message);
             }
