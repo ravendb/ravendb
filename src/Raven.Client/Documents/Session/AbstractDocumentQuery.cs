@@ -751,7 +751,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         /// <summary>
-        ///   Matches fields where the value is between the specified start and end, exclusive
+        ///   Matches fields where the value is between the specified start and end, inclusive
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "start">The start.</param>
