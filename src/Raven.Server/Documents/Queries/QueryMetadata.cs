@@ -67,7 +67,8 @@ namespace Raven.Server.Documents.Queries
                                   && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
                                   && HasExplanations == false
                                   && HasHighlightings == false
-                                  && IsDistinct == false;
+                                  && IsDistinct == false
+                                  && IsGroupBy == false;
         }
 
         public readonly bool IsOptimizedSortOnly;
