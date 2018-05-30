@@ -31,7 +31,9 @@ namespace SlowTests.Issues
                 });
 
                 var users = new BlockingCollection<User>();
-                using (var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("test")))
+                using (var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("test") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var t = s.Run(batch =>
                     {

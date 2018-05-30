@@ -28,7 +28,9 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Subs1"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 using (var session = store.OpenSession())
                 {
@@ -65,7 +67,9 @@ namespace SlowTests.Client.Subscriptions
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
 
 
-                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
+                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 subscription.AfterAcknowledgment += batch =>
                 {

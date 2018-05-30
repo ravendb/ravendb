@@ -107,7 +107,8 @@ namespace SlowTests.Issues
 
             var subsWorker = store.Subscriptions.GetSubscriptionWorker<Shirt>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
             {
-                CloseWhenNoDocsLeft = true
+                CloseWhenNoDocsLeft = true,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             });
 
             var shirts = new List<string>();

@@ -67,7 +67,9 @@ namespace SlowTests.Client.Subscriptions
                 );
 
                 using (var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<PersonWithAddress>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<PersonWithAddress>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<PersonWithAddress>();
 

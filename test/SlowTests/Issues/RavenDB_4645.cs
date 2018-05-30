@@ -42,7 +42,8 @@ namespace SlowTests.Issues
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    MaxDocsPerBatch = 5
+                    MaxDocsPerBatch = 5,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
                 var docs = new List<dynamic>();

@@ -73,7 +73,9 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -149,7 +151,9 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -249,7 +253,9 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -337,7 +343,9 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();

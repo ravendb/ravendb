@@ -108,7 +108,9 @@ declare function areAllGrandchildsGrandchilds(doc){
 From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionID));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionID) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 var keys = new BlockingCollection<object>();
                 subscription.Run(x => x.Items.ForEach(i => keys.Add(i.Result)));

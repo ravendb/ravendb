@@ -20,7 +20,8 @@ namespace SlowTests.Client.Subscriptions
                 var subscriptionName = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subscriptionName)
                 {
-                    CloseWhenNoDocsLeft = true
+                    CloseWhenNoDocsLeft = true,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 await Assert.ThrowsAsync<SubscriptionClosedException>(() => subscription.Run(x => { }).WaitAsync(_reasonableWaitTime));
             }

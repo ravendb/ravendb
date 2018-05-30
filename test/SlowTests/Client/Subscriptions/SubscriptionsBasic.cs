@@ -37,7 +37,9 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal("from Users as doc", subscriptionDocuments[0].Query);
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker(
-                    new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName));
+                    new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName) {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    });
 
                 var docs = new CountdownEvent(1);
 
@@ -96,7 +98,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (var carolines = store.Subscriptions.GetSubscriptionWorker<PersonWithAddress>(new SubscriptionWorkerOptions(id)
                 {
-                    MaxDocsPerBatch = 5
+                    MaxDocsPerBatch = 5,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
                     var docs = new CountdownEvent(5);
@@ -131,7 +134,8 @@ namespace SlowTests.Client.Subscriptions
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
-                    MaxDocsPerBatch = 1
+                    MaxDocsPerBatch = 1,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
                     var users = new BlockingCollection<User>();
@@ -251,7 +255,8 @@ namespace SlowTests.Client.Subscriptions
                 var subscription = store.Subscriptions.GetSubscriptionWorker<Company>(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 1,
-                    IgnoreSubscriberErrors = true
+                    IgnoreSubscriberErrors = true,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
 
