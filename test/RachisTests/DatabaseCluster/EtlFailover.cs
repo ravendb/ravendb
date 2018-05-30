@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -13,6 +14,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Commands;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -194,18 +196,24 @@ namespace RachisTests.DatabaseCluster
                     session.Store(new User()
                     {
                         Name = "Joe Doe"
-                    }, "users/1");
+                    }, "users|");
                     session.SaveChanges();
                 }
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
+
+                // BEFORE THE FIX: this will change the database record and restart the ETL, which would fail the test.
+                // we leave this here to make sure that such issue in future will fail the test immediately 
+                await src.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration()));
+
                 var taskInfo = (OngoingTaskRavenEtlDetails)src.Maintenance.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
+                Assert.NotNull(taskInfo);
+                Assert.NotNull(taskInfo.DestinationUrl);
                 Assert.Equal(myTag, taskInfo.ResponsibleNode.NodeTag);
                 Assert.Null(taskInfo.Error);
                 Assert.Equal(OngoingTaskConnectionStatus.Active, taskInfo.TaskConnectionStatus);
-                Assert.NotNull(taskInfo.DestinationUrl);
+
                 etlDone.Reset();
                 DisposeServerAndWaitForFinishOfDisposal(destNode.Servers.Single(s => s.WebUrl == taskInfo.DestinationUrl));
 

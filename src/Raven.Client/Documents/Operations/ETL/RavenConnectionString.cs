@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
@@ -31,6 +32,28 @@ namespace Raven.Client.Documents.Operations.ETL
                 }
                 TopologyDiscoveryUrls[i] = TopologyDiscoveryUrls[i].Trim();
             }
+        }
+
+        public override bool IsEqual(ConnectionString connectionString)
+        {
+            if (connectionString is RavenConnectionString ravenConnection)
+            {
+                if (TopologyDiscoveryUrls.Length != ravenConnection.TopologyDiscoveryUrls.Length)
+                    return false;
+
+                foreach (var url in TopologyDiscoveryUrls)
+                {
+                    if (ravenConnection.TopologyDiscoveryUrls.Contains(url) == false)
+                        return false;
+                }
+
+                var isEqual = base.IsEqual(connectionString);
+                return isEqual &&
+                       Database == ravenConnection.Database &&
+                       TopologyDiscoveryUrls.SequenceEqual(ravenConnection.TopologyDiscoveryUrls);
+            }
+
+            return false;
         }
 
         public override DynamicJsonValue ToJson()
