@@ -44,7 +44,21 @@ namespace Raven.Client.Documents.Operations
             }
             catch (Exception e)
             {
-                _result.TrySetException(e);
+                await _lock.WaitAsync().ConfigureAwait(false);
+
+                try
+                {
+                    StopProcessing();
+                }
+                catch
+                {
+                    // ignoring
+                }
+                finally
+                {
+                    _result.TrySetException(e);
+                    _lock.Release();
+                }
             }
         }
 
@@ -72,8 +86,21 @@ namespace Raven.Client.Documents.Operations
             }
             catch (Exception e)
             {
-                StopProcessing();
-                _result.TrySetException(e);
+                await _lock.WaitAsync().ConfigureAwait(false);
+
+                try
+                {
+                    StopProcessing();
+                }
+                catch
+                {
+                    // ignoring
+                }
+                finally
+                {
+                    _result.TrySetException(e);
+                    _lock.Release();
+                }
             }
         }
 
