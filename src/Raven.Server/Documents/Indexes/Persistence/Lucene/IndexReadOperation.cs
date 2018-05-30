@@ -183,14 +183,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize)
         {
-            int FindDocument(bool isAcdending, int i, (int Index, StringIndex Item, IndexReader IndexReader)[] items)
+            int FindDocument(bool isAsc, int i, (int Index, StringIndex Item, IndexReader IndexReader)[] items)
             {
                 var innerDoc = -1;
                 var tpl = items[i];
                 var index = tpl.Index;
                 while (index < tpl.Item.reverseOrder.Length)
                 {
-                    if (isAcdending == false)
+                    if (isAsc == false)
                         index = tpl.Item.reverseOrder.Length - index - 1;
 
                     innerDoc = tpl.Item.reverseOrder[index];

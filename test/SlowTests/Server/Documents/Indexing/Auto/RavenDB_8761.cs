@@ -250,7 +250,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                                 @"
                             from Orders 
                             group by array(Lines[].Product), array(Lines[].Quantity) 
-                            order by Lines[].Quantity
+                            order by count()
                             select Lines[].Product as Products, Lines[].Quantity as Quantities, count()")
                             .WaitForNonStaleResults(),
 
