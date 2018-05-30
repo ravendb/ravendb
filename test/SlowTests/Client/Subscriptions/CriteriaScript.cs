@@ -57,7 +57,9 @@ namespace SlowTests.Client.Subscriptions
                         ChangeVector = lastChangeVector
                     };
                     var subsId = subscriptionManager.Create(subscriptionCreationParams);
-                    using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                    using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    }))
                     {
                         var list = new BlockingCollection<Thing>();
                         GC.KeepAlive(subscription.Run(x =>
@@ -132,7 +134,9 @@ select project(d)
                     };
 
                     var subsId = subscriptionManager.Create(subscriptionCreationParams);
-                    using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                    using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId){
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    }))
                     {
                         using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {

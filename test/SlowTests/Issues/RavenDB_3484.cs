@@ -42,7 +42,8 @@ namespace SlowTests.Issues
 
                     subscriptions[clientNumber] = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
-                        Strategy = SubscriptionOpeningStrategy.WaitForFree
+                        Strategy = SubscriptionOpeningStrategy.WaitForFree,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     });
 
                     subscriptions[clientNumber].AfterAcknowledgment += x =>

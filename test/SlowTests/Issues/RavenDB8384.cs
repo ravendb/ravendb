@@ -46,7 +46,10 @@ select {
 "
                 });
 
-                var sub = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id));
+                var sub = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
                 
                 bool done = await sub.Run(batch =>
                 {

@@ -25,7 +25,9 @@ namespace SlowTests.Client.Subscriptions
 
                 var subscriptionId = store.Subscriptions.Create<User>(options: subscriptionCreationParams);
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("get-users"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("get-users") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 var users = new BlockingCollection<User>();
 
@@ -59,7 +61,9 @@ namespace SlowTests.Client.Subscriptions
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 var users = new BlockingCollection<User>();
                 
@@ -83,7 +87,8 @@ namespace SlowTests.Client.Subscriptions
                 var concurrentSubscription = store.Subscriptions.GetSubscriptionWorker<User>(
                     new SubscriptionWorkerOptions(subscriptionId)
                     {
-                        Strategy = SubscriptionOpeningStrategy.TakeOver
+                        Strategy = SubscriptionOpeningStrategy.TakeOver,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     });
 
                 Exception threadException = null;
@@ -133,7 +138,9 @@ namespace SlowTests.Client.Subscriptions
             {
                 
                 var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
@@ -170,7 +177,9 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
                 var users = new BlockingCollection<User>();
                 using (var session = store.OpenSession())
                 {

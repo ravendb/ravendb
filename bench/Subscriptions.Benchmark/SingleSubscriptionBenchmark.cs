@@ -69,7 +69,8 @@ namespace Subscriptions.Benchmark
 
                 using (var subscription = _store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(_subscriptionName)
                 {
-                    Strategy = SubscriptionOpeningStrategy.WaitForFree
+                    Strategy = SubscriptionOpeningStrategy.WaitForFree,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
                     var tcs = new TaskCompletionSource<object>();
