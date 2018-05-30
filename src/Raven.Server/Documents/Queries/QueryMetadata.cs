@@ -129,6 +129,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasIncludeOrLoad;
 
+        public bool HasOrderByRandom;
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -570,6 +572,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
+                HasOrderByRandom = true;
+
                 if (me.Arguments == null || me.Arguments.Count == 0)
                     return new OrderByField(null, OrderByFieldType.Random, asc);
 
