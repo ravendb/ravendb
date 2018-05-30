@@ -171,14 +171,19 @@ namespace Raven.Server.Documents
                 }
                 return;
             }
+
+            RavenTransaction rtnCtx = null;
             try
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
-                using (serverContext.OpenReadTransaction())
                 using (docContext.OpenReadTransaction())
                 {
-                    ExecutePendingClusterTransactions(database, index, docContext, serverContext);
+                    rtnCtx = serverContext.OpenReadTransaction();
+                    var tasks = ExecutePendingClusterTransactions(database, index, docContext, serverContext);
+                    // ReSharper disable once AccessToDisposedClosure
+                    // we don't care about any exceptions in the continuation..
+                    Task.WhenAll(tasks).ContinueWith(t => { rtnCtx.Dispose(); });
                 }
             }
             catch (Exception e)
@@ -188,6 +193,7 @@ namespace Raven.Server.Documents
                 {
                     _logger.Info($"Failed enqueue cluster transaction command for database: '{databaseName}'", e);
                 }
+                rtnCtx?.Dispose();
             }
         }
 
