@@ -54,25 +54,32 @@ namespace Raven.Client.Documents.Operations
             var observable = changes.ForOperationId(_id);
             _subscription = observable.Subscribe(this);
             await observable.EnsureSubscribedNow().ConfigureAwait(false);
-            changes.ConnectionStatusChanged += ConnectionStatusEvent;
+            changes.ConnectionStatusChanged += OnConnectionStatusChanged;
+
             await FetchOperationStatus().ConfigureAwait(false);
         }
 
-        private async void ConnectionStatusEvent(object sender, EventArgs e)
+        private void OnConnectionStatusChanged(object sender, EventArgs e)
+        {
+            AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
+        }
+
+        private async Task OnConnectionStatusChangedAsync()
         {
             try
             {
                 await FetchOperationStatus().ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
-                // ignore
+                StopProcessing();
+                _result.TrySetException(e);
             }
         }
 
         protected virtual void StopProcessing()
         {
-            _changes().ConnectionStatusChanged -= ConnectionStatusEvent;
+            _changes().ConnectionStatusChanged -= OnConnectionStatusChanged;
             _subscription?.Dispose();
             _subscription = null;
         }
@@ -204,7 +211,7 @@ namespace Raven.Client.Documents.Operations
                     {
                         _lock.Release();
                     }
-                    
+
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
                 }
 
