@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries
             private readonly List<Slice> _ids;
             private readonly Sort _sort;
             private readonly MapQueryResultRetriever _resultsRetriever;
-            private string _startsWith;
+            private readonly string _startsWith;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
@@ -326,9 +326,8 @@ namespace Raven.Server.Documents.Queries
 
                 public Sort(string field)
                 {
-                    _random = field == null ?
-                        new Random() :
-                        new Random(field.GetHashCode());
+                    field = field ?? "RandomValue-" + Guid.NewGuid();
+                    _random = new Random(field.GetHashCode());
                 }
 
                 public int Next()

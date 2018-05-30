@@ -77,6 +77,7 @@ namespace Raven.Server.Documents.Queries
         public bool HasCmpXchg { get; private set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
+
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
 
         public readonly string CollectionName;
@@ -107,6 +108,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasIncludeOrLoad;
 
+        public bool HasOrderByRandom;
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -125,13 +128,13 @@ namespace Raven.Server.Documents.Queries
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
-            if (operatorType == null && 
+            if (operatorType == null &&
                 // to support startsWith(id(), ...)
                 string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
                 operatorType = OperatorType.Equal;
 
-            if (search || exact || spatial != null || isNegated || 
-                operatorType != OperatorType.Equal )
+            if (search || exact || spatial != null || isNegated ||
+                operatorType != OperatorType.Equal)
             {
                 IsCollectionQuery = false;
             }
@@ -463,6 +466,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
+                HasOrderByRandom = true;
+
                 if (me.Arguments == null || me.Arguments.Count == 0)
                     return new OrderByField(null, OrderByFieldType.Random, asc);
 
@@ -946,7 +951,7 @@ namespace Raven.Server.Documents.Queries
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
-            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) && 
+            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) &&
                 fe.Compound[0] != Query.From.Alias)
             {
                 if (fe.Compound.Count != 1)
