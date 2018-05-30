@@ -28,7 +28,8 @@ namespace SlowTests.Client.Subscriptions
                 var sn = await store.Subscriptions.CreateAsync<User>();
                 var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
                 {
-                    CloseWhenNoDocsLeft = true
+                    CloseWhenNoDocsLeft = true,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 
                 var st = worker.Run(x => { });
