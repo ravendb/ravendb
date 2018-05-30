@@ -31,25 +31,7 @@ namespace SlowTests.Voron.Bugs
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-                var timedout = true;
-                for (var retry = 0; retry < 3; retry++)
-                {
-                    try
-                    {
-                        store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
-                    }
-                    catch (TimeoutException)
-                    {
-                        continue;
-                    }
-
-                    // sockets might be on closing progress and server might still try respond on previous subscription.
-                    // 'OnNext' - might not be called again in such situation so we need to retry sending. RavenDB-11207, RavenDB-11137
-                    timedout = false;
-                    break;
-                }
-
-                Assert.False(timedout);
+                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
 
                 WaitForIndexing(store);
 
@@ -75,6 +57,7 @@ namespace SlowTests.Voron.Bugs
                 for (int i = 0; i < 3; i++)
                 {
                     store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
+
                 }
 
                 try
@@ -90,6 +73,7 @@ namespace SlowTests.Voron.Bugs
                 try
                 {
                     store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
+
                 }
                 catch (TimeoutException)
                 {
