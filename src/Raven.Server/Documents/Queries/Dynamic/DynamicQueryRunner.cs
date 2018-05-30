@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var index = await MatchIndex(query, true, null, token.Token);
 
-            if (existingResultEtag.HasValue)
+            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
                 if (etag == existingResultEtag)
