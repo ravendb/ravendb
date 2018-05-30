@@ -16,9 +16,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RachisTests.DatabaseCluster.ClusterDatabaseMaintenance())
+                    using (var test = new RachisTests.DatabaseCluster.EtlFailover())
                     {
-                        await test.MoveToPassiveWhenRefusedConnectionFromAllNodes();
+                        await test.EtlDestinationFailoverBetweenNodesWithinSameCluster();
                     }
                 }
                 catch (Exception e)
