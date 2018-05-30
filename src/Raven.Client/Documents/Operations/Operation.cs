@@ -60,7 +60,14 @@ namespace Raven.Client.Documents.Operations
 
         private async void ConnectionStatusEvent(object sender, EventArgs e)
         {
-            await FetchOperationStatus().ConfigureAwait(false);
+            try
+            {
+                await FetchOperationStatus().ConfigureAwait(false);
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         protected virtual void StopProcessing()
