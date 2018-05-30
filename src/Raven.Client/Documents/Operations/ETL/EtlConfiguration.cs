@@ -101,17 +101,36 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(Name)] = Name,
                 [nameof(ConnectionStringName)] = ConnectionStringName,
                 [nameof(MentorNode)] = MentorNode,
-                [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => new DynamicJsonValue
-                {
-                    [nameof(x.Name)] = x.Name,
-                    [nameof(x.Script)] = x.Script,
-                    [nameof(x.Collections)] = new DynamicJsonArray(x.Collections),
-                    [nameof(x.ApplyToAllDocuments)] = x.ApplyToAllDocuments,
-                    [nameof(x.Disabled)] = x.Disabled
-                }))
+                [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => x.ToJson()))
             };
 
             return result;
+        }
+
+        public virtual bool IsEqual(EtlConfiguration<T> config)
+        {
+            if (config == null)
+                return false;
+
+            if (config.Transforms.Count != Transforms.Count)
+                return false;
+
+            var localTransforms = Transforms.OrderBy(x => x.Name);
+            var remoteTransforms = config.Transforms.OrderBy(x => x.Name);
+
+            using (var localEnum = localTransforms.GetEnumerator())
+            using (var remoteEnum = remoteTransforms.GetEnumerator())
+            {
+                while(localEnum.MoveNext() && remoteEnum.MoveNext())
+                {
+                    if (localEnum.Current.IsEqual(remoteEnum.Current) == false)
+                        return false;
+                }
+            }
+
+            return config.ConnectionStringName == ConnectionStringName &&
+                   config.Name == Name &&
+                   config.MentorNode == MentorNode;
         }
 
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
@@ -59,6 +60,40 @@ namespace Raven.Client.Documents.Operations.ETL
             }
 
             return errors.Count == 0;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(Script)] = Script,
+                [nameof(Collections)] = new DynamicJsonArray(Collections),
+                [nameof(ApplyToAllDocuments)] = ApplyToAllDocuments,
+                [nameof(Disabled)] = Disabled
+            };
+        }
+
+        public bool IsEqual(Transformation transformation)
+        {
+            if (transformation == null)
+                return false;
+
+            if (transformation.Collections.Count != Collections.Count)
+                return false;
+
+            var collections = new List<string>(Collections);
+
+            foreach (var collection in transformation.Collections)
+            {
+                collections.Remove(collection);
+            }
+
+            return collections.Count == 0 &&
+                   transformation.Name == Name &&
+                   transformation.Script == Script &&
+                   transformation.ApplyToAllDocuments == ApplyToAllDocuments &&
+                   transformation.Disabled == Disabled;
         }
 
         public string[] GetCollectionsFromScript()

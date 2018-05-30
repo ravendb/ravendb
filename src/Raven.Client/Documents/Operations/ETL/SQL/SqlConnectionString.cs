@@ -16,6 +16,16 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                 errors.Add($"{nameof(ConnectionString)} cannot be empty");
         }
 
+        public override bool IsEqual(ConnectionString connectionString)
+        {
+            if (connectionString is SqlConnectionString sqlConnection)
+            {
+                return base.IsEqual(connectionString) && ConnectionString == sqlConnection.ConnectionString;
+            }
+
+            return false;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
