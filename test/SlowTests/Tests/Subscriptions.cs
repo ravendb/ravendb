@@ -30,7 +30,10 @@ namespace SlowTests.Tests
                 };
 
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
 
                     var bc = new BlockingCollection<Thing>();

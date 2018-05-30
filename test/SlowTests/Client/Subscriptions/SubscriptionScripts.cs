@@ -59,7 +59,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -128,7 +130,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -211,7 +215,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var nodes = new BlockingCollection<Node>();
 
@@ -278,7 +284,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -385,7 +393,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -464,7 +474,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -539,7 +551,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -592,7 +606,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -646,7 +662,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -700,7 +718,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -753,7 +773,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -806,7 +828,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -868,7 +892,9 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                        }))
                 {
                     var users = new BlockingCollection<SupportCall>();
 

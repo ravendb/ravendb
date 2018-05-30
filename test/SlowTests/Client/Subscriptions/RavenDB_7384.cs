@@ -29,7 +29,9 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Subs1"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 var results = new List<User>();
                 var mre = new AsyncManualResetEvent();
@@ -80,7 +82,9 @@ namespace SlowTests.Client.Subscriptions
                     Query = "from Users as u select {Name:'David'}"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 var results = new List<User>();
                 var mre = new AsyncManualResetEvent();
@@ -131,7 +135,9 @@ namespace SlowTests.Client.Subscriptions
 
 
                 // reconnecting and making sure that the new script is in power
-                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
+                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 subscriptionTask = subscription.Run(batch =>
                 {

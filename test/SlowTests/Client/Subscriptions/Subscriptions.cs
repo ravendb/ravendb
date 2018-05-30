@@ -51,7 +51,9 @@ namespace SlowTests.Client.Subscriptions
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var list = new BlockingCollection<Thing>();
                     GC.KeepAlive(subscription.Run(u =>
@@ -90,7 +92,7 @@ namespace SlowTests.Client.Subscriptions
                 using (
                     var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                     {
-                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(20)
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
@@ -156,7 +158,9 @@ namespace SlowTests.Client.Subscriptions
                 await CreateDocuments(store, 5);
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (
-                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    }))
                 {
 
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
@@ -241,7 +245,9 @@ namespace SlowTests.Client.Subscriptions
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
-                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    }))
                 {
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
@@ -283,7 +289,7 @@ namespace SlowTests.Client.Subscriptions
                     using (var takingOverSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(
                         new SubscriptionWorkerOptions(subsId)
                         {
-
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
                             Strategy = SubscriptionOpeningStrategy.TakeOver
                         }))
                     {

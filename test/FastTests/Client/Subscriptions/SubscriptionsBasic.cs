@@ -52,7 +52,9 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions("1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions("1") {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
                 var ex = await Assert.ThrowsAsync<SubscriptionDoesNotExistException>(() => subscription.Run(x => { }));
             }
         }
@@ -63,7 +65,10 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)                    
+                }))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -78,7 +83,8 @@ namespace FastTests.Client.Subscriptions
 
                     using (var secondSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                     {
-                        Strategy = SubscriptionOpeningStrategy.OpenIfFree
+                        Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                     {
                         Assert.True(await Assert.ThrowsAsync<SubscriptionInUseException>(() => secondSubscription.Run(x => { })).WaitAsync(_reasonableWaitTime));
@@ -102,7 +108,10 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 var id = store.Subscriptions.Create<User>();
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
 
                     var keys = new BlockingCollection<string>();
@@ -143,7 +152,10 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     var names = new BlockingCollection<string>();
                     
@@ -208,7 +220,8 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create<Company>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    MaxDocsPerBatch = 25
+                    MaxDocsPerBatch = 25,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }
                 ))
                 {
@@ -254,7 +267,8 @@ namespace FastTests.Client.Subscriptions
 
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    MaxDocsPerBatch = 31
+                    MaxDocsPerBatch = 31,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
                     var docs = new CountdownEvent(100);
@@ -287,7 +301,8 @@ namespace FastTests.Client.Subscriptions
 
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    MaxDocsPerBatch = 15
+                    MaxDocsPerBatch = 15,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
 
@@ -333,7 +348,10 @@ namespace FastTests.Client.Subscriptions
                     {
                         Query = @"from Users where Age <0"
                     });
-                    using (var filteredUsersSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(filteredUsersId)))
+                    using (var filteredUsersSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(filteredUsersId)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    }))
                     {
                         var usersDocs = new CountdownEvent(1);
                         
@@ -460,7 +478,8 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    Strategy = SubscriptionOpeningStrategy.OpenIfFree
+                    Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 var mre = new AsyncManualResetEvent();
                 PutUserDoc(store);
@@ -473,7 +492,8 @@ namespace FastTests.Client.Subscriptions
 
                 throwingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    Strategy = SubscriptionOpeningStrategy.OpenIfFree
+                    Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 var subscriptionTask = throwingSubscriptionWorker.Run(x => { });
 
@@ -484,7 +504,10 @@ namespace FastTests.Client.Subscriptions
 
                 store.Subscriptions.DropConnection(id);
 
-                notThrowingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id));
+                notThrowingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
 
                 t = notThrowingSubscriptionWorker.Run(x =>
                 {
@@ -519,7 +542,10 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
 
                     var docs = new BlockingCollection<User>();
@@ -545,7 +571,10 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
                 {
                     PutUserDoc(store);
                     var subscriptionTask = subscription.Run(x => throw new Exception("Fake exception"));
@@ -567,7 +596,8 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    IgnoreSubscriberErrors = true
+                    IgnoreSubscriberErrors = true,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
                     var docs = new BlockingCollection<User>();
