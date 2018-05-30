@@ -15,9 +15,6 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart()
         {
-            var timeout = 60;
-            if (PlatformDetails.RunningOnPosix)
-                timeout = 6000;
             using (var store = GetDocumentStore(new Options
             {
                 Path = NewDataPath()
@@ -27,14 +24,14 @@ namespace SlowTests.Voron.Bugs
 
                 for (int i = 0; i < 3; i++)
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(timeout));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
                 }
 
                 WaitForIndexing(store);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(timeout));
+                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
 
                 WaitForIndexing(store);
 
@@ -59,13 +56,13 @@ namespace SlowTests.Voron.Bugs
 
                 for (int i = 0; i < 3; i++)
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(300));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
 
                 }
 
                 try
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(300));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
                 }
                 catch (TimeoutException)
                 {
@@ -75,7 +72,7 @@ namespace SlowTests.Voron.Bugs
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
                 try
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(300));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
 
                 }
                 catch (TimeoutException)
