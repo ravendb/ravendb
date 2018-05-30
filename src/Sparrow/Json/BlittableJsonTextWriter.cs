@@ -258,14 +258,17 @@ namespace Sparrow.Json
             var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
 
             // We ensure our buffer will have enough space to deal with the whole string.
-            int bufferSize = 2 * numberOfEscapeSequences + size + 1;
+
+            const int NumberOfQuotesChars = 2; // for " "
+
+            int bufferSize = 2 * numberOfEscapeSequences + size + NumberOfQuotesChars;
             if (bufferSize >= JsonOperationContext.ManagedPinnedBuffer.Size)
             {
                 UnlikelyWriteLargeString(strBuffer, size, numberOfEscapeSequences, escapeSequencePos); // OK, do it the slow way. 
                 return;
             }
 
-            EnsureBuffer(size + 2);
+            EnsureBuffer(size + NumberOfQuotesChars);
             _buffer[_pos++] = Quote;
 
             if (numberOfEscapeSequences == 0)
@@ -396,7 +399,7 @@ namespace Sparrow.Json
                 return;
 
 WriteLargeCompressedString:
-                UnlikelyWriteCompressedString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
+                UnlikelyWriteLargeString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
             }
             finally
             {
@@ -405,7 +408,7 @@ WriteLargeCompressedString:
             }
         }
 
-        private void UnlikelyWriteCompressedString(int numberOfEscapeSequences, byte* strSrcBuffer, int escapeSequencePos, byte* strBuffer, int size)
+        private void UnlikelyWriteLargeString(int numberOfEscapeSequences, byte* strSrcBuffer, int escapeSequencePos, byte* strBuffer, int size)
         {
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
