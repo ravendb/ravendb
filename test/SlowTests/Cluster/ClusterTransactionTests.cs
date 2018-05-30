@@ -64,7 +64,6 @@ namespace SlowTests.Cluster
             var file = Path.GetTempFileName();
 
             var leader = await CreateRaftClusterAndGetLeader(3);
-
             var user1 = new User()
             {
                 Name = "Karmel"
@@ -78,7 +77,7 @@ namespace SlowTests.Cluster
                 Name = "Indych"
             };
 
-            using (var store = GetDocumentStore(new Options { Server = leader }))
+            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
             {
                 // we kill one server so we would not clean the pending cluster transactions.
                 await DisposeAndRemoveServer(Servers.First(s => s != leader));
