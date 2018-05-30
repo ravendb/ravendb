@@ -54,12 +54,18 @@ namespace Raven.Client.Documents.Operations
             var observable = changes.ForOperationId(_id);
             _subscription = observable.Subscribe(this);
             await observable.EnsureSubscribedNow().ConfigureAwait(false);
+            changes.ConnectionStatusChanged += ConnectionStatusEvent;
+            await FetchOperationStatus().ConfigureAwait(false);
+        }
 
+        private async void ConnectionStatusEvent(object sender, EventArgs e)
+        {
             await FetchOperationStatus().ConfigureAwait(false);
         }
 
         protected virtual void StopProcessing()
         {
+            _changes().ConnectionStatusChanged -= ConnectionStatusEvent;
             _subscription?.Dispose();
             _subscription = null;
         }
