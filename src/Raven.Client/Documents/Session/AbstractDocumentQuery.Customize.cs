@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
         {
             RandomOrdering();
+            NoCaching();
             return this;
         }
 
