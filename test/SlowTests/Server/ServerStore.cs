@@ -18,7 +18,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate());
+                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate(), (string)null, X509KeyStorageFlags.MachineKeySet);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -50,7 +50,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate());
+                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate(), (string)null, X509KeyStorageFlags.MachineKeySet);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

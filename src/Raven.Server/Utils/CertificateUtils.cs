@@ -27,10 +27,8 @@ namespace Raven.Server.Utils
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log);
-            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes);
-            log?.AppendLine($"Successfully loaded X509Certificate2 using certBytes with length: {certBytes.Length} ");
+            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey.Verify();
-            log?.AppendLine($"Successfully verified chain for X509Certificate2: {Environment.NewLine}{selfSignedCertificateBasedOnPrivateKey}");
             return certBytes;
         }
 
@@ -87,8 +85,8 @@ namespace Raven.Server.Utils
             store.Save(memoryStream, Array.Empty<char>(), GetSeededSecureRandom());
             certBytes = memoryStream.ToArray();
 
-            var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
-            RegisterCertificateInOperatingSystem(new X509Certificate2(cert.Export(X509ContentType.Cert)));
+            var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            RegisterCertificateInOperatingSystem(new X509Certificate2(cert.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet));
             return cert;
         }
 
@@ -115,7 +113,7 @@ namespace Raven.Server.Utils
                 -1,
                 out var certBytes);
 
-            return new X509Certificate2(certBytes);
+            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
         }
 
         public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
@@ -194,13 +192,11 @@ namespace Raven.Server.Utils
             store.SetKeyEntry(friendlyName, keyEntry, new[] { certificateEntry });
             var stream = new MemoryStream();
             store.Save(stream, new char[0], random);
-            log?.AppendLine($"stream.Length = {stream.Length}");
-            log?.AppendLine($"stream.Position = {stream.Position}");
 
             certBytes = stream.ToArray();
 
             log?.AppendLine($"certBytes.Length = {certBytes.Length}");
-            log?.AppendLine($"certBytes in base64 = {Convert.ToBase64String(certBytes)}");
+            log?.AppendLine($"cert in base64 = {Convert.ToBase64String(certBytes)}");
         }
 
         public static void CreateCertificateAuthorityCertificate(string commonNameValue, 
