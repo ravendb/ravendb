@@ -94,9 +94,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
+            if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false)
+            {
+                foreach (var result in QuerySortOnly(query, retriever, position, pageSize))
+                    yield return result;
+
+                yield break;
+            }
+
+            var returnedResults = 0;
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, getSpatialField, documentsContext);
-            var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -170,6 +178,102 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (isDistinctCount)
                     totalResults.Value = returnedResults;
+            }
+        }
+
+        private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize)
+        {
+            int FindDocument(bool isAsc, int i, (int Index, StringIndex Item, IndexReader IndexReader)[] items)
+            {
+                var innerDoc = -1;
+                var tpl = items[i];
+                var index = tpl.Index;
+                while (index < tpl.Item.reverseOrder.Length)
+                {
+                    if (isAsc == false)
+                        index = tpl.Item.reverseOrder.Length - index - 1;
+
+                    innerDoc = tpl.Item.reverseOrder[index];
+                    if (tpl.IndexReader.HasDeletions && tpl.IndexReader.IsDeleted(innerDoc))
+                    {
+                        innerDoc = -1;
+                        index = ++tpl.Index;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                return innerDoc;
+            }
+
+            var returnedResults = 0;
+
+            var order = query.Metadata.OrderBy[0];
+            var isAscending = order.Ascending;
+            var fieldName = order.Name;
+
+            var subReaders = _searcher.IndexReader.GetSequentialSubReaders();
+            var indexes = new(int Index, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
+            for (var i = 0; i < subReaders.Length; i++)
+            {
+                var subReader = subReaders[i];
+                var index = FieldCache_Fields.DEFAULT.GetStringIndex(subReader, fieldName, _state);
+                indexes[i] = (0, index, subReader);
+            }
+
+            while (true)
+            {
+                var idx = -1;
+                var doc = -1;
+                string docTerm = null;
+
+                for (var i = 0; i < indexes.Length; i++)
+                {
+                    var tpl = indexes[i];
+
+                    var innerDoc = FindDocument(isAscending, i, indexes);
+
+                    if (innerDoc == -1)
+                        continue;
+
+                    var termIndex = tpl.Item.order[innerDoc];
+                    var term = tpl.Item.lookup[termIndex];
+
+                    if (idx == -1)
+                    {
+                        idx = i;
+                        docTerm = term;
+                        doc = innerDoc;
+                        continue;
+                    }
+
+                    var compare = string.Compare(docTerm, term, StringComparison.Ordinal);
+                    if (isAscending && compare > 0 || isAscending == false && compare < 0)
+                    {
+                        idx = i;
+                        docTerm = term;
+                        doc = innerDoc;
+                    }
+                }
+
+                if (idx == -1)
+                    yield break;
+
+                indexes[idx].Index++;
+
+                if (start-- > 0)
+                    continue;
+
+                var document = indexes[idx].IndexReader.Document(doc, _state);
+                var result = retriever.Get(document, 1.0f, _state);
+
+                returnedResults++;
+
+                yield return (result, null, null);
+
+                if (returnedResults == pageSize)
+                    yield break;
             }
         }
 

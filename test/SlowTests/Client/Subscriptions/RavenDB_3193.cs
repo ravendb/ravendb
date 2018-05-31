@@ -30,7 +30,8 @@ namespace SlowTests.Client.Subscriptions
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    MaxDocsPerBatch = 31
+                    MaxDocsPerBatch = 31,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
                 var docs = new CountdownEvent(100);

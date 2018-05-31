@@ -44,7 +44,21 @@ namespace Raven.Client.Documents.Operations
             }
             catch (Exception e)
             {
-                _result.TrySetException(e);
+                await _lock.WaitAsync().ConfigureAwait(false);
+
+                try
+                {
+                    StopProcessing();
+                }
+                catch
+                {
+                    // ignoring
+                }
+                finally
+                {
+                    _result.TrySetException(e);
+                    _lock.Release();
+                }
             }
         }
 
@@ -54,12 +68,45 @@ namespace Raven.Client.Documents.Operations
             var observable = changes.ForOperationId(_id);
             _subscription = observable.Subscribe(this);
             await observable.EnsureSubscribedNow().ConfigureAwait(false);
+            changes.ConnectionStatusChanged += OnConnectionStatusChanged;
 
             await FetchOperationStatus().ConfigureAwait(false);
         }
 
+        private void OnConnectionStatusChanged(object sender, EventArgs e)
+        {
+            AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
+        }
+
+        private async Task OnConnectionStatusChangedAsync()
+        {
+            try
+            {
+                await FetchOperationStatus().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await _lock.WaitAsync().ConfigureAwait(false);
+
+                try
+                {
+                    StopProcessing();
+                }
+                catch
+                {
+                    // ignoring
+                }
+                finally
+                {
+                    _result.TrySetException(e);
+                    _lock.Release();
+                }
+            }
+        }
+
         protected virtual void StopProcessing()
         {
+            _changes().ConnectionStatusChanged -= OnConnectionStatusChanged;
             _subscription?.Dispose();
             _subscription = null;
         }
@@ -191,7 +238,7 @@ namespace Raven.Client.Documents.Operations
                     {
                         _lock.Release();
                     }
-                    
+
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
                 }
 

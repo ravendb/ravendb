@@ -516,7 +516,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                cert = args.Count == 3 ? new X509Certificate2(path, args[2]) : new X509Certificate2(path);
+                cert = args.Count == 3 ? new X509Certificate2(path, args[2], X509KeyStorageFlags.MachineKeySet) : new X509Certificate2(path, (string)null, X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
@@ -607,7 +607,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = password != null ? new X509Certificate2(certBytes, password) : new X509Certificate2(certBytes);
+                cert = password != null ? new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet) : new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
@@ -759,7 +759,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = new X509Certificate2(path, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+                cert = new X509Certificate2(path, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
@@ -1111,7 +1111,7 @@ namespace Raven.Server.Utils.Cli
             _reader = textReader;
             _consoleColoring = consoleColoring;
 
-            var parentProcessId = server.Configuration.Testing.ParentProcessId;
+            var parentProcessId = server.Configuration.Embedded.ParentProcessId;
             if (parentProcessId != null)
             {
                 void OnParentProcessExit(object o, EventArgs e)

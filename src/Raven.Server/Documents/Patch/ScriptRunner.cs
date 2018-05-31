@@ -145,6 +145,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
                 ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnPutDocument));
                 ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CompareExchange));
+                ScriptEngine.SetValue("counter", new ClrFunctionInstance(ScriptEngine, GetCounter));
 
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, GetMetadata));
 
@@ -596,6 +597,40 @@ namespace Raven.Server.Documents.Patch
                 return LoadDocumentInternal(args[0].AsString());
             }
 
+            private JsValue GetCounter(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+
+                if (args.Length < 2 || args.Length > 3)
+                    throw new InvalidOperationException($"there is no overload of method 'counter' that takes {args.Length} arguments");
+
+                var signature = args.Length == 2 ? "counter(doc, name)" : "counter(doc, name, raw)";
+
+                if (args[0].IsObject() == false)                
+                    throw new InvalidOperationException($"{signature}: 'doc' must be an object argument");
+                
+                if (!(args[0].AsObject() is BlittableObjectInstance doc))                    
+                    throw new InvalidOperationException($"{signature}: 'doc' is missing 'Id' property");
+                    
+                var id = doc.DocumentId;
+
+                if (args[1].IsString() == false)
+                    throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+
+                var name = args[1].AsString();
+
+                var raw = false;
+                if (args.Length == 3)
+                {
+                    if (args[2].IsBoolean() == false)
+                        throw new InvalidOperationException("counter(alias, name, raw): 'raw' must be a boolean argument");
+                    raw = args[2].AsBoolean();
+                }
+
+                return GetCounterInternal(id, name, raw);
+            }
+
+
             private JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
@@ -746,6 +781,32 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
+            private JsValue GetCounterInternal(string docId, string name, bool raw)
+            {
+                if (string.IsNullOrEmpty(docId) || string.IsNullOrEmpty(name))
+                {
+                    return JsValue.Undefined;
+                }
+
+                if (raw == false)
+                {
+                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, docId, name) ?? JsValue.Null;
+                }
+
+                var djv = new DynamicJsonValue();
+                foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, docId, name))
+                {
+                    djv[cv] = val;
+                }
+
+                if (djv.Properties.Count == 0)
+                {
+                    return JsValue.Null;
+                }
+
+                return new BlittableObjectInstance(ScriptEngine, null, Clone(_docsCtx.ReadObject(djv, docId), _docsCtx), null, null);                
+            }
+
             public void DisposeClonedDocuments()
             {
                 foreach (var disposable in _disposables)
@@ -841,33 +902,33 @@ namespace Raven.Server.Documents.Patch
                 return jsArray;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin, JsonOperationContext context)
+            {
+                if (ReadOnly)
+                    return origin;
+
+                var noCache = origin.NoCache;
+                origin.NoCache = true;
+                // RavenDB-8286
+                // here we need to make sure that we aren't sending a value to 
+                // the js engine that might be modified by the actions of the js engine
+                // for example, calling put() might cause the original data to change 
+                // because we defrag the data that we looked at. We are handling this by
+                // ensuring that we have our own, safe, copy.
+                var cloned = origin.Clone(context);
+                cloned.NoCache = true;
+                _disposables.Add(cloned);
+
+                origin.NoCache = noCache;
+                return cloned;
+            }
             private JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
             {
-                BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
-                {
-                    if (ReadOnly)
-                        return origin;
-
-                    var noCache = origin.NoCache;
-                    origin.NoCache = true;
-                    // RavenDB-8286
-                    // here we need to make sure that we aren't sending a value to 
-                    // the js engine that might be modified by the actions of the js engine
-                    // for example, calling put() mgiht cause the original data to change 
-                    // because we defrag the data that we looked at. We are handling this by
-                    // ensuring that we have our own, safe, copy.
-                    var cloned = origin.Clone(context);
-                    cloned.NoCache = true;
-                    _disposables.Add(cloned);
-
-                    origin.NoCache = noCache;
-                    return cloned;
-                }
-                                
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
-                    return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified, d.ChangeVector)
+                    return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d.Id, d.LastModified, d.ChangeVector)
                     {
                         LuceneDocument = t.Item2,
                         LuceneState = t.Item3
@@ -875,11 +936,11 @@ namespace Raven.Server.Documents.Patch
                 }
                 if (o is Document doc)
                 {                    
-                    return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);                    
+                    return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified);                    
                 }
                 if (o is DocumentConflict dc)
                 {
-                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);                    
+                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified);                    
                 }
 
                 if (o is BlittableJsonReaderObject json)

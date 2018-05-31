@@ -3,6 +3,7 @@ using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -23,6 +24,29 @@ namespace Raven.Server.Documents.Queries.Results
                 return DocumentsStorage.Get(ctx, id);
             // can happen during some debug endpoints that should never load a document
             return null;
+        }
+
+        protected override long? GetCounter(string docId, string name)
+        {
+            if (DocumentsStorage != null &&
+                _context is DocumentsOperationContext ctx)
+                return DocumentsStorage.CountersStorage.GetCounterValue(ctx, docId, name);
+            return null;
+        }
+
+        protected override DynamicJsonValue GetCounterRaw(string docId, string name)
+        {
+            if (DocumentsStorage == null || !(_context is DocumentsOperationContext ctx))            
+                return null;
+
+            var djv = new DynamicJsonValue();
+
+            foreach (var (cv, val) in DocumentsStorage.CountersStorage.GetCounterValues(ctx, docId, name))
+            {
+                djv[cv] = val;
+            }
+
+            return djv;
         }
 
         protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)

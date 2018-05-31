@@ -104,5 +104,24 @@ namespace Raven.Server.Documents.Indexes.Static
             jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
             return true;
         }
+
+        [ThreadStatic]
+        private static JsValue[] _oneItemArray;
+
+        public static object StringifyObject(JsValue jsValue)
+        {
+            if (_oneItemArray == null)
+                _oneItemArray = new JsValue[1];
+            _oneItemArray[0] = jsValue;
+            try
+            {
+                // json string of the object
+                return jsValue.AsObject().Engine.Json.Stringify(JsValue.Null, _oneItemArray);
+            }
+            finally
+            {
+                _oneItemArray[0] = null;
+            }
+        }
     }
 }

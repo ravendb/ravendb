@@ -31,6 +31,14 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 [nameof(Name)] = Name
             };
         }
+
+        public virtual bool IsEqual(ConnectionString connectionString)
+        {
+            if (connectionString == null)
+                return false;
+
+            return Name == connectionString.Name && Type == connectionString.Type;
+        }
     }
 
     public enum ConnectionStringType

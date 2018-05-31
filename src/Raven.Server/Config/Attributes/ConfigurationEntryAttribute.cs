@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Config.Attributes
 {
-    [AttributeUsage(AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
     public class ConfigurationEntryAttribute : Attribute
     {
         public ConfigurationEntryAttribute(string key, ConfigurationEntryScope scope, [CallerLineNumber]int order = 0, bool setDefaultValueIfNeeded = true) // the default order is the order of declaration in a configuration class

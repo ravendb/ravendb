@@ -1300,7 +1300,7 @@ namespace Raven.Server.Commercial
             if (lastResponsibleNode == null)
                 return null;
 
-            if (databaseTopology.AllNodes.Count() > 1 &&
+            if (databaseTopology.Count > 1 &&
                 databaseTopology.Members.Contains(lastResponsibleNode) == false)
             {
                 var taskName = databaseTask.GetTaskName();

@@ -60,7 +60,17 @@ namespace Raven.Server.Documents.Queries
             Build(parameters);
 
             CanCache = cacheKey != 0;
+
+            IsOptimizedSortOnly = IsCollectionQuery == false
+                                  && WhereFields.Count == 0
+                                  && OrderBy?.Length == 1
+                                  && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
+                                  && HasExplanations == false
+                                  && HasHighlightings == false
+                                  && IsDistinct == false;
         }
+
+        public readonly bool IsOptimizedSortOnly;
 
         public readonly bool IsDistinct;
 
@@ -829,6 +839,28 @@ namespace Raven.Server.Documents.Queries
                         return CreateSuggest(me, alias, parameters);
                     }
 
+                    if (string.Equals("counter", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (HasFacet)
+                            ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
+
+                        if (me.Arguments.Count == 0 || me.Arguments.Count > 3)
+                            ThrowInvalidArgumentsToCounter(parameters , me.Arguments.Count);
+
+                        var args = new SelectField[me.Arguments.Count];
+                        for (int i = 0; i < me.Arguments.Count; i++)
+                        {
+                            if (me.Arguments[i] is ValueExpression vt)
+                                args[i] = SelectField.CreateValue(vt.Token, alias, vt.Value);
+                            else if (me.Arguments[i] is FieldExpression ft)
+                                args[i] = GetSelectValue(null, ft, parameters);
+
+                        }
+
+                        return SelectField.CreateCounterField(alias, args);
+
+                    }
+
                     if (IsGroupBy == false)
                         ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
 
@@ -1274,6 +1306,13 @@ namespace Raven.Server.Documents.Queries
         private void ThrowSuggestMethodMustHaveTwoOrThreeArguments(int count, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method suggest() must contain two or three arguments but '{count}' were specified", QueryText, parameters);
+        }
+
+        private void ThrowInvalidArgumentsToCounter(BlittableJsonReaderObject parameters, int argsCount)
+        {
+            throw new InvalidQueryException($"There is no overload of method 'counter' that takes {argsCount} arguments. " +
+                                            "Supported overloads are : counter(name), counter(doc, name), counter(doc, name, raw).", QueryText, parameters);
+
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor

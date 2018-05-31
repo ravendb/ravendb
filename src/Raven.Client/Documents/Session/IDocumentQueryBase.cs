@@ -203,7 +203,7 @@ namespace Raven.Client.Documents.Session
         TSelf WhereLucene(string fieldName, string whereClause, bool exact);
 
         /// <summary>
-        ///     Matches fields where the value is between the specified start and end, exclusive
+        ///     Matches fields where the value is between the specified start and end, inclusive 
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="start">The start.</param>
@@ -211,7 +211,7 @@ namespace Raven.Client.Documents.Session
         TSelf WhereBetween(string fieldName, object start, object end, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is between the specified start and end, exclusive
+        ///     Matches fields where the value is between the specified start and end, inclusive
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="start">The start.</param>

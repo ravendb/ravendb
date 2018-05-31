@@ -59,7 +59,8 @@ namespace SubscriptionFailover.Benchmark
 
             var subscripiton = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
             {
-                MaxDocsPerBatch = 1024
+                MaxDocsPerBatch = 1024,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             });
             var counter = 0;
             var tcs = new TaskCompletionSource<bool>();
@@ -152,7 +153,8 @@ namespace SubscriptionFailover.Benchmark
 
                 var subscripiton = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
-                    MaxDocsPerBatch = 1024
+                    MaxDocsPerBatch = 1024,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 var counter = 0;
                 var tcs = new TaskCompletionSource<bool>();

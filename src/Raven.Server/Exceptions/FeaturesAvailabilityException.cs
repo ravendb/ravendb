@@ -19,10 +19,10 @@ namespace Raven.Server.Exceptions
         {
         }
 
-        public static void ThrowFeaturesAvailabilyException(string feature)
+        public static void Throw(string feature)
         {
             throw new FeaturesAvailabilityException(
-                $"Can not use '{feature}', as this is an experimental feature and the Database does not support experimental features. " +
+                $"Can not use '{feature}', as this is an experimental feature and the server does not support experimental features. " +
                 $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
     }

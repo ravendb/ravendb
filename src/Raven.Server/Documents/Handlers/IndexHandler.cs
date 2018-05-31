@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Jint.Native;
+using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -15,8 +17,11 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Extensions;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -759,6 +764,139 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
 
         }
+
+        [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser)]
+        public async Task TestJavaScriptIndex()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "TestJavaScriptIndex");
+                if (input.TryGet("Definition", out BlittableJsonReaderObject index) == false)
+                    ThrowRequiredPropertyNameInRequest("Definition");
+
+                input.TryGet("Ids", out BlittableJsonReaderArray ids);
+
+                var indexDefinition = JsonDeserializationServer.IndexDefinition(index);
+
+                if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                    throw new ArgumentException("Index must have a 'Maps' fields");
+
+                indexDefinition.Type = indexDefinition.DetectStaticIndexType();
+
+                if (indexDefinition.Type.IsJavaScript() == false)
+                    throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
+
+                var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration);
+
+                var inputSize = GetIntValueQueryString("inputSize", false) ?? defaultInputSizeForTestingJavaScriptIndex;
+                var collections = new HashSet<string>(compiledIndex.Maps.Keys);
+                var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
+                using (context.OpenReadTransaction())
+                {
+                    if (ids == null)
+                    {
+                        foreach (var collection in collections)
+                        {
+                            docsPerCollection.Add(collection,
+                                Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, inputSize).Select(d => new DynamicBlittableJson(d)).ToList());
+                        }
+                    }
+                    else
+                    {
+                        var listOfIds = ids.Select(x => x.ToString());
+                        var _ = new Reference<int>
+                        {
+                            Value = 0
+                        };
+                        var docs = Database.DocumentsStorage.GetDocuments(context, listOfIds, 0, int.MaxValue, _);
+                        foreach (var doc in docs)
+                        {
+                            if (doc.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionStr))
+                            {
+                                if (docsPerCollection.TryGetValue(collectionStr, out var listOfDocs) == false)
+                                {
+                                    listOfDocs = docsPerCollection[collectionStr] = new List<DynamicBlittableJson>();
+                                }
+                                listOfDocs.Add(new DynamicBlittableJson(doc));
+                            }                            
+                        }
+                    }
+
+                    var mapRes = new List<ObjectInstance>();
+                    //all maps
+                    foreach (var ListOfFunctions in compiledIndex.Maps)
+                    {
+                        //multi maps per collection
+                        foreach (var mapFunc in ListOfFunctions.Value)
+                        {
+                            if (docsPerCollection.TryGetValue(ListOfFunctions.Key, out var docs))
+                            {
+                                foreach (var res in mapFunc(docs))
+                                {
+                                    mapRes.Add((ObjectInstance)res);
+                                }
+                            }                                                                                 
+                        }
+                    }
+                    var first = true;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("MapResults");
+                            writer.WriteStartArray();
+                            foreach (var mapResult in mapRes)
+                            {
+                                if (JavaScriptIndexUtils.StringifyObject(mapResult) is JsString jsStr)
+                                {
+                                    if (first == false)
+                                    {
+                                        writer.WriteComma();
+                                    }
+                                    writer.WriteString(jsStr.ToString());
+                                    first = false;
+                                }
+                                
+                            }
+                            writer.WriteEndArray();
+                        if (indexDefinition.Reduce != null)
+                        {
+                            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
+                            {
+                                compiledIndex.SetBufferPoolForTestingPurposes(bufferPool);
+                                compiledIndex.SetAllocatorForTestingPurposes(context.Allocator);
+                                first = true;
+                                writer.WritePropertyName("ReduceResults");
+                                writer.WriteStartArray();
+                                
+                                var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine,mr))));
+                                
+                                foreach (JsValue reduceResult in reduceResults)
+                                {
+                                    if (JavaScriptIndexUtils.StringifyObject(reduceResult) is JsString jsStr)
+                                    {
+                                        if (first == false)
+                                        {
+                                            writer.WriteComma();
+                                        }
+
+                                        writer.WriteString(jsStr.ToString());
+                                        first = false;
+                                    }
+
+                                }
+                            }
+
+                            writer.WriteEndArray();
+                        }
+                        writer.WriteEndObject();
+                    }                    
+
+                }
+            }
+        }
+
+        private static readonly int defaultInputSizeForTestingJavaScriptIndex = 10;
 
         private async Task<bool> SendDataOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveIndexingPerformanceCollector collector, MemoryStream ms, int timeToWait)
         {

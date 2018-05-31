@@ -58,6 +58,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract Document LoadDocument(string id);
 
+        protected abstract long? GetCounter(string docId, string name);
+
+        protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
+
         protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string lowerId, IState state)
         {
             Document doc = null;
@@ -115,7 +119,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     continue;
 
-                if (TryGetValue(fieldToFetch, doc, input, state, out var fieldVal))
+                if (TryGetValue(fieldToFetch, doc, input, state, out var key, out var fieldVal))
                 {
                     if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
                     {
@@ -130,7 +134,7 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                     if (fieldVal is List<object> list)
                         fieldVal = new DynamicJsonArray(list);
-                    result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
+                    result[key] = fieldVal;
                 }
             }
 
@@ -151,7 +155,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var fieldVal))
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal))
                 {
                     if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
                     {
@@ -179,7 +183,7 @@ namespace Raven.Server.Documents.Queries.Results
                             newDoc.IndexScore = score;
                         }
 
-                        else
+                        else 
                             ThrowInvalidQueryBodyResponse(fieldVal);
 
                         return newDoc;
@@ -199,7 +203,7 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                     if (fieldVal is Document d2)
                         fieldVal = d2.Data;
-                    var key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+
                     result[key] = fieldVal;
                 }
             }
@@ -314,8 +318,10 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out object value)
+        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out string key, out object value)
         {
+            key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+            
             if (fieldToFetch.QueryField == null)
             {
                 return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
@@ -326,7 +332,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out key, out args[i]);
                     if (ReferenceEquals(args[i], document))
                     {
                         args[i] = Tuple.Create(document, luceneDoc, state);
@@ -334,11 +340,42 @@ namespace Raven.Server.Documents.Queries.Results
                 }
 
                 args[args.Length - 1] = _query.QueryParameters;
-
+              
                 value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     args);
+                
+                return true;
+            }
+
+            if (fieldToFetch.QueryField.IsCounter)
+            {
+                string name;
+                if (fieldToFetch.QueryField.IsParameter)
+                {
+                    if (_query.QueryParameters == null)
+                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", _query.Query, null);
+
+                    if (_query.QueryParameters.TryGetMember(fieldToFetch.QueryField.Name, out var nameObject) == false)
+                        throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.Name}' was not provided", _query.Query, _query.QueryParameters);
+
+                    name = nameObject.ToString();
+                    key = fieldToFetch.QueryField.Alias ?? name;
+                }
+                else
+                {
+                    name = fieldToFetch.Name;
+                }
+                if (fieldToFetch.QueryField.FunctionArgs != null) 
+                {
+                    value = GetCounterRaw(document.Id, name);
+                }
+                else
+                {
+                    value = GetCounter(document.Id, name);
+                }
+
                 return true;
             }
 

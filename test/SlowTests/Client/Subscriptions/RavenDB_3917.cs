@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
@@ -28,7 +29,10 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(),  store2.Smuggler);
-                var subscription = store2.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId));
+                var subscription = store2.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                });
                 await Assert.ThrowsAsync<SubscriptionDoesNotExistException>(() => subscription.Run(x => { }));
             }
         }
