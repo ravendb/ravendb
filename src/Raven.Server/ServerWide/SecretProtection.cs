@@ -521,9 +521,9 @@ namespace Raven.Server.ServerWide
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(rawBytes);
+                collection.Import(rawBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             else
-                collection.Import(rawBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+                collection.Import(rawBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
             using (var userIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, 
                 System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
