@@ -217,7 +217,7 @@ namespace Raven.Server.Commercial
                 return false;
             }
 
-            var cert = new X509Certificate2(cache.Cert);
+            var cert = new X509Certificate2(cache.Cert, (string)null, X509KeyStorageFlags.MachineKeySet);
 
             var sanNames = cert.Extensions["2.5.29.17"];
 

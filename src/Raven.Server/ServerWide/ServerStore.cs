@@ -802,7 +802,7 @@ namespace Raven.Server.ServerWide
                             }
 
                             var bytesToSave = Convert.FromBase64String(certBase64);
-                            var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
+                            var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
                             {
@@ -873,7 +873,7 @@ namespace Raven.Server.ServerWide
                             if (cert.TryGet("Certificate", out string base64Cert) == false)
                                 throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate property");
 
-                            var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert));
+                            var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
 
                             var now = Server.Time.GetUtcNow();
                             if (certificate.NotBefore.ToUniversalTime() > now)
@@ -1933,7 +1933,7 @@ namespace Raven.Server.ServerWide
                 //This is ugly, but we have to deal with the TRUSTED_ISSUERS and need to register the server and client certificates 
                 //properly so the SSL on Windows 7 and Linux will handle that until we upgrade
 
-                CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(certificate.Export(X509ContentType.Cert)));
+                CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(certificate.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet));
 
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1942,7 +1942,7 @@ namespace Raven.Server.ServerWide
                     {
                         var def = JsonDeserializationServer.CertificateDefinition(item.Value);
 
-                        var cert = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                        var cert = new X509Certificate2(Convert.FromBase64String(def.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
                         CertificateUtils.RegisterCertificateInOperatingSystem(cert);
                     }
 
@@ -1952,7 +1952,7 @@ namespace Raven.Server.ServerWide
                         using (var localCertificate = Cluster.GetLocalState(context, localCertKey))
                         {
                             var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                            var cert = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                            var cert = new X509Certificate2(Convert.FromBase64String(def.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
                             CertificateUtils.RegisterCertificateInOperatingSystem(cert);
                         }
                     }

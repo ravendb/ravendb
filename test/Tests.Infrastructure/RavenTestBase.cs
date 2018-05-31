@@ -505,39 +505,13 @@ namespace FastTests
                 exceptionAggregator.Execute(store.Dispose);
             CreatedStores.Clear();
         }
-
-        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath,
-            RavenServer.CertificateHolder serverCertificateHolder,
-            Dictionary<string, DatabaseAccess> permissions,
-            SecurityClearance clearance,
-            RavenServer server = null)
-        {
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out var clietnCertBytes);
-            var serverCertificate = new X509Certificate2(serverCertPath);
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = serverCertificate,
-                Server = server
-            }))
-            {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new PutClientCertificateOperation("RavenTestsClient", clientCertificate, permissions, clearance)
-                        .GetCommand(store.Conventions, context);
-
-                    requestExecutor.Execute(command, context);
-                }
-            }
-            return new X509Certificate2(clietnCertBytes);
-        }
-
+        
         protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = new X509Certificate2(serverCertPath);
+                serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
             }
             catch (CryptographicException e)
             {
@@ -567,7 +541,7 @@ namespace FastTests
                         {
                             var destination = new MemoryStream();
                             stream.CopyTo(destination);
-                            clientCertificate = new X509Certificate2(destination.ToArray());
+                            clientCertificate = new X509Certificate2(destination.ToArray(), (string)null, X509KeyStorageFlags.MachineKeySet);
                         }
                     }
                 }

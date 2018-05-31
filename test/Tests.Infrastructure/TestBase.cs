@@ -144,15 +144,12 @@ namespace FastTests
 
                 try
                 {
-                    new X509Certificate2(certBytes);
+                    new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {
                     throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
-
-                if (certBytes.Length == 0)
-                    throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
                 
                 string tempFileName = null;
                 try

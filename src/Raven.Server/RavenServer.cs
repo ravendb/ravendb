@@ -556,7 +556,7 @@ namespace Raven.Server
                 X509Certificate2 newCertificate;
                 try
                 {
-                    newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+                    newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {
@@ -1295,7 +1295,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(Convert.FromBase64String(newCertHolder.CertificateForClients)));
+                        CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(Convert.FromBase64String(newCertHolder.CertificateForClients), (string)null, X509KeyStorageFlags.MachineKeySet));
                     }
                     catch (Exception e)
                     {
