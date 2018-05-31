@@ -681,7 +681,7 @@ namespace Raven.Server.Web.Authentication
 
                             foreach (var cert in clusterNodes)
                             {
-                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate));
+                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
                                 collection.Import(x509Certificate2.Export(X509ContentType.Cert));
                             }
                         }
