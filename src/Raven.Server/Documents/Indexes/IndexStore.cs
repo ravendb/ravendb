@@ -948,6 +948,30 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 index = Index.Open(indexPath, _documentDatabase);
+
+                var differences = IndexDefinitionCompareDifferences.None;
+
+                if (staticIndexDefinition != null)
+                {
+                    if (staticIndexDefinition.LockMode != null && index.Definition.LockMode != staticIndexDefinition.LockMode)
+                        differences |= IndexDefinitionCompareDifferences.LockMode;
+
+                    if (staticIndexDefinition.Priority != null && index.Definition.Priority != staticIndexDefinition.Priority)
+                        differences |= IndexDefinitionCompareDifferences.Priority;
+                }
+                else if (autoIndexDefinition != null)
+                {
+                    if (autoIndexDefinition.Priority != index.Definition.Priority)
+                        differences |= IndexDefinitionCompareDifferences.Priority;
+                }
+
+                if (differences != IndexDefinitionCompareDifferences.None)
+                {
+                    // database record has different lock mode / priority setting than persisted locally
+
+                    UpdateStaticIndexLockModeAndPriority(staticIndexDefinition, index, differences);
+                }
+
                 index.Start();
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started {index.Name} from {indexPath}");
