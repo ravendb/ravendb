@@ -276,12 +276,12 @@ namespace Raven.Server.Documents.ETL
             ea.ThrowIfNeeded();
         }
 
-        private bool IsMyEtlTask<T, TConnectionString>(T etlTask)
+        private bool IsMyEtlTask<T, TConnectionString>(DatabaseRecord record, T etlTask)
             where TConnectionString : ConnectionString
             where T : EtlConfiguration<TConnectionString>
         {
             var processState = GetProcessState(etlTask.Transforms, _database, etlTask.Name);
-            var whoseTaskIsIt = _database.WhoseTaskIsIt(_databaseRecord.Topology, etlTask, processState);
+            var whoseTaskIsIt = _database.WhoseTaskIsIt(record.Topology, etlTask, processState);
             return whoseTaskIsIt == _serverStore.NodeTag;
         }
 
@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.RavenEtls)
             {
-                if (IsMyEtlTask<RavenEtlConfiguration, RavenConnectionString>(config))
+                if (IsMyEtlTask<RavenEtlConfiguration, RavenConnectionString>(record, config))
                 {
                     myRavenEtl.Add(config);
                 }
@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.SqlEtls)
             {
-                if (IsMyEtlTask<SqlEtlConfiguration, SqlConnectionString>(config))
+                if (IsMyEtlTask<SqlEtlConfiguration, SqlConnectionString>(record, config))
                 {
                     mySqlEtl.Add(config);
                 }
