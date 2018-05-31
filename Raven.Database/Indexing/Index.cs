@@ -205,6 +205,7 @@ namespace Raven.Database.Indexing
         [CLSCompliant(false)]
         public volatile bool IsMapIndexingInProgress;
         private DateTime _indexCreationTime;
+        internal bool FailedToSetIndexStateToError;
 
         protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, string operation, int itemsCount)
         {
@@ -2260,7 +2261,16 @@ namespace Raven.Database.Indexing
             {
                 try
                 {
-                    context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, priority));
+                    try
+                    {
+                        context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, priority));
+                    }
+                    catch (Exception)
+                    {
+                        // can happen if we get a concurrency exception when trying to set it
+                        // we still want to proceed here with marking the index as errored
+                        FailedToSetIndexStateToError = true;
+                    }
                     Priority = priority;
 
                     context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
