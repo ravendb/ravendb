@@ -346,12 +346,29 @@ namespace Raven.Database.Indexing
                         }
                         continue;
                     }
+
                     if (IsIndexStale(indexesStat, actions, isIdle, localFoundOnlyIdleWork) == false)
                         continue;
 
                     var index = context.IndexStorage.GetIndexInstance(indexesStat.Id);
                     if (index == null) // not there
                         continue;
+
+                    if (index.FailedToSetIndexStateToError)
+                    {
+                        try
+                        {
+                            actions.Indexing.SetIndexPriority(index.indexId, IndexingPriority.Error);
+                        }
+                        catch (Exception e)
+                        {
+                            if(Log.IsWarnEnabled)
+                            {
+                                Log.WarnException($"Failed to mark index {index.PublicName} as errored.", e);
+                            }
+                        }
+                        continue;
+                    }
 
                     if (ShouldSkipIndex(index))
                         continue;
