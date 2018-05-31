@@ -3,6 +3,7 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -47,6 +48,23 @@ namespace Raven.Server.Documents.Queries.Results
         protected override Document LoadDocument(string id)
         {
             return DocumentsStorage.Get(_context, id);
+        }
+
+        protected override long? GetCounter(string docId, string name)
+        {
+            return DocumentsStorage.CountersStorage.GetCounterValue(_context, docId, name);
+        }
+
+        protected override DynamicJsonValue GetCounterRaw(string docId, string name)
+        {
+            var djv = new DynamicJsonValue();
+
+            foreach (var (cv, val) in DocumentsStorage.CountersStorage.GetCounterValues(_context, docId, name))
+            {
+                djv[cv] = val;
+            }
+
+            return djv;
         }
     }
 }
