@@ -1332,9 +1332,11 @@ namespace Raven.Server.ServerWide
                             {
 
                             }
-                        });
+                        });                    
 
-                    exceptionAggregator.Execute(() => _shutdownNotification.Dispose());
+                    exceptionAggregator.Execute(_shutdownNotification.Dispose);
+
+                    exceptionAggregator.Execute(_timer.Dispose);
 
                     exceptionAggregator.ThrowIfNeeded();
                 }

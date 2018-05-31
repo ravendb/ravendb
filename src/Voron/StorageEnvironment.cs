@@ -38,6 +38,13 @@ namespace Voron
 
     public class StorageEnvironment : IDisposable
     {
+        internal class IndirectReference
+        {
+            public StorageEnvironment Owner;
+        }
+
+        internal IndirectReference SelfReference = new IndirectReference();
+
         public void QueueForSyncDataFile()
         {
             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeSyncEnvironment(this);
@@ -107,6 +114,7 @@ namespace Voron
         {
             try
             {
+                SelfReference.Owner = this;
                 _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
                 _options = options;
                 _dataPager = options.DataPager;
@@ -455,13 +463,14 @@ namespace Voron
 
         public void Dispose()
         {
+
             if (_envDispose.IsSet)
                 return; // already disposed
 
             _cancellationTokenSource.Cancel();
             try
             {
-                GlobalFlushingBehavior.GlobalFlusher.Value.RemoveFromFlushQueues(this);
+                SelfReference.Owner = null;
 
                 if (_journal != null) // error during ctor
                 {
