@@ -205,6 +205,11 @@ namespace FastTests
                 {
                     UseNewLocalServer();
                     Servers.Add(_localServer);
+                    _doNotReuseServer = false;
+
+                    if (_globalServer == null)
+                        _globalServer = _localServer;
+
                     return _localServer;
                 }
 
@@ -269,6 +274,8 @@ namespace FastTests
         public void UseNewLocalServer(string customConfigPath = null)
         {
             _localServer?.Dispose();
+            if (_localServer!= null)
+                Servers.Remove(_localServer);
             _localServer = GetNewServer(_customServerSettings, customConfigPath: customConfigPath);
         }
 
