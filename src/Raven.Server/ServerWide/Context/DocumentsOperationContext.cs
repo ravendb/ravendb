@@ -42,9 +42,9 @@ namespace Raven.Server.ServerWide.Context
             return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Changes);
         }
 
-        protected override DocumentsTransaction CreateWriteTransaction()
+        protected override DocumentsTransaction CreateWriteTransaction(TimeSpan? timeout = null)
         {
-            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator), _documentDatabase.Changes);
+            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator, timeout), _documentDatabase.Changes);
 
             CurrentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
 

@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Index _index;
 
-        private readonly TransactionContextPool _contextPool;
+        internal readonly TransactionContextPool _contextPool;
 
         public DocumentDatabase DocumentDatabase { get; }
 
@@ -98,35 +98,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void WriteDefinition(IndexDefinitionBase indexDefinition)
+        public void WriteDefinition(IndexDefinitionBase indexDefinition, TimeSpan? timeout = null)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
+            using (var tx = context.OpenWriteTransaction(timeout))
             {
                 indexDefinition.Persist(context, _environment.Options);
 
                 tx.Commit();
-            }
-        }
-
-        public void WritePriority(IndexPriority priority)
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var oldPriority = _index.Definition.Priority;
-                try
-                {
-                    _index.Definition.Priority = priority;
-                    _index.Definition.Persist(context, _environment.Options);
-
-                    tx.Commit();
-                }
-                catch (Exception)
-                {
-                    _index.Definition.Priority = oldPriority;
-                    throw;
-                }
             }
         }
 
@@ -152,27 +131,6 @@ namespace Raven.Server.Documents.Indexes
                 return IndexState.Normal;
 
             return (IndexState)state.Reader.ReadLittleEndianInt32();
-        }
-
-        public void WriteLock(IndexLockMode mode)
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var oldLockMode = _index.Definition.LockMode;
-                try
-                {
-                    _index.Definition.LockMode = mode;
-                    _index.Definition.Persist(context, _environment.Options);
-
-                    tx.Commit();
-                }
-                catch (Exception)
-                {
-                    _index.Definition.LockMode = oldLockMode;
-                    throw;
-                }
-            }
         }
 
         public unsafe List<IndexingError> ReadErrors()
