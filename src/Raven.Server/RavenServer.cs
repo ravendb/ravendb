@@ -137,7 +137,7 @@ namespace Raven.Server
 
             sp.Restart();
             ListenToPipes().IgnoreUnobservedExceptions();
-            Router = new RequestRouter(RouteScanner.Scan(), this);
+            Router = new RequestRouter(RouteScanner.AllRoutes, this);
 
             try
             {
@@ -1542,6 +1542,7 @@ namespace Raven.Server
                 });
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => AfterDisposal?.Invoke());
+                ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
 
                 ea.ThrowIfNeeded();
             }
