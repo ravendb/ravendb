@@ -11,16 +11,8 @@ namespace Raven.Server.ServerWide
 {
     public static class DebugInfoPackageUtils
     {
-        public static readonly IReadOnlyList<RouteInformation> Routes =
-            RouteScanner.Scan(attr =>
-            {
-                var isDebugEndpoint = attr.IsDebugInformationEndpoint && attr.Path.Contains("info-package") == false;
-
-                if (isDebugEndpoint && attr.IsPosixSpecificEndpoint && PlatformDetails.RunningOnPosix == false)
-                    return false;
-
-                return isDebugEndpoint;
-            }).Values.ToList();
+        public static readonly IReadOnlyList<RouteInformation> Routes = RouteScanner.DebugRoutes;
+           
 
         public static string GetOutputPathFromRouteInformation(RouteInformation route, string prefix)
         {

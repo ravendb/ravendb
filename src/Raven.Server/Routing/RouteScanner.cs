@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Sparrow.Platform;
 
 namespace Raven.Server.Routing
 {
@@ -17,6 +18,20 @@ namespace Raven.Server.Routing
     /// </summary>
     public class RouteScanner
     {
+        public readonly static List<RouteInformation> DebugRoutes = Scan(attr =>
+            {
+                var isDebugEndpoint = attr.IsDebugInformationEndpoint && attr.Path.Contains("info-package") == false;
+
+                if (isDebugEndpoint && attr.IsPosixSpecificEndpoint && PlatformDetails.RunningOnPosix == false)
+                    return false;
+
+                return isDebugEndpoint;
+            }).Values.ToList();
+
+
+        public readonly static Dictionary<string, RouteInformation> AllRoutes = Scan();
+
+
         public static Dictionary<string, RouteInformation> Scan(Func<RavenActionAttribute, bool> predicate = null)
         {
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
