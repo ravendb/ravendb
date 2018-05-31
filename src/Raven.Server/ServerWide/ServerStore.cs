@@ -793,7 +793,7 @@ namespace Raven.Server.ServerWide
                             }
 
                             var bytesToSave = Convert.FromBase64String(certBase64);
-                            var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
+                            var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
                             {
@@ -864,7 +864,7 @@ namespace Raven.Server.ServerWide
                             if (cert.TryGet("Certificate", out string base64Cert) == false)
                                 throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate property");
 
-                            var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert));
+                            var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
 
                             var now = Server.Time.GetUtcNow();
                             if (certificate.NotBefore.ToUniversalTime() > now)

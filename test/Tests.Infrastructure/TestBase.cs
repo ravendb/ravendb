@@ -145,7 +145,7 @@ namespace FastTests
 
                 try
                 {
-                    new X509Certificate2(certBytes);
+                    new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {
