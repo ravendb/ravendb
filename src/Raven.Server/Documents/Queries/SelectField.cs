@@ -43,6 +43,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsSuggest;
 
+        public bool IsCounter;
+
         protected SelectField()
         {
 
@@ -101,6 +103,27 @@ namespace Raven.Server.Documents.Queries
                 Name = new QueryFieldName(methodName, false),
                 Function = methodName,
                 FunctionArgs = args
+            };
+        }
+
+        public static SelectField CreateCounterField(string alias, SelectField[] args)
+        {
+            var nameIndex = args.Length == 1 ? 0 : 1;
+
+            SelectField[] functionArgs = null;
+            if (args.Length == 3)
+            {
+                if (args[2].Value is bool raw && raw)
+                    functionArgs = new SelectField[0];
+            }
+
+            return new SelectField
+            {
+                Alias = alias,
+                Name = new QueryFieldName(args[nameIndex].Value.ToString(), false),
+                FunctionArgs = functionArgs,
+                IsCounter = true,
+                IsParameter = args[nameIndex].ValueTokenType == AST.ValueTokenType.Parameter
             };
         }
 

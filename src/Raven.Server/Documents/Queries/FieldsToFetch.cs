@@ -79,6 +79,18 @@ namespace Raven.Server.Documents.Queries
                 return fieldToFetch;
             }
 
+            if (selectField.IsCounter)
+            {
+                var fieldToFetch = new FieldToFetch(selectField.Name, selectField, selectField.Alias ?? selectField.Name,
+                    canExtractFromIndex: false, isDocumentId: false);
+                if (selectField.FunctionArgs != null)
+                {
+                    fieldToFetch.FunctionArgs = new FieldToFetch[0];
+                }
+
+                return fieldToFetch;
+            }
+
             if (selectFieldName == null)
             {
                 if (selectField.IsGroupByKey == false)
@@ -165,8 +177,8 @@ namespace Raven.Server.Documents.Queries
             singleFieldNoAlias = selectFields.Length == 1 &&
                                  ((selectFields[0].Alias == null &&
                                    selectFields[0].Function != null) ||
-                                   (selectFields[0].Name == string.Empty &&
-                                    selectFields[0].Function == null)
+                                  (selectFields[0].Name == string.Empty &&
+                                   selectFields[0].Function == null)
                                  );
             for (var i = 0; i < selectFields.Length; i++)
             {
