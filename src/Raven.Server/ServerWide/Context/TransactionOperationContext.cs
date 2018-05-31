@@ -21,9 +21,9 @@ namespace Raven.Server.ServerWide.Context
             return new RavenTransaction(_environment.ReadTransaction(PersistentContext, Allocator));
         }
 
-        protected override RavenTransaction CreateWriteTransaction()
+        protected override RavenTransaction CreateWriteTransaction(TimeSpan? timeout = null)
         {
-            return new RavenTransaction(_environment.WriteTransaction(PersistentContext, Allocator));
+            return new RavenTransaction(_environment.WriteTransaction(PersistentContext, Allocator, timeout));
         }
 
         public StorageEnvironment Environment => _environment;
@@ -81,16 +81,16 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CreateReadTransaction();
 
-        protected abstract TTransaction CreateWriteTransaction();
+        protected abstract TTransaction CreateWriteTransaction(TimeSpan? timeout = null);
 
-        public TTransaction OpenWriteTransaction()
+        public TTransaction OpenWriteTransaction(TimeSpan? timeout = null)
         {
             if (Transaction != null && Transaction.Disposed == false)
             {
                 ThrowTransactionAlreadyOpened();
             }
 
-            Transaction = CreateWriteTransaction();
+            Transaction = CreateWriteTransaction(timeout);
 
             return Transaction;
         }
