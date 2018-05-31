@@ -50,7 +50,7 @@ namespace Sparrow.Json
 
             private void DisposeOfContexts()
             {
-                var current = Head;
+                var current = Interlocked.Exchange(ref Head, HeaderDisposed);
                 while (current != null)
                 {
                     var ctx = current.Value;
@@ -209,6 +209,11 @@ namespace Sparrow.Json
             while (true)
             {
                 var current = threadHeader.Head;
+                if(current == ContextStack.HeaderDisposed)
+                {
+                    context.Dispose();
+                    return;
+                }
                 var newHead = new StackNode<T> { Value = context, Next = current };
                 if (Interlocked.CompareExchange(ref threadHeader.Head, newHead, current) == current)
                     return;
