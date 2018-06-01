@@ -251,6 +251,8 @@ namespace Raven.Client.Documents.Session
         public void RandomOrdering()
         {
             AssertNoRawQuery();
+
+            NoCaching();
             OrderByTokens.AddLast(OrderByToken.Random);
         }
 
@@ -261,11 +263,14 @@ namespace Raven.Client.Documents.Session
         public void RandomOrdering(string seed)
         {
             AssertNoRawQuery();
+
             if (string.IsNullOrWhiteSpace(seed))
             {
                 RandomOrdering();
                 return;
             }
+
+            NoCaching();
             OrderByTokens.AddLast(OrderByToken.CreateRandom(seed));
         }
 
