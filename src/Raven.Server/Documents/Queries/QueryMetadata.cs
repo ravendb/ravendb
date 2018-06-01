@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Queries
             else
                 IndexName = fromToken.FieldValue;
 
-            if (IsDynamic == false || IsGroupBy || IsDistinct)
+            if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
 
             DeclaredFunctions = Query.DeclaredFunctions;

@@ -289,22 +289,6 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            private class Sort
-            {
-                private readonly Random _random;
-
-                public Sort(string field)
-                {
-                    field = field ?? "RandomValue-" + Guid.NewGuid();
-                    _random = new Random(field.GetHashCode());
-                }
-
-                public int Next()
-                {
-                    return _random.Next();
-                }
-            }
-
             private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
             {
                 private readonly Query _query;
