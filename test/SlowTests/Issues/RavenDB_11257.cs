@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Orders;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -53,9 +51,11 @@ namespace SlowTests.Issues
                                 x.RandomOrdering();
                                 x.WaitForNonStaleResults();
                             })
+                            .Statistics(out var stats)
                             .First(x => x.Name != Guid.Empty.ToString());
 
                         Assert.NotNull(product);
+                        Assert.Equal(new Products_ByName().IndexName, stats.IndexName);
 
                         productNames.Add(product.Name);
                     }
@@ -75,15 +75,17 @@ namespace SlowTests.Issues
                                 x.RandomOrdering();
                                 x.WaitForNonStaleResults();
                             })
-                            .First(x => x.Name != Guid.Empty.ToString());
+                            .Statistics(out var stats)
+                            .First();
 
                         Assert.NotNull(product);
+                        Assert.Equal("Auto/Products/ById()", stats.IndexName);
 
                         productNames.Add(product.Name);
                     }
                 }
 
-                Assert.True(productNames.Count > 1, $"Dynamic: {productNames.Count} > 1");
+                Assert.True(productNames.Count > 1, $"Dynamic 1: {productNames.Count} > 1");
 
                 productNames = new HashSet<string>();
 
@@ -97,15 +99,17 @@ namespace SlowTests.Issues
                                 x.RandomOrdering();
                                 x.WaitForNonStaleResults();
                             })
-                            .First();
+                            .Statistics(out var stats)
+                            .First(x => x.Name != Guid.Empty.ToString());
 
                         Assert.NotNull(product);
+                        Assert.Equal("Auto/Products/ByName", stats.IndexName);
 
                         productNames.Add(product.Name);
                     }
                 }
 
-                Assert.True(productNames.Count > 1, $"Collection: {productNames.Count} > 1");
+                Assert.True(productNames.Count > 1, $"Dynamic 2: {productNames.Count} > 1");
             }
         }
     }
