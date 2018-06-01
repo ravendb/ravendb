@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public abstract class AutoIndexDefinitionBase : IndexDefinitionBase<AutoIndexField>
     {
+        public IndexState State { get; set; }
+
         protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields)
             : base(indexName, new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields)
         {

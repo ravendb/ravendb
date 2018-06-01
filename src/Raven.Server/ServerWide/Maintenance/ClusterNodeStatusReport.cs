@@ -30,6 +30,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             public bool IsSideBySide;
             public long LastIndexedEtag;
+            public TimeSpan? LastQueried;
             public bool IsStale;
             public IndexState State;
         }
@@ -41,6 +42,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public DatabaseStatus Status;
         public string Error;
+        public TimeSpan? UpTime;
 
         public DynamicJsonValue ToJson()
         {
@@ -55,7 +57,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(NumberOfDocuments)] = NumberOfDocuments,
                 [nameof(DatabaseChangeVector)] = DatabaseChangeVector,
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
-                [nameof(Error)] = Error
+                [nameof(Error)] = Error,
+                [nameof(UpTime)] = UpTime
             };
             var indexStats = new DynamicJsonValue();
             foreach (var stat in LastIndexStats)
@@ -63,6 +66,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 indexStats[stat.Key] = new DynamicJsonValue
                 {
                     [nameof(stat.Value.LastIndexedEtag)] = stat.Value.LastIndexedEtag,
+                    [nameof(stat.Value.LastQueried)] = stat.Value.LastQueried,
                     [nameof(stat.Value.IsSideBySide)] = stat.Value.IsSideBySide,
                     [nameof(stat.Value.IsStale)] = stat.Value.IsStale,
                     [nameof(stat.Value.State)] = stat.Value.State

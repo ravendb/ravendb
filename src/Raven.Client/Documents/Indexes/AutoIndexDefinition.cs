@@ -18,6 +18,8 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexPriority? Priority { get; set; }
 
+        public IndexState? State { get; set; }
+
         public string Collection { get; set; }
 
         public Dictionary<string, AutoIndexFieldOptions> MapFields { get; set; }
@@ -42,6 +44,9 @@ namespace Raven.Client.Documents.Indexes
 
             if (Priority != other.Priority)
                 result |= IndexDefinitionCompareDifferences.Priority;
+
+            if (State != other.State)
+                result |= IndexDefinitionCompareDifferences.State;
 
             return result;
         }

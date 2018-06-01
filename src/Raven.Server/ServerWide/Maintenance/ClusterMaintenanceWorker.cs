@@ -104,8 +104,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
 
-                    var recorod = _server.Cluster.ReadDatabase(ctx, dbName);
-                    if (recorod == null || recorod.Topology.RelevantFor(_server.NodeTag) == false)
+                    var record = _server.Cluster.ReadDatabase(ctx, dbName);
+                    if (record == null || record.Topology.RelevantFor(_server.NodeTag) == false)
                     {
                         continue; // Database does not exists in this server
                     }
@@ -155,6 +155,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 report.Status = DatabaseStatus.Loaded;
                 try
                 {
+                    var now = dbInstance.Time.GetUtcNow();
+
                     using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
@@ -163,6 +165,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                         report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                        report.UpTime = now - dbInstance.StartTime;
 
                         foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
                         {
@@ -178,10 +181,16 @@ namespace Raven.Server.ServerWide.Maintenance
                             foreach (var index in indexStorage.GetIndexes())
                             {
                                 var stats = index.GetIndexStats(context);
+                                TimeSpan? lastQueried = null;
+                                var lastQueryingTime = index.GetLastQueryingTime();
+                                if (lastQueryingTime.HasValue)
+                                    lastQueried = now - lastQueryingTime;
+
                                 //We might have old version of this index with the same name
                                 report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
                                 {
                                     LastIndexedEtag = stats.LastProcessedEtag,
+                                    LastQueried = lastQueried,
                                     IsSideBySide = index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase),
                                     IsStale = stats.IsStale,
                                     State = index.State

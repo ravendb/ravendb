@@ -444,7 +444,8 @@ namespace Raven.Client.Documents.Indexes
         Configuration = 1 << 6,
         LockMode = 1 << 7,
         Priority = 1 << 8,
+        State = 1 << 9,
 
-        All = Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority
+        All = Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority | State
     }
 }

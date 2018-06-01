@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.ServerWide;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -254,6 +256,45 @@ namespace Raven.Server.Config
         {
             var prop = getKey.ToProperty();
             return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
+        }
+
+        public static object GetValue<T>(Expression<Func<RavenConfiguration, T>> getKey, RavenConfiguration serverConfiguration, DatabaseRecord record)
+        {
+            TimeUnitAttribute timeUnit = null;
+
+            var property = (PropertyInfo)getKey.ToProperty();
+            if (property.PropertyType == typeof(TimeSetting) ||
+                property.PropertyType == typeof(TimeSetting?))
+            {
+                timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
+                Debug.Assert(timeUnit != null);
+            }
+
+            object value = null;
+            foreach (var entry in property
+                .GetCustomAttributes<ConfigurationEntryAttribute>()
+                .OrderBy(x => x.Order))
+            {
+                if (record.Settings.TryGetValue(entry.Key, out var valueAsString) == false)
+                    value = serverConfiguration.GetServerWideSetting(entry.Key);
+
+                if (valueAsString != null)
+                {
+                    value = valueAsString;
+                    break;
+                }
+            }
+
+            if (value == null)
+                value = GetDefaultValue(getKey);
+
+            if (value == null)
+                return null;
+
+            if (timeUnit != null)
+                return new TimeSetting(Convert.ToInt64(value), timeUnit.Unit);
+
+            throw new NotSupportedException("Cannot get value of a property of type: " + property.PropertyType.Name);
         }
 
         public static string GetDataDirectoryPath(CoreConfiguration coreConfiguration, string name, ResourceType type)
