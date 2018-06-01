@@ -43,9 +43,6 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
 
-        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters =
-            new List<(Type, TryConvertValueForQueryDelegate<object>)>();
-
         private readonly List<(Type Type, TryConvertValueToObjectForQueryDelegate<object> Convert)> _listOfQueryValueToObjectConverters =
             new List<(Type, TryConvertValueToObjectForQueryDelegate<object>)>();
 
@@ -816,36 +813,34 @@ namespace Raven.Client.Documents.Conventions
             AssertNotFrozen();
 
             int index;
-            for (index = 0; index < _listOfQueryValueConverters.Count; index++)
+            for (index = 0; index < _listOfQueryValueToObjectConverters.Count; index++)
             {
-                var entry = _listOfQueryValueConverters[index];
+                var entry = _listOfQueryValueToObjectConverters[index];
                 if (entry.Type.IsAssignableFrom(typeof(T)))
                     break;
             }
 
-            _listOfQueryValueConverters.Insert(index, (typeof(T), Actual));
+            _listOfQueryValueToObjectConverters.Insert(index, (typeof(T), Actual));
 
-            bool Actual(string name, object value, bool forRange, out string strValue)
+            bool Actual(string name, object value, bool forRange, out object strValue)
             {
                 if (value is T t)
-                    return converter(name, t, forRange, out strValue);
+                {
+                    var result = converter(name, t, forRange, out var str);
+                    strValue = str;
+                    return result;
+                }
                 strValue = null;
                 return false;
             }
         }
 
+        [Obsolete("Use TryConvertValueForQuery, staying here for backward compact")]
         public bool TryConvertValueForQuery(string fieldName, object value, bool forRange, out string strValue)
         {
-            foreach (var queryValueConverter in _listOfQueryValueConverters)
-            {
-                if (queryValueConverter.Type.IsInstanceOfType(value) == false)
-                    continue;
-
-                return queryValueConverter.Convert(fieldName, value, forRange, out strValue);
-            }
-
-            strValue = null;
-            return false;
+            var result = TryConvertValueToObjectForQuery(fieldName, value, forRange, out var output);
+            strValue = output as string;
+            return result && (strValue != null || output == null);
         }
 
         private void RegisterQueryValueConverter<T>(TryConvertValueToObjectForQueryDelegate<T> converter)
@@ -875,8 +870,7 @@ namespace Raven.Client.Documents.Conventions
         {
             RegisterQueryValueConverter(converter);
 
-            if (_customRangeTypes.ContainsKey(typeof(T)) == false)
-                _customRangeTypes.Add(typeof(T), rangeType);
+            _customRangeTypes[typeof(T)] = rangeType;
         }
 
         internal bool TryConvertValueToObjectForQuery(string fieldName, object value, bool forRange, out object objValue)
