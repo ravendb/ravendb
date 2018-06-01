@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -12,6 +13,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -21,6 +23,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -99,7 +102,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var task2 = database.IndexStore.SetPriority(index2.Name, IndexPriority.Low);
                 index2.SetState(IndexState.Disabled);
                 var task = Task.WhenAll(task1, task2);
-               
+
                 await Assert.ThrowsAsync<NotSupportedException>(async () => await task);
                 Assert.StartsWith("'Lock Mode' can't be set for the Auto-Index", task1.Exception.InnerException.Message);
 
@@ -925,19 +928,65 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted()
         {
+            DatabaseRecord ReadRecord(DocumentDatabase database)
+            {
+                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                    return database.ServerStore.Cluster.ReadDatabase(context, database.Name);
+            }
+
+            void WaitForIndexDeletion(DocumentDatabase database, string indexName)
+            {
+                Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(indexName) == null, TimeSpan.FromSeconds(15)));
+            }
+
+            void WaitForIndex(DocumentDatabase database, string indexName, Func<Index, bool> condition)
+            {
+                Assert.True(SpinWait.SpinUntil(() => condition(database.IndexStore.GetIndex(indexName)), TimeSpan.FromSeconds(15)));
+            }
+
+            DoNotReuseServer();
             using (var database = CreateDocumentDatabase())
             {
                 var index0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No } }));
-                index0.SetState(IndexState.Idle);
 
-                database.IndexStore.RunIdleOperations(); // young idle index should be removed
+                var record = ReadRecord(database);
+                record.AutoIndexes[index0.Name].State = IndexState.Idle;
 
-                index0 = database.IndexStore.GetIndex(index0.Name);
-                Assert.Null(index0);
+                var now = database.Time.GetUtcNow();
+                await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(database.Name, record, new Dictionary<string, ClusterNodeStatusReport>
+                {
+                    {
+                        Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                            {
+                                {
+                                    database.Name, new DatabaseStatusReport
+                                    {
+                                        UpTime = database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan.Add(TimeSpan.FromSeconds(1)),
+                                        LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
+                                        {
+                                            {
+                                                index0.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Idle,
+                                                    LastQueried = database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            ClusterNodeStatusReport.ReportStatus.Ok,
+                            null,
+                            now,
+                            null)
+                    }
+                });
+
+                WaitForIndexDeletion(database, index0.Name);
 
                 var index1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Companies", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }));
                 var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Age", Storage = FieldStorage.No } }));
-
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
                     await index1.Query(new IndexQueryServerSide("FROM Companies"), context, OperationCancelToken.None); // last querying time
@@ -947,16 +996,48 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     await index2.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
                 }
 
-                Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
-                Assert.Equal(IndexPriority.Normal, index2.Definition.Priority);
+                Assert.Equal(IndexState.Normal, index1.State);
+                Assert.Equal(IndexState.Normal, index2.State);
 
-                database.IndexStore.RunIdleOperations(); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
+                now = database.Time.GetUtcNow();
+                await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(database.Name, record, new Dictionary<string, ClusterNodeStatusReport>
+                {
+                    {
+                        Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                            {
+                                {
+                                    database.Name, new DatabaseStatusReport
+                                    {
+                                        UpTime = now - database.StartTime,
+                                        LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
+                                        {
+                                            {
+                                                index1.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Normal,
+                                                    LastQueried = now - index1.GetLastQueryingTime()
+                                                }
+                                            },
+                                            {
+                                                index2.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Normal,
+                                                    LastQueried = now - index2.GetLastQueryingTime()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            ClusterNodeStatusReport.ReportStatus.Ok,
+                            null,
+                            now,
+                            null)
+                    }
+                }); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
 
-                index1 = database.IndexStore.GetIndex(index1.Name);
-                index2 = database.IndexStore.GetIndex(index2.Name);
-
-                Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
-                Assert.Equal(IndexPriority.Normal, index2.Definition.Priority);
+                WaitForIndex(database, index1.Name, index => index.State == IndexState.Normal);
+                WaitForIndex(database, index2.Name, index => index.State == IndexState.Normal);
 
                 database.Time.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
@@ -965,37 +1046,140 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     await index1.Query(new IndexQueryServerSide("FROM Companies"), context, OperationCancelToken.None); // last querying time
                 }
 
-                database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
+                now = database.Time.GetUtcNow();
+                await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(database.Name, record, new Dictionary<string, ClusterNodeStatusReport>
+                {
+                    {
+                        Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                            {
+                                {
+                                    database.Name, new DatabaseStatusReport
+                                    {
+                                        UpTime = now - database.StartTime,
+                                        LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
+                                        {
+                                            {
+                                                index1.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Normal,
+                                                    LastQueried = now - index1.GetLastQueryingTime()
+                                                }
+                                            },
+                                            {
+                                                index2.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Normal,
+                                                    LastQueried = now - index2.GetLastQueryingTime()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            ClusterNodeStatusReport.ReportStatus.Ok,
+                            null,
+                            now,
+                            null)
+                    }
+                }); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
 
-                index1 = database.IndexStore.GetIndex(index1.Name);
-                index2 = database.IndexStore.GetIndex(index2.Name);
+                WaitForIndex(database, index1.Name, index => index.State == IndexState.Normal);
+                WaitForIndex(database, index2.Name, index => index.State == IndexState.Idle);
 
-                Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
-                Assert.Equal(IndexState.Idle, index2.State);
+                record = ReadRecord(database);
+                record.AutoIndexes[index2.Name].State = IndexState.Idle;
 
-                var now = database.Time.GetUtcNow();
+                now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () =>
                         now.Add(TimeSpan.FromSeconds(1))
                            .Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
-                database.IndexStore.RunIdleOperations(); // should not remove anything, age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
+                now = database.Time.GetUtcNow();
+                await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(database.Name, record, new Dictionary<string, ClusterNodeStatusReport>
+                {
+                    {
+                        Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                            {
+                                {
+                                    database.Name, new DatabaseStatusReport
+                                    {
+                                        UpTime = now - database.StartTime,
+                                        LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
+                                        {
+                                            {
+                                                index1.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Normal,
+                                                    LastQueried = now - index1.GetLastQueryingTime()
+                                                }
+                                            },
+                                            {
+                                                index2.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Normal,
+                                                    LastQueried = now - index2.GetLastQueryingTime()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            ClusterNodeStatusReport.ReportStatus.Ok,
+                            null,
+                            now,
+                            null)
+                    }
+                }); // should not remove anything, age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 
-                index1 = database.IndexStore.GetIndex(index1.Name);
-                index2 = database.IndexStore.GetIndex(index2.Name);
+                WaitForIndex(database, index1.Name, index => index.State == IndexState.Idle);
+                WaitForIndex(database, index2.Name, index => index.State == IndexState.Idle);
 
-                Assert.Equal(IndexState.Idle, index1.State);
-                Assert.Equal(IndexState.Idle, index2.State);
+                record = ReadRecord(database);
+                record.AutoIndexes[index1.Name].State = IndexState.Idle;
+                record.AutoIndexes[index2.Name].State = IndexState.Idle;
 
                 now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
 
-                database.IndexStore.RunIdleOperations(); // this will delete indexes
+                now = database.Time.GetUtcNow();
+                await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(database.Name, record, new Dictionary<string, ClusterNodeStatusReport>
+                {
+                    {
+                        Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                            {
+                                {
+                                    database.Name, new DatabaseStatusReport
+                                    {
+                                        UpTime = now - database.StartTime,
+                                        LastIndexStats = new Dictionary<string, DatabaseStatusReport.ObservedIndexStatus>
+                                        {
+                                            {
+                                                index1.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Idle,
+                                                    LastQueried = now - index1.GetLastQueryingTime()
+                                                }
+                                            },
+                                            {
+                                                index2.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                                {
+                                                    State = IndexState.Idle,
+                                                    LastQueried = now - index2.GetLastQueryingTime()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            ClusterNodeStatusReport.ReportStatus.Ok,
+                            null,
+                            now,
+                            null)
+                    }
+                }); // this will delete indexes
 
-                index1 = database.IndexStore.GetIndex(index1.Name);
-                index2 = database.IndexStore.GetIndex(index2.Name);
-
-                Assert.Null(index1);
-                Assert.Null(index2);
+                WaitForIndexDeletion(database, index1.Name);
+                WaitForIndexDeletion(database, index2.Name);
             }
         }
 
@@ -1032,18 +1216,18 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
 
                 var index1 = await database.IndexStore.CreateIndex(definition1);
-                
-                var exception =  Assert.Throws<NotSupportedException>(() => index1.SetLock(IndexLockMode.LockedIgnore));
+
+                var exception = Assert.Throws<NotSupportedException>(() => index1.SetLock(IndexLockMode.LockedIgnore));
                 Assert.StartsWith("'Lock Mode' can't be set for the Auto-Index", exception.Message);
-                
+
                 await database.IndexStore.CreateIndex(definition2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
-                exception =  Assert.Throws<NotSupportedException>(() => index1.SetLock(IndexLockMode.LockedError));
+                exception = Assert.Throws<NotSupportedException>(() => index1.SetLock(IndexLockMode.LockedError));
                 Assert.StartsWith("'Lock Mode' can't be set for the Auto-Index", exception.Message);
-                
+
                 var index2 = await database.IndexStore.CreateIndex(definition2);
-                
+
                 Assert.NotNull(index1);
                 Assert.NotNull(index2);
             }
