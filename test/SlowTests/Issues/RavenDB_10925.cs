@@ -196,6 +196,8 @@ namespace SlowTests.Issues
                         })
                     }));
 
+                Assert.Equal("Auto/Companies/ByCityAndCountAndExact(State)ReducedByArray(Name)", i3.Name);
+
                 database.IndexStore.RunIdleOperations();
 
                 var indexes = database
