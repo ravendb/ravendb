@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes
                     // this can only be set by cluster
                     // and if local state is disabled or error
                     // then we are ignoring this change
-                    if (existingIndex.State == IndexState.Normal || existingIndex.State == IndexState.Idle) 
+                    if (existingIndex.State == IndexState.Normal || existingIndex.State == IndexState.Idle)
                         existingIndex.SetState(definition.State);
                 }
 
@@ -1018,13 +1018,9 @@ namespace Raven.Server.Documents.Indexes
         public void RunIdleOperations()
         {
             long etag;
-            DatabaseRecord record;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
-
-            if (record.Topology.Members[0] != _serverStore.NodeTag)
-                return;
+                _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
 
             AsyncHelpers.RunSync(() => RunIdleOperationsAsync(etag));
         }
@@ -1038,8 +1034,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_lastSurpassedAutoIndexesDatabaseRecordEtag >= databaseRecordEtag)
                 return;
-
-            _lastSurpassedAutoIndexesDatabaseRecordEtag = databaseRecordEtag;
 
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
 
@@ -1089,9 +1083,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (indexesToRemove.Count == 0 && indexesToExtend.Count == 0)
-                return;
-
+            var moreWork = false;
             foreach (var kvp in indexesToExtend)
             {
                 var definition = kvp.Value.CreateAutoIndexDefinition();
@@ -1102,13 +1094,17 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     await CreateIndex(definition);
+                    await TryDeleteIndexIfExists(kvp.Key);
 
-                    indexesToRemove.Add(kvp.Key);
+                    moreWork = true;
+                    break; // extending only one auto-index at a time
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Could not create extended index '{definition.Name}'.", e);
+
+                    moreWork = true;
                 }
             }
 
@@ -1124,8 +1120,13 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Could not delete surpassed index '{indexName}'.", e);
+
+                    moreWork = true;
                 }
             }
+
+            if (moreWork == false)
+                _lastSurpassedAutoIndexesDatabaseRecordEtag = databaseRecordEtag;
         }
 
         private void InitializePath(PathSetting path)
