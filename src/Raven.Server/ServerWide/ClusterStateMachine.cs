@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide
             Index,
             Value
         }
-        
+
         private static readonly Slice Items;
         private static readonly Slice CompareExchange;
         public static readonly Slice Identities;
@@ -109,7 +109,7 @@ namespace Raven.Server.ServerWide
                 Count = 3, // Database, Separator, Index
             });
         }
-       
+
         public event EventHandler<(string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType ChangeType)> DatabaseChanged;
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
@@ -202,6 +202,7 @@ namespace Raven.Server.ServerWide
                     case nameof(DeleteIndexCommand):
                     case nameof(SetIndexLockCommand):
                     case nameof(SetIndexPriorityCommand):
+                    case nameof(SetIndexStateCommand):
                     case nameof(EditRevisionsConfigurationCommand):
                     case nameof(UpdatePeriodicBackupCommand):
                     case nameof(EditExpirationCommand):
@@ -307,7 +308,7 @@ namespace Raven.Server.ServerWide
                 var database = tuple.Key;
                 var cleanIndex = tuple.Value;
                 var record = ReadDatabase(context, database);
-                if(record == null)
+                if (record == null)
                     continue;
 
                 record.TruncatedClusterTransactionIndex = cleanIndex;
@@ -435,7 +436,7 @@ namespace Raven.Server.ServerWide
             {
                 if (_parent.Log.IsOperationsEnabled)
                     _parent.Log.Operations($"{nameof(InstallUpdatedServerCertificate)} failed.", e);
-                
+
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
                     "Server certificate",
@@ -499,7 +500,7 @@ namespace Raven.Server.ServerWide
             // ReSharper disable once UseNullPropagation
             if (leader == null)
                 return;
-            
+
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
@@ -577,7 +578,7 @@ namespace Raven.Server.ServerWide
                     NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                     return;
                 }
-                
+
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
@@ -834,7 +835,7 @@ namespace Raven.Server.ServerWide
             {
                 RemovedNode = nodeTag
             }.ToJson(context);
-            
+
             var index = _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -1039,8 +1040,8 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-        
-        
+
+
         public BlittableJsonReaderObject GetItem(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -1080,7 +1081,7 @@ namespace Raven.Server.ServerWide
                     }, null);
             };
         }
-        
+
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -1111,13 +1112,13 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        yield return (key ,-1);
+                        yield return (key, -1);
                     }
                 }
             }
         }
 
-        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context, 
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context,
             string dbName, string prefix, int start = 0, int pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -1130,8 +1131,8 @@ namespace Raven.Server.ServerWide
                     var index = ReadCompareExchangeIndex(item.Value.Reader);
                     var value = ReadCompareExchangeValue(context, item.Value.Reader);
                     yield return (key, index, value);
-                    
-                    if(pageSize == 0)
+
+                    if (pageSize == 0)
                         yield break;
                 }
             }
@@ -1270,7 +1271,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice, 
+        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice,
             RootObjectType type = RootObjectType.VariableSizeTree)
             where T : RavenTransaction
         {
@@ -1446,7 +1447,8 @@ namespace Raven.Server.ServerWide
                             //Happens, we don't really care at this point
                         }
                     }
-                });
+                }
+                );
             }
             catch (Exception)
             {
@@ -1644,7 +1646,7 @@ namespace Raven.Server.ServerWide
             ClusterStateMachine.InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
         }
-     }
+    }
 
     public class RecentLogIndexNotification
     {

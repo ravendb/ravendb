@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     public class AutoMapReduceIndexDefinition : AutoIndexDefinitionBase
     {
         public readonly Dictionary<string, AutoIndexField> GroupByFields;
-        
+
         public readonly Dictionary<string, AutoIndexField> MapAndGroupByFields;
 
         public readonly AutoIndexField[] OrderedGroupByFields;
@@ -23,14 +23,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
-            
+
             MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);
 
             foreach (var field in MapFields)
             {
                 MapAndGroupByFields[field.Key] = field.Value.As<AutoIndexField>();
             }
-            
+
             foreach (var field in GroupByFields)
             {
                 MapAndGroupByFields[field.Key] = field.Value;
@@ -138,6 +138,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             if (Priority != other.Priority)
                 result |= IndexDefinitionCompareDifferences.Priority;
+
+            if (State != otherDefinition.State)
+                result |= IndexDefinitionCompareDifferences.State;
 
             return result;
         }

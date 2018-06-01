@@ -116,6 +116,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxStepsForScript { get; set; }
 
+        [Description("Time (in minutes) between index cleanup")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.CleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CleanupInterval { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();

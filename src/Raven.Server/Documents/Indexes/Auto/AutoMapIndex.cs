@@ -40,5 +40,17 @@ namespace Raven.Server.Documents.Indexes.Auto
             SetLock(definition.LockMode);
             SetPriority(definition.Priority);
         }
+
+        public override void SetState(IndexState state)
+        {
+            base.SetState(state);
+            Definition.State = state;
+        }
+
+        protected override void LoadValues()
+        {
+            base.LoadValues();
+            Definition.State = State;
+        }
     }
 }

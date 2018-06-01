@@ -1909,6 +1909,11 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
+        public DateTime? GetLastQueryingTime()
+        {
+            return _lastQueryingTime;
+        }
+
         private void MarkQueried(DateTime time)
         {
             if (_lastQueryingTime != null &&
