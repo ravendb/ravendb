@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes
                 name = $"'{name}'";
 
             if (x.GroupByArrayBehavior == GroupByArrayBehavior.ByContent)
-                name = AutoIndexField.GetGroupByArrayContentAutoIndexFieldName(name);
+                name = AutoIndexField.GetGroupByArrayContentAutoIndexFieldName(name).ToUpperFirstLetter();
 
             if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
             {
