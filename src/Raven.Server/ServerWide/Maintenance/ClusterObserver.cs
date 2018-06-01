@@ -303,18 +303,26 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     await _engine.PutAsync(new DeleteIndexCommand(kvp.Key, database));
 
+                    AddToDecisionLog(database, $"Deleting idle auto-index '{kvp.Key}' because difference between newest and current querying time is '{differenceBetweenNewestAndCurrentQueryingTime}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.");
+
                     continue;
                 }
 
                 if (state == IndexState.Normal && differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
                     await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Idle, database));
+                    
+                    AddToDecisionLog(database, $"Marking auto-index '{kvp.Key}' as idle because difference between newest and current querying time is '{differenceBetweenNewestAndCurrentQueryingTime}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
+
                     continue;
                 }
 
                 if (state == IndexState.Idle)
                 {
                     await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Normal, database));
+
+                    AddToDecisionLog(database, $"Marking idle auto-index '{kvp.Key}' as normal because difference between newest and current querying time is '{differenceBetweenNewestAndCurrentQueryingTime}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
+
                     continue;
                 }
             }
