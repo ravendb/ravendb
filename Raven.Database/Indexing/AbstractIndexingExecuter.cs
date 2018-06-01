@@ -359,6 +359,8 @@ namespace Raven.Database.Indexing
                         try
                         {
                             actions.Indexing.SetIndexPriority(index.indexId, IndexingPriority.Error);
+
+                            index.FailedToSetIndexStateToError = false;
                         }
                         catch (Exception e)
                         {
