@@ -1553,6 +1553,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out var strVal))
                 return strVal;
 
+            if (_conventions.TryConvertValueToObjectForQuery(whereParams.FieldName, whereParams.Value, forRange, out var objValue))
+                return objValue;
+
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
                 return whereParams.Value;
             if (type == typeof(string))
