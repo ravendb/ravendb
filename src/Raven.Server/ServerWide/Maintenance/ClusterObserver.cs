@@ -128,6 +128,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
+                    var now = SystemTime.UtcNow;
+                    var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
+
                     var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
@@ -182,8 +185,12 @@ namespace Raven.Server.ServerWide.Maintenance
                             cleanUpState.Add(database, cleanUp.Value);
                         }
 
-                        await CleanUpUnusedAutoIndexes(database, databaseRecord, newStats);
+                        if (cleanupIndexes)
+                            await CleanUpUnusedAutoIndexes(database, databaseRecord, newStats);
                     }
+
+                    if (cleanupIndexes)
+                        _lastIndexCleanupTimeInTicks = now.Ticks;
                 }
 
                 foreach (var command in updateCommands)
@@ -235,14 +242,8 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private async Task CleanUpUnusedAutoIndexes(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
+        internal async Task CleanUpUnusedAutoIndexes(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
         {
-            var now = SystemTime.UtcNow;
-            if (now.Ticks - _lastIndexCleanupTimeInTicks < _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks)
-                return;
-
-            _lastIndexCleanupTimeInTicks = now.Ticks;
-
             if (record.Topology.Count != stats.Count)
                 return;
 
@@ -291,37 +292,43 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var kvp in indexes)
             {
-                var differenceBetweenNewestAndCurrentQueryingTime = kvp.Value - newestIndexQueryTime;
-                if (differenceBetweenNewestAndCurrentQueryingTime == TimeSpan.Zero && lowestDatabaseUptime > kvp.Value)
-                    differenceBetweenNewestAndCurrentQueryingTime = kvp.Value;
+                TimeSpan difference;
+                if (lowestDatabaseUptime > kvp.Value)
+                    difference = kvp.Value;
+                else
+                {
+                    difference = kvp.Value - newestIndexQueryTime;
+                    if (difference == TimeSpan.Zero && lowestDatabaseUptime > kvp.Value)
+                        difference = kvp.Value;
+                }
 
                 var state = IndexState.Normal;
                 if (record.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
                     state = definition.State.Value;
 
-                if (state == IndexState.Idle && differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                 {
                     await _engine.PutAsync(new DeleteIndexCommand(kvp.Key, database));
 
-                    AddToDecisionLog(database, $"Deleting idle auto-index '{kvp.Key}' because difference between newest and current querying time is '{differenceBetweenNewestAndCurrentQueryingTime}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.");
+                    AddToDecisionLog(database, $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.");
 
                     continue;
                 }
 
-                if (state == IndexState.Normal && differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
                     await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Idle, database));
-                    
-                    AddToDecisionLog(database, $"Marking auto-index '{kvp.Key}' as idle because difference between newest and current querying time is '{differenceBetweenNewestAndCurrentQueryingTime}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
+
+                    AddToDecisionLog(database, $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
 
                     continue;
                 }
 
-                if (state == IndexState.Idle)
+                if (state == IndexState.Idle && difference < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
                     await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Normal, database));
 
-                    AddToDecisionLog(database, $"Marking idle auto-index '{kvp.Key}' as normal because difference between newest and current querying time is '{differenceBetweenNewestAndCurrentQueryingTime}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
+                    AddToDecisionLog(database, $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
 
                     continue;
                 }

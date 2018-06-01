@@ -276,7 +276,7 @@ namespace Raven.Server.Config
                 .OrderBy(x => x.Order))
             {
                 if (record.Settings.TryGetValue(entry.Key, out var valueAsString) == false)
-                    value = serverConfiguration.GetServerWideSetting(entry.Key);
+                    value = serverConfiguration.GetSetting(entry.Key);
 
                 if (valueAsString != null)
                 {
