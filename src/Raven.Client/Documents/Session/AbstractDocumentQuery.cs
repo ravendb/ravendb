@@ -1550,9 +1550,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var type = whereParams.Value.GetType().GetNonNullableType();
 
-            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out var strVal))
-                return strVal;
-
             if (_conventions.TryConvertValueToObjectForQuery(whereParams.FieldName, whereParams.Value, forRange, out var objValue))
                 return objValue;
 
