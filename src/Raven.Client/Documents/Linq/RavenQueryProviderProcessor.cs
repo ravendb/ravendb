@@ -1815,7 +1815,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof(string);
             }
 
-            var ordering = OrderingUtil.GetOrderingOfType(fieldType);
+            var rangeType = QueryGenerator.Conventions.GetRangeType(fieldType);
+
+            var ordering = OrderingUtil.GetOrderingFromRangeType(rangeType);
             if (descending)
                 _documentQuery.OrderByDescending(fieldName, ordering);
             else
