@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Queries
                         ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type.ToString(), QueryText, parameters);
                     }
 
-                    if (IsCollectionQuery && (OrderBy.Length > 1 || OrderBy[0].OrderingType != OrderByFieldType.Random))
+                    if (IsCollectionQuery && OrderBy.Length > 0)
                         IsCollectionQuery = false;
                 }
             }
