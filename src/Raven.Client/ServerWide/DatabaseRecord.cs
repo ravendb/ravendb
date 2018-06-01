@@ -113,7 +113,6 @@ namespace Raven.Client.ServerWide
                 if (result == IndexDefinitionCompareDifferences.None)
                     return;
 
-                result &= ~IndexDefinitionCompareDifferences.LockMode;
                 result &= ~IndexDefinitionCompareDifferences.Priority;
                 result &= ~IndexDefinitionCompareDifferences.State;
 
