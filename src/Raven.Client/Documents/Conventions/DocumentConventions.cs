@@ -827,8 +827,8 @@ namespace Raven.Client.Documents.Conventions
 
             bool Actual(string name, object value, bool forRange, out string strValue)
             {
-                if (value is T)
-                    return converter(name, (T)value, forRange, out strValue);
+                if (value is T t)
+                    return converter(name, t, forRange, out strValue);
                 strValue = null;
                 return false;
             }
@@ -864,8 +864,8 @@ namespace Raven.Client.Documents.Conventions
 
             bool Actual(string name, object value, bool forRange, out object objValue)
             {
-                if (value is T)
-                    return converter(name, (T)value, forRange, out objValue);
+                if (value is T t)
+                    return converter(name, t, forRange, out objValue);
                 objValue = null;
                 return false;
             }
