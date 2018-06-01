@@ -30,12 +30,6 @@ namespace Raven.Client.Documents.Indexes
             return RangeType.None;
         }
 
-        public static string ApplyRangeSuffixIfNecessary(string fieldName, Type type)
-        {
-            var rangeType = DocumentConventions.GetRangeType(type);
-            return ApplyRangeSuffixIfNecessary(fieldName, rangeType);
-        }
-
         public static string ApplyRangeSuffixIfNecessary(string fieldName, RangeType rangeType)
         {
             if (rangeType == RangeType.None)

@@ -654,7 +654,8 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector)
         {
-            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingOfType(propertySelector.ReturnType));
+            var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingFromRangeType(rangeType));
             return this;
         }
 
@@ -670,7 +671,8 @@ namespace Raven.Client.Documents.Session
         {
             foreach (var item in propertySelectors)
             {
-                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.ReturnType));
+                var rangeType = Conventions.GetRangeType(item.ReturnType);
+                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingFromRangeType(rangeType));
             }
             return this;
         }
@@ -685,7 +687,8 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector)
         {
-            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingOfType(propertySelector.ReturnType));
+            var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingFromRangeType(rangeType));
             return this;
         }
 
@@ -701,7 +704,8 @@ namespace Raven.Client.Documents.Session
         {
             foreach (var item in propertySelectors)
             {
-                OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.ReturnType));
+                var rangeType = Conventions.GetRangeType(item.ReturnType);
+                OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingFromRangeType(rangeType));
             }
 
             return this;

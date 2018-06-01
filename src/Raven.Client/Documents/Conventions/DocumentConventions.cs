@@ -702,7 +702,7 @@ namespace Raven.Client.Documents.Conventions
             return (DocumentConventions)MemberwiseClone();
         }
 
-        public static RangeType GetRangeType(Type type)
+        public RangeType GetRangeType(Type type)
         {
             var nonNullable = Nullable.GetUnderlyingType(type);
             if (nonNullable != null)
@@ -713,6 +713,11 @@ namespace Raven.Client.Documents.Conventions
 
             if (type == typeof(double) || type == typeof(float) || type == typeof(decimal))
                 return RangeType.Double;
+
+            if (_customRangeTypes.TryGetValue(type, out var rangeType))
+            {
+                return rangeType;
+            }
 
             return RangeType.None;
         }
