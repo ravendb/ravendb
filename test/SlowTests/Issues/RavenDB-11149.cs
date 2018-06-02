@@ -9,7 +9,9 @@ namespace SlowTests.Issues
     {
         private class Document
         {
+#pragma warning disable 169,649
             public string Id;
+#pragma warning restore 169,649
             public string Field1;
             public string Field2;
             public string Field3;

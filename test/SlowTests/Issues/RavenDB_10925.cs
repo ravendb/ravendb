@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                         })
                     }));
 
-                Assert.Equal("Auto/Companies/ByCityAndCountAndExact(State)ReducedByArray(Name)", i3.Name);
+                Assert.Equal("Auto/Companies/ByCityAndCountReducedByArray(Name)", i1.Name);
 
                 database.IndexStore.RunIdleOperations();
 
