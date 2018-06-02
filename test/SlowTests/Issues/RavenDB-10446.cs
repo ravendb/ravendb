@@ -116,7 +116,7 @@ namespace SlowTests.Issues
             {
                 await subsWorker.Run(batch => batch.Items.ForEach(i => shirts.Add(i.Result.ModelName)));
             }
-            catch (Exception e) { }
+            catch (Exception) { }
 
             Assert.Equal(1, shirts.Count);
             Assert.Equal("Brown Tunica No 5", shirts[0]);

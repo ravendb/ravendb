@@ -1282,7 +1282,6 @@ namespace Raven.Client.Util
 
         public class SubscriptionsWrappedConstantSupport : JavascriptConversionExtension
         {            
-            private readonly List<string> _projectionParameters;
             private readonly DocumentConventions _conventions;
 
             public SubscriptionsWrappedConstantSupport(DocumentConventions conventions)
