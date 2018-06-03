@@ -1444,7 +1444,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
                             && unaryExpression.Operand is LambdaExpression lambdaExpression
-                            && (lambdaExpression.Body.NodeType == ExpressionType.New || lambdaExpression.Body.NodeType == ExpressionType.MemberInit)
+                            && (lambdaExpression.Body.NodeType == ExpressionType.New 
+                                || lambdaExpression.Body.NodeType == ExpressionType.MemberInit
+                                || lambdaExpression.Body.NodeType == ExpressionType.MemberAccess)
                             && lambdaExpression.Parameters[0] != null
                             && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
                         {
@@ -1851,7 +1853,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
-                    AddToFieldsToFetch(GetSelectPath(memberExpression), GetSelectPath(memberExpression));
+                    var selectPath = RemoveTransperentIdentifiersIfNeeded(memberExpression);
+
+                    AddToFieldsToFetch(selectPath, selectPath);
                     if (_insideSelect == false)
                     {
                         foreach (var fieldToFetch in FieldsToFetch)
@@ -1867,7 +1871,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 //See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
                 case ExpressionType.New:
                     var newExpression = ((NewExpression)body);
-                    _newExpressionType = newExpression.Type;
 
                     if (_insideLet > 0)
                     {
@@ -1875,6 +1878,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         _insideLet--;
                         break;
                     }
+
+                    _newExpressionType = newExpression.Type;
 
                     if (_declareBuilder != null)
                     {
@@ -1976,6 +1981,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private string RemoveTransperentIdentifiersIfNeeded(MemberExpression memberExpression)
+        {
+            var selectPath = GetSelectPath(memberExpression);
+            while (selectPath.StartsWith("<>h__TransparentIdentifier"))
+            {
+                selectPath = selectPath.Substring(28);
+            }
+
+            return selectPath;
         }
 
         private string GetSelectPathOrConstantValue(MemberExpression member)
