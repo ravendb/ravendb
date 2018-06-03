@@ -107,7 +107,12 @@ namespace Raven.Server.Commercial
                     }
 
                     _accountKey.ImportCspBlob(_cache.AccountKey);
-                    _jws = new Jws(_accountKey, _cache.Id);
+
+                    // From: https://community.letsencrypt.org/t/acme-v2-strict-jws-kid-header-processing/63321
+                    // "KeyID headers contain the full account URL as returned by the Location header in a newAccount response"
+                    var kid = _cache.Location.ToString();
+
+                    _jws = new Jws(_accountKey, kid);
                     success = true;
                 }
                 catch
@@ -159,7 +164,7 @@ namespace Raven.Server.Commercial
                 var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var problem = JsonConvert.DeserializeObject<Problem>(problemJson);
                 problem.RawJson = problemJson;
-                throw new LetsEncrytException(problem, response);
+                throw new LetsEncryptException(problem, response);
             }
 
             var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -545,9 +550,9 @@ namespace Raven.Server.Commercial
             public string RawJson { get; set; }
         }
 
-        public class LetsEncrytException : Exception
+        public class LetsEncryptException : Exception
         {
-            public LetsEncrytException(Problem problem, HttpResponseMessage response)
+            public LetsEncryptException(Problem problem, HttpResponseMessage response)
                 : base($"{problem.Type}: {problem.Detail}")
             {
                 Problem = problem;
@@ -763,7 +768,9 @@ namespace Raven.Server.Commercial
 
             internal void SetKeyId(Account account)
             {
-                _jwk.KeyId = account.Id;
+                // From: https://community.letsencrypt.org/t/acme-v2-strict-jws-kid-header-processing/63321
+                // "KeyID headers contain the full account URL as returned by the Location header in a newAccount response"
+                _jwk.KeyId = account.Location.ToString();
             }
         }
     }
