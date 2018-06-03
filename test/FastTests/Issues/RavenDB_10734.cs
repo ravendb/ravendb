@@ -48,9 +48,10 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("TestDB")));
+                var dbName = GetDatabaseName();
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
 
-                var requestExecutor = store.GetRequestExecutor("TestDB");
+                var requestExecutor = store.GetRequestExecutor(dbName);
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(ComplexDocument)))
@@ -59,7 +60,7 @@ namespace FastTests.Issues
                     requestExecutor.Execute(new PutDocumentCommand("foo/bar",null,blittableJson),context);
                 }
 
-                var url = $"{store.Urls[0]}/databases/TestDB/docs/class?id=foo/bar";
+                var url = $"{store.Urls[0]}/databases/{dbName}/docs/class?id=foo/bar";
                 var responseAsString = await SendGetAndReadString(url);
 
                 Assert.DoesNotContain("NotSupportedException",responseAsString);

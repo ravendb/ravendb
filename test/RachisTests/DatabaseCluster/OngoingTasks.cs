@@ -22,7 +22,7 @@ namespace RachisTests.DatabaseCluster
         public async Task CanGetTaskInfo()
         {
             var clusterSize = 3;
-            var databaseName = "TestDB";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
