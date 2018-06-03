@@ -860,7 +860,10 @@ namespace Raven.Client.Documents.Session
                             .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
                             .ToArray();
                 }
-                newFieldsToFetch = FieldsToFetchToken.Create(fields, queryData.Projections.ToArray(), queryData.IsCustomFunction);
+
+                GetSourceAliasIfExists(queryData, fields, out var sourceAlias);
+
+                newFieldsToFetch = FieldsToFetchToken.Create(fields, queryData.Projections.ToArray(), queryData.IsCustomFunction, sourceAlias);
             }
             else
                 newFieldsToFetch = null;
