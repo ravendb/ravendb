@@ -130,6 +130,13 @@ namespace Raven.Client.Documents.Session.Operations
                 {
                     var projectionField = fieldsToFetch.Projections[0];
                     T value;
+
+                    if (fieldsToFetch.SourceAlias != null)
+                    {
+                        // remove source-alias from projection name
+                        projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
+                    }
+
                     return document.TryGet(projectionField, out value) == false
                         ? default(T)
                         : value;
