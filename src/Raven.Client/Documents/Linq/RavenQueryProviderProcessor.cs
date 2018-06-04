@@ -1987,10 +1987,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var selectPath = GetSelectPath(memberExpression);
             while (selectPath.StartsWith(TransparentIdentifier))
             {
-                selectPath = selectPath.Substring(TransparentIdentifier.Length
-                                                  + 1 // number suffix
-                                                  + 1 // "."
-                                                  );
+                var indexOf = selectPath.IndexOf(".", StringComparison.Ordinal);
+                selectPath = selectPath.Substring(indexOf + 1);
             }
 
             return selectPath;
