@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;

@@ -968,8 +968,8 @@ namespace Raven.Client.Http
 
             request.RequestUri = new Uri(url);
 
-            if (!request.Headers.Contains("Raven-Client-Version"))
-                request.Headers.Add("Raven-Client-Version", ClientVersion);
+            if (!request.Headers.Contains(Constants.Headers.ClientVersion))
+                request.Headers.Add(Constants.Headers.ClientVersion, ClientVersion);
 
             return request;
         }

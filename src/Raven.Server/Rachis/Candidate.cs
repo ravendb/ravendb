@@ -6,6 +6,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
 
@@ -54,7 +55,8 @@ namespace Raven.Server.Rachis
                     if (clusterTopology.Members.Count == 1)
                     {
                         CastVoteForSelf(ElectionTerm + 1, "Single member cluster, natural leader");
-                        _engine.SwitchToLeaderState(ElectionTerm, "I'm the only one in the cluster, so no need for elections, I rule.");
+                        _engine.SwitchToLeaderState(ElectionTerm, ClusterCommandsVersionManager.CurrentClusterMinimalVersion,
+                            "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
 
@@ -150,12 +152,20 @@ namespace Raven.Server.Rachis
                             StateChange();
 
                             var connections = new Dictionary<string, RemoteConnection>();
+                            var versions = new List<int>();
                             foreach (var candidateAmbassador in _voters)
                             {
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
+                                if (candidateAmbassador.ClusterCommandsVersion > 0)
+                                {
+                                    versions.Add(candidateAmbassador.ClusterCommandsVersion);
+                                }
                             }
-                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm}", connections);
 
+                            var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
+                            _engine.SwitchToLeaderState(ElectionTerm, minimalVersion,
+                                $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {minimalVersion}",
+                                connections);
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&
