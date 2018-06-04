@@ -8,18 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -129,19 +126,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (metadata != null)
                     {
-                        UpdateDocumentCounters(metadata, kvp.Value);
-
-                        if (metadata.Modifications != null)
-                        {
-                            var data = context.ReadObject(doc.Data, kvp.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-                            var flags = data.TryGet(Constants.Documents.Metadata.Key, out metadata) && 
-                                        metadata.TryGet(Constants.Documents.Metadata.Counters, out object _)
-                                        ? DocumentFlags.HasCounters
-                                        : DocumentFlags.None;
-
-                            _database.DocumentsStorage.Put(context, kvp.Key, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
-                        }
+                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, kvp.Key, metadata, kvp.Value);
                     }
 
                     void LoadDocument()
@@ -176,86 +161,6 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 return CountersDetail.Counters.Count;
-            }
-
-            private void UpdateDocumentCounters(BlittableJsonReaderObject metadata, List<CounterOperation> countersOperations)
-            {
-                List<string> updates = null;
-                if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
-                {
-                    foreach (var operation in countersOperations)
-                    {
-                        // we need to check the updates to avoid inserting duplicate counter names
-                        int loc = updates?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ??
-                                  counters.BinarySearch(operation.CounterName, StringComparison.OrdinalIgnoreCase);
-
-                        switch (operation.Type)
-                        {
-                            case CounterOperationType.Increment:
-                            case CounterOperationType.Put:
-                                if (loc < 0)
-                                {
-                                    CreateUpdatesIfNeeded();
-                                    updates.Insert(~loc, operation.CounterName);
-                                }
-
-                                break;
-                            case CounterOperationType.Delete:
-                                if (loc >= 0)
-                                {
-                                    CreateUpdatesIfNeeded();
-                                    updates.RemoveAt(loc);
-                                }
-                                break;
-                            case CounterOperationType.None:
-                            case CounterOperationType.Get:
-                                break;
-                            default:
-                                ThrowInvalidBatchOperationType(operation);
-                                break;
-                        }
-                    }
-                }
-                else
-                {
-                    updates = new List<string>(countersOperations.Count);
-                    foreach (var operation in countersOperations)
-                    {
-                        updates.Add(operation.CounterName);
-                    }
-                    updates.Sort(StringComparer.OrdinalIgnoreCase);
-                }
-
-                if (updates != null)
-                {
-                    if (updates.Count == 0)
-                    {
-                        metadata.Modifications = new DynamicJsonValue(metadata);
-                        metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    }
-                    else
-                    {
-                        metadata.Modifications = new DynamicJsonValue(metadata)
-                        {
-                            [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(updates)
-                        };
-                    }
-                }
-
-                void CreateUpdatesIfNeeded()
-                {
-                    if (updates != null)
-                        return;
-
-                    updates = new List<string>(counters.Length + countersOperations.Count);
-                    for (int i = 0; i < counters.Length; i++)
-                    {
-                        var val = counters.GetStringByIndex(i);
-                        if (val == null)
-                            continue;
-                        updates.Add(val);
-                    }
-                }
             }
 
             private static void ThrowMissingDocument(string docId)

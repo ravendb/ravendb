@@ -17,6 +17,7 @@ using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
@@ -502,5 +503,102 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             return table.NumberOfEntries;
         }
+
+        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId, BlittableJsonReaderObject metadata, List<CounterOperation> countersOperations)
+        {
+            List<string> updates = null;
+            if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
+            {
+                foreach (var operation in countersOperations)
+                {
+                    // we need to check the updates to avoid inserting duplicate counter names
+                    int loc = updates?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ??
+                              counters.BinarySearch(operation.CounterName, StringComparison.OrdinalIgnoreCase);
+
+                    switch (operation.Type)
+                    {
+                        case CounterOperationType.Increment:
+                        case CounterOperationType.Put:
+                            if (loc < 0)
+                            {
+                                CreateUpdatesIfNeeded();
+                                updates.Insert(~loc, operation.CounterName);
+                            }
+
+                            break;
+                        case CounterOperationType.Delete:
+                            if (loc >= 0)
+                            {
+                                CreateUpdatesIfNeeded();
+                                updates.RemoveAt(loc);
+                            }
+                            break;
+                        case CounterOperationType.None:
+                        case CounterOperationType.Get:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
+                    }
+                }
+            }
+            else
+            {
+                updates = new List<string>(countersOperations.Count);
+                foreach (var operation in countersOperations)
+                {
+                    updates.Add(operation.CounterName);
+                }
+                updates.Sort(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (updates != null)
+            {
+                if (updates.Count == 0)
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(updates)
+                    };
+                }
+
+                doc.Modifications = new DynamicJsonValue(doc)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+            }
+
+            if (metadata.Modifications != null)
+            {
+                var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                var flags = data.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
+                            metadata.TryGet(Constants.Documents.Metadata.Counters, out object _)
+                    ? DocumentFlags.HasCounters
+                    : DocumentFlags.None;
+
+                _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
+            }
+
+            void CreateUpdatesIfNeeded()
+            {
+                if (updates != null)
+                    return;
+
+                updates = new List<string>(counters.Length + countersOperations.Count);
+                for (int i = 0; i < counters.Length; i++)
+                {
+                    var val = counters.GetStringByIndex(i);
+                    if (val == null)
+                        continue;
+                    updates.Add(val);
+                }
+            }
+        }
+
     }
 }
