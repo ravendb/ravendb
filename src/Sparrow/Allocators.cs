@@ -4,10 +4,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Win32;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -29,7 +27,7 @@ namespace Sparrow
         [FieldOffset(16)]
         public uint Flags;
 
-        public MemoryBlockHeader(Pointer ptr, Pointer.HeaderFlags flags = Pointer.HeaderFlags.Allocated)
+        public MemoryBlockHeader(BlockPointer ptr, BlockPointer.HeaderFlags flags = BlockPointer.HeaderFlags.Allocated)
         {
             this.Ptr = (byte*)ptr.Ptr + sizeof(MemoryBlockHeader);
             this.Size = ptr.Size - sizeof(MemoryBlockHeader);
@@ -45,7 +43,7 @@ namespace Sparrow
         public bool IsAllocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (Flags & (uint)Pointer.HeaderFlags.Allocated) != 0; }
+            get { return (Flags & (uint)BlockPointer.HeaderFlags.Allocated) != 0; }
         }
     }
 
@@ -54,7 +52,7 @@ namespace Sparrow
     public unsafe struct MemoryBlock
     {
         public readonly MemoryBlockHeader* _header;
-        public readonly Pointer _ptr;
+        public readonly BlockPointer _ptr;
 
         public int Size
         {
@@ -69,7 +67,7 @@ namespace Sparrow
             get { return _header->Ptr; }
         }
 
-        public MemoryBlock(Pointer ptr)
+        public MemoryBlock(BlockPointer ptr)
         {
             if (!ptr.IsValid)
                 ThrowArgumentNullException("The pointer cannot be null or invalid.");
@@ -92,10 +90,76 @@ namespace Sparrow
         }
     }
 
-    public readonly unsafe struct Pointer<T> where T : struct
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly unsafe struct Pointer
+    {
+        public readonly void* Ptr;
+
+        public readonly int Size;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<byte> AsSpan()
+        {
+            return new Span<byte>(Ptr, Size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<byte> AsSpan(int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new Span<byte>(Ptr, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<byte> AsSpan(int start, int length)
+        {
+#if VALIDATE
+            if (start + length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new Span<byte>((byte*)Ptr + start, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<byte> AsReadOnlySpan()
+        {
+            return new ReadOnlySpan<byte>(Ptr, Size);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<byte> AsReadOnlySpan(int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new ReadOnlySpan<byte>(Ptr, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<byte> AsReadOnlySpan(int start, int length)
+        {
+#if VALIDATE
+            if (start + length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
+        }
+    }
+
+    public readonly unsafe struct BlockPointer<T> where T : struct
     {
         [MethodImpl(MethodImplOptions.NoOptimization)]
-        static Pointer()
+        static BlockPointer()
         {
             // If T is not a blittable type, fail on type loading unrecoverably.
             // We need to ensure the JIT wont optimize away the call to Marshal.SizeOf<T> for correctness either now or in the future. 
@@ -103,12 +167,12 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Pointer(Pointer ptr)
+        public BlockPointer(BlockPointer ptr)
         {
             this._ptr = ptr;
         }
 
-        private readonly Pointer _ptr;
+        private readonly BlockPointer _ptr;
 
         public bool IsValid
         {
@@ -134,10 +198,54 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<T> AsSpan(int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new Span<T>(Ptr, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<T> AsSpan(int start, int length)
+        {
+#if VALIDATE
+            if (start + length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new Span<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
             EnsureIsNotBadPointerAccess();
             return new ReadOnlySpan<byte>(_ptr.Ptr, Size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<T> AsReadOnlySpan(int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new ReadOnlySpan<T>(Ptr, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<T> AsReadOnlySpan(int start, int length)
+        {
+#if VALIDATE
+            if (start + length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new ReadOnlySpan<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 
         public int Size
@@ -179,7 +287,9 @@ namespace Sparrow
         }
     }
 
-    public readonly unsafe struct Pointer
+   
+
+    public readonly unsafe struct BlockPointer
     {
         [Flags]
         public enum HeaderFlags : uint
@@ -241,7 +351,7 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Pointer(Header* header)
+        internal BlockPointer(Header* header)
         {
             _header = header;
         }
@@ -273,9 +383,54 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<byte> AsSpan(int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new Span<byte>(_header->Ptr, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<byte> AsSpan(int start, int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new Span<byte>((byte*)_header->Ptr + start, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
             return new ReadOnlySpan<byte>(_header->Ptr, Size);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<byte> AsReadOnlySpan(int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new ReadOnlySpan<byte>(_header->Ptr, length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<byte> AsReadOnlySpan(int start, int length)
+        {
+#if VALIDATE
+            if (length > Size)
+                throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
+#endif
+
+            return new ReadOnlySpan<byte>((byte*)_header->Ptr + start, length);
         }
 
         public ref byte this[int i]
@@ -304,10 +459,6 @@ namespace Sparrow
     }
 
 
-    public interface IAllocator
-    {
-    }
-
     public class Allocator
     {
         //public static Allocator Create<T>(AllocatorBuilder<T> blockAllocator) where T : struct, IAllocator
@@ -320,13 +471,13 @@ namespace Sparrow
     {
     }
 
-    public interface IAllocationHandler<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IDisposable
+    public interface IAllocationHandler<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IAllocator, IDisposable
     {
-        void OnAllocate(ref TAllocator allocator, Pointer ptr);
-        void OnRelease(ref TAllocator allocator, Pointer ptr);
+        void OnAllocate(ref TAllocator allocator, BlockPointer ptr);
+        void OnRelease(ref TAllocator allocator, BlockPointer ptr);
     }
 
-    public interface ILifecycleHandler<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IDisposable
+    public interface ILifecycleHandler<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IAllocator, IDisposable
     {
         void BeforeInitialize(ref TAllocator allocator);
         void AfterInitialize(ref TAllocator allocator);
@@ -334,18 +485,20 @@ namespace Sparrow
         void BeforeFinalization(ref TAllocator allocator);
     }
 
-    public interface ILowMemoryHandler<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IDisposable
+    public interface ILowMemoryHandler<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IAllocator, IDisposable
     {
         void NotifyLowMemory(ref TAllocator allocator);
         void NotifyLowMemoryOver(ref TAllocator allocator);
     }
 
-    public interface IRenewable<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IDisposable
+    public interface IRenewable<TAllocator> where TAllocator : struct, IAllocator<TAllocator>, IAllocator, IDisposable
     {
         void Renew(ref TAllocator allocator);
     }
 
-    public unsafe interface IAllocator<T> where T : struct, IAllocator<T>, IDisposable
+    public interface IAllocator { }
+
+    public unsafe interface IAllocator<T> where T : struct, IAllocator, IDisposable
     {
         int Allocated { get; }
 
@@ -354,30 +507,16 @@ namespace Sparrow
         void Configure<TConfig>(ref T allocator, ref TConfig configuration)
             where TConfig : struct, IAllocatorOptions;
 
-        void Allocate(ref T allocator, int size, out Pointer.Header* header);
-        void Release(ref T allocator, in Pointer.Header* header);
+        void Allocate(ref T allocator, int size, out BlockPointer.Header* header);
+        void Release(ref T allocator, in BlockPointer.Header* header);
         void Reset(ref T allocator);
     }
 
-    public sealed class Allocator<TAllocator, TBlockAllocatorOptions> : IDisposable, ILowMemoryHandler
-        where TAllocator : struct, IAllocator<TAllocator>, IDisposable
-        where TBlockAllocatorOptions : struct, IAllocatorOptions
+    public sealed class Allocator<TAllocator> : IDisposable, ILowMemoryHandler
+        where TAllocator : struct, IAllocator<TAllocator>, IAllocator, IDisposable
     {
-        private TAllocator _allocator = default(TAllocator);
-        private readonly TBlockAllocatorOptions _options = default(TBlockAllocatorOptions);
+        private TAllocator _allocator;
         private readonly SingleUseFlag _disposeFlag = new SingleUseFlag();
-
-        public Allocator()
-        {
-            if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
-                ((ILifecycleHandler<TAllocator>)_allocator).BeforeInitialize(ref _allocator);
-
-            _allocator.Initialize(ref _allocator);
-            _allocator.Configure(ref _allocator, ref _options);
-
-            if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
-                ((ILifecycleHandler<TAllocator>)_allocator).AfterInitialize(ref _allocator);
-        }
 
         ~Allocator()
         {
@@ -387,34 +526,32 @@ namespace Sparrow
             Dispose();
         }
 
-        public int Allocated
+        public void Initialize<TBlockAllocatorOptions>(TBlockAllocatorOptions options)
+            where TBlockAllocatorOptions : struct, IAllocatorOptions
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _allocator.Allocated; }
-        }
-
-
-        public Allocator(TBlockAllocatorOptions options)
-        {
-            _options = options;
-
             if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
                 ((ILifecycleHandler<TAllocator>)_allocator).BeforeInitialize(ref _allocator);
 
             _allocator.Initialize(ref _allocator);
-            _allocator.Configure(ref _allocator, ref _options);
+            _allocator.Configure(ref _allocator, ref options);
 
             if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
                 ((ILifecycleHandler<TAllocator>)_allocator).AfterInitialize(ref _allocator);
         }
 
-        public Pointer Allocate(int size)
+        public int Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _allocator.Allocated; }
+        }
+        
+        public BlockPointer Allocate(int size)
         {
             unsafe
             {
                 _allocator.Allocate(ref _allocator, size, out var header);
 
-                var ptr = new Pointer(header);
+                var ptr = new BlockPointer(header);
                 if (_allocator.GetType() == typeof(IAllocationHandler<TAllocator>))
                     ((IAllocationHandler<TAllocator>)_allocator).OnAllocate(ref _allocator, ptr);
 
@@ -422,21 +559,21 @@ namespace Sparrow
             }
         }
 
-        public Pointer<TType> Allocate<TType>(int size) where TType : struct
+        public BlockPointer<TType> Allocate<TType>(int size) where TType : struct
         {
             unsafe
             {
                 _allocator.Allocate(ref _allocator, size * Unsafe.SizeOf<TType>(), out var header);
 
-                var ptr = new Pointer(header);
+                var ptr = new BlockPointer(header);
                 if (_allocator.GetType() == typeof(IAllocationHandler<TAllocator>))
                     ((IAllocationHandler<TAllocator>)_allocator).OnAllocate(ref _allocator, ptr);
 
-                return new Pointer<TType>(ptr);
+                return new BlockPointer<TType>(ptr);
             }
         }
 
-        public void Release(Pointer ptr)
+        public void Release(BlockPointer ptr)
         {
             unsafe
             {
@@ -447,12 +584,14 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew()
         {
             if (_allocator.GetType() == typeof(IRenewable<TAllocator>))
                 ((IRenewable<TAllocator>)_allocator).Renew(ref _allocator);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
             _allocator.Reset(ref _allocator);
@@ -481,18 +620,14 @@ namespace Sparrow
         }
     }
 
-
     public interface INativeBlockOptions : IAllocatorOptions
     {
         bool UseSecureMemory { get; }
         bool ElectricFenceEnabled { get; }
     }
 
-    public struct NativeBlockAllocator<TOptions> : IAllocator<NativeBlockAllocator<TOptions>>, IDisposable, ILowMemoryHandler<NativeBlockAllocator<TOptions>>
-        where TOptions : struct, INativeBlockOptions
+    public static class NativeBlockAllocator
     {
-        private TOptions Options;
-
         public struct DefaultOptions : INativeBlockOptions
         {
             public bool UseSecureMemory => false;
@@ -510,6 +645,12 @@ namespace Sparrow
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => true;
         }
+    }
+
+    public struct NativeBlockAllocator<TOptions> : IAllocator<NativeBlockAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<NativeBlockAllocator<TOptions>>
+        where TOptions : struct, INativeBlockOptions
+    {
+        private TOptions Options;
 
         public void Configure<TConfig>(ref NativeBlockAllocator<TOptions> blockAllocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
@@ -531,45 +672,46 @@ namespace Sparrow
             private set;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize(ref NativeBlockAllocator<TOptions> blockAllocator)
         {
             blockAllocator.Allocated = 0;
         }
 
-        public unsafe void Allocate(ref NativeBlockAllocator<TOptions> blockAllocator, int size, out Pointer.Header* header)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Allocate(ref NativeBlockAllocator<TOptions> blockAllocator, int size, out BlockPointer.Header* header)
         {
-            int allocatedSize;
-            header = null;
+            byte* memory;
+            int allocatedSize = size + sizeof(BlockPointer.Header);
 
-            if (typeof(TOptions) == typeof(DefaultOptions))
-            {
-                allocatedSize = size + sizeof(Pointer.Header);
-                byte* memory = NativeMemory.AllocateMemory(allocatedSize);
-
-                header = (Pointer.Header*)memory;
-                *header = new Pointer.Header(memory + sizeof(Pointer.Header), size);
-            }
-            else if (typeof(TOptions) == typeof(ElectricFenceOptions))
-            {
-                allocatedSize = size + sizeof(Pointer.Header);
-                byte* memory = ElectricFencedMemory.Allocate(allocatedSize);
-
-                header = (Pointer.Header*)memory;
-                *header = new Pointer.Header(memory + sizeof(Pointer.Header), size);
-            }
-            else if (typeof(TOptions) == typeof(SecureOptions))
-            {                                
+            // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
+            //       JIT will be able to fold all this if sequence into a branchless single call.
+            if (blockAllocator.Options.ElectricFenceEnabled)
+                memory = ElectricFencedMemory.Allocate(allocatedSize);
+            else if (blockAllocator.Options.UseSecureMemory)
                 throw new NotImplementedException();
-            }
+            else
+                memory = NativeMemory.AllocateMemory(allocatedSize);
 
-            blockAllocator.Allocated += size + sizeof(Pointer.Header);
+            header = (BlockPointer.Header*)memory;
+            *header = new BlockPointer.Header(memory + sizeof(BlockPointer.Header), size);
+
+            blockAllocator.Allocated += size + sizeof(BlockPointer.Header);
         }
 
-        public unsafe void Release(ref NativeBlockAllocator<TOptions> blockAllocator, in Pointer.Header* header)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Release(ref NativeBlockAllocator<TOptions> blockAllocator, in BlockPointer.Header* header)
         {
-            blockAllocator.Allocated -= header->Size + sizeof(Pointer.Header);
+            blockAllocator.Allocated -= header->Size + sizeof(BlockPointer.Header);
 
-            throw new NotImplementedException();
+            // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
+            //       JIT will be able to fold all this if sequence into a branchless single call.
+            if (blockAllocator.Options.ElectricFenceEnabled)
+                ElectricFencedMemory.Free((byte*)header);
+            else if (blockAllocator.Options.UseSecureMemory)
+                throw new NotImplementedException();
+            else
+                NativeMemory.Free((byte*) header, header->Size);
         }
 
         public void Reset(ref NativeBlockAllocator<TOptions> blockAllocator)
@@ -589,7 +731,6 @@ namespace Sparrow
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 }
