@@ -336,6 +336,8 @@ namespace Raven.Server.Rachis
             private set => _operationTimeout = value;
         }
 
+        public int? MaximalVersion { get; set; }
+
         private Leader _currentLeader;
         public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -372,7 +374,8 @@ namespace Raven.Server.Rachis
                 OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
-                
+                MaximalVersion = configuration.Cluster.MaximalVersion;
+
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
@@ -450,7 +453,7 @@ namespace Raven.Server.Rachis
                 throw;
             }
         }
-
+        
         private void SwitchToSingleLeader(TransactionOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
@@ -738,14 +741,18 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SwitchToLeaderState(long electionTerm, string reason, Dictionary<string, RemoteConnection> connections = null)
+        public void SwitchToLeaderState(long electionTerm, int version, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
-            SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () => _currentLeader = leader);
+            SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
+            {
+                ClusterCommandsVersionManager.CurrentClusterMinimalVersion = version;
+                _currentLeader = leader;
+            });
             leader.Start(connections);
         }
 
