@@ -188,7 +188,9 @@ class editIndex extends viewModelBase {
 
     private updateIndexFields() {
         const map = this.editedIndex().maps()[0].map();
-        new getIndexFieldsFromMapCommand(this.activeDatabase(), map)
+        const additionalSourcesDto = {} as dictionary<string>;
+        this.editedIndex().additionalSources().forEach(x => additionalSourcesDto[x.name()] = x.code());
+        new getIndexFieldsFromMapCommand(this.activeDatabase(), map, additionalSourcesDto)
             .execute()
             .done((fields: resultsDto<string>) => {
                 this.fieldNames(fields.Results);
