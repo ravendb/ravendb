@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
@@ -8,6 +9,7 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide
 {
@@ -28,6 +30,8 @@ namespace Raven.Server.ServerWide
         }
 
         public static int CurrentClusterMinimalVersion;
+
+        private static readonly Logger _log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
 
         public static readonly IReadOnlyDictionary<string, int> ClusterCommandsVersions = new Dictionary<string, int>
         {
@@ -98,6 +102,23 @@ namespace Raven.Server.ServerWide
         static ClusterCommandsVersionManager()
         {
             MyCommandsVersion = CurrentClusterMinimalVersion = Enumerable.Max(ClusterCommandsVersions.Values);
+        }
+
+        public static int GetClusterMinimalVersion(List<int> versions, int? maximalVersion)
+        {
+            var minVersion = Enumerable.Min(versions);
+            if (maximalVersion.HasValue)
+            {
+                if (maximalVersion.Value < minVersion)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Cluster version was clamped from {minVersion} to {maximalVersion.Value}");
+                    }
+                    return maximalVersion.Value;
+                }
+            }
+            return minVersion;
         }
     }
 

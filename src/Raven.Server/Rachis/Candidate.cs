@@ -55,7 +55,8 @@ namespace Raven.Server.Rachis
                     if (clusterTopology.Members.Count == 1)
                     {
                         CastVoteForSelf(ElectionTerm + 1, "Single member cluster, natural leader");
-                        _engine.SwitchToLeaderState(ElectionTerm, "I'm the only one in the cluster, so no need for elections, I rule.");
+                        _engine.SwitchToLeaderState(ElectionTerm, ClusterCommandsVersionManager.CurrentClusterMinimalVersion,
+                            "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
 
@@ -151,16 +152,19 @@ namespace Raven.Server.Rachis
                             StateChange();
 
                             var connections = new Dictionary<string, RemoteConnection>();
-                            var versions = new int[_voters.Count];
-                            for (int i = 0; i < _voters.Count; i++)
+                            var versions = new List<int>();
+                            foreach (var candidateAmbassador in _voters)
                             {
-                                CandidateAmbassador candidateAmbassador = _voters[i];
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
-                                versions[i] = candidateAmbassador.ClusterCommandsVersion;
+                                if (candidateAmbassador.ClusterCommandsVersion > 0)
+                                {
+                                    versions.Add(candidateAmbassador.ClusterCommandsVersion);
+                                }
                             }
-                            ClusterCommandsVersionManager.CurrentClusterMinimalVersion = ClusterCommandsVersionManager.Median(versions);
-                            _engine.SwitchToLeaderState(ElectionTerm,
-                                $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}",
+
+                            var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
+                            _engine.SwitchToLeaderState(ElectionTerm, minimalVersion,
+                                $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {minimalVersion}",
                                 connections);
                             break;
                         }

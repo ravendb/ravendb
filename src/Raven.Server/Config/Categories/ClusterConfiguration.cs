@@ -71,5 +71,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.HardDeleteOnReplacement", ConfigurationEntryScope.ServerWideOnly)]
         public bool HardDeleteOnReplacement { get; set; }
 
+        [Description("If exceeded, clamp the cluster to the specified version.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Cluster.MaximalVersion", ConfigurationEntryScope.ServerWideOnly)]
+        public int? MaximalVersion { get; set; }
     }
 }
