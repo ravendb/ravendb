@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
@@ -22,13 +23,16 @@ namespace Raven.Server.Web.Studio
                     if (json.TryGet("Map", out string map) == false)
                         throw new ArgumentException("'Map' field is mandatory, but wasn't specified");
 
+                    json.TryGet(nameof(IndexDefinition.AdditionalSources), out BlittableJsonReaderObject additionalSourcesJson);
+
                     var indexDefinition = new IndexDefinition
                     {
                         Name = "index-fields",
                         Maps =
                         {
                             map
-                        }
+                        },
+                        AdditionalSources = ConvertToAdditionalSources(additionalSourcesJson)
                     };
 
                     try
@@ -40,10 +44,7 @@ namespace Raven.Server.Web.Studio
                         using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartObject();
-                            writer.WriteArray(context, "Results", outputFields, (w, c, field) =>
-                            {
-                                w.WriteString(field);
-                            });
+                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
                             writer.WriteEndObject();
                         }
                     }
@@ -60,5 +61,24 @@ namespace Raven.Server.Web.Studio
                 }
             }
         }
+
+        private static Dictionary<string, string> ConvertToAdditionalSources(BlittableJsonReaderObject json)
+        {
+            if (json == null || json.Count == 0)
+                return null;
+
+            var result = new Dictionary<string, string>();
+
+            BlittableJsonReaderObject.PropertyDetails propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
+            {
+                json.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                result[propertyDetails.Name] = propertyDetails.Value?.ToString();
+            }
+
+            return result;
+        }
     }
 }
+

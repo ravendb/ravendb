@@ -8,15 +8,17 @@ namespace Raven.Client.Documents.Session.Tokens
         public readonly string[] FieldsToFetch;
         public readonly string[] Projections;
         public readonly bool IsCustomFunction;
+        public readonly string SourceAlias;
 
-        private FieldsToFetchToken(string[] fieldsToFetch, string[] projections, bool isCustomFunction)
+        private FieldsToFetchToken(string[] fieldsToFetch, string[] projections, bool isCustomFunction, string sourceAlias)
         {
             FieldsToFetch = fieldsToFetch;
             Projections = projections;
             IsCustomFunction = isCustomFunction;
+            SourceAlias = sourceAlias;
         }
 
-        public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections, bool isCustomFunction)
+        public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections, bool isCustomFunction, string sourceAlias = null)
         {
             if (fieldsToFetch == null || fieldsToFetch.Length == 0)
                 throw new ArgumentNullException(nameof(fieldsToFetch));
@@ -24,7 +26,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (isCustomFunction == false && projections != null && projections.Length != fieldsToFetch.Length)
                 throw new ArgumentNullException(nameof(projections), "Length of projections must be the same as length of fields to fetch.");
 
-            return new FieldsToFetchToken(fieldsToFetch, projections, isCustomFunction);
+            return new FieldsToFetchToken(fieldsToFetch, projections, isCustomFunction, sourceAlias);
         }
 
         public override void WriteTo(StringBuilder writer)

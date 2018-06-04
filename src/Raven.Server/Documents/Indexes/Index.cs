@@ -165,6 +165,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
+        private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Func<bool> _indexValidationStalenessCheck = () => true;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
@@ -901,14 +902,15 @@ namespace Raven.Server.Documents.Indexes
                             _mre.Reset();
                         }
 
-                        // this is called on every iteration because index priorities can be changed at runtime
-                        ChangeIndexThreadPriorityIfNeeded();
+                        if (_priorityChanged)
+                            ChangeIndexThreadPriority();
+
+                        if (_definitionChanged)
+                            PersistIndexDefinition();
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
-
-
-
+                        
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
                         LastIndexingTime = stats.StartTime;
 
@@ -1122,11 +1124,8 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        private void ChangeIndexThreadPriorityIfNeeded()
+        private void ChangeIndexThreadPriority()
         {
-            if (_priorityChanged == false)
-                return;
-
             _priorityChanged.Lower();
 
             ThreadPriority newPriority;
@@ -1151,6 +1150,21 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             Thread.CurrentThread.Priority = newPriority;
+        }
+
+        private void PersistIndexDefinition()
+        {
+            try
+            {
+                _indexStorage.WriteDefinition(Definition);
+
+                _definitionChanged.Lower();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to persist definition of '{Name}' index", e);
+            }
         }
 
         private void HandleLogsApplied()
@@ -1548,9 +1562,25 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing priority for '{Name}' from '{Definition.Priority}' to '{priority}'.");
 
-                _indexStorage.WritePriority(priority);
-
+                var oldPriority = Definition.Priority;
+                
                 Definition.Priority = priority;
+
+                try
+                {
+                    _indexStorage.WriteDefinition(Definition, timeout: TimeSpan.FromSeconds(5));
+                }
+                catch (TimeoutException)
+                {
+                    _definitionChanged.Raise();
+                    _mre.Set();
+                }
+                catch (Exception)
+                {
+                    Definition.Priority = oldPriority;
+                    throw;
+                }
+
                 _priorityChanged.Raise();
 
                 DocumentDatabase.Changes.RaiseNotifications(new IndexChange
@@ -1640,7 +1670,24 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Info(
                         $"Changing lock mode for '{Name}' from '{Definition.LockMode}' to '{mode}'.");
 
-                _indexStorage.WriteLock(mode);
+                var oldLockMode = Definition.LockMode;
+                
+                Definition.LockMode = mode;
+
+                try
+                {
+                    _indexStorage.WriteDefinition(Definition, timeout: TimeSpan.FromSeconds(5));
+                }
+                catch (TimeoutException)
+                {
+                    _definitionChanged.Raise();
+                    _mre.Set();
+                }
+                catch (Exception)
+                {
+                    Definition.LockMode = oldLockMode;
+                    throw;
+                }
 
                 DocumentDatabase.Changes.RaiseNotifications(new IndexChange
                 {
@@ -1907,6 +1954,11 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return stats;
+        }
+
+        public DateTime? GetLastQueryingTime()
+        {
+            return _lastQueryingTime;
         }
 
         private void MarkQueried(DateTime time)

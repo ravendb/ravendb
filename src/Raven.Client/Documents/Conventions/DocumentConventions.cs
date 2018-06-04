@@ -35,6 +35,7 @@ namespace Raven.Client.Documents.Conventions
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
+        public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
         internal static readonly DocumentConventions Default = new DocumentConventions();
 
@@ -42,8 +43,10 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
 
-        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters =
-            new List<(Type, TryConvertValueForQueryDelegate<object>)>();
+        private readonly List<(Type Type, TryConvertValueToObjectForQueryDelegate<object> Convert)> _listOfQueryValueToObjectConverters =
+            new List<(Type, TryConvertValueToObjectForQueryDelegate<object>)>();
+
+        private readonly Dictionary<Type, RangeType> _customRangeTypes = new Dictionary<Type, RangeType>();
 
         private readonly List<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, object, Task<string>>>>();
@@ -691,7 +694,7 @@ namespace Raven.Client.Documents.Conventions
             return (DocumentConventions)MemberwiseClone();
         }
 
-        public static RangeType GetRangeType(Type type)
+        public RangeType GetRangeType(Type type)
         {
             var nonNullable = Nullable.GetUnderlyingType(type);
             if (nonNullable != null)
@@ -702,6 +705,11 @@ namespace Raven.Client.Documents.Conventions
 
             if (type == typeof(double) || type == typeof(float) || type == typeof(decimal))
                 return RangeType.Double;
+
+            if (_customRangeTypes.TryGetValue(type, out var rangeType))
+            {
+                return rangeType;
+            }
 
             return RangeType.None;
         }
@@ -794,35 +802,77 @@ namespace Raven.Client.Documents.Conventions
             AssertNotFrozen();
 
             int index;
-            for (index = 0; index < _listOfQueryValueConverters.Count; index++)
+            for (index = 0; index < _listOfQueryValueToObjectConverters.Count; index++)
             {
-                var entry = _listOfQueryValueConverters[index];
+                var entry = _listOfQueryValueToObjectConverters[index];
                 if (entry.Type.IsAssignableFrom(typeof(T)))
                     break;
             }
 
-            _listOfQueryValueConverters.Insert(index, (typeof(T), Actual));
+            _listOfQueryValueToObjectConverters.Insert(index, (typeof(T), Actual));
 
-            bool Actual(string name, object value, bool forRange, out string strValue)
+            bool Actual(string name, object value, bool forRange, out object strValue)
             {
-                if (value is T)
-                    return converter(name, (T)value, forRange, out strValue);
+                if (value is T t)
+                {
+                    var result = converter(name, t, forRange, out var str);
+                    strValue = str;
+                    return result;
+                }
                 strValue = null;
                 return false;
             }
         }
 
+        [Obsolete("Use TryConvertValueForQuery, staying here for backward compact")]
         public bool TryConvertValueForQuery(string fieldName, object value, bool forRange, out string strValue)
         {
-            foreach (var queryValueConverter in _listOfQueryValueConverters)
+            var result = TryConvertValueToObjectForQuery(fieldName, value, forRange, out var output);
+            strValue = output as string;
+            return result && (strValue != null || output == null);
+        }
+
+        private void RegisterQueryValueConverter<T>(TryConvertValueToObjectForQueryDelegate<T> converter)
+        {
+            AssertNotFrozen();
+
+            int index;
+            for (index = 0; index < _listOfQueryValueToObjectConverters.Count; index++)
+            {
+                var entry = _listOfQueryValueToObjectConverters[index];
+                if (entry.Type.IsAssignableFrom(typeof(T)))
+                    break;
+            }
+
+            _listOfQueryValueToObjectConverters.Insert(index, (typeof(T), Actual));
+
+            bool Actual(string name, object value, bool forRange, out object objValue)
+            {
+                if (value is T t)
+                    return converter(name, t, forRange, out objValue);
+                objValue = null;
+                return false;
+            }
+        }
+
+        public void RegisterQueryValueConverter<T>(TryConvertValueToObjectForQueryDelegate<T> converter, RangeType rangeType)
+        {
+            RegisterQueryValueConverter(converter);
+
+            _customRangeTypes[typeof(T)] = rangeType;
+        }
+
+        internal bool TryConvertValueToObjectForQuery(string fieldName, object value, bool forRange, out object objValue)
+        {
+            foreach (var queryValueConverter in _listOfQueryValueToObjectConverters)
             {
                 if (queryValueConverter.Type.IsInstanceOfType(value) == false)
                     continue;
 
-                return queryValueConverter.Convert(fieldName, value, forRange, out strValue);
+                return queryValueConverter.Convert(fieldName, value, forRange, out objValue);
             }
 
-            strValue = null;
+            objValue = null;
             return false;
         }
 

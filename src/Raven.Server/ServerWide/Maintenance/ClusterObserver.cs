@@ -10,10 +10,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -71,6 +75,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private long _iteration;
         private readonly long _term;
         private readonly long _moveToRehabTime;
+        private long _lastIndexCleanupTimeInTicks;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
@@ -123,6 +128,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
+                    var now = SystemTime.UtcNow;
+                    var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
+
                     var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
@@ -152,7 +160,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                             continue;
                         }
-                      
+
                         var updateReason = UpdateDatabaseTopology(database, databaseRecord, clusterTopology, newStats, prevStats, ref deletions);
                         if (updateReason != null)
                         {
@@ -176,7 +184,13 @@ namespace Raven.Server.ServerWide.Maintenance
                             AddToDecisionLog(database, $"Should clean up values up to raft index {cleanUp}.");
                             cleanUpState.Add(database, cleanUp.Value);
                         }
+
+                        if (cleanupIndexes)
+                            await CleanUpUnusedAutoIndexes(database, databaseRecord, newStats);
                     }
+
+                    if (cleanupIndexes)
+                        _lastIndexCleanupTimeInTicks = now.Ticks;
                 }
 
                 foreach (var command in updateCommands)
@@ -204,9 +218,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     foreach (var command in deletions)
                     {
-                       AddToDecisionLog(command.DatabaseName, 
-                            $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
-                       
+                        AddToDecisionLog(command.DatabaseName,
+                             $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
+
                         await Delete(command);
                     }
                 }
@@ -224,6 +238,99 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     await _engine.PutAsync(cmd);
+                }
+            }
+        }
+
+        internal async Task CleanUpUnusedAutoIndexes(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
+        {
+            if (record.Topology.Count != stats.Count)
+                return;
+
+            var indexes = new Dictionary<string, TimeSpan>();
+
+            var lowestDatabaseUptime = TimeSpan.MaxValue;
+            var newestIndexQueryTime = TimeSpan.MaxValue;
+
+            foreach (var node in record.Topology.AllNodes)
+            {
+                if (stats.TryGetValue(node, out var nodeReport) == false)
+                    return;
+
+                if (nodeReport.Report.TryGetValue(database, out var report) == false)
+                    return;
+
+                if (report.UpTime.HasValue && lowestDatabaseUptime > report.UpTime)
+                    lowestDatabaseUptime = report.UpTime.Value;
+
+                foreach (var kvp in report.LastIndexStats)
+                {
+                    var lastQueried = kvp.Value.LastQueried;
+                    if (lastQueried.HasValue == false)
+                        continue;
+
+                    if (newestIndexQueryTime > lastQueried.Value)
+                        newestIndexQueryTime = lastQueried.Value;
+
+                    var indexName = kvp.Key;
+                    if (indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    if (indexes.TryGetValue(indexName, out var lq) == false || lq > lastQueried)
+                    {
+                        indexes[indexName] = lastQueried.Value;
+                        continue;
+                    }
+                }
+            }
+
+            if (indexes.Count == 0)
+                return;
+
+            var timeToWaitBeforeMarkingAutoIndexAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle, _server.Configuration, record);
+            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle, _server.Configuration, record);
+
+            foreach (var kvp in indexes)
+            {
+                TimeSpan difference;
+                if (lowestDatabaseUptime > kvp.Value)
+                    difference = kvp.Value;
+                else
+                {
+                    difference = kvp.Value - newestIndexQueryTime;
+                    if (difference == TimeSpan.Zero && lowestDatabaseUptime > kvp.Value)
+                        difference = kvp.Value;
+                }
+
+                var state = IndexState.Normal;
+                if (record.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
+                    state = definition.State.Value;
+
+                if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                {
+                    await _engine.PutAsync(new DeleteIndexCommand(kvp.Key, database));
+
+                    AddToDecisionLog(database, $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.");
+
+                    continue;
+                }
+
+                if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                {
+                    await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Idle, database));
+
+                    AddToDecisionLog(database, $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
+
+                    continue;
+                }
+
+                if (state == IndexState.Idle && difference < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                {
+                    await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Normal, database));
+
+                    AddToDecisionLog(database, $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
+
+                    continue;
                 }
             }
         }
@@ -284,7 +391,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _logger.Operations(alertMsg);
             }
         }
-        
+
         private string UpdateDatabaseTopology(string dbName, DatabaseRecord record, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous,
@@ -303,8 +410,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     nodeStats.Report.TryGetValue(dbName, out var dbStats))
                 {
                     status = dbStats.Status;
-                    if (status == Loaded || 
-                        status == Loading || 
+                    if (status == Loaded ||
+                        status == Loading ||
                         status == Unloaded)
                     {
                         hasLivingNodes = true;
@@ -318,13 +425,13 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
                 }
-                
+
                 // Give one minute of grace before we move the node to a rehab
                 if (DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime) < current[member]?.LastSuccessfulUpdateDateTime)
                 {
                     continue;
                 }
-                
+
                 if (TryMoveToRehab(dbName, topology, current, member))
                     return $"Node {member} is currently not responding (with status: {status}) and moved to rehab";
 
@@ -351,7 +458,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (recoverable.Count > 0)
                 {
                     var node = FindMostUpToDateNode(recoverable, dbName, current);
-                    topology.Rehabs.Remove(node);   
+                    topology.Rehabs.Remove(node);
                     topology.Members.Add(node);
 
                     RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
@@ -438,7 +545,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     updateTopologyStatusReason.AppendLine(tryPromote.UpdateTopologyReason);
                 }
             }
-            
+
             var goodMembers = GetNumberOfRespondingNodes(clusterTopology, dbName, topology, current);
             var pendingDelete = GetPendingDeleteNodes(record);
             foreach (var rehab in topology.Rehabs)
@@ -490,7 +597,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 _logger.Operations($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.");
                             }
-                            
+
                             topology.Members.Add(rehab);
                             topology.Rehabs.Remove(rehab);
                             RemoveOtherNodesIfNeeded(dbName, record, clusterTopology, current, ref deletions);
@@ -529,7 +636,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             return goodMembers;
         }
-        
+
         private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
         {
             DatabaseStatusReport dbStats = null;
@@ -703,7 +810,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             var nodesToDelete = new List<string>();
-            var mentorChangeVector = new Dictionary<string,string>();
+            var mentorChangeVector = new Dictionary<string, string>();
 
             foreach (var node in topology.Promotables.Concat(topology.Rehabs))
             {
@@ -711,7 +818,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     current.TryGetValue(mentorNode, out var metorStats) == false ||
                     metorStats.Report.TryGetValue(dbName, out var dbReport) == false)
                 {
-                   continue; 
+                    continue;
                 }
                 if (record.DeletionInProgress?.ContainsKey(node) == true)
                 {
@@ -916,7 +1023,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (mentorIndexStats.State == IndexState.Error && currentIndexStats.State == IndexState.Error)
                     continue;
-                
+
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                     return false;

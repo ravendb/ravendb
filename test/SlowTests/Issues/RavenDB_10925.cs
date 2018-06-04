@@ -107,6 +107,7 @@ namespace SlowTests.Issues
                     }));
 
                 database.IndexStore.RunIdleOperations(); // it will merge the i5
+                database.IndexStore.RunIdleOperations(); // need to run twice since we are extending one index at a time
 
                 indexes = database
                     .IndexStore
@@ -196,6 +197,8 @@ namespace SlowTests.Issues
                         })
                     }));
 
+                Assert.Equal("Auto/Companies/ByCityAndCountAndExact(State)ReducedByArray(Name)", i3.Name);
+
                 database.IndexStore.RunIdleOperations();
 
                 var indexes = database
@@ -228,6 +231,7 @@ namespace SlowTests.Issues
                     }));
 
                 database.IndexStore.RunIdleOperations(); // i4 should be merged
+                database.IndexStore.RunIdleOperations(); // need to run twice since we are extending one index at a time
 
                 indexes = database
                     .IndexStore

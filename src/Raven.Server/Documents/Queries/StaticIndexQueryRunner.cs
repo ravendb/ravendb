@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = GetIndex(query.Metadata.IndexName);
 
-            if (existingResultEtag.HasValue)
+            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
                 if (etag == existingResultEtag)

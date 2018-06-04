@@ -30,7 +30,7 @@ select count() as Count, Artist"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             }
@@ -54,7 +54,7 @@ select Artist"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             }

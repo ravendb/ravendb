@@ -244,6 +244,8 @@ namespace Raven.Client.Documents.Session
         public void RandomOrdering()
         {
             AssertNoRawQuery();
+
+            NoCaching();
             OrderByTokens.AddLast(OrderByToken.Random);
         }
 
@@ -254,11 +256,14 @@ namespace Raven.Client.Documents.Session
         public void RandomOrdering(string seed)
         {
             AssertNoRawQuery();
+
             if (string.IsNullOrWhiteSpace(seed))
             {
                 RandomOrdering();
                 return;
             }
+
+            NoCaching();
             OrderByTokens.AddLast(OrderByToken.CreateRandom(seed));
         }
 
@@ -1545,8 +1550,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var type = whereParams.Value.GetType().GetNonNullableType();
 
-            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out var strVal))
-                return strVal;
+            if (_conventions.TryConvertValueToObjectForQuery(whereParams.FieldName, whereParams.Value, forRange, out var objValue))
+                return objValue;
 
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
                 return whereParams.Value;
@@ -1658,6 +1663,40 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 var whereToken = token as WhereToken;
                 whereToken?.AddAlias(fromAlias);
             }
+        }
+
+        protected static void GetSourceAliasIfExists(QueryData queryData, string[] fields, out string sourceAlias)
+        {
+            sourceAlias = null;
+
+            if (fields.Length != 1)
+                return;
+
+            var typeInfo = typeof(T).GetTypeInfo();
+            if (typeof(T) != typeof(string) && 
+                typeInfo.IsValueType == false && 
+                typeInfo.IsEnum == false)
+                return;
+
+            var indexOf = fields[0].IndexOf(".", StringComparison.Ordinal);
+            if (indexOf == -1)
+                return;
+
+            var possibleAlias = fields[0].Substring(0, indexOf);
+            if (queryData.FromAlias != null &&
+                queryData.FromAlias == possibleAlias)
+            {
+                sourceAlias = possibleAlias;
+                return;
+            }
+
+            if (queryData.LoadTokens == null ||
+                queryData.LoadTokens.Count == 0)
+                return;
+            if (queryData.LoadTokens.Any(lt => lt.Alias == possibleAlias) == false)
+                return;
+
+            sourceAlias = possibleAlias;
         }
 
         public string ProjectionParameter(object id)

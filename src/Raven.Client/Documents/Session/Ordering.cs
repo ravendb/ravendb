@@ -1,6 +1,4 @@
-﻿using System;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
+﻿using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Documents.Session
 {
@@ -14,10 +12,8 @@ namespace Raven.Client.Documents.Session
 
     internal static class OrderingUtil
     {
-        public static OrderingType GetOrderingOfType(Type fieldType)
+        public static OrderingType GetOrderingFromRangeType(RangeType rangeType)
         {
-            var rangeType = DocumentConventions.GetRangeType(fieldType);
-
             var ordering = OrderingType.String;
 
             switch (rangeType)

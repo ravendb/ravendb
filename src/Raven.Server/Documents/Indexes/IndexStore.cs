@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -127,6 +126,15 @@ namespace Raven.Server.Documents.Indexes
                     existingIndex.SetPriority(definition.Priority);
                 }
 
+                if ((differences & IndexDefinitionCompareDifferences.State) != 0)
+                {
+                    // this can only be set by cluster
+                    // and if local state is disabled or error
+                    // then we are ignoring this change
+                    if (existingIndex.State == IndexState.Normal || existingIndex.State == IndexState.Idle)
+                        existingIndex.SetState(definition.State);
+                }
+
                 existingIndex.Update(definition, existingIndex.Configuration);
 
                 return;
@@ -165,6 +173,9 @@ namespace Raven.Server.Documents.Indexes
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
 
+                if (definition.State.HasValue)
+                    result.State = definition.State.Value;
+
                 return result;
             }
 
@@ -184,6 +195,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
+
+                if (definition.State.HasValue)
+                    result.State = definition.State.Value;
 
                 return result;
             }
@@ -531,6 +545,9 @@ namespace Raven.Server.Documents.Indexes
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             if ((differences & IndexDefinitionCompareDifferences.LockMode) == IndexDefinitionCompareDifferences.LockMode)
+                return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+
+            if ((differences & IndexDefinitionCompareDifferences.State) == IndexDefinitionCompareDifferences.State)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             return IndexCreationOptions.Update;
@@ -948,6 +965,30 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 index = Index.Open(indexPath, _documentDatabase);
+
+                var differences = IndexDefinitionCompareDifferences.None;
+
+                if (staticIndexDefinition != null)
+                {
+                    if (staticIndexDefinition.LockMode != null && index.Definition.LockMode != staticIndexDefinition.LockMode)
+                        differences |= IndexDefinitionCompareDifferences.LockMode;
+
+                    if (staticIndexDefinition.Priority != null && index.Definition.Priority != staticIndexDefinition.Priority)
+                        differences |= IndexDefinitionCompareDifferences.Priority;
+                }
+                else if (autoIndexDefinition != null)
+                {
+                    if (autoIndexDefinition.Priority != index.Definition.Priority)
+                        differences |= IndexDefinitionCompareDifferences.Priority;
+                }
+
+                if (differences != IndexDefinitionCompareDifferences.None)
+                {
+                    // database record has different lock mode / priority setting than persisted locally
+
+                    UpdateStaticIndexLockModeAndPriority(staticIndexDefinition, index, differences);
+                }
+
                 index.Start();
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started {index.Name} from {indexPath}");
@@ -1001,20 +1042,15 @@ namespace Raven.Server.Documents.Indexes
         public void RunIdleOperations()
         {
             long etag;
-            DatabaseRecord record;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-                record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
-
-            if (record.Topology.Members[0] != _serverStore.NodeTag)
-                return;
+                _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
 
             AsyncHelpers.RunSync(() => RunIdleOperationsAsync(etag));
         }
 
         private async Task RunIdleOperationsAsync(long databaseRecordEtag)
         {
-            await HandleUnusedAutoIndexes();
             await DeleteOrMergeSurpassedAutoIndexes(databaseRecordEtag);
         }
 
@@ -1022,8 +1058,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_lastSurpassedAutoIndexesDatabaseRecordEtag >= databaseRecordEtag)
                 return;
-
-            _lastSurpassedAutoIndexesDatabaseRecordEtag = databaseRecordEtag;
 
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(this);
 
@@ -1055,7 +1089,13 @@ namespace Raven.Server.Documents.Indexes
 
                     var definitionToCheck = (AutoIndexDefinitionBase)indexToCheck.Definition;
 
-                    var result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck);
+                    DynamicQueryMatchResult result;
+
+                    using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck, context);
+                    }
+                    
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
                         indexesToRemove.Add(index.Name);
@@ -1073,9 +1113,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (indexesToRemove.Count == 0 && indexesToExtend.Count == 0)
-                return;
-            
+            var moreWork = false;
             foreach (var kvp in indexesToExtend)
             {
                 var definition = kvp.Value.CreateAutoIndexDefinition();
@@ -1086,13 +1124,17 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     await CreateIndex(definition);
+                    await TryDeleteIndexIfExists(kvp.Key);
 
-                    indexesToRemove.Add(kvp.Key);
+                    moreWork = true;
+                    break; // extending only one auto-index at a time
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Could not create extended index '{definition.Name}'.", e);
+
+                    moreWork = true;
                 }
             }
 
@@ -1108,95 +1150,13 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Could not delete surpassed index '{indexName}'.", e);
+
+                    moreWork = true;
                 }
             }
-        }
 
-        private async Task HandleUnusedAutoIndexes()
-        {
-            var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
-            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
-            var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
-
-            var indexesSortedByLastQueryTime = (from index in _indexes
-                                                where index.State != IndexState.Disabled && index.State != IndexState.Error
-                                                let stats = index.GetStats()
-                                                let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
-                                                orderby lastQueryingTime
-                                                select new UnusedIndexState
-                                                {
-                                                    LastQueryingTime = lastQueryingTime,
-                                                    Index = index,
-                                                    State = stats.State,
-                                                    CreationDate = stats.CreatedTimestamp
-                                                }).ToList();
-
-            for (var i = 0; i < indexesSortedByLastQueryTime.Count; i++)
-            {
-                var item = indexesSortedByLastQueryTime[i];
-
-                if (item.Index.Type != IndexType.AutoMap && item.Index.Type != IndexType.AutoMapReduce)
-                    continue;
-
-                var now = _documentDatabase.Time.GetUtcNow();
-                var age = now - item.CreationDate;
-                var lastQuery = now - item.LastQueryingTime;
-
-                if (item.State == IndexState.Normal)
-                {
-                    TimeSpan differenceBetweenNewestAndCurrentQueryingTime;
-                    if (i < indexesSortedByLastQueryTime.Count - 1)
-                    {
-                        var lastItem = indexesSortedByLastQueryTime[indexesSortedByLastQueryTime.Count - 1];
-                        differenceBetweenNewestAndCurrentQueryingTime = lastItem.LastQueryingTime - item.LastQueryingTime;
-                    }
-                    else
-                    {
-                        if (item.LastQueryingTime > _documentDatabase.StartTime)
-                            differenceBetweenNewestAndCurrentQueryingTime = now - item.LastQueryingTime;
-                        else
-                            differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
-                    }
-
-                    if (differenceBetweenNewestAndCurrentQueryingTime >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
-                    {
-                        if (lastQuery >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
-                        {
-                            try
-                            {
-                                item.Index.SetState(IndexState.Idle);
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Changed index '{item.Index.Name}' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
-                            }
-                            catch (Exception e)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Failed to set state of '{item.Index.Name}' to {IndexState.Idle} when running idle operations", e);
-                            }
-                        }
-                    }
-
-                    continue;
-                }
-
-                if (item.State == IndexState.Idle)
-                {
-                    if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
-                    {
-                        try
-                        {
-                            await TryDeleteIndexIfExists(item.Index.Name);
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Deleted index '{item.Index.Name}' due to idleness. Age: {age}. Last query: {lastQuery}.");
-                        }
-                        catch (Exception e)
-                        {
-                            if (_logger.IsOperationsEnabled)
-                                _logger.Operations($"Could not delete idle index '{item.Index.Name}'.", e);
-                        }
-                    }
-                }
-            }
+            if (moreWork == false)
+                _lastSurpassedAutoIndexesDatabaseRecordEtag = databaseRecordEtag;
         }
 
         private void InitializePath(PathSetting path)
@@ -1372,7 +1332,7 @@ namespace Raven.Server.Documents.Indexes
             if (index.Type == IndexType.Faulty || index.Type.IsAuto())
             {
                 index.SetLock(mode);  // this will throw proper exception
-                return; 
+                return;
             }
 
             var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);

@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries
             else
                 IndexName = fromToken.FieldValue;
 
-            if (IsDynamic == false || IsGroupBy || IsDistinct)
+            if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
 
             DeclaredFunctions = Query.DeclaredFunctions;
@@ -127,6 +127,8 @@ namespace Raven.Server.Documents.Queries
         public string[] Includes;
 
         public bool HasIncludeOrLoad;
+
+        public bool HasOrderByRandom;
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
@@ -232,7 +234,7 @@ namespace Raven.Server.Documents.Queries
                         ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type.ToString(), QueryText, parameters);
                     }
 
-                    if (IsCollectionQuery && (OrderBy.Length > 1 || OrderBy[0].OrderingType != OrderByFieldType.Random))
+                    if (IsCollectionQuery && OrderBy.Length > 0)
                         IsCollectionQuery = false;
                 }
             }
@@ -569,6 +571,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
+                HasOrderByRandom = true;
+
                 if (me.Arguments == null || me.Arguments.Count == 0)
                     return new OrderByField(null, OrderByFieldType.Random, asc);
 

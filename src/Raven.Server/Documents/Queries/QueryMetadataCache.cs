@@ -10,12 +10,12 @@ namespace Raven.Server.Documents.Queries
 
         private readonly QueryMetadata[] _cache = new QueryMetadata[CacheSize];
 
-        public bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong metadataHash, out QueryMetadata metadata)
+        public bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, out ulong metadataHash, out QueryMetadata metadata)
         {
             metadataHash = 0;
             metadata = null;
 
-            if (query == null || query.Query == null || query.QueryParameters == null || query.QueryParameters.Count == 0)
+            if (query == null || query.Query == null)
                 return false;
 
             metadataHash = GetQueryMetadataHash(query);
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Queries
         private static ulong GetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query)
         {
             var hash = Hashing.XXHash64.CalculateRaw(query.Query);
-            if (query.QueryParameters == null)
+            if (query.QueryParameters == null || query.QueryParameters.Count == 0)
                 return hash;
             return Hashing.Combine(hash, query.QueryParameters.GetHashOfPropertyNames());
         }

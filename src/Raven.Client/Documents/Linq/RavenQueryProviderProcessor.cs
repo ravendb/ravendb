@@ -70,6 +70,8 @@ namespace Raven.Client.Documents.Linq
         };
         private List<string> _projectionParameters { get; set; }
 
+        private const string TransparentIdentifier = "<>h__TransparentIdentifier";
+
         private int _aliasesCount;
 
         private readonly LinqPathProvider _linqPathProvider;
@@ -1444,9 +1446,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
                             && unaryExpression.Operand is LambdaExpression lambdaExpression
-                            && (lambdaExpression.Body.NodeType == ExpressionType.New || lambdaExpression.Body.NodeType == ExpressionType.MemberInit)
+                            && (lambdaExpression.Body.NodeType == ExpressionType.New 
+                                || lambdaExpression.Body.NodeType == ExpressionType.MemberInit
+                                || lambdaExpression.Body.NodeType == ExpressionType.MemberAccess)
                             && lambdaExpression.Parameters[0] != null
-                            && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
+                            && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
                         {
                             _insideLet++;
                         }
@@ -1819,7 +1823,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof(string);
             }
 
-            var ordering = OrderingUtil.GetOrderingOfType(fieldType);
+            var rangeType = QueryGenerator.Conventions.GetRangeType(fieldType);
+
+            var ordering = OrderingUtil.GetOrderingFromRangeType(rangeType);
             if (descending)
                 _documentQuery.OrderByDescending(fieldName, ordering);
             else
@@ -1849,7 +1855,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
-                    AddToFieldsToFetch(GetSelectPath(memberExpression), GetSelectPath(memberExpression));
+                    var selectPath = RemoveTransparentIdentifiersIfNeeded(memberExpression);
+
+                    AddToFieldsToFetch(selectPath, selectPath);
                     if (_insideSelect == false)
                     {
                         foreach (var fieldToFetch in FieldsToFetch)
@@ -1865,7 +1873,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 //See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
                 case ExpressionType.New:
                     var newExpression = ((NewExpression)body);
-                    _newExpressionType = newExpression.Type;
 
                     if (_insideLet > 0)
                     {
@@ -1873,6 +1880,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         _insideLet--;
                         break;
                     }
+
+                    _newExpressionType = newExpression.Type;
 
                     if (_declareBuilder != null)
                     {
@@ -1974,6 +1983,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private string RemoveTransparentIdentifiersIfNeeded(MemberExpression memberExpression)
+        {
+            var selectPath = GetSelectPath(memberExpression);
+            while (selectPath.StartsWith(TransparentIdentifier))
+            {
+                var indexOf = selectPath.IndexOf(".", StringComparison.Ordinal);
+                selectPath = selectPath.Substring(indexOf + 1);
+            }
+
+            return selectPath;
         }
 
         private string GetSelectPathOrConstantValue(MemberExpression member)

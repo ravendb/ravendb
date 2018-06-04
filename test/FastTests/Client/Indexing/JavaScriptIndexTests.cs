@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -46,6 +47,34 @@ namespace FastTests.Client.Indexing
                 }
 
             }
+        }
+
+
+        [Fact]
+        public void CanIndexTimeSpan()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new TeemoByDuration());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Teemo
+                    {
+                        Description = "5 minutes",
+                        Duration = TimeSpan.FromMinutes(5)
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    session.Query<Teemo>("TeemoByDuration").Single(x => x.Duration == TimeSpan.FromMinutes(5));
+                }
+
+            }
+        }
+
+        public class Teemo
+        {
+            public string Description { get; set; }
+            public TimeSpan Duration { get; set; }
         }
 
         [Fact]
@@ -368,6 +397,24 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        private class TeemoByDuration : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "TeemoByDuration",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Teemos', function (t){ return { Duration: t.Duration, Description: t.Description};})",
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
         private class UsersByNameWithAdditionalSources : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()

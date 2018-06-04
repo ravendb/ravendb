@@ -74,6 +74,9 @@ namespace Raven.Server.Documents.Indexes.Auto
             if (Priority != other.Priority)
                 result |= IndexDefinitionCompareDifferences.Priority;
 
+            if (State != otherDefinition.State)
+                result |= IndexDefinitionCompareDifferences.State;
+
             return result;
         }
 

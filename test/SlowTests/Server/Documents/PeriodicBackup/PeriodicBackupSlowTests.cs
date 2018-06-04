@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var periodicBackupTaskId = result.TaskId;
 
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
-                var done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
+                var done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(180));
                 Assert.True(done, "Failed to complete the backup in time");
             }
 

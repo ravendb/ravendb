@@ -25,7 +25,47 @@ namespace SlowTests.Issues
                 ModifyDocumentStore = str =>
                 {
                     str.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
-                    str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter);
+                    str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, RangeType.Long);
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(-2)) });
+                    session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(-1)) });
+                    session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(0)) });
+                    session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(1)) });
+                    session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(2)) });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Query<Foo>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .OrderByDescending(x => x.Bar);
+                    Debug.WriteLine(q);
+                    var result = q.ToList();
+
+                    Assert.Equal(5, result.Count);
+                    Assert.True(result[0].Bar > result[1].Bar);
+                    Assert.True(result[1].Bar > result[2].Bar);
+                    Assert.True(result[2].Bar > result[3].Bar);
+                    Assert.True(result[3].Bar > result[4].Bar);
+                }
+            }
+        }
+
+        [Fact]
+        public void Duration_Can_Filter_By_Value()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = str =>
+                {
+                    str.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
+                    str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, RangeType.Long);
                 }
             }))
             {
@@ -55,9 +95,11 @@ namespace SlowTests.Issues
                     Assert.True(result[0].Bar > result[1].Bar);
                     Assert.True(result[1].Bar > result[2].Bar);
                     Assert.True(result[2].Bar > result[3].Bar);
+                    Assert.Equal(new Duration(TimeSpan.FromHours(-1)), result[3].Bar);
                 }
             }
         }
+
 
         public struct Duration : IEquatable<Duration>, IComparable<Duration>, IComparable
         {
@@ -177,9 +219,15 @@ namespace SlowTests.Issues
             }
         }
 
-        public static bool DurationQueryValueConverter(string name, Duration value, bool forRange, out string strValue)
+        public static bool DurationQueryValueConverter(string name, Duration value, bool forRange, out object objValue)
         {
-            strValue = new TimeSpan(value.Ticks).ToString("c");
+            if (forRange)
+            {
+                objValue = value.Ticks;
+                return true;
+            }
+
+            objValue = new TimeSpan(value.Ticks).ToString("c");
 
             return true;
         }

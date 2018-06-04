@@ -113,8 +113,8 @@ namespace Raven.Client.ServerWide
                 if (result == IndexDefinitionCompareDifferences.None)
                     return;
 
-                result &= ~IndexDefinitionCompareDifferences.LockMode;
                 result &= ~IndexDefinitionCompareDifferences.Priority;
+                result &= ~IndexDefinitionCompareDifferences.State;
 
                 if (result != IndexDefinitionCompareDifferences.None)
                     throw new NotSupportedException($"Can not update auto-index: {definition.Name} (compare result: {result})");
