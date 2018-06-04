@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
             
             tracker.Query = indexQuery.Query;
 
-            var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery);
+            var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, context);
 
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {

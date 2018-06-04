@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -59,7 +59,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(
                 "FROM Users GROUP BY Location WHERE Location = 'Poland' ORDER BY Count AS long ASC, Location ASC SELECT Location, count() "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -86,7 +86,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -116,7 +116,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, sum(Count) "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -146,7 +146,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count(), sum(Sum) "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -214,7 +214,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery =
                 DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location, NickName WHERE Location = 'Poland' SELECT Location, count() "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -269,7 +269,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(usersByCountAndTotalAgeGroupedByLocation.Name, result.IndexName);
@@ -291,7 +291,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight ASC"));
  
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -318,7 +318,7 @@ select Name, count()"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             }
@@ -345,7 +345,7 @@ select Name, count()"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             }
