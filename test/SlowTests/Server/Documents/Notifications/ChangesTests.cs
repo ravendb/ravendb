@@ -194,6 +194,135 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
+        [Fact]
+        public async Task CanCanNotificationAboutDocumentsStartingWith()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var list = new BlockingCollection<DocumentChange>();
+                var taskObservable = store.Changes();
+                await taskObservable.EnsureConnectedNow();
+                var observableWithTask = taskObservable.ForDocumentsStartingWith("users/");
+                
+                observableWithTask.Subscribe(x =>
+                {
+                    if (x.Type == DocumentChangeTypes.Put)
+                        list.Add(x);
+                });
+                await observableWithTask.EnsureSubscribedNow();
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "differentDocumentPrefix/1");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
+                
+                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("users/1", documentChange.Id);
+                
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("users/2", documentChange.Id);
+            }
+        }
+        
+        [Fact]
+        public async Task CanCanNotificationAboutDocumentsFromCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var list = new BlockingCollection<DocumentChange>();
+                var taskObservable = store.Changes();
+                await taskObservable.EnsureConnectedNow();
+                var observableWithTask = taskObservable.ForDocumentsInCollection("users");
+                
+                observableWithTask.Subscribe(x =>
+                {
+                    if (x.Type == DocumentChangeTypes.Put)
+                        list.Add(x);
+                });
+                await observableWithTask.EnsureSubscribedNow();
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee(), "employees/1");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
+                
+                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("users/1", documentChange.Id);
+                
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("users/2", documentChange.Id);
+            }
+        }
+        
+        [Fact]
+        public async Task CanCanNotificationAboutDocumentsWithType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var list = new BlockingCollection<DocumentChange>();
+                var taskObservable = store.Changes();
+                await taskObservable.EnsureConnectedNow();
+                var observableWithTask = taskObservable.ForDocumentsOfType<Company>();
+                
+                observableWithTask.Subscribe(x =>
+                {
+                    if (x.Type == DocumentChangeTypes.Put)
+                        list.Add(x);
+                });
+                await observableWithTask.EnsureSubscribedNow();
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee(), "employees/1");
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
+                
+                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("users/1", documentChange.Id);
+                
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("users/2", documentChange.Id);
+            }
+        }
+
         private class UsersIndex : AbstractIndexCreationTask<User>
         {
             public override string IndexName => "Users/All";
