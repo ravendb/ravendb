@@ -579,9 +579,9 @@ namespace Sparrow
                 if (Environment.HasShutdownStarted)
                     return; // no need
 
+                var current = Interlocked.Exchange(ref Head, HeaderDisposed);
                 try
                 {
-                    var current = Interlocked.Exchange(ref Head, HeaderDisposed);
                     while (current != null)
                     {
                         var segment = current.Value;
@@ -593,10 +593,9 @@ namespace Sparrow
                         segment.Dispose();
                     }
                 }
-                catch (Exception)
+                catch (ObjectDisposedException)
                 {
-
-                    throw;
+                    // in case that in the future we will throw that exception
                 }
             }
         }
