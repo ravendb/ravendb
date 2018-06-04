@@ -362,16 +362,6 @@ namespace Sparrow.Json
             _ptrCurrent -= allocation.SizeInBytes;
 #endif
         }
-
-        public class IntPtrComarer : IComparer<IntPtr>
-        {
-            public static IntPtrComarer Instance = new IntPtrComarer();
-
-            public int Compare(IntPtr x, IntPtr y)
-            {
-                return Math.Sign((x.ToInt64() - y.ToInt64()));
-            }
-        }
     }
 
     public unsafe class AllocatedMemoryData
