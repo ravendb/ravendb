@@ -25,7 +25,6 @@ namespace FastTests.Server.Cluster
 
                 if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(type.Name, out int _))
                     continue;
-                Console.WriteLine($"[nameof({type.Name})] = 404,");
                 exceptions.Add(new InvalidOperationException($"Missing version in '{nameof(ClusterCommandsVersionManager)}.{nameof(ClusterCommandsVersionManager.ClusterCommandsVersions)}' for the command '{type.Name}'."));
             }
 

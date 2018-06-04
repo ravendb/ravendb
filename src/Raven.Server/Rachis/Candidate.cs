@@ -151,16 +151,14 @@ namespace Raven.Server.Rachis
                             StateChange();
 
                             var connections = new Dictionary<string, RemoteConnection>();
-                            var versions = new List<int>();
-                            foreach (var candidateAmbassador in _voters)
+                            var versions = new int[_voters.Count];
+                            for (int i = 0; i < _voters.Count; i++)
                             {
+                                CandidateAmbassador candidateAmbassador = _voters[i];
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
-                                if (candidateAmbassador.ClusterCommandsVersion > 0)
-                                {
-                                    versions.Add(candidateAmbassador.ClusterCommandsVersion);
-                                }
+                                versions[i] = candidateAmbassador.ClusterCommandsVersion;
                             }
-                            ClusterCommandsVersionManager.CurrentClusterMinimalVersion = ClusterCommandsVersionManager.Min(versions);
+                            ClusterCommandsVersionManager.CurrentClusterMinimalVersion = ClusterCommandsVersionManager.Median(versions);
                             _engine.SwitchToLeaderState(ElectionTerm,
                                 $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}",
                                 connections);

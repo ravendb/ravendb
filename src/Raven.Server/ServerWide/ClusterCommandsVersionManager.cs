@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
@@ -12,32 +13,18 @@ namespace Raven.Server.ServerWide
 {
     public static class ClusterCommandsVersionManager
     {
-        public const int DefaultVersion = 400;
-
         public static readonly int MyCommandsVersion;
 
-        public static int Max(IEnumerable<int> values)
+        public static int Median(int[] values)
         {
-            var max = 0;
-            foreach (var value in values)
-            {
-                if (value > max)
-                    max = value;
-            }
+            if (values == null || values.Length == 0)
+                throw new ArgumentException("Array must contain values.");
 
-            return max;
-        }
-
-        public static int Min(IEnumerable<int> values)
-        {
-            var min = int.MaxValue;
-            foreach (var value in values)
-            {
-                if (value < min)
-                    min = value;
-            }
-
-            return min;
+            // we do it very naively here, because we expect a small amount of values.
+            Array.Sort(values);
+            if (values.Length % 2 == 1)
+                return values[(values.Length -1) / 2];
+            return Math.Min(values[values.Length / 2 - 1], values[values.Length / 2 + 1]);
         }
 
         public static int CurrentClusterMinimalVersion;
@@ -110,7 +97,7 @@ namespace Raven.Server.ServerWide
 
         static ClusterCommandsVersionManager()
         {
-            MyCommandsVersion = CurrentClusterMinimalVersion = Max(ClusterCommandsVersions.Values);
+            MyCommandsVersion = CurrentClusterMinimalVersion = Enumerable.Max(ClusterCommandsVersions.Values);
         }
     }
 
