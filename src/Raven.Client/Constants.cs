@@ -44,6 +44,8 @@ namespace Raven.Client
 
             public const string Etag = "ETag";
 
+            public const string ClientVersion = "Raven-Client-Version";
+
             public const string IfNoneMatch = "If-None-Match";
             public const string TransferEncoding = "Transfer-Encoding";
             public const string ContentEncoding = "Content-Encoding";

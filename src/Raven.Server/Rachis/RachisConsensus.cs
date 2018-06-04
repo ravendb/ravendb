@@ -43,10 +43,16 @@ namespace Raven.Server.Rachis
         }
 
         public TStateMachine StateMachine;
+        private RachisVersionValidation _validator;
 
         internal override RachisStateMachine GetStateMachine()
         {
             return StateMachine;
+        }
+
+        internal override RachisVersionValidation GetValidator()
+        {
+            return _validator;
         }
 
         public override void Notify(Notification notification)
@@ -57,9 +63,10 @@ namespace Raven.Server.Rachis
         protected override void InitializeState(TransactionOperationContext context)
         {
             StateMachine = new TStateMachine();
+            _validator = StateMachine.Validator();
             StateMachine.Initialize(this, context);
         }
-
+        
         public override void Dispose()
         {
             SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis");
@@ -226,6 +233,10 @@ namespace Raven.Server.Rachis
     public abstract class RachisConsensus : IDisposable
     {        
         internal abstract RachisStateMachine GetStateMachine();
+
+        internal abstract RachisVersionValidation GetValidator();
+
+        public RachisVersionValidation Validator => GetValidator();
 
         public const string InitialTag = "?";
 
@@ -744,6 +755,7 @@ namespace Raven.Server.Rachis
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
+            Validator.AssertPutCommandToLeader(cmd);
             return leader.PutAsync(cmd, OperationTimeout);
         }
 
