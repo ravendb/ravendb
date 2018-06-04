@@ -27,109 +27,110 @@ namespace Raven.Client.Util
 
         private static ObjectPool<ExclusiveSynchronizationContext, ExclusiveSynchronizationContextResetBehavior> _pool = new ObjectPool<ExclusiveSynchronizationContext, ExclusiveSynchronizationContextResetBehavior>(() => new ExclusiveSynchronizationContext(), 10);
 
-
         public static void RunSync(Func<Task> task)
         {
+            var oldContext = SynchronizationContext.Current;
+
             // Do we have an active synchronization context?
-            if (SynchronizationContext.Current == null)
+            if (oldContext == null)
             {
                 // We can run synchronously without any issue.    
                 task().GetAwaiter().GetResult();
+                return;
             }
-            else
+
+            var sw = Stopwatch.StartNew();
+            var synch = _pool.Allocate();
+
+            SynchronizationContext.SetSynchronizationContext(synch);
+            try
             {
-                var oldContext = SynchronizationContext.Current;
-                var synch = _pool.Allocate();
-
-                SynchronizationContext.SetSynchronizationContext(synch);
-                try
+                synch.Post(async _ =>
                 {
-                    synch.Post(async _ =>
+                    try
                     {
-                        try
-                        {
-                            await task().ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            synch.InnerException = e;
-                            throw;
-                        }
-                        finally
-                        {
-                            synch.EndMessageLoop();
-                        }
-                    }, null);
-                    synch.BeginMessageLoop();
-                }
-                catch (AggregateException ex)
-                {
-                    var exception = ex.ExtractSingleInnerException();
-                    ExceptionDispatchInfo.Capture(exception).Throw();
-                }
-                finally
-                {
-                    SynchronizationContext.SetSynchronizationContext(oldContext);
-                }
-
-                _pool.Free(synch);
+                        await task().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
+                        synch.EndMessageLoop();
+                    }
+                }, null);
+                synch.BeginMessageLoop();
             }
+            catch (AggregateException ex)
+            {
+                var exception = ex.ExtractSingleInnerException();
+                if (exception is OperationCanceledException)
+                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
+                ExceptionDispatchInfo.Capture(exception).Throw();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldContext);
+            }
+
+            _pool.Free(synch);
         }
 
         public static T RunSync<T>(Func<Task<T>> task)
-        {            
+        {
+            var oldContext = SynchronizationContext.Current;
+
             // Do we have an active synchronization context?
-            if (SynchronizationContext.Current == null)
-            { 
+            if (oldContext == null)
+            {
                 // We can run synchronously without any issue.    
                 return task().GetAwaiter().GetResult();
             }
-            else
+
+            var result = default(T);
+
+            var sw = Stopwatch.StartNew();
+            var synch = _pool.Allocate();
+
+            SynchronizationContext.SetSynchronizationContext(synch);
+            try
             {
-                var result = default(T);
-
-                Stopwatch sp = Stopwatch.StartNew();
-                var oldContext = SynchronizationContext.Current;
-                var synch = _pool.Allocate();
-
-                SynchronizationContext.SetSynchronizationContext(synch);
-                try
+                synch.Post(async _ =>
                 {
-                    synch.Post(async _ =>
+                    try
                     {
-                        try
-                        {
-                            result = await task().ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            synch.InnerException = e;
-                            throw;
-                        }
-                        finally
-                        {
-                            sp.Stop();
-                            synch.EndMessageLoop();
-                        }
-                    }, null);
-                    synch.BeginMessageLoop();
-                }
-                catch (AggregateException ex)
-                {
-                    var exception = ex.ExtractSingleInnerException();
-                    if (exception is OperationCanceledException)
-                        throw new TimeoutException("Operation timed out after: " + sp.Elapsed, ex);
-                    ExceptionDispatchInfo.Capture(exception).Throw();
-                }
-                finally
-                {
-                    SynchronizationContext.SetSynchronizationContext(oldContext);
-                }
+                        result = await task().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
+                        sw.Stop();
+                        synch.EndMessageLoop();
+                    }
+                }, null);
+                synch.BeginMessageLoop();
+            }
+            catch (AggregateException ex)
+            {
+                var exception = ex.ExtractSingleInnerException();
+                if (exception is OperationCanceledException)
+                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
+                ExceptionDispatchInfo.Capture(exception).Throw();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldContext);
+            }
 
-                _pool.Free(synch);
+            _pool.Free(synch);
 
-                return result;
-            }                        
+            return result;
         }
 
         private class ExclusiveSynchronizationContext : SynchronizationContext
@@ -156,7 +157,10 @@ namespace Raven.Client.Util
                 _workItemsWaiting.Reset();
                 _done = false;
                 InnerException = null;
-                while (_items.TryDequeue(out var dummy)) ; // Drain queue in case of exceptions.
+                while (_items.TryDequeue(out var dummy))
+                {
+                    // Drain queue in case of exceptions.
+                }
             }
 
             public void EndMessageLoop()
@@ -170,13 +174,13 @@ namespace Raven.Client.Util
 
                 // Start to process in a loop
                 while (!_done)
-                {                    
+                {
                     // If the queue is empty, we wait.
                     if (_items.IsEmpty)
                         _workItemsWaiting.WaitOne();
 
                     // Queue is no longer empty (unless someone won) therefore we are ready to process. 
-                    while (_items.TryDequeue(out Tuple<SendOrPostCallback, object> task))
+                    while (_items.TryDequeue(out var task))
                     {
                         // Execute the operation.
                         task.Item1(task.Item2);
@@ -184,11 +188,11 @@ namespace Raven.Client.Util
                         {
                             throw new AggregateException("AsyncHelpers.Run method threw an exception.", InnerException);
                         }
-                    }                       
+                    }
                 }
 
                 OperationCompleted();
-            }            
+            }
 
             public override SynchronizationContext CreateCopy()
             {
