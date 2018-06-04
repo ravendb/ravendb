@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             public string Reason { get; }
         }
 
-        public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
+        public DynamicQueryMatchResult Match(DynamicQueryMapping query, DocumentsOperationContext docsContext, List<Explanation> explanations = null)
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
                 .Where(x => x.Type.IsAuto() && (query.IsGroupBy ? x.Type.IsMapReduce() : x.Type.IsMap()))
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (definitions.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
 
-            var results = definitions.Select(definition => ConsiderUsageOfIndex(query, definition, explanations))
+            var results = definitions.Select(definition => ConsiderUsageOfIndex(query, definition, docsContext, explanations))
                     .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return prioritizedResults[0];
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, List<Explanation> explanations = null)
+        private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, DocumentsOperationContext docsContext, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -208,6 +209,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 // probably dynamic index that was disposed by the auto cleaner
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
+
+            if (currentBestState == DynamicQueryMatchType.Complete && query.MapFields.Count == 0)
+            {
+                // RavenDB-11272: query by id() e.g. from Products order by id()
+                // we need to check if current index isn't empty to have ids of indexed docs to sort on
+
+                if (stats.EntriesCount == 0 && lastMappedEtagFor > 0) // index has not entries but did some work already
+                {
+                    using (docsContext.OpenReadTransaction())
+                    {
+                        var collectionStats = index.DocumentDatabase.DocumentsStorage.GetCollection(query.ForCollection, docsContext);
+
+                        if (collectionStats.Count > 0)
+                        {
+                            currentBestState = DynamicQueryMatchType.Failure;
+                            explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is empty while there are docs in {query.ForCollection} collection and query needs to perform query on id()"));
+                        } 
+                    }
+                }
+            }
+
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
                 LastMappedEtag = lastMappedEtagFor,

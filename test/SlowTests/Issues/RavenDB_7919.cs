@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                 var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users where FirstName = 'Arek'"));
 
-                var result = matcher.Match(dynamicQuery);
+                var result = matcher.Match(dynamicQuery, null);
 
                 Assert.Equal(DynamicQueryMatchType.CompleteButIdle, result.MatchType);
             }
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
 
                 var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users group by Location select count()"));
 
-                var result = matcher.Match(dynamicQuery);
+                var result = matcher.Match(dynamicQuery, null);
 
                 Assert.Equal(DynamicQueryMatchType.CompleteButIdle, result.MatchType);
             }
