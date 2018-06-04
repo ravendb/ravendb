@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -67,6 +68,7 @@ namespace Raven.Server.Rachis
             
         }
 
+        public abstract RachisVersionValidation Validator();
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 

@@ -6,6 +6,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
 
@@ -150,12 +151,19 @@ namespace Raven.Server.Rachis
                             StateChange();
 
                             var connections = new Dictionary<string, RemoteConnection>();
+                            var versions = new List<int>();
                             foreach (var candidateAmbassador in _voters)
                             {
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
+                                if (candidateAmbassador.ClusterCommandsVersion > 0)
+                                {
+                                    versions.Add(candidateAmbassador.ClusterCommandsVersion);
+                                }
                             }
-                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm}", connections);
-
+                            ClusterCommandsVersionManager.CurrentClusterMinimalVersion = ClusterCommandsVersionManager.Min(versions);
+                            _engine.SwitchToLeaderState(ElectionTerm,
+                                $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}",
+                                connections);
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&

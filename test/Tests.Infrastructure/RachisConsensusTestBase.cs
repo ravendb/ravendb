@@ -279,6 +279,17 @@ namespace Tests.Infrastructure
             }
         }
 
+        public class CountingValidator : RachisVersionValidation
+        {
+            public override void AssertPutCommandToLeader(CommandBase cmd)
+            {
+            }
+
+            public override void AssertEntryBeforeSendToFollower(BlittableJsonReaderObject entry, int version, string follower)
+            {
+            }
+        }
+
         public class CountingStateMachine : RachisStateMachine
         {
             public long Read(TransactionOperationContext context, string name)
@@ -296,6 +307,11 @@ namespace Tests.Infrastructure
                 Assert.True(cmd.TryGet("Value", out int val));
                 var tree = context.Transaction.InnerTransaction.CreateTree("values");
                 tree.Increment(name, val);
+            }
+
+            public override RachisVersionValidation Validator()
+            {
+                return new CountingValidator();
             }
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)

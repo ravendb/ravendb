@@ -72,7 +72,22 @@ namespace Sparrow.Utils
 
         private void ThrowDisposed()
         {
-            throw new ObjectDisposedException(_name);
+            throw new LockAlreadyDisposedException(_name);
+        }
+    }
+
+    public class LockAlreadyDisposedException : Exception
+    {
+        public LockAlreadyDisposedException()
+        {
+        }
+
+        public LockAlreadyDisposedException(string message) : base(message)
+        {
+        }
+
+        public LockAlreadyDisposedException(string message, Exception innerException) : base(message, innerException)
+        {
         }
     }
 }

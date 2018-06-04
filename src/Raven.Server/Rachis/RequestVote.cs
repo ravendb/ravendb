@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Rachis
+﻿using Raven.Server.ServerWide;
+
+namespace Raven.Server.Rachis
 {
     public enum ElectionResult
     {
@@ -24,6 +26,7 @@
         public long Term { get; set; }
         public bool VoteGranted { get; set; }
         public bool NotInTopology { get; set; }
+        public int ClusterCommandsVersion { get; set; } = ClusterCommandsVersionManager.DefaultVersion;
         public string Message { get; set; }
     }
 }

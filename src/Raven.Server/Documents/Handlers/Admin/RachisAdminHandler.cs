@@ -45,7 +45,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                 HttpContext.Response.Headers["Reached-Leader"] = "true";
 
                 var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
-                var command = CommandBase.CreateFrom(commandJson);
+                CommandBase command;
+                try
+                {
+                    command = CommandBase.CreateFrom(commandJson);
+                }
+                catch (InvalidOperationException e)
+                {
+                    RequestRouter.AssertClientVersion(HttpContext, e);
+                    throw;
+                }
 
                 switch (command)
                 {
