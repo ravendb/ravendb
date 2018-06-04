@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
                 var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
-                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
+                var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache);
                 tracker.Query = query.Query;
 
                 var format = GetStringQueryString("format", false);

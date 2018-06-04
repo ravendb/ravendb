@@ -31,8 +31,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public static IndexQueryServerSide Create(
-            BlittableJsonReaderObject json, 
-            JsonOperationContext context, 
+            BlittableJsonReaderObject json,
             QueryMetadataCache cache,
             QueryType queryType = QueryType.Select)
         {
@@ -44,7 +43,7 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            if (cache.TryGetMetadata(result, context, out var metadataHash, out var metadata))
+            if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
             {
                 result.Metadata = metadata;
                 return result;
