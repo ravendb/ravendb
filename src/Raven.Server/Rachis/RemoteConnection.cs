@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
@@ -120,6 +121,7 @@ namespace Raven.Server.Rachis
                 [nameof(RequestVoteResponse.NotInTopology)] = rvr.NotInTopology,
                 [nameof(RequestVoteResponse.Term)] = rvr.Term,
                 [nameof(RequestVoteResponse.VoteGranted)] = rvr.VoteGranted,
+                [nameof(RequestVoteResponse.ClusterCommandsVersion)] = ClusterCommandsVersionManager.MyCommandsVersion,
                 [nameof(RequestVoteResponse.Message)] = rvr.Message
             });
         }
@@ -155,7 +157,8 @@ namespace Raven.Server.Rachis
                 [nameof(LogLengthNegotiationResponse.MaxIndex)] = lln.MaxIndex,
                 [nameof(LogLengthNegotiationResponse.MinIndex)] = lln.MinIndex,
                 [nameof(LogLengthNegotiationResponse.MidpointIndex)] = lln.MidpointIndex,
-                [nameof(LogLengthNegotiationResponse.MidpointTerm)] = lln.MidpointTerm
+                [nameof(LogLengthNegotiationResponse.MidpointTerm)] = lln.MidpointTerm,
+                [nameof(LogLengthNegotiationResponse.CommandsVersion)] = ClusterCommandsVersionManager.MyCommandsVersion
 
             });
         }
