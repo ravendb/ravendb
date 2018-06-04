@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide
             var commandName = cmd.GetType().Name;
             if (ClusterCommandsVersionManager.CanPutCommand(commandName) == false)
             {
-                throw new RejectPutClusterCommandException($"Cannot accept the command '{commandName}', " +
+                RejectPutClusterCommandException.Throw($"Cannot accept the command '{commandName}', " +
                                                           $"because the cluster version is '{ClusterCommandsVersionManager.CurrentClusterMinimalVersion}', " +
                                                           $"while this command can be applied in cluster with minimum version of {ClusterCommandsVersionManager.ClusterCommandsVersions[commandName]}");
             }
@@ -29,16 +29,18 @@ namespace Raven.Server.ServerWide
             if ((entry.TryGet(nameof(RachisEntry.Entry), out BlittableJsonReaderObject blittableEntry) &&
                  blittableEntry.TryGet("Type", out type)) == false)
             {
-                throw new RejectSendToFollowerException("Rachis entry is invalid!");
+                RejectSendToFollowerException.Throw("Rachis entry has no type!");
             }
 
             var myCommandVersion = ClusterCommandsVersionManager.ClusterCommandsVersions[type];
 
             if (myCommandVersion > version)
             {
-                throw new RejectSendToFollowerException($"The command '{type}' with the version {myCommandVersion} is not supported on follower {follower}.");
+                RejectSendToFollowerException.Throw($"The command '{type}' with the version {myCommandVersion} is not supported on follower {follower}.");
             }
         }
+
+        
     }
 
     public class RejectPutClusterCommandException : Exception
@@ -54,6 +56,11 @@ namespace Raven.Server.ServerWide
         public RejectPutClusterCommandException(string message, Exception innerException) : base(message, innerException)
         {
         }
+
+        public static void Throw(string msg)
+        {
+            throw new RejectPutClusterCommandException(msg);
+        }
     }
 
     public class RejectSendToFollowerException : Exception
@@ -68,6 +75,11 @@ namespace Raven.Server.ServerWide
 
         public RejectSendToFollowerException(string message, Exception innerException) : base(message, innerException)
         {
+        }
+
+        public static void Throw(string msg)
+        {
+            throw new RejectSendToFollowerException(msg);
         }
     }
 }
