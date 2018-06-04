@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Memory;
@@ -232,6 +234,7 @@ namespace Raven.Server.Config
 
             return results;
         });
+        
 
         public static bool ContainsKey(string key)
         {
@@ -333,6 +336,8 @@ namespace Raven.Server.Config
             _configBuilder.AddCommandLine(args);
             Settings = _configBuilder.Build();
         }
+        
+        private static int _pathCounter = 0;
 
         private void CheckDirectoryPermissions()
         {
@@ -361,42 +366,64 @@ namespace Raven.Server.Config
                         continue;
 
                     var fileName = Guid.NewGuid().ToString("N");
-                    var path = pathSettingValue.ToFullPath();
-                    var fullPath = Path.Combine(path, fileName);
-
-                    var configEntry = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
-                        .OrderBy(x => x.Order)
-                        .First();
-
-                    if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly &&
-                        ResourceType == ResourceType.Database)
-                        continue;
-
-                    var configurationKey = configEntry.Key;
-
-                    var createdDirectory = false;
+                    
                     try
                     {
-                        if (Directory.Exists(path) == false)
+                        var path = pathSettingValue.ToFullPath();
+                        var fullPath = Path.Combine(path, fileName);
+
+                        var configEntry = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
+                            .OrderBy(x => x.Order)
+                            .First();
+
+                        if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly &&
+                            ResourceType == ResourceType.Database)
+                            continue;
+
+                        var configurationKey = configEntry.Key;
+
+                        string createdDirectory = null;
+                        try
                         {
-                            Directory.CreateDirectory(path);
-                            createdDirectory = true;
+                            // if there is no 'path' directory, we are going to create a directory with a similiar name, in order to avoid deleting a directory in use afterwards,
+                            // and write a sample file inside it, in order to check write permissions.
+                            if (Directory.Exists(path) == false)
+                            {
+                                var curPathCounterVal = Interlocked.Increment(ref _pathCounter);
+                                // test that we can create the directory, but
+                                // not actually create it
+                                createdDirectory = path + curPathCounterVal.ToString();
+                                Directory.CreateDirectory(createdDirectory);
+                                var createdFile = Path.Combine(createdDirectory, "test.file");
+                                File.WriteAllText(createdFile, string.Empty);
+                                File.Delete(createdFile);
+                            }
+                            // in case there is a 'path' directory, we are going to try and write to it some file, in order to check write permissions
+                            else
+                            {
+                                File.WriteAllText(fullPath, string.Empty);
+                                File.Delete(fullPath);
+                            }
                         }
+                        catch (Exception e)
+                        {
+                            if (results == null)
+                                results = new Dictionary<string, KeyValuePair<string, string>>();
 
-                        File.WriteAllText(fullPath, string.Empty);
-                        File.Delete(fullPath);
-                    }
-                    catch (Exception e)
-                    {
-                        if (results == null)
-                            results = new Dictionary<string, KeyValuePair<string, string>>();
-
-                        results[configurationKey] = new KeyValuePair<string, string>(path, e.Message);
+                            var errorousDirPath = createdDirectory ?? path;
+                            results[configurationKey] = new KeyValuePair<string, string>(errorousDirPath, e.Message);
+                        }
+                        finally
+                        {
+                            if (createdDirectory != null)
+                            {
+                                IOExtensions.DeleteDirectory(createdDirectory);
+                            }
+                        }
                     }
                     finally
                     {
-                        if (createdDirectory)
-                            IOExtensions.DeleteDirectory(path);
+                        Interlocked.Decrement(ref _pathCounter);
                     }
                 }
             }
