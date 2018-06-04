@@ -15,7 +15,9 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
@@ -145,7 +147,10 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
                 ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnPutDocument));
                 ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CompareExchange));
+
                 ScriptEngine.SetValue("counter", new ClrFunctionInstance(ScriptEngine, GetCounter));
+                ScriptEngine.SetValue("incrementCounter", new ClrFunctionInstance(ScriptEngine, IncrementCounter));
+                ScriptEngine.SetValue("deleteCounter", new ClrFunctionInstance(ScriptEngine, DeleteCounter));
 
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, GetMetadata));
 
@@ -630,6 +635,143 @@ namespace Raven.Server.Documents.Patch
                 return GetCounterInternal(id, name, raw);
             }
 
+            private JsValue IncrementCounter(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+
+                if (args.Length < 2 || args.Length > 3)
+                {
+                    throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
+                                                        "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
+                }
+            
+                var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
+
+                BlittableJsonReaderObject metadata;
+                BlittableJsonReaderObject document;
+                string id;
+
+                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                {
+                    id = doc.DocumentId;
+                    document = doc.Blittable;
+                    metadata = document.GetMetadata();
+                }
+                else if (args[0].IsString())
+                {
+                    id = args[0].AsString();
+                    document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
+                    metadata = document.GetMetadata();
+                }
+                else
+                {
+                    throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+                }
+
+                if (args[1].IsString() == false)
+                {
+                    throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+                }
+                var name = args[1].AsString();
+
+                double value = 1;
+                if (args.Length == 3)
+                {
+                    if (args[2].IsNumber() == false)
+                        throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
+                    value = args[2].AsNumber();
+                }
+
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, name, (long)value);
+
+                _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
+                {
+                    new CounterOperation
+                    {
+                        Type = CounterOperationType.Increment,
+                        CounterName = name,
+                        Delta = (long)value
+                    }
+                });
+               
+                return JsBoolean.True;
+            }
+
+            private JsValue DeleteCounter(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+
+                if (args.Length !=2)
+                {
+                    throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
+                }
+
+                BlittableJsonReaderObject metadata;
+                BlittableJsonReaderObject document;
+
+                string id;
+                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                {
+                    id = doc.DocumentId;
+                    document = doc.Blittable;
+                    metadata = document.GetMetadata();
+                }
+                else if (args[0].IsString())
+                {
+                    id = args[0].AsString();
+                    document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
+                    metadata = document.GetMetadata();
+                }
+                else
+                {
+                    throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
+                }
+
+                if (args[1].IsString() == false)
+                {
+                    throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
+                }
+                var name = args[1].AsString();
+
+                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, name);
+
+                _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
+                {
+                    new CounterOperation
+                    {
+                        Type = CounterOperationType.Delete,
+                        CounterName = name
+                    }
+                });
+              
+                return JsBoolean.True;
+            }
+
+            private JsValue GetCounterInternal(string docId, string name, bool raw)
+            {
+                if (string.IsNullOrEmpty(docId) || string.IsNullOrEmpty(name))
+                {
+                    return JsValue.Undefined;
+                }
+
+                if (raw == false)
+                {
+                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, docId, name) ?? JsValue.Null;
+                }
+
+                var djv = new DynamicJsonValue();
+                foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, docId, name))
+                {
+                    djv[cv] = val;
+                }
+
+                if (djv.Properties.Count == 0)
+                {
+                    return JsValue.Null;
+                }
+
+                return new BlittableObjectInstance(ScriptEngine, null, Clone(_docsCtx.ReadObject(djv, docId), _docsCtx), null, null);
+            }
 
             private JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
             {
@@ -779,32 +921,6 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.LoadDocument.Add(id);
                 var document = _database.DocumentsStorage.Get(_docsCtx, id);
                 return TranslateToJs(ScriptEngine, _jsonCtx, document);
-            }
-
-            private JsValue GetCounterInternal(string docId, string name, bool raw)
-            {
-                if (string.IsNullOrEmpty(docId) || string.IsNullOrEmpty(name))
-                {
-                    return JsValue.Undefined;
-                }
-
-                if (raw == false)
-                {
-                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, docId, name) ?? JsValue.Null;
-                }
-
-                var djv = new DynamicJsonValue();
-                foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, docId, name))
-                {
-                    djv[cv] = val;
-                }
-
-                if (djv.Properties.Count == 0)
-                {
-                    return JsValue.Null;
-                }
-
-                return new BlittableObjectInstance(ScriptEngine, null, Clone(_docsCtx.ReadObject(djv, docId), _docsCtx), null, null);                
             }
 
             public void DisposeClonedDocuments()
