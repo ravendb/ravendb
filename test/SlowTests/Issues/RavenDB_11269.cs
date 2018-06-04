@@ -174,10 +174,10 @@ namespace SlowTests.Issues
                                 select employee.Address.Country;
 
                     Assert.Equal("from Orders as o load o.Employee as employee select employee.Address.Country", query.ToString());
-                    var employeesCountery = query.ToList();
+                    var employeesCountry = query.ToList();
 
-                    Assert.Equal(1, employeesCountery.Count);
-                    Assert.Equal("Germany", employeesCountery[0]);
+                    Assert.Equal(1, employeesCountry.Count);
+                    Assert.Equal("Germany", employeesCountry[0]);
                 }
 
             }

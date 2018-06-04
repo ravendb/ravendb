@@ -70,6 +70,8 @@ namespace Raven.Client.Documents.Linq
         };
         private List<string> _projectionParameters { get; set; }
 
+        private const string TransparentIdentifier = "<>h__TransparentIdentifier";
+
         private int _aliasesCount;
 
         private readonly LinqPathProvider _linqPathProvider;
@@ -1448,7 +1450,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                 || lambdaExpression.Body.NodeType == ExpressionType.MemberInit
                                 || lambdaExpression.Body.NodeType == ExpressionType.MemberAccess)
                             && lambdaExpression.Parameters[0] != null
-                            && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
+                            && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
                         {
                             _insideLet++;
                         }
@@ -1853,7 +1855,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
-                    var selectPath = RemoveTransperentIdentifiersIfNeeded(memberExpression);
+                    var selectPath = RemoveTransparentIdentifiersIfNeeded(memberExpression);
 
                     AddToFieldsToFetch(selectPath, selectPath);
                     if (_insideSelect == false)
@@ -1983,12 +1985,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private string RemoveTransperentIdentifiersIfNeeded(MemberExpression memberExpression)
+        private string RemoveTransparentIdentifiersIfNeeded(MemberExpression memberExpression)
         {
             var selectPath = GetSelectPath(memberExpression);
-            while (selectPath.StartsWith("<>h__TransparentIdentifier"))
+            while (selectPath.StartsWith(TransparentIdentifier))
             {
-                selectPath = selectPath.Substring(28);
+                selectPath = selectPath.Substring(TransparentIdentifier.Length
+                                                  + 1 // number suffix
+                                                  + 1 // "."
+                                                  );
             }
 
             return selectPath;
