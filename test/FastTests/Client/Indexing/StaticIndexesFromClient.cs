@@ -107,62 +107,64 @@ namespace FastTests.Client.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenAsyncSession())
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
                 {
-                    await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14 });
-                    await session.StoreAsync(new UserAndAge { Name = "Toli", Age = 5 });
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14 }, cts.Token);
+                        await session.StoreAsync(new UserAndAge { Name = "Toli", Age = 5 }, cts.Token);
 
-                    await session.SaveChangesAsync();
+                        await session.SaveChangesAsync(cts.Token);
+                    }
+
+                    var input = new IndexDefinition
+                    {
+                        Maps = { "from user in docs.UserAndAges select new { user.Name }" },
+                        Type = IndexType.Map,
+                        Name = "Users_ByName"
+                    };
+
+                    var input2 = new IndexDefinition
+                    {
+                        Maps = { "from user in docs.UserAndAges select new { user.Age }" },
+                        Type = IndexType.Map,
+                        Name = "Users_ByName"
+                    };
+
+                    await store
+                        .Maintenance
+                        .SendAsync(new PutIndexesOperation(input), cts.Token);
+
+                    var output1 = await store
+                        .Maintenance
+                        .SendAsync(new GetIndexOperation("Users_ByName"), cts.Token);
+
+                    Assert.True(input.Equals(output1));
+
+                    await store
+                        .Maintenance
+                        .SendAsync(new PutIndexesOperation(input2), cts.Token);
+
+                    await store
+                        .Maintenance
+                        .SendAsync(new StopIndexingOperation(), cts.Token);
+
+                    await store
+                       .Maintenance
+                       .SendAsync(new PutIndexesOperation(input), cts.Token);
+
+                    await store
+                        .Maintenance
+                        .SendAsync(new StartIndexingOperation(), cts.Token);
+
+                    WaitForIndexing(store);
+
+                    var output2 = await store
+                        .Maintenance
+                        .SendAsync(new GetIndexOperation("Users_ByName"), cts.Token);
+
+                    Assert.True(input.Equals(output2));
                 }
-
-                var input = new IndexDefinition
-                {
-                    Maps = { "from user in docs.UserAndAges select new { user.Name }" },
-                    Type = IndexType.Map,
-                    Name = "Users_ByName"
-                };
-
-                var input2 = new IndexDefinition
-                {
-                    Maps = { "from user in docs.UserAndAges select new { user.Age }" },
-                    Type = IndexType.Map,
-                    Name = "Users_ByName"
-                };
-
-                await store
-                    .Maintenance
-                    .SendAsync(new PutIndexesOperation(new[] { input }));
-
-                var output1 = await store
-                    .Maintenance
-                    .SendAsync(new GetIndexOperation("Users_ByName"));
-
-                Assert.True(input.Equals(output1));
-
-                await store
-                    .Maintenance
-                    .SendAsync(new PutIndexesOperation(new[] { input2 }));
-
-                await store
-                    .Maintenance
-                    .SendAsync(new StopIndexingOperation());
-
-                await store
-                   .Maintenance
-                   .SendAsync(new PutIndexesOperation(new[] { input }));
-
-                await store
-                    .Maintenance
-                    .SendAsync(new StartIndexingOperation());
-
-                WaitForIndexing(store);
-
-                var output2 = await store
-                    .Maintenance
-                    .SendAsync(new GetIndexOperation("Users_ByName"));
-
-                Assert.True(input.Equals(output2));
-
             }
         }
 
