@@ -1089,7 +1089,13 @@ namespace Raven.Server.Documents.Indexes
 
                     var definitionToCheck = (AutoIndexDefinitionBase)indexToCheck.Definition;
 
-                    var result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck);
+                    DynamicQueryMatchResult result;
+
+                    using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck, context);
+                    }
+                    
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
                         indexesToRemove.Add(index.Name);

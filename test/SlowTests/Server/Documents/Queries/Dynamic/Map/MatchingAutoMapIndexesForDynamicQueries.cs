@@ -364,7 +364,7 @@ include highlight(Name, 18, 2)
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
 
@@ -373,7 +373,7 @@ include highlight(Name, 18, 2)
                 definition = mapping.CreateAutoIndexDefinition();
                 db.IndexStore.CreateIndex(definition).Wait();
 
-                result = matcher.Match(mapping);
+                result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             }
