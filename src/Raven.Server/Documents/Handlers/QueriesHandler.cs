@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Handlers
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
+            return IndexQueryServerSide.Create(json, Database.QueryMetadataCache);
         }
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "DeleteByQuery"))
                 {
                     var reader = context.Read(RequestBodyStream(), "queries/delete");
-                    var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
+                    var query = IndexQueryServerSide.Create(reader, Database.QueryMetadataCache);
                     
                     tracker.Query = query.Query;
                     
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                     throw new BadRequestException("Missing 'Query' property.");
 
-                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
+                var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache, QueryType.Update);
 
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Handlers
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                     throw new BadRequestException("Missing 'Query' property.");
 
-                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
+                var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache, QueryType.Update);
 
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
