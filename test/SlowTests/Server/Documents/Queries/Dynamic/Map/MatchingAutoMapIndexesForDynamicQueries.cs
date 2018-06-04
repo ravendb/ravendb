@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         {
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -49,7 +49,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Companies WHERE Name = 'IBM'"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -70,7 +70,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -107,7 +107,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(usersByNameAndAge.Name, result.IndexName);
@@ -129,7 +129,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             Assert.Equal(usersByName.Name, result.IndexName);
@@ -161,7 +161,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends[].Name = 'Jon'"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Name"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -205,7 +205,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users ORDER BY Address.ZipCode AS double"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -227,7 +227,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight"));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -249,14 +249,14 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             var dynamicQueryWithStringSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age > 9 ORDER BY Age AS long"));
 
-            var result = _sut.Match(dynamicQueryWithStringSorting);
+            var result = _sut.Match(dynamicQueryWithStringSorting, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
 
             var dynamicQueryWithNoneSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age = 31 ORDER BY Age AS double"));
 
-            result = _sut.Match(dynamicQueryWithNoneSorting);
+            result = _sut.Match(dynamicQueryWithNoneSorting, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
@@ -282,13 +282,13 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             index.SetState(IndexState.Disabled);
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
 
             index.SetState(IndexState.Error);
 
-            result = _sut.Match(dynamicQuery);
+            result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
 
@@ -299,7 +299,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 MapErrors = 900
             });
 
-            result = _sut.Match(dynamicQuery);
+            result = _sut.Match(dynamicQuery, null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
@@ -319,7 +319,7 @@ where search(Name, 'arek')"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             }
@@ -340,7 +340,7 @@ where exact(Name = 'arek')"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
-                var result = matcher.Match(mapping);
+                var result = matcher.Match(mapping, null);
 
                 Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
             }

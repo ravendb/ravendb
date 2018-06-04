@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.Queries
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT count() "));
 
-            var result = _sut.Match(dynamicQuery);
+            var result = _sut.Match(dynamicQuery,  null);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
