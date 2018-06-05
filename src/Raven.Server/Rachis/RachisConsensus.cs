@@ -374,7 +374,7 @@ namespace Raven.Server.Rachis
                 OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
-                MaximalVersion = configuration.Cluster.MaximalVersion;
+                MaximalVersion = configuration.Cluster.MaximalAllowedVersion;
 
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
