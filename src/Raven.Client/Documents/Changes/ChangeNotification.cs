@@ -30,6 +30,7 @@ namespace Raven.Client.Documents.Changes
         /// <summary>
         /// Document type name.
         /// </summary>
+        [Obsolete("DatabaseChanges.ForDocumentsOfType is not supported anymore. Will be removed in next major version of the product.")]
         public string TypeName { get; set; }
 
         /// <summary>
@@ -51,7 +52,6 @@ namespace Raven.Client.Documents.Changes
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Id)] = Id,
                 [nameof(CollectionName)] = CollectionName,
-                [nameof(TypeName)] = TypeName,
                 [nameof(ChangeVector)] = ChangeVector
             };
         }
@@ -60,7 +60,6 @@ namespace Raven.Client.Documents.Changes
         {
             value.TryGet(nameof(CollectionName), out string collectionName);
             value.TryGet(nameof(ChangeVector), out string changeVector);
-            value.TryGet(nameof(TypeName), out string typeName);
             value.TryGet(nameof(Id), out string id);
             value.TryGet(nameof(Type), out string type);
 
@@ -69,7 +68,6 @@ namespace Raven.Client.Documents.Changes
                 CollectionName = collectionName,
                 ChangeVector = changeVector,
                 Id = id,
-                TypeName = typeName,
                 Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true)
             };
         }
