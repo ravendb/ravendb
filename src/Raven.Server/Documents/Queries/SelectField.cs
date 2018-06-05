@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
@@ -108,22 +109,12 @@ namespace Raven.Server.Documents.Queries
 
         public static SelectField CreateCounterField(string alias, SelectField[] args)
         {
-            var nameIndex = args.Length == 1 ? 0 : 1;
-
-            SelectField[] functionArgs = null;
-            if (args.Length == 3)
-            {
-                if (args[2].Value is bool raw && raw)
-                    functionArgs = new SelectField[0];
-            }
-
             return new SelectField
             {
                 Alias = alias,
-                Name = new QueryFieldName(args[nameIndex].Value.ToString(), false),
-                FunctionArgs = functionArgs,
+                Name = new QueryFieldName(args[args.Length -1].Value.ToString(), false),
                 IsCounter = true,
-                IsParameter = args[nameIndex].ValueTokenType == AST.ValueTokenType.Parameter
+                IsParameter = args[args.Length - 1].ValueTokenType == AST.ValueTokenType.Parameter
             };
         }
 

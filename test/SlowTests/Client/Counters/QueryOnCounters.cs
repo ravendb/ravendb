@@ -124,7 +124,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced
-                        .RawQuery<CounterResult3>("from users as u select counter(u, \"downloads\", true)")
+                        .RawQuery<CounterResult3>("from users as u select counterRaw(u, \"downloads\")")
                         .ToList();
 
                     Assert.Equal(3, query.Count);
@@ -280,7 +280,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced
-                        .RawQuery<CounterResult4>("from users as u select { Name : u.Name, Downloads : counter(u, \"downloads\"), Likes : counter(u, \"likes\", true) }")
+                        .RawQuery<CounterResult4>("from users as u select { Name : u.Name, Downloads : counter(u, \"downloads\"), Likes : counterRaw(u, \"likes\") }")
                         .ToList();
 
                     Assert.Equal(3, query.Count); 
@@ -564,7 +564,7 @@ namespace SlowTests.Client.Counters
                 {
                     var query = session.Advanced
                         .RawQuery<CounterResult5>(@"
-                            declare function GetCounters(doc)
+                            declare function getCounters(doc)
                             {
                                 var names = doc[""@metadata""][""@counters""];
                                 if (names == null)
@@ -581,7 +581,7 @@ namespace SlowTests.Client.Counters
                             from Users as u
                             select
                             {
-                                Counters: GetCounters(u)
+                                Counters: getCounters(u)
                             }")
                         .ToList();
 

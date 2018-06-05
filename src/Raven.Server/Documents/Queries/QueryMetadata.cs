@@ -843,13 +843,14 @@ namespace Raven.Server.Documents.Queries
                         return CreateSuggest(me, alias, parameters);
                     }
 
-                    if (string.Equals("counter", methodName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals("counter", methodName, StringComparison.OrdinalIgnoreCase) 
+                        || string.Equals("counterRaw", methodName, StringComparison.OrdinalIgnoreCase))
                     {
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
-                        if (me.Arguments.Count == 0 || me.Arguments.Count > 3)
-                            ThrowInvalidArgumentsToCounter(parameters , me.Arguments.Count);
+                        if (me.Arguments.Count == 0 || me.Arguments.Count > 2)
+                            ThrowInvalidNumberOfArgumentsForCounter(methodName, parameters, me.Arguments.Count);
 
                         var args = new SelectField[me.Arguments.Count];
                         for (int i = 0; i < me.Arguments.Count; i++)
@@ -858,11 +859,17 @@ namespace Raven.Server.Documents.Queries
                                 args[i] = SelectField.CreateValue(vt.Token, alias, vt.Value);
                             else if (me.Arguments[i] is FieldExpression ft)
                                 args[i] = GetSelectValue(null, ft, parameters);
-
+                            else
+                                ThrowCounterInvalidArgument(methodName, me.Arguments[i], parameters);
                         }
 
-                        return SelectField.CreateCounterField(alias, args);
+                        var counterField = SelectField.CreateCounterField(alias, args);
+                        if (string.Equals("counterRaw", methodName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            counterField.FunctionArgs = new SelectField[0];
+                        }
 
+                        return counterField;
                     }
 
                     if (IsGroupBy == false)
@@ -1312,11 +1319,15 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Method suggest() must contain two or three arguments but '{count}' were specified", QueryText, parameters);
         }
 
-        private void ThrowInvalidArgumentsToCounter(BlittableJsonReaderObject parameters, int argsCount)
+        private void ThrowInvalidNumberOfArgumentsForCounter(string methodName, BlittableJsonReaderObject parameters, int argsCount)
         {
-            throw new InvalidQueryException($"There is no overload of method 'counter' that takes {argsCount} arguments. " +
-                                            "Supported overloads are : counter(name), counter(doc, name), counter(doc, name, raw).", QueryText, parameters);
+            throw new InvalidQueryException($"There is no overload of method '{methodName}' that takes {argsCount} arguments. " +
+                                            $"Supported overloads are : {methodName}(name), {methodName}(doc, name).", QueryText, parameters);
+        }
 
+        private void ThrowCounterInvalidArgument(string methodName, QueryExpression expression, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Invalid argument of type {expression.GetType().Name} specified as an argument of {methodName}(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor

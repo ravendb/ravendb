@@ -149,6 +149,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CompareExchange));
 
                 ScriptEngine.SetValue("counter", new ClrFunctionInstance(ScriptEngine, GetCounter));
+                ScriptEngine.SetValue("counterRaw", new ClrFunctionInstance(ScriptEngine, GetCounterRaw));
                 ScriptEngine.SetValue("incrementCounter", new ClrFunctionInstance(ScriptEngine, IncrementCounter));
                 ScriptEngine.SetValue("deleteCounter", new ClrFunctionInstance(ScriptEngine, DeleteCounter));
 
@@ -604,35 +605,58 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetCounter(JsValue self, JsValue[] args)
             {
+                return GetCounterInternal(args);
+            }
+
+            private JsValue GetCounterRaw(JsValue self, JsValue[] args)
+            {
+                return GetCounterInternal(args, true);
+            }
+
+            private JsValue GetCounterInternal(JsValue[] args, bool raw = false)
+            {
                 AssertValidDatabaseContext();
+                var signatue = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
+                if (args.Length != 2)
+                    throw new InvalidOperationException($"{signatue} must be called with exactly 2 arguments");
 
-                if (args.Length < 2 || args.Length > 3)
-                    throw new InvalidOperationException($"there is no overload of method 'counter' that takes {args.Length} arguments");
-
-                var signature = args.Length == 2 ? "counter(doc, name)" : "counter(doc, name, raw)";
-
-                if (args[0].IsObject() == false)                
-                    throw new InvalidOperationException($"{signature}: 'doc' must be an object argument");
-                
-                if (!(args[0].AsObject() is BlittableObjectInstance doc))                    
-                    throw new InvalidOperationException($"{signature}: 'doc' is missing 'Id' property");
-                    
-                var id = doc.DocumentId;
-
-                if (args[1].IsString() == false)
-                    throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
-
-                var name = args[1].AsString();
-
-                var raw = false;
-                if (args.Length == 3)
+                string id;
+                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
                 {
-                    if (args[2].IsBoolean() == false)
-                        throw new InvalidOperationException("counter(alias, name, raw): 'raw' must be a boolean argument");
-                    raw = args[2].AsBoolean();
+                    id = doc.DocumentId;
+                }
+                else if (args[0].IsString())
+                {
+                    id = args[0].AsString();
+                }
+                else
+                {
+                    throw new InvalidOperationException($"{signatue}: 'doc' must be a string argument (the document id) or the actual document instance itself");
                 }
 
-                return GetCounterInternal(id, name, raw);
+                if (args[1].IsString() == false)
+                {
+                    throw new InvalidOperationException($"{signatue}: 'name' must be a string argument");
+                }
+
+                var name = args[1].AsString();
+                if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(name))
+                {
+                    return JsValue.Undefined;
+                }
+
+                if (raw == false)
+                {
+                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name) ?? JsValue.Null;
+                }
+
+                var rawValues = new ObjectInstance(ScriptEngine);
+                foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, id, name))
+                {
+                    rawValues.FastAddProperty(cv, val, true, false, false);
+                }
+
+                return rawValues;
             }
 
             private JsValue IncrementCounter(JsValue self, JsValue[] args)
@@ -745,32 +769,6 @@ namespace Raven.Server.Documents.Patch
                 });
               
                 return JsBoolean.True;
-            }
-
-            private JsValue GetCounterInternal(string docId, string name, bool raw)
-            {
-                if (string.IsNullOrEmpty(docId) || string.IsNullOrEmpty(name))
-                {
-                    return JsValue.Undefined;
-                }
-
-                if (raw == false)
-                {
-                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, docId, name) ?? JsValue.Null;
-                }
-
-                var djv = new DynamicJsonValue();
-                foreach (var (cv, val) in _database.DocumentsStorage.CountersStorage.GetCounterValues(_docsCtx, docId, name))
-                {
-                    djv[cv] = val;
-                }
-
-                if (djv.Properties.Count == 0)
-                {
-                    return JsValue.Null;
-                }
-
-                return new BlittableObjectInstance(ScriptEngine, null, Clone(_docsCtx.ReadObject(djv, docId), _docsCtx), null, null);
             }
 
             private JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
