@@ -7,13 +7,13 @@ using Xunit;
 
 namespace FastTests.Server.Cluster
 {
-    class VersionValidation : RavenTestBase
+    public class VersionValidation : RavenTestBase
     {
         [Fact]
         public void AllClusterCommandsHasVersion()
         {
             List<Exception> exceptions = new List<Exception>();
-            var assembly = typeof(ServerStore).GetTypeInfo().Assembly;
+            var assembly = typeof(Raven.Server.ServerWide.ServerStore).GetTypeInfo().Assembly;
             foreach (var type in assembly.GetTypes())
             {
                 var typeInfo = type.GetTypeInfo();
