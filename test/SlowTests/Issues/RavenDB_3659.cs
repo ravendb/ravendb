@@ -49,7 +49,8 @@ namespace SlowTests.Issues
                 }
             });
 
-            Assert.Contains($"Key: '{RavenConfiguration.GetKey(x => x.Storage.TempPath)}' Path: '{_invalidCustomSettings[RavenConfiguration.GetKey(x => x.Storage.TempPath)]}'", e.Message);
+            string expectedSubstring = $"Key: '{RavenConfiguration.GetKey(x => x.Storage.TempPath)}' Path: '{_invalidCustomSettings[RavenConfiguration.GetKey(x => x.Storage.TempPath)]}";
+            Assert.Contains(expectedSubstring, e.Message);
         }
 
         [Fact]
