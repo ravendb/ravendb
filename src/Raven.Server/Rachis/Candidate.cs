@@ -152,7 +152,11 @@ namespace Raven.Server.Rachis
                             StateChange();
 
                             var connections = new Dictionary<string, RemoteConnection>();
-                            var versions = new List<int>();
+                            var versions = new List<int>
+                            {
+                                ClusterCommandsVersionManager.MyCommandsVersion
+                            };
+
                             foreach (var candidateAmbassador in _voters)
                             {
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
