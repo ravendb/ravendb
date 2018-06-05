@@ -317,14 +317,20 @@ namespace Raven.Tests.FileSystem.Synchronization
             // set up destinations
             await sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 
-            var destinationSyncResults = sourceClient.Synchronization.StartAsync().Result;
-
-            foreach (var destinationSyncResult in destinationSyncResults)
+            for (int i = 0; i < 2; i++)
             {
-                foreach (var report in destinationSyncResult.Reports)
+                var destinationSyncResults = sourceClient.Synchronization.StartAsync().Result;
+
+                foreach (var destinationSyncResult in destinationSyncResults)
                 {
-                    Assert.Null(report.Exception);
-                    Assert.Equal(SynchronizationType.Rename, report.Type);
+                    if (destinationSyncResult.Reports == null)
+                        continue;
+
+                    foreach (var report in destinationSyncResult.Reports)
+                    {
+                        Assert.Null(report.Exception);
+                        Assert.Equal(SynchronizationType.Rename, report.Type);
+                    }
                 }
             }
 

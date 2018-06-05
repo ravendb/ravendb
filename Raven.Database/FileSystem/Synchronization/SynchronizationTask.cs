@@ -514,8 +514,19 @@ namespace Raven.Database.FileSystem.Synchronization
                 }
 
                 NoSyncReason reason;
-                var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, x => destinationSyncClient.GetMetadataForAsync(x).Result,
-                    out reason);
+                SynchronizationWorkItem work = null;
+                try
+                {
+                    work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, x => destinationSyncClient.GetMetadataForAsync(x).Result,
+                        out reason);
+                }
+                catch (FileNotFoundException e)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("File '{0}' was not synchronized to {1}. Because {2} file doesn't exist. File metadata: {3}", file, destinationUrl, e.FileName, localMetadata);
+
+                    reason = NoSyncReason.FileNotFound;
+                }
 
                 if (work == null)
                 {
@@ -529,7 +540,7 @@ namespace Raven.Database.FileSystem.Synchronization
                         case NoSyncReason.NoNeedToDeleteNonExistigFile:
                             var localEtag = Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField));
 
-                            if (reason == NoSyncReason.ContainedInDestinationHistory)
+                            if (reason == NoSyncReason.ContainedInDestinationHistory || reason == NoSyncReason.FileNotFound)
                             {
                                 RemoveSyncingConfiguration(file, destinationUrl);
                             }
@@ -569,6 +580,13 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 if (needSyncingAgain.Contains(fileHeader) == false)
                     enqueued = true;
+
+                if (work.SynchronizationType == SynchronizationType.Rename)
+                {
+                    Context.NotifyAboutWork();
+                    enqueued = true;
+                    break;
+                }
             }
 
             if (enqueued == false && EtagUtil.IsGreaterThan(maxEtagOfFilteredDoc, synchronizationInfo.LastSourceFileEtag))

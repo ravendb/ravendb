@@ -77,6 +77,12 @@ namespace Raven.Database.FileSystem.Synchronization
                         break;
                     case SynchronizationType.ContentUpdateNoRDC:
                     case SynchronizationType.ContentUpdate:
+                        
+                        if (sourceMetadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
+                        {
+                            report.BytesCopied = -1;
+                            break;
+                        }
 
                         if (type == SynchronizationType.ContentUpdateNoRDC)
                         {
