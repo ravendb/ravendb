@@ -170,7 +170,7 @@ namespace Raven.Client.Documents
                 throw new ObjectDisposedException(GetType().Name, "The document store has already been disposed and cannot be used");
         }
 
-        protected void AssertInitialized()
+        public void AssertInitialized()
         {
             if (Initialized == false)
                 throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
