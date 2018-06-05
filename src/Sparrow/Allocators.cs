@@ -185,7 +185,6 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                EnsureIsNotBadPointerAccess();
                 return _ptr.Ptr;
             }
         }
@@ -193,7 +192,6 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan()
         {
-            EnsureIsNotBadPointerAccess();
             return new Span<T>(_ptr.Ptr, Size);
         }
 
@@ -204,7 +202,6 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 #endif
-
             return new Span<T>(Ptr, length);
         }
 
@@ -215,14 +212,12 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 #endif
-
             return new Span<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            EnsureIsNotBadPointerAccess();
             return new ReadOnlySpan<byte>(_ptr.Ptr, Size);
         }
 
@@ -233,7 +228,6 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 #endif
-
             return new ReadOnlySpan<T>(Ptr, length);
         }
 
@@ -244,7 +238,6 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 #endif
-
             return new ReadOnlySpan<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 
@@ -253,8 +246,20 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                EnsureIsNotBadPointerAccess();
                 // We move to the actual header which is behind.
                 return _ptr.Size / Unsafe.SizeOf<T>();
+            }
+        }
+
+        public int SizeAsBytes
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                EnsureIsNotBadPointerAccess();
+                // We move to the actual header which is behind.
+                return _ptr.Size;
             }
         }
 
@@ -263,7 +268,7 @@ namespace Sparrow
         internal void EnsureIsNotBadPointerAccess()
         {
             if (!_ptr.IsValid)
-                throw new ArgumentOutOfRangeException($"Trying to access the pointer but it is not valid");
+                throw new InvalidOperationException($"Trying to access the pointer but it is not valid");
         }
 
 
@@ -284,6 +289,12 @@ namespace Sparrow
                 byte* ptr = (byte*)_ptr.Ptr + i * Unsafe.SizeOf<T>();
                 return ref Unsafe.AsRef<T>(ptr);
             }
+        }
+
+        // User-defined conversion from Digit to double
+        public static implicit operator BlockPointer(BlockPointer<T> ptr)
+        {
+            return new BlockPointer(ptr._ptr._header);
         }
     }
 
@@ -589,6 +600,8 @@ namespace Sparrow
         {
             if (_allocator.GetType() == typeof(IRenewable<TAllocator>))
                 ((IRenewable<TAllocator>)_allocator).Renew(ref _allocator);
+            else
+                throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -624,26 +637,37 @@ namespace Sparrow
     {
         bool UseSecureMemory { get; }
         bool ElectricFenceEnabled { get; }
+        bool Zeroed { get; }
     }
 
     public static class NativeBlockAllocator
     {
-        public struct DefaultOptions : INativeBlockOptions
+        public struct Default : INativeBlockOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
         }
 
-        public struct SecureOptions : INativeBlockOptions
+        public struct DefaultZero : INativeBlockOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => true;
+        }
+
+        public struct Secure : INativeBlockOptions
         {
             public bool UseSecureMemory => true;
             public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
         }
 
-        public struct ElectricFenceOptions : INativeBlockOptions
+        public struct ElectricFence : INativeBlockOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => true;
+            public bool Zeroed => false;
         }
     }
 
@@ -654,8 +678,8 @@ namespace Sparrow
 
         public void Configure<TConfig>(ref NativeBlockAllocator<TOptions> blockAllocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
-            if (!typeof(INativeBlockOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
-                throw new NotSupportedException($"{nameof(TConfig)} does not implements {nameof(INativeBlockOptions)}");
+            if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
+                throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TOptions)}");
 
             // This cast will get evicted by the JIT. 
             this.Options = (TOptions)(object)configuration;
@@ -693,6 +717,9 @@ namespace Sparrow
             else
                 memory = NativeMemory.AllocateMemory(allocatedSize);
 
+            if (blockAllocator.Options.Zeroed)
+                Memory.Set(memory, 0, allocatedSize);
+
             header = (BlockPointer.Header*)memory;
             *header = new BlockPointer.Header(memory + sizeof(BlockPointer.Header), size);
 
@@ -702,7 +729,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Release(ref NativeBlockAllocator<TOptions> blockAllocator, in BlockPointer.Header* header)
         {
-            blockAllocator.Allocated -= header->Size + sizeof(BlockPointer.Header);
+            blockAllocator.Allocated -= header->Size + sizeof(BlockPointer.Header);            
 
             // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
             //       JIT will be able to fold all this if sequence into a branchless single call.
@@ -712,6 +739,8 @@ namespace Sparrow
                 throw new NotImplementedException();
             else
                 NativeMemory.Free((byte*) header, header->Size);
+
+            header->Ptr = null;
         }
 
         public void Reset(ref NativeBlockAllocator<TOptions> blockAllocator)
