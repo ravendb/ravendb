@@ -195,14 +195,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            var hasType = change.TypeName != null && HasItemEqualsTo(_matchingDocumentsOfType, change.TypeName);
-            if (hasType)
-            {
-                Send(change);
-                return;
-            }
-
-            if (change.Id == null && change.CollectionName == null && change.TypeName == null)
+            if (change.Id == null && change.CollectionName == null)
             {
                 Send(change);
             }
