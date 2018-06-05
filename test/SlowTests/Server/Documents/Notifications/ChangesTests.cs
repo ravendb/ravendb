@@ -195,7 +195,7 @@ namespace SlowTests.Server.Documents.Notifications
         }
 
         [Fact]
-        public async Task CanCanNotificationAboutDocumentsStartingWith()
+        public async Task CanGetNotificationAboutDocumentsStartingWith()
         {
             using (var store = GetDocumentStore())
             {
@@ -238,7 +238,7 @@ namespace SlowTests.Server.Documents.Notifications
         }
         
         [Fact]
-        public async Task CanCanNotificationAboutDocumentsFromCollection()
+        public async Task CanGetNotificationAboutDocumentsFromCollection()
         {
             using (var store = GetDocumentStore())
             {
@@ -281,45 +281,18 @@ namespace SlowTests.Server.Documents.Notifications
         }
         
         [Fact]
-        public async Task CanCanNotificationAboutDocumentsWithType()
+        public async Task ShouldThrowWhenTryingToGetNotificationAboutDocumentsWithType()
         {
             using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
-                var observableWithTask = taskObservable.ForDocumentsOfType<Company>();
-                
-                observableWithTask.Subscribe(x =>
-                {
-                    if (x.Type == DocumentChangeTypes.Put)
-                        list.Add(x);
-                });
-                await observableWithTask.EnsureSubscribedNow();
-                
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
-                }
-                
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Employee(), "employees/1");
-                    session.SaveChanges();
-                }
-                
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), "users/2");
-                    session.SaveChanges();
-                }
-                
-                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
-                Assert.Equal("users/1", documentChange.Id);
-                
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
-                Assert.Equal("users/2", documentChange.Id);
+
+#pragma warning disable CS0618 // Type or member is obsolete
+                Assert.Throws<NotSupportedException>(() => taskObservable.ForDocumentsOfType<Company>());
+#pragma warning restore CS0618 // Type or member is obsolete
+
             }
         }
 
