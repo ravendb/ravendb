@@ -327,64 +327,60 @@ namespace Raven.Server.Config
 
                     var fileName = Guid.NewGuid().ToString("N");
                     
+                    
+                    var path = pathSettingValue.ToFullPath();
+                    var fullPath = Path.Combine(path, fileName);
+
+                    var configEntry = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
+                        .OrderBy(x => x.Order)
+                        .First();
+
+                    if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly &&
+                        ResourceType == ResourceType.Database)
+                        continue;
+
+                    var configurationKey = configEntry.Key;
+
+                    string createdDirectory = null;
                     try
                     {
-                        var path = pathSettingValue.ToFullPath();
-                        var fullPath = Path.Combine(path, fileName);
-
-                        var configEntry = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
-                            .OrderBy(x => x.Order)
-                            .First();
-
-                        if (configEntry.Scope == ConfigurationEntryScope.ServerWideOnly &&
-                            ResourceType == ResourceType.Database)
-                            continue;
-
-                        var configurationKey = configEntry.Key;
-
-                        string createdDirectory = null;
-                        try
+                        // if there is no 'path' directory, we are going to create a directory with a similiar name, in order to avoid deleting a directory in use afterwards,
+                        // and write a sample file inside it, in order to check write permissions.
+                        if (Directory.Exists(path) == false)
                         {
-                            // if there is no 'path' directory, we are going to create a directory with a similiar name, in order to avoid deleting a directory in use afterwards,
-                            // and write a sample file inside it, in order to check write permissions.
-                            if (Directory.Exists(path) == false)
-                            {
-                                var curPathCounterVal = Interlocked.Increment(ref _pathCounter);
-                                // test that we can create the directory, but
-                                // not actually create it
-                                createdDirectory = path + curPathCounterVal.ToString();
-                                Directory.CreateDirectory(createdDirectory);
-                                var createdFile = Path.Combine(createdDirectory, "test.file");
-                                File.WriteAllText(createdFile, string.Empty);
-                                File.Delete(createdFile);
-                            }
-                            // in case there is a 'path' directory, we are going to try and write to it some file, in order to check write permissions
-                            else
-                            {
-                                File.WriteAllText(fullPath, string.Empty);
-                                File.Delete(fullPath);
-                            }
+                            var curPathCounterVal = Interlocked.Increment(ref _pathCounter);
+                            // test that we can create the directory, but
+                            // not actually create it
+                            createdDirectory = path + curPathCounterVal.ToString();
+                            Directory.CreateDirectory(createdDirectory);
+                            var createdFile = Path.Combine(createdDirectory, "test.file");
+                            File.WriteAllText(createdFile, string.Empty);
+                            File.Delete(createdFile);
                         }
-                        catch (Exception e)
+                        // in case there is a 'path' directory, we are going to try and write to it some file, in order to check write permissions
+                        else
                         {
-                            if (results == null)
-                                results = new Dictionary<string, KeyValuePair<string, string>>();
+                            File.WriteAllText(fullPath, string.Empty);
+                            File.Delete(fullPath);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (results == null)
+                            results = new Dictionary<string, KeyValuePair<string, string>>();
 
-                            var errorousDirPath = createdDirectory ?? path;
-                            results[configurationKey] = new KeyValuePair<string, string>(errorousDirPath, e.Message);
-                        }
-                        finally
-                        {
-                            if (createdDirectory != null)
-                            {
-                                IOExtensions.DeleteDirectory(createdDirectory);
-                            }
-                        }
+                        var errorousDirPath = createdDirectory ?? path;
+                        results[configurationKey] = new KeyValuePair<string, string>(errorousDirPath, e.Message);
                     }
                     finally
                     {
-                        Interlocked.Decrement(ref _pathCounter);
+                        if (createdDirectory != null)
+                        {
+                            Interlocked.Decrement(ref _pathCounter);
+                            IOExtensions.DeleteDirectory(createdDirectory);
+                        }
                     }
+                    
                 }
             }
 
