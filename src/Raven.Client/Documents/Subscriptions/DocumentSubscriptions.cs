@@ -215,7 +215,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
         public SubscriptionWorker<T> GetSubscriptionWorker<T>(SubscriptionWorkerOptions options, string database = null) where T : class
         {
-            (_store as DocumentStoreBase).AssertInitialized();
+            ((DocumentStoreBase)_store).AssertInitialized();
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
 
