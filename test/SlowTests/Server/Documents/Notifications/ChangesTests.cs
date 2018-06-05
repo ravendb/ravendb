@@ -281,18 +281,19 @@ namespace SlowTests.Server.Documents.Notifications
         }
         
         [Fact]
-        public async Task ShouldThrowWhenTryingToGetNotificationAboutDocumentsWithType()
+        public async Task CanSubscribeToForDocumentsOfTypeWithoutThrowingExceptionButNothingWillHappen()
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
 
-#pragma warning disable CS0618 // Type or member is obsolete
-                Assert.Throws<NotSupportedException>(() => taskObservable.ForDocumentsOfType<Company>());
-#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning disable 618
+                var subscription = taskObservable.ForDocumentsOfType<Company>();
+#pragma warning restore 618
+                await subscription.EnsureSubscribedNow();
 
+                subscription.Subscribe(x => { });
             }
         }
 

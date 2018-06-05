@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Changes
         private TaskCompletionSource<IDatabaseChanges> _tcs;
 
         private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
-        
+
         private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
         private int _immediateConnection;
 
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Changes
             _requestExecutor = requestExecutor;
             _conventions = requestExecutor.Conventions;
             _database = databaseName;
-           
+
             _tcs = new TaskCompletionSource<IDatabaseChanges>(TaskCreationOptions.RunContinuationsAsynchronously);
             _cts = new CancellationTokenSource();
             _client = CreateClientWebSocket(_requestExecutor);
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Changes
             _onDispose = onDispose;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
-            _task = DoWork();   
+            _task = DoWork();
         }
 
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
@@ -214,19 +214,31 @@ namespace Raven.Client.Documents.Changes
         [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public IChangesObservable<DocumentChange> ForDocumentsOfType(string typeName)
         {
-            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
+            if (typeName == null)
+                throw new ArgumentNullException(nameof(typeName));
+
+            var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
+                DatabaseConnectionState.Dummy, 
+                notification => false);
+
+            return taskedObservable;
         }
 
         [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public IChangesObservable<DocumentChange> ForDocumentsOfType(Type type)
         {
-            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            var typeName = _conventions.FindClrTypeName(type);
+            return ForDocumentsOfType(typeName);
         }
 
         [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public IChangesObservable<DocumentChange> ForDocumentsOfType<TEntity>()
         {
-            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
+            var typeName = _conventions.FindClrTypeName(typeof(TEntity));
+            return ForDocumentsOfType(typeName);
         }
 
         public event Action<Exception> OnError;
@@ -286,7 +298,7 @@ namespace Raven.Client.Documents.Changes
             // try to reconnect
             if (newValue && Volatile.Read(ref _immediateConnection) != 0)
                 counter.Set(counter.OnConnect());
-            
+
             return counter;
         }
 
@@ -304,7 +316,7 @@ namespace Raven.Client.Documents.Changes
                     writer.WriteStartObject();
                     writer.WritePropertyName("CommandId");
                     writer.WriteInteger(currentCommandId);
-                    
+
                     writer.WriteComma();
                     writer.WritePropertyName("Command");
                     writer.WriteString(command);
@@ -312,14 +324,14 @@ namespace Raven.Client.Documents.Changes
 
                     writer.WritePropertyName("Param");
                     writer.WriteString(value);
-                  
+
                     writer.WriteEndObject();
                 }
 
                 _ms.TryGetBuffer(out var buffer);
 
                 _confirmations.Add(currentCommandId, taskCompletionSource);
-                
+
                 await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token).ConfigureAwait(false);
             }
             finally
@@ -404,7 +416,7 @@ namespace Raven.Client.Documents.Changes
                     catch
                     {
                         // we couldn't reconnect
-                        NotifyAboutError(e); 
+                        NotifyAboutError(e);
                         throw;
                     }
                 }
@@ -488,13 +500,13 @@ namespace Raven.Client.Documents.Changes
                                         json.TryGet("Exception", out string exceptionAsString);
                                         NotifyAboutError(new Exception(exceptionAsString));
                                         break;
-                                     case "Confirm":
-                                         if (json.TryGet("CommandId", out int commandId) &&
-                                             _confirmations.TryRemove(commandId, out var tcs))
-                                         {
-                                             tcs.TrySetResult(null);
-                                         }
-                                         break;
+                                    case "Confirm":
+                                        if (json.TryGet("CommandId", out int commandId) &&
+                                            _confirmations.TryRemove(commandId, out var tcs))
+                                        {
+                                            tcs.TrySetResult(null);
+                                        }
+                                        break;
                                     default:
                                         json.TryGet("Value", out BlittableJsonReaderObject value);
                                         NotifySubscribers(type, value, _counters.ValuesSnapshot);
