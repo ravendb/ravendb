@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -42,6 +43,13 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 ThrowOnNullResults();
                 return;
+            }
+
+            if (_session.TransactionMode == TransactionMode.ClusterWide)
+            {
+                if (result.TransactionIndex > 0 == false)
+                    throw new ClientHasHigherVersionException(
+                        $"The command was send to a node that is not supporting cluster transactions, therefore is was executed ONLY on that node.");
             }
 
             for (var i = 0; i < _sessionCommandsCount; i++)
