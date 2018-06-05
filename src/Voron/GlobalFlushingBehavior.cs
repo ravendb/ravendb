@@ -28,7 +28,8 @@ namespace Voron
 
         private class EnvSyncReq
         {
-            public StorageEnvironment Env;
+            public StorageEnvironment Env => Reference?.Owner;
+            public StorageEnvironment.IndirectReference Reference;
             public long LastKnownSyncCounter;
         }
 
@@ -51,32 +52,6 @@ namespace Voron
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
 
-        public void RemoveFromFlushQueues(StorageEnvironment env)
-        {
-            foreach (var req in _maybeNeedToSync)
-            {
-                if (req.Env == env)
-                    req.Env = null;
-            }
-            foreach (var req in _maybeNeedToFlush)
-            {
-                if (req.Env == env)
-                    req.Env = null;
-            }
-            foreach (var req in _syncIsRequired)
-            {
-                if (req.Env == env)
-                    req.Env = null;
-            }
-            foreach (var mpi in _mountPoints)
-            {
-                foreach (var req in mpi.Value.StorageEnvironments)
-                {
-                    if (req.Env == env)
-                        req.Env = null;
-                }
-            }
-        }
 
         public void VoronEnvironmentFlushing()
         {
@@ -312,7 +287,10 @@ namespace Voron
             if (env.Options.ManualFlushing)
                 return;
 
-            _maybeNeedToFlush.Enqueue(new EnvSyncReq{Env = env });
+            _maybeNeedToFlush.Enqueue(new EnvSyncReq
+            {
+                Reference = env.SelfReference,
+            });
             _flushWriterEvent.Set();
         }
 
@@ -320,7 +298,7 @@ namespace Voron
         {
             _maybeNeedToSync.Enqueue(new EnvSyncReq
             {
-                Env = env,
+                Reference = env.SelfReference,
                 LastKnownSyncCounter = env.LastSyncCounter
             });
         }
@@ -329,7 +307,7 @@ namespace Voron
         {
             _syncIsRequired.Enqueue(new EnvSyncReq
             {
-                Env = env,
+                Reference = env.SelfReference,
                 LastKnownSyncCounter = env.LastSyncCounter
             });
             _flushWriterEvent.Set();

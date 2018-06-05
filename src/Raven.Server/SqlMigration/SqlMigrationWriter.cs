@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -13,57 +14,25 @@ using CommandType = Raven.Client.Documents.Commands.Batches.CommandType;
 
 namespace Raven.Server.SqlMigration
 {
-    public delegate void DocumentsInsertedEventHandler(double time, int rowsRead, int documentsInserted, int attachmentsInserted);
-
     internal class SqlMigrationWriter : IDisposable
     {
-        public event DocumentsInsertedEventHandler OnDocumentsInserted;
-
-        private int _rowsRead;
-
         private readonly DocumentsOperationContext _context;
-        private readonly SqlDatabase _database;
         private BatchHandler.MergedBatchCommand _command;
+        private readonly int _batchSize;
 
-        private readonly Stopwatch _time;
-
-        public SqlMigrationWriter(DocumentsOperationContext context, SqlDatabase database)
+        public SqlMigrationWriter(DocumentsOperationContext context, int batchSize)
         {
-            if (database.IsValid() == false)
-                throw new InvalidOperationException("Database is not valid");
-
-            _database = database;
             _context = context;
+            _batchSize = batchSize;
 
-            _time = new Stopwatch();
-        }
-
-        public async Task WriteDatabase()
-        {
             Reset();
-
-            foreach (var table in _database.ParentTables)
-            {
-                var patcher = table.GetJsPatch();
-                using (var reader = table.GetReader())
-                {
-                    while (reader.Read())
-                    {
-                        var migrationDocument = _database.Factory.FromReader(reader, table, out var attachments);
-
-                        var doc = patcher.PatchDocument(migrationDocument.ToBllitable(_context));
-
-                        await InsertDocument(doc, migrationDocument.Id, attachments);
-                    }
-                }
-            }
-            await FlushCommands();
         }
 
         private readonly List<BatchRequestParser.CommandData> _commands = new List<BatchRequestParser.CommandData>();
         private readonly List<BatchHandler.MergedBatchCommand.AttachmentStream> _attachmentStreams = new List<BatchHandler.MergedBatchCommand.AttachmentStream>();
         private readonly List<IDisposable> _toDispose = new List<IDisposable>();
-        private async Task InsertDocument(BlittableJsonReaderObject document, string id, Dictionary<string, byte[]> attachments)
+
+        public async Task InsertDocument(BlittableJsonReaderObject document, string id, Dictionary<string, byte[]> attachments)
         {
             _commands.Add(new BatchRequestParser.CommandData
             {
@@ -75,7 +44,7 @@ namespace Raven.Server.SqlMigration
             foreach (var attachment in attachments)
             {
                 var memoryStream = new MemoryStream(attachment.Value);
-                var stream = _command.AttachmentStreamsTempFile.StartNewStream();
+                var stream = _command.AttachmentStreamsTempFile.StartNewStream(); 
 
                 _toDispose.Add(memoryStream);
                 _toDispose.Add(stream);
@@ -83,7 +52,7 @@ namespace Raven.Server.SqlMigration
                 var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream
                 {
                     Stream = stream,
-                    Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(_context, memoryStream, stream, _context.DocumentDatabase.DatabaseShutdown)
+                    Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(_context, memoryStream, stream, _context.DocumentDatabase.DatabaseShutdown) //TODO: do we need it?
                 };
 
                 stream.Flush();
@@ -99,10 +68,10 @@ namespace Raven.Server.SqlMigration
                 });
             }
 
-            if (_commands.Count >= _database.Factory.Options.BatchSize)
+            if (_commands.Count >= _batchSize)
                 await FlushCommands();
         }
-  
+
         private async Task FlushCommands()
         {
             if (_commands.Count == 0 && _attachmentStreams.Count == 0)
@@ -110,7 +79,7 @@ namespace Raven.Server.SqlMigration
 
             _command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(_commands.ToArray(), 0, _commands.Count);
             _command.AttachmentStreams = new Queue<BatchHandler.MergedBatchCommand.AttachmentStream>(_attachmentStreams);
-           
+
             try
             {
                 await _context.DocumentDatabase.TxMerger.Enqueue(_command);
@@ -121,10 +90,6 @@ namespace Raven.Server.SqlMigration
                 throw new InvalidOperationException($"Failed to enqueue batch of {_commands.Count} documents and attachments. ids: {ids}", e);
             }
 
-            var attachmentsCount = _command.ParsedCommands.Count(x => x.Type == CommandType.AttachmentPUT);
-
-            OnDocumentsInserted?.Invoke((double) _time.ElapsedMilliseconds / 1000, SqlReader.RowsRead - _rowsRead, _command.ParsedCommands.Count - attachmentsCount, attachmentsCount);
-            
             Reset();
 
             foreach (var dispose in _toDispose)
@@ -135,9 +100,6 @@ namespace Raven.Server.SqlMigration
 
         private void Reset()
         {
-            _rowsRead = SqlReader.RowsRead;
-            _time.Restart();
-
             _command?.Dispose();
             _command = new BatchHandler.MergedBatchCommand(_context.DocumentDatabase)
             {
@@ -150,8 +112,7 @@ namespace Raven.Server.SqlMigration
 
         public void Dispose()
         {
-            SqlReader.DisposeAll();
-            SqlConnection.ClearAllPools();
+            AsyncHelpers.RunSync(FlushCommands);
             _command?.Dispose();
         }
     }

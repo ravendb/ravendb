@@ -55,16 +55,19 @@ namespace Raven.Client.Documents.Changes
         /// <summary>
         /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
         /// </summary>
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         IChangesObservable<DocumentChange> ForDocumentsOfType(string typeName);
 
         /// <summary>
         /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
         /// </summary>
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         IChangesObservable<DocumentChange> ForDocumentsOfType(Type type);
 
         /// <summary>
         /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
         /// </summary>
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         IChangesObservable<DocumentChange> ForDocumentsOfType<TEntity>();
     }
 }

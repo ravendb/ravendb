@@ -22,6 +22,8 @@ class operation extends abstractNotification {
     isCompleted: KnockoutComputed<boolean>;
     isCanceled: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
+    
+    onUpdateCallbacks: Array<() => void> = [];
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         super(db, dto);
@@ -29,6 +31,10 @@ class operation extends abstractNotification {
         this.operationId(dto.OperationId);
         this.updateWith(dto);
         this.initializeObservables();
+    }
+    
+    invokeOnUpdateHandlers() {
+        this.onUpdateCallbacks.forEach(c => c());
     }
 
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.OperationChanged) {

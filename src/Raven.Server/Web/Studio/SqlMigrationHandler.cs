@@ -1,313 +1,170 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Migration;
-using Raven.Client.ServerWide;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
+using Raven.Server.SqlMigration.Model;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {
     public class SqlMigrationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/sql-migration/schema", "GET", AuthorizationStatus.DatabaseAdmin)]
+        
+        [RavenAction("/databases/*/admin/sql-migration/list-database-names", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task ListDatabaseNames()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var sourceSqlDatabaseBlittable = context.ReadForMemory(RequestBodyStream(), "source-database-info"))
+            {
+                var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
+
+                var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                var dbNames = dbDriver.GetDatabaseNames();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteArray("Result", dbNames);
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        
+        
+        [RavenAction("/databases/*/admin/sql-migration/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task SqlSchema()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var sourceSqlDatabaseBlittable = context.ReadForMemory(RequestBodyStream(), "source-database-info"))
             {
-                DatabaseRecord databaseRecord;
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-                using (transactionOperationContext.OpenReadTransaction())
+                var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
+
+                var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                var schema = dbDriver.FindSchema();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    databaseRecord = Server.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name);
+                    context.Write(writer, schema.ToJson());
                 }
-
-                string ConnectionStringName;
-                ConnectionStringName = GetStringQueryString(nameof(ConnectionStringName));
-
-                if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
-                    throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
-
-                IDbConnection connection;
-
-                try
-                {
-                    connection = ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
-                }
-                catch (Exception e)
-                {
-                    WriteSchemaResponse(context, Error: "Cannot open connection using the given connection string. Error: " + e);
-                    return Task.CompletedTask;
-                }
-
-                var database = new SqlDatabase(connection, ConnectionString.ConnectionString);
-
-                var tableColumns = SqlDatabase.GetSchemaResultTablesColumns(connection);
-
-                var tables = new List<SqlSchemaResultTable>();
-
-                foreach (var table in database.GetAllTables())
-                {
-                    var columns = table.PrimaryKeys.Select(column => new SqlSchemaResultTable.Column
-                        {
-                            Name = column,
-                            Type = SqlSchemaResultTable.Column.ColumnType.Primary
-                        })
-                        .ToList();
-
-                    columns.AddRange(table.ForeignKeys.Keys.Select(column => new SqlSchemaResultTable.Column
-                    {
-                        Name = column,
-                        Type = SqlSchemaResultTable.Column.ColumnType.Foreign
-                    }));
-
-                    foreach (var column in tableColumns[table.Name])
-                    {
-                        if (columns.Any(col => col.Name == column))
-                            continue;
-
-                        columns.Add(new SqlSchemaResultTable.Column
-                        {
-                            Name = column,
-                            Type = SqlSchemaResultTable.Column.ColumnType.None
-                        });
-                    }
-
-                    tables.Add(new SqlSchemaResultTable
-                    {
-                        Name = table.Name,
-                        Columns = columns.ToArray(),
-                        EmbeddedTables = table.ForeignKeys.Values.ToArray()
-                    });
-                }
-
-                WriteSchemaResponse(context, tables.ToArray());
             }
+
             return Task.CompletedTask;
         }
-
+        
         [RavenAction("/databases/*/admin/sql-migration/import", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ImportSql()
+        public Task ImportSql()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                DatabaseRecord databaseRecord;
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-                using (transactionOperationContext.OpenReadTransaction())
+                using (var sqlImportDoc = context.ReadForMemory(RequestBodyStream(), "sql-migration-request"))
                 {
-                    databaseRecord = Server.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name);
-                }
-
-                using (var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null))
-                {
-                    string ConnectionStringName;
-                    if (sqlImportDoc.TryGet(nameof(ConnectionStringName), out ConnectionStringName) == false)
-                        throw new InvalidOperationException($"'{nameof(ConnectionStringName)}' is a required field when asking for sql-migration");
-
-                    if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
-                        throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
-
-                    IDbConnection connection;
+                    MigrationRequest migrationRequest;
                     
-                    try
+                    // we can't use JsonDeserializationServer here as it doesn't support recursive processing
+                    var serializer = DocumentConventions.Default.CreateSerializer();
+                    using (var blittableJsonReader = new BlittableJsonReader())
                     {
-                        connection = ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
+                        blittableJsonReader.Init(sqlImportDoc);
+                        migrationRequest = serializer.Deserialize<MigrationRequest>(blittableJsonReader);
                     }
-                    catch (Exception e)
+                    
+                    var operationId = Database.Operations.GetNextOperationId();
+                    
+                    var sourceSqlDatabase = migrationRequest.Source;
+                    
+                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                    var schema = dbDriver.FindSchema();
+                    var token = CreateOperationToken();
+                    
+                    var result = new MigrationResult(migrationRequest.Settings);
+                    
+                    var collectionsCount = migrationRequest.Settings.Collections.Count;
+                    var operationDescription = "Importing " + collectionsCount + " " + (collectionsCount == 1 ? "collection" : "collections") + " from SQL database: " + schema.CatalogName;
+                    
+                    Database.Operations.AddOperation(Database, operationDescription, Documents.Operations.Operations.OperationType.MigrationFromSql, onProgress =>
                     {
-                        WriteImportResponse(context, Errors: new SqlMigrationImportResult.Error
+                        return Task.Run(async () =>
                         {
-                            Type = SqlMigrationImportResult.Error.ErrorType.BadConnectionString,
-                            Message = "Cannot open connection using the given connection string. Error: " + e
+                            try
+                            {
+                                // allocate new context as we executed this async
+                                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
+                                {
+                                    await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress, token.Token);    
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                result.AddError($"Error occurred during import. Exception: {e.Message}");
+                                onProgress.Invoke(result.Progress);
+                                throw;
+                            }
+
+                            return (IOperationResult) result;
                         });
-                        return;
-                    }
-
-                    BlittableJsonReaderArray Tables;
-                    if (sqlImportDoc.TryGet(nameof(Tables), out Tables) == false)
-                        throw new InvalidOperationException($"'{nameof(Tables)}' is a required field when asking for sql-migration");
-
-                    var sqlMigrationTables = (from BlittableJsonReaderObject table in Tables.Items select JsonDeserializationServer.SqlMigrationTable(table)).ToList();
+                    }, operationId, token);
                     
-                    var options = new SqlMigrationDocumentFactory.FactoryOptions();
-
-                    bool BinaryToAttachment;
-                    if (sqlImportDoc.TryGet(nameof(BinaryToAttachment), out BinaryToAttachment))
-                        options.BinaryToAttachment = BinaryToAttachment;
-
-                    bool TrimStrings;
-                    if (sqlImportDoc.TryGet(nameof(TrimStrings), out TrimStrings))
-                        options.TrimStrings = TrimStrings;
-
-                    bool SkipUnsupportedTypes;
-                    if (sqlImportDoc.TryGet(nameof(SkipUnsupportedTypes), out SkipUnsupportedTypes))
-                        options.SkipUnsupportedTypes = SkipUnsupportedTypes;
-
-                    int BatchSize;
-                    if (sqlImportDoc.TryGet(nameof(BatchSize), out BatchSize))
-                        options.BatchSize = BatchSize;
-
-                    var factory = new SqlMigrationDocumentFactory(options);
-
-                    var database = new SqlDatabase(connection, ConnectionString.ConnectionString, factory, context, sqlMigrationTables);
-
-                    database.Validate(out var errors);
-
-                    if (database.IsValid())
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        using (var writer = new SqlMigrationWriter(context, database))
-                        {
-                            await writer.WriteDatabase();
-                        }
+                        writer.WriteOperationId(context, operationId);
                     }
-
-                    WriteImportResponse(context, errors.ToArray());
+                    
+                    return Task.CompletedTask;
                 }
             }
         }
-
-
-        private void WriteSchemaResponse(DocumentsOperationContext context, SqlSchemaResultTable[] Tables = null, string Error = null)
+        
+        [RavenAction("/databases/*/admin/sql-migration/test", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task TestSql()
         {
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                writer.WriteStartObject();
-
-                WriteTablesArray(nameof(Tables), Tables, writer);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(Error));
-                writer.WriteString(Error);
-                writer.WriteComma();
-
-                var Success = Error == null;
-                writer.WritePropertyName(nameof(Success));
-                writer.WriteBool(Success);
-
-                writer.WriteEndObject();
+                using (var sqlImportTestDoc = context.ReadForMemory(RequestBodyStream(), "sql-migration-test-request"))
+                {
+                    MigrationTestRequest testRequest;
+                    
+                    // we can't use JsonDeserializationServer here as it doesn't support recursive processing
+                    var serializer = DocumentConventions.Default.CreateSerializer();
+                    using (var blittableJsonReader = new BlittableJsonReader())
+                    {
+                        blittableJsonReader.Init(sqlImportTestDoc);
+                        testRequest = serializer.Deserialize<MigrationTestRequest>(blittableJsonReader);
+                    }
+                    
+                    var sourceSqlDatabase = testRequest.Source;
+                    
+                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                    var schema = dbDriver.FindSchema();
+                    
+                    var (testResultDocument, documentId) = dbDriver.Test(testRequest.Settings, schema, context);
+                    
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        
+                        writer.WritePropertyName("DocumentId");
+                        writer.WriteString(documentId);
+                        
+                        writer.WriteComma();
+                        
+                        writer.WritePropertyName("Document");
+                        writer.WriteObject(testResultDocument);
+                        
+                        writer.WriteEndObject();
+                    }
+                    
+                    return Task.CompletedTask;
+                }
             }
-        }
-
-        private void WriteTablesArray(string name, SqlSchemaResultTable[] tables, BlittableJsonTextWriter writer)
-        {
-            writer.WritePropertyName(name);
-            writer.WriteStartArray();
-
-            var first = true;
-
-            foreach (var table in tables)
-            {
-                if (first)
-                    first = false;
-                else
-                    writer.WriteComma();
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(table.Name));
-                writer.WriteString(table.Name);
-                writer.WriteComma();
-
-                WriteColumnsArray(nameof(table.Columns), table.Columns, writer);
-                writer.WriteComma();
-
-                writer.WriteArray(nameof(table.EmbeddedTables), table.EmbeddedTables);
-
-                writer.WriteEndObject();
-            }
-
-            writer.WriteEndArray();
-        }
-
-        private void WriteColumnsArray(string name, SqlSchemaResultTable.Column[] columns, BlittableJsonTextWriter writer)
-        {
-            writer.WritePropertyName(name);
-            writer.WriteStartArray();
-
-            var first = true;
-
-            foreach (var column in columns)
-            {
-                if (first)
-                    first = false;
-                else
-                    writer.WriteComma();
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(column.Name));
-                writer.WriteString(column.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(column.Type));
-                writer.WriteString(column.Type.ToString());
-
-                writer.WriteEndObject();
-            }
-
-            writer.WriteEndArray();
-        }
-
-        private void WriteImportResponse(DocumentsOperationContext context, params SqlMigrationImportResult.Error[] Errors)
-        {
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                WriteErrorsArray(nameof(Errors), Errors, writer);
-              
-                writer.WriteComma();
-
-                var Success = Errors.Length == 0;
-
-                writer.WritePropertyName(nameof(Success));
-                writer.WriteBool(Success);
-
-                writer.WriteEndObject();
-            }
-        }
-
-        private void WriteErrorsArray(string name, SqlMigrationImportResult.Error[] errors, BlittableJsonTextWriter writer)
-        {
-            writer.WritePropertyName(name);
-            writer.WriteStartArray();
-
-            var first = true;
-
-            foreach (var error in errors)
-            {
-                if (first)
-                    first = false;
-                else
-                    writer.WriteComma();
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(error.Type));
-                writer.WriteString(error.Type.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(error.Message));
-                writer.WriteString(error.Message);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(error.TableName));
-                writer.WriteString(error.TableName);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(error.ColumnName));
-                writer.WriteString(error.ColumnName);
-
-                writer.WriteEndObject();
-            }
-
-            writer.WriteEndArray();
         }
     }
 }

@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
-import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");

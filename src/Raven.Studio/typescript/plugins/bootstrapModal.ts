@@ -20,9 +20,20 @@ dialog.addContext('bootstrapModal', {
         blockoutOpacity: .2,
         removeDelay: 300,
         addHost: (theDialog: dialog.Dialog) => {
-            const body = $('body');
+            const body = $("body");
+            
+            let modalContainer = body;
+            if (body.hasClass("fullscreen")) {
+                // looks like we are in fullscreen mode - find modal root
+                modalContainer = $(".modal-root");
+                
+                if (modalContainer.length === 0) {
+                    throw new Error('Unable to find element with class .modal-root');
+                }
+            }
+            
             const host = $('<div class="modal" id="bootstrapModal" tabindex="-1" role="dialog" aria-labelledby="bootstrapModal" aria-hidden="true"></div>')
-                .appendTo(body);
+                .appendTo(modalContainer);
             theDialog.host = host.get(0);
             closeCalled = false;
         },
@@ -30,6 +41,7 @@ dialog.addContext('bootstrapModal', {
             closeCalled = true;
             $('#bootstrapModal').modal('hide');
             $('body').removeClass('modal-open');
+            $('.modal-root').removeClass('modal-open');
         },
         attached: null,
         compositionComplete: (child: HTMLElement, parent: HTMLElement, context: composition.CompositionContext) => {
@@ -43,6 +55,11 @@ dialog.addContext('bootstrapModal', {
             }
 
             $('#bootstrapModal').modal(options);
+            
+            if ($("body").hasClass("fullscreen")) {
+                $('.modal-backdrop').appendTo('.modal-root');   
+            }
+            
             $('#bootstrapModal').on('hidden.bs.modal', (e) => {
                 if (!closeCalled) {
                     theDialog.close();

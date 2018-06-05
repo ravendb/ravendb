@@ -55,6 +55,9 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
+using Raven.Server.SqlMigration;
+using Raven.Server.SqlMigration.Model;
+using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Sparrow;
@@ -368,6 +371,14 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CountersDetail));
             scripter.AddType(typeof(CounterDetail));
             scripter.AddType(typeof(CounterOperationType));
+       
+            // sql migration
+            scripter.AddType(typeof(DatabaseSchema));
+            scripter.AddType(typeof(MigrationProvider));
+            scripter.AddType(typeof(MigrationRequest));
+            scripter.AddType(typeof(MigrationResult));
+            scripter.AddType(typeof(MigrationProgress));
+            scripter.AddType(typeof(MigrationTestRequest));
 
             return scripter;
         }

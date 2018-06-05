@@ -23,6 +23,7 @@ interface computedAppUrls {
     terms: (indexName?: string) => KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
     importCollectionFromCsv: KnockoutComputed<string>;
+    importDatabaseFromSql: KnockoutComputed<string>;
     exportDatabaseUrl: KnockoutComputed<string>;
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;

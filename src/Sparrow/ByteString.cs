@@ -590,7 +590,30 @@ namespace Sparrow
 
         public class SegmentStack : StackHeader<UnmanagedGlobalSegment>
         {
+            ~SegmentStack()
+            {
+                if (Environment.HasShutdownStarted)
+                    return; // no need
 
+                var current = Interlocked.Exchange(ref Head, HeaderDisposed);
+                try
+                {
+                    while (current != null)
+                    {
+                        var segment = current.Value;
+                        current = current.Next;
+                        if (segment == null)
+                            continue;
+                        if (!segment.InUse.Raise())
+                            continue;
+                        segment.Dispose();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    // in case that in the future we will throw that exception
+                }
+            }
         }
     }
 

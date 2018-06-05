@@ -64,54 +64,58 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 var obj = propertyDescriptor.Value;
                 object value;
-                if (obj.IsObject() && obj.IsArray() == false)
+                foreach (var v in EnumerateValues(obj))
                 {
-                    //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' witht the actual property name 
-                    //so we must use field.Name and not property from this point on.
-                    var val = TryDetectDynamicFieldCreation(property, obj.AsObject(), field);
-                    if (val != null)
+                    var actualValue = v;
+                    if (actualValue.IsObject() && actualValue.IsArray() == false)
                     {
-                        if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
+                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' witht the actual property name 
+                        //so we must use field.Name and not property from this point on.
+                        var val = TryDetectDynamicFieldCreation(property, actualValue.AsObject(), field);
+                        if (val != null)
                         {
-                            obj = val; //Here we populate the dynamic spatial field that will be handled below.
+                            if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
+                            {
+                                actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
+                            }
+                            else
+                            {
+                                value = GetValue(val);
+                                newFields += GetRegularFields(instance, field, value, indexContext);
+                                continue;
+                            }
                         }
-                        else
+
+                        if (actualValue.AsObject().TryGetValue("$spatial", out var inner))
                         {
-                            value = GetValue(val);
-                            newFields += GetRegularFields(instance, field, value, indexContext);
+
+                            SpatialField spatialField;
+                            IEnumerable<AbstractField> spatial;
+                            if (inner.IsString())
+                            {
+
+                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
+                            }
+                            else if (inner.IsObject() && inner.AsObject().TryGetValue("Lat", out var lat)
+                                                      && lat.IsNumber() && inner.AsObject().TryGetValue("Lng", out var lng) && lng.IsNumber())
+                            {
+                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                            }
+                            else
+                            {
+                                continue; //Ignoring bad spatial field 
+                            }
+                            newFields += GetRegularFields(instance, field, spatial, indexContext, nestedArray: false);
+
                             continue;
                         }
                     }
 
-                    if (obj.AsObject().TryGetValue("$spatial", out var inner))
-                    {
-
-                        SpatialField spatialField;
-                        IEnumerable<AbstractField> spatial;
-                        if (inner.IsString())
-                        {
-                         
-                            spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                            spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
-                        }
-                        else if (inner.IsObject() && inner.AsObject().TryGetValue("Lat", out var lat)
-                                                  && lat.IsNumber() && inner.AsObject().TryGetValue("Lng", out var lng) && lng.IsNumber())
-                        {
-                            spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                            spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
-                        }
-                        else
-                        {
-                           continue; //Ignoring bad spatial field 
-                        }
-                        newFields += GetRegularFields(instance, field, spatial, indexContext, nestedArray: false);                        
-
-                        continue;
-                    }
-                }
-
-                value = GetValue(propertyDescriptor.Value);
-                newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
+                    value = GetValue(propertyDescriptor.Value);
+                    newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
+                }                                
             }
 
             return newFields;
@@ -212,6 +216,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private static void ThrowInvalidObject(JsValue jsValue)
         {
             throw new InvalidOperationException("Invalid type " + jsValue);
+        }
+
+        private IEnumerable<JsValue> EnumerateValues(JsValue jv)
+        {
+            if (jv.IsArray())
+            {
+                var arr = jv.AsArray();
+                foreach (var (key, val) in arr.GetOwnProperties())
+                {
+                    if (key == "length")
+                        continue;
+
+                    yield return val.Value;
+                }
+            }
+            else
+            {
+                yield return jv;
+            }
+            
         }
 
         private IEnumerable EnumerateArray(ArrayInstance arr)

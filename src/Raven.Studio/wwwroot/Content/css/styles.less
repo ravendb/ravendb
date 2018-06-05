@@ -1548,14 +1548,6 @@ pre {
     }
 }
 
-.popover:not(.right) {
-    margin-left: 60px;
-
-    .arrow {
-        left: 35% !important;
-    }
-}
-
 .popover-lg {
     max-width: 100%;
 }
@@ -1820,6 +1812,10 @@ ul.properties {
     margin-right: auto;
 }
 
+.no-margin { 
+    margin: 0;
+}
+
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
@@ -1838,6 +1834,7 @@ ul.properties {
 @import "pages/debug-advanced.less";
 @import "pages/metrics.less";
 @import "pages/export-progress.less";
+@import "pages/sql-migration-progress.less";
 @import "pages/compaction-progress.less";
 @import "pages/stats.less";
 @import "pages/revisions.less";
@@ -1859,3 +1856,4 @@ ul.properties {
 @import "pages/license.less";
 @import "pages/cmp-xchg.less";
 @import "pages/eula.less";
+@import "pages/sql-migration.less";

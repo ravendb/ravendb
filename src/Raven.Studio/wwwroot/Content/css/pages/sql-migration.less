@@ -1,0 +1,235 @@
+@raven-field-color: #a4f012;
+
+.fullscreen {
+    
+    #editTransform {
+        margin-top: 60px;
+    }
+    
+    .hidden-fullscreen {
+        display: none;
+    }
+    
+    .sql-migration {
+        width: 100%;
+        
+        .exit-button {
+            display: inline-block;
+        }
+        
+        & > h3 {
+            display: block;
+        }
+        
+        .modal-root {
+            width: 100%;
+            background-color: @gray-base;
+        }
+    }
+}
+
+.sql-migration {
+
+    .exit-button {
+        display: none;
+    }
+    
+    .customizations {
+        font-size: 10px;
+        
+        
+        i + i {
+            padding-left: 5px;
+        }
+    }
+    
+    
+    .filter-input {
+        margin-left: @grid-gutter-width/4;
+    }
+    .left-indent {
+        padding-left: 30px;
+    }
+    
+    .object-container [class^="icon-"] + span {
+        margin-left: 0;
+    }
+    
+    .raven-property-name {
+        color: @raven-field-color;
+    }
+    
+    .panel-header {
+        
+        .icon-arrow-right {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        
+        .inline-edit {
+            &:hover {
+                &:after {
+                    top: -4px;
+                }
+            }
+        }
+    }
+    
+    .panel-addon {
+        font-size: 13px;
+        line-height: 1.5;
+        position: relative;
+        
+        .table-warning {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+    }
+    
+    .btn-sm {
+        padding: 2px 8px;
+    }
+    
+    .panel-info {
+        .link-actions {
+            padding-left: 5px;
+            padding-right: 5px;
+            margin: 2px;
+            
+            .btn.btn-sm.active {
+                background-color: fade(@brand-info, 50%) !important;
+            }
+        }
+    }
+    
+    
+    .document-id {
+        padding: 4px;
+        padding-bottom: 0;
+    }
+    
+    .object-container {
+        padding: 20px 7.5px 20px 20px;
+        position: relative;
+        
+        &:before {
+            position: absolute;
+            content: '{';
+            top: 6px;
+            left: 7px;
+            opacity: 0.5;
+        }
+        &:after {
+            position: absolute;
+            content: '}';
+            bottom: 3px;
+            left: 7px;
+            opacity: 0.5;
+        }
+    }
+    
+    .array-container {
+        padding: 20px 7.5px 20px 20px;
+        position: relative;
+        
+        &:before {
+            position: absolute;
+            content: '[';
+            top: 6px;
+            left: 7px;
+            opacity: 0.5;
+        }
+        &:after {
+            position: absolute;
+            content: ']';
+            bottom: 3px;
+            left: 7px;
+            opacity: 0.5;
+        }
+        
+    }
+    
+    .with-top-label {
+        position: relative;
+        vertical-align: middle;
+        
+        transform: translate(0, 8px);
+        
+        &:before {
+            color: #63728a;
+            position: absolute;
+            left: 0;
+            top: -11px;
+            line-height: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            content: attr(data-label);
+        }
+    }
+    
+    .properties_table {
+        border-collapse: separate;
+        
+        td {
+            padding-right: 5px;
+            padding-top: 1px;
+            padding-bottom: 1px;
+        }
+    }
+    
+    .inline-edit {
+        border: solid 1px transparent; 
+        input {
+            display: none;
+        }
+        
+        &.edit-mode {
+            input {
+                display: block;
+            }
+            
+            .static {
+                display: none;
+            }
+        }
+        
+        &:hover:not(.edit-mode) {
+            padding-right: 4px;
+            border: solid 1px @gray;
+            border-right: solid 22px @gray;
+            position: relative;
+            
+            &:after {
+                position: absolute;
+                right: -17px;
+                top: 0;
+                bottom: 0;
+                content: "\e92a";
+                font-family: 'icomoon' !important;
+            }
+            
+            cursor: pointer;
+        }
+    }
+    
+    .settings-menu {
+        .flex-form {
+            .control-label {
+                width: 255px;
+            }    
+        }
+    }
+    
+    .dropdown .dropdown-menu.settings-menu {
+        width: 470px;
+    }
+}
+
+
+.reference-in-use-modal {
+    .max-height {
+        max-height: 80vh;
+        overflow: auto;
+    }
+}

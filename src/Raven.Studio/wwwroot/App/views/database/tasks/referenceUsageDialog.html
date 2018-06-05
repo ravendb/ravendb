@@ -1,0 +1,83 @@
+<div class="modal-dialog modal-lg reference-in-use-modal" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Incoming link references for table <strong data-bind="text: table.tableName"></strong></h4>
+        </div>
+        <div class="modal-body max-height">
+            <p class="margin-bottom">Table <strong data-bind="text: table.tableName"></strong> is linked by following references:</p>
+
+            <table style="width:100%" class="margin-bottom table table-striped">
+                <thead>
+                    <tr>
+                        <th>Reference path</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: $root.references">
+                <tr>
+                    <td>
+                        <div data-bind="template: { name: 'in-use-reference-template' }">
+                        </div>
+                    </td>
+                    <td width="180">
+                        <div class="btn-group link-actions">
+                            <button class="btn btn-sm"
+                                    data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">
+                                skip
+                            </button>
+                            <button class="btn btn-sm"
+                                    data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">
+                                link
+                            </button>
+                            <button class="btn btn-sm"
+                                    data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">
+                                embed
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/html" id="in-use-reference-template">
+    <div>
+        <div data-bind="if: _.isUndefined(sourceTable.parentReference)">
+            <a href="#" data-bind="click: _.partial($root.goToTable, sourceTable)"><i class="icon-table"></i> <strong data-bind="text: sourceTable.tableName"></strong></a>
+        </div>
+        <div data-bind="with: sourceTable.parentReference">
+            <div data-bind="template: { name: 'in-use-reference-template' }"></div>
+        </div>
+        <span data-bind="visible: type === 'OneToMany'">
+            <span class="text-muted">PK</span>
+            <span data-bind="text: joinColumns.join(', ')"></span>
+            
+            <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+            
+            <span class="text-muted">from FK</span>
+            <span data-bind="text: joinColumns.join(', ')"></span>
+            <span class="text-muted">in <i class="icon-table"></i></span>
+            <span data-bind="text: targetTable.tableName"></span>
+        </span>
+        <span data-bind="visible: type === 'ManyToOne'">
+            <span class="text-muted">FK</span> 
+            <span data-bind="text: joinColumns.join(', ')"></span> 
+            <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+            
+            <span class="text-muted">from PK</span>
+            <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
+            <span class="text-muted">in <i class="icon-table"></i></span>
+            <span data-bind="text: targetTable.tableName"></span>
+        </span>
+    </div>
+    
+</script>
