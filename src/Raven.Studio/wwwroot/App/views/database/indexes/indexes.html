@@ -211,7 +211,7 @@
                         </ul>
                     </div>
                 </div>
-                <div class="properties-item priority">
+                <div class="properties-item priority" data-bind="if: !isSideBySide()">
                     <span class="properties-label">Priority:</span>
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
@@ -249,7 +249,7 @@
                         </ul>
                     </div>
                 </div>
-                <div class="properties-item mode" data-bind="css: { 'hidden': type === 'AutoMap' || type === 'AutoMapReduce' }">
+                <div class="properties-item mode" data-bind="css: { 'hidden': type === 'AutoMap' || type === 'AutoMapReduce' || isSideBySide() }">
                     <span class="properties-label">Mode:</span>
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
