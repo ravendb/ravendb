@@ -646,9 +646,9 @@ namespace Raven.Client.Http
                 if (_disableClientConfigurationUpdates == false)
                     request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
 
-                if (sessionInfo?.LastClusterTransaction != null)
+                if (sessionInfo?.GetLastClusterTransactionFunc != null)
                 {
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransaction.Value.ToString());
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.GetLastClusterTransactionFunc.Invoke()?.ToString());
                 }
 
                 if (_disableTopologyUpdates == false)

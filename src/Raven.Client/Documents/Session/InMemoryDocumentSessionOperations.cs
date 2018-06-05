@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.LastTransactionIndex);
+            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastIndexFunc);
             TransactionMode = options.TransactionMode;
         }
 

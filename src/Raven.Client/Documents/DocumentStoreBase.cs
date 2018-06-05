@@ -137,6 +137,7 @@ namespace Raven.Client.Documents
         public DocumentSubscriptions Subscriptions { get; }
 
         private long _lastTransactionIndex;
+        public Func<long?> GetLastIndexFunc => () => LastTransactionIndex;
 
         public long? LastTransactionIndex
         {
