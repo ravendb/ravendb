@@ -11,5 +11,7 @@ namespace Raven.Database.FileSystem.Synchronization
         [Description("File was conflicted on a destination side and had no resolution")] DestinationFileConflicted = 4,
         [Description("File did not exist locally")] SourceFileNotExist = 5,
         [Description("No need to delete a file on a destination side. It didn't exist there")] NoNeedToDeleteNonExistigFile = 6,
+        [Description("File does not exist")] FileNotFound = 7,
+
     }
 }

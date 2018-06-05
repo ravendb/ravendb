@@ -570,6 +570,118 @@ namespace Raven.Tests.FileSystem.Synchronization
         }
 
         [Fact]
+        public async Task Should_synchronize_last_rename_1()
+        {
+            var content = new MemoryStream(new byte[] {1, 2, 3, 4});
+
+            var sourceClient = NewAsyncClient(0);
+            var destinationClient = NewAsyncClient(1);
+
+            await sourceClient.UploadAsync("1.bin", content, new RavenJObject { { "key", "value" } });
+
+            await sourceClient.RenameAsync("1.bin", "2.bin");
+
+            await sourceClient.RenameAsync("2.bin", "3.bin");
+
+            SyncTestUtils.TurnOnSynchronization(sourceClient, destinationClient);
+
+            await sourceClient.Synchronization.StartAsync();
+            await sourceClient.Synchronization.StartAsync();
+
+            var stats = await destinationClient.GetStatisticsAsync();
+
+            Assert.Equal(1, stats.FileCount);
+
+            var files = await destinationClient.GetAsync(new[] {"1.bin", "2.bin", "3.bin"});
+
+            Assert.Null(files[0]);
+            Assert.Null(files[1]);
+            Assert.NotNull(files[2]);
+        }
+
+        [Fact]
+        public async Task Should_synchronize_last_rename_2()
+        {
+            var content = new MemoryStream(new byte[] {1, 2, 3, 4});
+
+            var sourceClient = NewAsyncClient(0);
+            var destinationClient = NewAsyncClient(1);
+
+            await sourceClient.UploadAsync("1.bin", content, new RavenJObject { { "key", "value" } });
+
+            await sourceClient.Synchronization.StartAsync("1.bin", destinationClient);
+
+            await sourceClient.RenameAsync("1.bin", "2.bin");
+
+            await sourceClient.RenameAsync("2.bin", "3.bin");
+
+            await sourceClient.RenameAsync("3.bin", "4.bin");
+
+            SyncTestUtils.TurnOnSynchronization(sourceClient, destinationClient);
+
+            await sourceClient.Synchronization.StartAsync();
+            await sourceClient.Synchronization.StartAsync();
+            await sourceClient.Synchronization.StartAsync();
+
+            var stats = await destinationClient.GetStatisticsAsync();
+
+            Assert.Equal(1, stats.FileCount);
+
+            var files = await destinationClient.GetAsync(new[] {"1.bin", "2.bin", "3.bin", "4.bin"});
+
+            Assert.Null(files[0]);
+            Assert.Null(files[1]);
+            Assert.Null(files[2]);
+            Assert.NotNull(files[3]);
+        }
+
+
+        [Fact]
+        public async Task Should_synchronize_last_rename_3()
+        {
+            var content = new MemoryStream(new byte[] {1, 2, 3, 4});
+            var content2 = new MemoryStream(new byte[] {1, 2, 3, 4});
+
+            var sourceClient = NewAsyncClient(0);
+            var destinationClient = NewAsyncClient(1);
+
+            await sourceClient.UploadAsync("1.bin", content, new RavenJObject { { "key", "value" } });
+
+            await sourceClient.Synchronization.StartAsync("1.bin", destinationClient);
+
+            await sourceClient.RenameAsync("1.bin", "2.bin");
+
+            await sourceClient.RenameAsync("2.bin", "3.bin");
+
+            await sourceClient.UploadAsync("2.bin", content2, new RavenJObject { { "key", "value" } });
+
+            await sourceClient.RenameAsync("3.bin", "4.bin");
+
+            SyncTestUtils.TurnOnSynchronization(sourceClient, destinationClient);
+
+            await sourceClient.Synchronization.StartAsync();
+            await sourceClient.Synchronization.StartAsync();
+            await sourceClient.Synchronization.StartAsync();
+
+            var stats = await destinationClient.GetStatisticsAsync();
+
+            Assert.Equal(2, stats.FileCount);
+
+            var files = await destinationClient.GetAsync(new[] {"1.bin", "2.bin", "3.bin", "4.bin"});
+
+            Assert.Null(files[0]);
+            Assert.NotNull(files[1]);
+            Assert.Null(files[2]);
+            Assert.NotNull(files[3]);
+
+            var result = new MemoryStream();
+
+            (await destinationClient.DownloadAsync("2.bin")).CopyTo(result);
+
+            Assert.Equal(content2.ToArray(), result.ToArray());
+        }
+
+        [Fact]
         public async Task Empty_file_should_be_synchronized_correctly()
         {
             var source = NewAsyncClient(0);
