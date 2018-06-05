@@ -88,7 +88,11 @@ namespace Raven.Server.ServerWide
             [nameof(PutSqlConnectionStringCommand)] = 400,
             [nameof(RemoveRavenConnectionStringCommand)] = 400,
             [nameof(RemoveSqlConnectionStringCommand)] = 400,
-            [nameof(AddOrUpdateCompareExchangeBatchCommand)] = 400
+            [nameof(AddOrUpdateCompareExchangeBatchCommand)] = 400,
+
+            [nameof(CleanUpClusterStateCommand)] = 410,
+            [nameof(ClusterTransactionCommand)] = 410,
+            [nameof(SetIndexStateCommand)] = 410,
         };
 
         public static bool CanPutCommand(string command)
@@ -106,17 +110,14 @@ namespace Raven.Server.ServerWide
 
         public static int GetClusterMinimalVersion(List<int> versions, int? maximalVersion)
         {
-            var minVersion = Enumerable.Min(versions);
-            if (maximalVersion.HasValue)
+            var minVersion = versions.Min();
+            if (maximalVersion < minVersion)
             {
-                if (maximalVersion.Value < minVersion)
+                if (_log.IsInfoEnabled)
                 {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Cluster version was clamped from {minVersion} to {maximalVersion.Value}");
-                    }
-                    return maximalVersion.Value;
+                    _log.Info($"Cluster version was clamped from {minVersion} to {maximalVersion.Value}");
                 }
+                return maximalVersion.Value;
             }
             return minVersion;
         }

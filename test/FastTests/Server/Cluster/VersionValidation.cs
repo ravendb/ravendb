@@ -7,13 +7,13 @@ using Xunit;
 
 namespace FastTests.Server.Cluster
 {
-    class VersionValidation : RavenTestBase
+    public class VersionValidation : RavenTestBase
     {
         [Fact]
         public void AllClusterCommandsHasVersion()
         {
             List<Exception> exceptions = new List<Exception>();
-            var assembly = typeof(ServerStore).GetTypeInfo().Assembly;
+            var assembly = typeof(Raven.Server.ServerWide.ServerStore).GetTypeInfo().Assembly;
             foreach (var type in assembly.GetTypes())
             {
                 var typeInfo = type.GetTypeInfo();
@@ -25,6 +25,9 @@ namespace FastTests.Server.Cluster
 
                 if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(type.Name, out int _))
                     continue;
+
+                //Console.WriteLine($"[nameof({type.Name})] = 410,");
+
                 exceptions.Add(new InvalidOperationException($"Missing version in '{nameof(ClusterCommandsVersionManager)}.{nameof(ClusterCommandsVersionManager.ClusterCommandsVersions)}' for the command '{type.Name}'."));
             }
 
