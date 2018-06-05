@@ -211,33 +211,22 @@ namespace Raven.Client.Documents.Changes
             return ForDocumentsInCollection(collectionName);
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public IChangesObservable<DocumentChange> ForDocumentsOfType(string typeName)
         {
-            if (typeName == null) throw new ArgumentNullException(nameof(typeName));
-            var encodedTypeName = Uri.EscapeDataString(typeName);
-
-            var counter = GetOrAddConnectionState("types/" + typeName, "watch-type", "unwatch-type", encodedTypeName);
-
-            var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
-                counter,
-                notification => string.Equals(typeName, notification.TypeName, StringComparison.OrdinalIgnoreCase));
-
-            return taskedObservable;
+            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public IChangesObservable<DocumentChange> ForDocumentsOfType(Type type)
         {
-            if (type == null)
-                throw new ArgumentNullException(nameof(type));
-
-            var typeName = _conventions.FindClrTypeName(type);
-            return ForDocumentsOfType(typeName);
+            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public IChangesObservable<DocumentChange> ForDocumentsOfType<TEntity>()
         {
-            var typeName = _conventions.FindClrTypeName(typeof(TEntity));
-            return ForDocumentsOfType(typeName);
+            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
         }
 
         public event Action<Exception> OnError;
