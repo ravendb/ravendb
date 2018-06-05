@@ -173,5 +173,7 @@ namespace Raven.Client.Documents
         DatabaseSmuggler Smuggler { get; }
 
         IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
+
+        void AssertInitialized();
     }
 }
