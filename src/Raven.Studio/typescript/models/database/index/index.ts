@@ -53,6 +53,7 @@ class index {
     isPausedState: KnockoutComputed<boolean>;
 
     isFaulty: KnockoutComputed<boolean>;
+    isSideBySide: KnockoutComputed<boolean>;
     globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>;
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
@@ -168,6 +169,10 @@ class index {
             return this.type === faultyType;
         });
 
+        this.isSideBySide = ko.pureComputed(() => {            
+            return this.name.startsWith(index.SideBySideIndexPrefix);
+        });
+        
         this.badgeClass = ko.pureComputed(() => {
             if (this.isFaulty()) {
                 return "state-danger";
