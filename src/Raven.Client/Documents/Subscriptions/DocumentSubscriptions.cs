@@ -215,7 +215,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
         public SubscriptionWorker<T> GetSubscriptionWorker<T>(SubscriptionWorkerOptions options, string database = null) where T : class
         {
-            _store.AssertInitialized();
+            (_store as DocumentStoreBase).AssertInitialized();
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
 
@@ -259,7 +259,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public async Task DeleteAsync(string name, string database = null)
         {
-            _store.AssertInitialized();
+            (_store as DocumentStoreBase).AssertInitialized();
             JsonOperationContext jsonOperationContext;
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
