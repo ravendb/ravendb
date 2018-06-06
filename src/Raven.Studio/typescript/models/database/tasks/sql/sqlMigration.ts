@@ -23,16 +23,17 @@ class sqlMigration {
         detectManyToMany: ko.observable<boolean>(true) 
     };
     
+    static sqlServerConnectionString = ko.observable<string>();
+    static mysqlConnectionString = ko.observable<string>();
+    
     sqlServer = {
-        connectionString: ko.observable<string>()
+        connectionString: sqlMigration.sqlServerConnectionString
     };
     
     sqlServerValidationGroup: KnockoutValidationGroup;
     
     mySql = {
-        server: ko.observable<string>("127.0.0.1"),
-        username: ko.observable<string>("root"),
-        password: ko.observable<string>() 
+        connectionString: sqlMigration.mysqlConnectionString
     };
     
     connectionStringOverride = ko.observable<string>();
@@ -62,11 +63,7 @@ class sqlMigration {
                 required: true
             });
         
-        this.mySql.server.extend({
-            required: true
-        });
-
-        this.mySql.username.extend({
+        this.mySql.connectionString.extend({
             required: true
         });
         
@@ -82,9 +79,7 @@ class sqlMigration {
         });
 
         this.mySqlValidationGroup = ko.validatedObservable({
-            server: this.mySql.server,
-            username: this.mySql.username,            
-            password: this.mySql.password,
+            connectionString: this.mySql.connectionString,
             sourceDatabaseName: this.sourceDatabaseName,
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
@@ -250,13 +245,7 @@ class sqlMigration {
         
         switch (this.databaseType()) {
             case "MySQL":
-                let mySQLConnectionString = `server='${this.escape(this.mySql.server())}';` +
-                                            `uid='${this.escape(this.mySql.username())}'\;` +
-                                            `database='${this.escape(this.sourceDatabaseName())}'`;
-                if (this.mySql.password()) {
-                    mySQLConnectionString += `\;pwd='${this.escape(this.mySql.password())}'`;
-                } 
-                return mySQLConnectionString;
+                return `${this.mySql.connectionString()}\;database='${this.escape(this.sourceDatabaseName())}'`;
                 
             case "MsSQL":
                 // Append initial catalog. For now we don't take it from the connection string.
