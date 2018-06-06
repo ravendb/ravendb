@@ -514,7 +514,7 @@ namespace FastTests
             RavenServer server = null)
         {
             var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out var clietnCertBytes);
-            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
+            var serverCertificate = new X509Certificate2(serverCertPath, (string)null);
             using (var store = GetDocumentStore(new Options
             {
                 AdminCertificate = serverCertificate,
@@ -530,7 +530,7 @@ namespace FastTests
                     requestExecutor.Execute(command, context);
                 }
             }
-            return new X509Certificate2(clietnCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+            return new X509Certificate2(clietnCertBytes, (string)null);
         }
 
         protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
@@ -538,7 +538,7 @@ namespace FastTests
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                serverCertificate = new X509Certificate2(serverCertPath, (string)null);
             }
             catch (CryptographicException e)
             {
@@ -568,7 +568,7 @@ namespace FastTests
                         {
                             var destination = new MemoryStream();
                             stream.CopyTo(destination);
-                            clientCertificate = new X509Certificate2(destination.ToArray(), (string)null, X509KeyStorageFlags.MachineKeySet);
+                            clientCertificate = new X509Certificate2(destination.ToArray(), (string)null);
                         }
                     }
                 }

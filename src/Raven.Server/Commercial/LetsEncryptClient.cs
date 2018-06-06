@@ -349,7 +349,7 @@ namespace Raven.Server.Commercial
             }
             var (pem, _) = await SendAsync<string>(HttpMethod.Get, response.Certificate, null, token);
 
-            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null, X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null);
 
             _cache.CachedCerts[_currentOrder.Identifiers[0].Value] = new CertificateCache
             {
@@ -380,7 +380,7 @@ namespace Raven.Server.Commercial
                 return false;
             }
 
-            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(cache.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(cache.Cert), (string)null);
 
             // if it is about to expire, we need to refresh
             if ((cert.NotAfter - DateTime.UtcNow).TotalDays < 14)

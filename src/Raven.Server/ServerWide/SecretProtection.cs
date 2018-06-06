@@ -391,7 +391,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 // may need to send this over the cluster, so use exportable here
-                loadedCertificate = new X509Certificate2(rawData, (string)null,X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                loadedCertificate = new X509Certificate2(rawData, (string)null,X509KeyStorageFlags.Exportable);
                 ValidateExpiration(executable, loadedCertificate, serverStore);
                 ValidatePrivateKey(executable, null, rawData, out  privateKey);
                 ValidateKeyUsages(executable, loadedCertificate);
@@ -521,9 +521,9 @@ namespace Raven.Server.ServerWide
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(rawBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                collection.Import(rawBytes);
             else
-                collection.Import(rawBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                collection.Import(rawBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
 
             using (var userIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, 
                 System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
@@ -550,7 +550,7 @@ namespace Raven.Server.ServerWide
                 var rawData = File.ReadAllBytes(path);
 
                 // we need to load it as exportable because we might need to send it over the cluster
-                var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable);
 
                 ValidateExpiration(path, loadedCertificate, serverStore);
 
