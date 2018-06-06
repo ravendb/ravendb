@@ -22,7 +22,13 @@ namespace Raven.Client.Extensions
         {
             string name = null;
             if (_conventions.PropertyNameConverter != null)
-                name = _conventions.PropertyNameConverter(memberInfo);
+            {
+                if (memberInfo.DeclaringType?.Namespace?.StartsWith("System") == false &&
+                    memberInfo.DeclaringType?.Namespace?.StartsWith("Microsoft") == false)
+                {
+                    name = _conventions.PropertyNameConverter(memberInfo);
+                }              
+            }
 
             return string.IsNullOrWhiteSpace(name) ?
                 new MemberMetadata { MemberName = memberInfo.Name } :
