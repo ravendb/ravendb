@@ -133,6 +133,11 @@ class licenseModel {
                 return 'Community';
         }
     });
+    
+    static supportTableCssClass = ko.pureComputed(() => {
+        const label = licenseModel.supportLabel();
+        return label.toLocaleLowerCase();
+    })
 }
 
 export = licenseModel;
