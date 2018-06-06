@@ -14,9 +14,27 @@ class about extends viewModelBase {
     supportCssClass = license.supportCssClass;
     
     supportLabel = license.supportLabel;
+    supportTableCssClass = license.supportTableCssClass;
     
     clientVersion = shell.clientVersion;
     serverVersion = buildInfo.serverBuildVersion;
+
+    developerLicense = license.developerLicense;
+    
+    maxClusterSize  = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        return licenseStatus ? licenseStatus.MaxClusterSize : 1;
+    });
+    
+    maxCores = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        return licenseStatus ? licenseStatus.MaxCores : 3;
+    });
+    
+    maxMemory = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        return licenseStatus ? licenseStatus.MaxMemory : 6;
+    });
     
     canUpgradeSupport = ko.pureComputed(() => {
         const support = license.supportCoverage();
@@ -42,13 +60,16 @@ class about extends viewModelBase {
         const dateFormat = "YYYY MMMM Do";
         const expiration = moment(licenseStatus.Expiration);
         const now = moment();
+        const nextMonth = moment().add(1, 'month');
         if (now.isBefore(expiration)) {
+            const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
+            
             const fromDuration = generalUtils.formatDurationByDate(expiration, false);
-            return `in ${fromDuration} (${expiration.format(dateFormat)})`;
+            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(in ${fromDuration})</small>`;
         }
 
         const duration = generalUtils.formatDurationByDate(expiration, true);
-        return `${duration} ago (${expiration.format(dateFormat)})`;
+        return `${expiration.format(dateFormat)} <br /><Small class="text-danger">(${duration} ago)</Small>`;
     });
 
     licenseType = ko.pureComputed(() => {
@@ -83,7 +104,7 @@ class about extends viewModelBase {
 
         return licenseId;
     });
-
+    
     registered = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         if (!licenseStatus) {
@@ -92,6 +113,16 @@ class about extends viewModelBase {
 
         return licenseStatus.Type !== "None" && licenseStatus.Type !== "Invalid";
     });
+    
+    licenseAttribute(name: keyof Raven.Server.Commercial.LicenseStatus) {
+        return ko.pureComputed(() => {
+           const licenseStatus = license.licenseStatus();
+           if (licenseStatus) {
+               return licenseStatus[name] ? "icon-checkmark" : "icon-cancel";
+           }
+           return "icon-cancel";
+        });
+    }
 
     register() {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
