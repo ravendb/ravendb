@@ -23,7 +23,7 @@ class queryCommand extends commandBase {
         }
         
         if (this.criteria.showFields()) {
-            return queryUtil.replaceSelectWithFetchAllStoredFields(this.criteria.queryText());
+            return queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria.queryText());
         } else {
             return this.criteria.queryText();
         }
