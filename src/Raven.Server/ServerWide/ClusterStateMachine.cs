@@ -790,7 +790,7 @@ namespace Raven.Server.ServerWide
                 }
             };
         }
-
+        
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
@@ -920,12 +920,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseChanged(context, databaseName, index, type);
             }
         }
-
-        public override RachisVersionValidation Validator()
-        {
-            return new ClusterValidator();
-        }
-
+        
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
@@ -1448,6 +1443,11 @@ namespace Raven.Server.ServerWide
             AsyncHelpers.RunSync(() => serverStore.LicenseManager.CalculateLicenseLimits());
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+        }
+
+        protected override RachisVersionValidation InitializeValidator()
+        {
+            return new ClusterValidator();
         }
     }
 

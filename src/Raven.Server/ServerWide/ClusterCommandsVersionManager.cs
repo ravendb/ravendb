@@ -17,18 +17,6 @@ namespace Raven.Server.ServerWide
     {
         public static readonly int MyCommandsVersion;
 
-        public static int Median(int[] values)
-        {
-            if (values == null || values.Length == 0)
-                throw new ArgumentException("Array must contain values.");
-
-            // we do it very naively here, because we expect a small amount of values.
-            Array.Sort(values);
-            if (values.Length % 2 == 1)
-                return values[(values.Length -1) / 2];
-            return Math.Min(values[values.Length / 2 - 1], values[values.Length / 2 + 1]);
-        }
-
         public static int CurrentClusterMinimalVersion;
 
         private static readonly Logger _log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
