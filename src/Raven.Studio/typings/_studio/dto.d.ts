@@ -221,7 +221,7 @@ interface replicationConflictListItemDto {
     LastModified: string;
 }
 
-type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase";
+type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase" | "DatabaseIsNotRelevant";
 
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";
 
