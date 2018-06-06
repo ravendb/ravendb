@@ -437,6 +437,8 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     return ((AutoMapIndex)self).Definition.IndexFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:
                     return ((AutoMapReduceIndex)self).Definition.IndexFields.Keys.ToArray();
+                case IndexType.Faulty:
+                    throw new ArgumentException($"Index '{self.Name}' is Faulty. Can't return index entries for a faulty index.");
                 default:
                     throw new ArgumentException("Unknown index type: " + self.Type);
             }
