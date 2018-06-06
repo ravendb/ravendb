@@ -29,6 +29,6 @@
         public long MidpointIndex { get; set; }
         public long MidpointTerm { get; set; }
 
-        public int CommandsVersion { get; set; }
+        public int? CommandsVersion { get; set; }
     }
 }
