@@ -70,8 +70,6 @@ namespace Raven.Client.Documents.Linq
         };
         private List<string> _projectionParameters { get; set; }
 
-        private const string TransparentIdentifier = "<>h__TransparentIdentifier";
-
         private int _aliasesCount;
 
         private readonly LinqPathProvider _linqPathProvider;
@@ -545,7 +543,7 @@ namespace Raven.Client.Documents.Linq
                                                                                                 result.Path)
                                    : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
                                                                                          result.Path);
-            return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath)
+            return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath, result.Args)
             {
                 MaybeProperty = result.MaybeProperty
             };
@@ -1446,11 +1444,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
                             && unaryExpression.Operand is LambdaExpression lambdaExpression
-                            && (lambdaExpression.Body.NodeType == ExpressionType.New 
-                                || lambdaExpression.Body.NodeType == ExpressionType.MemberInit
-                                || lambdaExpression.Body.NodeType == ExpressionType.MemberAccess)
                             && lambdaExpression.Parameters[0] != null
-                            && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
+                            && lambdaExpression.Parameters[0].Name.StartsWith(LinqPathProvider.TransparentIdentifier))
                         {
                             _insideLet++;
                         }
@@ -1855,7 +1850,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
-                    var selectPath = RemoveTransparentIdentifiersIfNeeded(memberExpression);
+                    var selectPath = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(GetSelectPath(memberExpression));
 
                     AddToFieldsToFetch(selectPath, selectPath);
                     if (_insideSelect == false)
@@ -1910,6 +1905,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
+                        if (newExpression.Arguments[index] is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
+                        {
+                            var counterInfo = LinqPathProvider.CreateCounterResult(mce);
+                            if (_fromAlias == null && counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+                            {
+                                AddFromAlias(counterInfo.Args[0]);
+                            }
+
+                            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
+                            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(newExpression.Members[index]));
+                            continue;
+                        }
+
                         //lambda 2 js
                         if (_fromAlias == null)
                         {
@@ -1959,8 +1967,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
-                        //lambda 2 js
+                        if (field.Expression is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
+                        {
+                            var counterInfo = LinqPathProvider.CreateCounterResult(mce);
+                            if (_fromAlias == null && counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+                            {
+                                AddFromAlias(counterInfo.Args[0]);
+                            }
 
+                            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
+                            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(field.Member));
+                            continue;
+                        }
+
+                        //lambda 2 js
                         if (_fromAlias == null)
                         {
                             AddFromAlias(lambdaExpression?.Parameters[0].Name);
@@ -1977,7 +1997,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 //for example .Select(product => product.Properties["VendorName"])
                 case ExpressionType.Call:
                     var expressionInfo = GetMember(body);
-                    AddToFieldsToFetch(expressionInfo.Path, null);
+                    var path = expressionInfo.Path;
+                    string alias = null;
+                                      
+                    if (expressionInfo.Args != null)
+                    {
+                        if (_fromAlias == null 
+                            && expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+                        {
+                            AddFromAlias(expressionInfo.Args[0]);
+                        }
+
+                        AddCallArgumentsToPath(expressionInfo.Args, ref path, out alias);
+                    }
+
+                    AddToFieldsToFetch(path, alias);
                     break;
 
                 default:
@@ -1985,16 +2019,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private string RemoveTransparentIdentifiersIfNeeded(MemberExpression memberExpression)
+        private static void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)
         {
-            var selectPath = GetSelectPath(memberExpression);
-            while (selectPath.StartsWith(TransparentIdentifier))
+            alias = null;
+            var args = mceArgs[0];
+            if (mceArgs.Length == 2)
             {
-                var indexOf = selectPath.IndexOf(".", StringComparison.Ordinal);
-                selectPath = selectPath.Substring(indexOf + 1);
+                args += $", {mceArgs[1]}";
             }
 
-            return selectPath;
+            alias = mceArgs[mceArgs.Length - 1];
+
+            path = $"{path}({args})";
         }
 
         private string GetSelectPathOrConstantValue(MemberExpression member)
