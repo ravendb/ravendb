@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_session.TransactionMode == TransactionMode.ClusterWide)
             {
-                if (result.TransactionIndex > 0 == false)
+                if (result.TransactionIndex <= 0)
                     throw new ClientHasHigherVersionException(
                         $"Cluster transaction was send to a node that is not supporting it. So it was executed ONLY on the requested node on {_session.RequestExecutor.Url}.");
             }
