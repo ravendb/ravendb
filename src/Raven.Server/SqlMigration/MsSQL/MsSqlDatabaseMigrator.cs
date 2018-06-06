@@ -105,9 +105,11 @@ namespace Raven.Server.SqlMigration.MsSQL
                     return ColumnType.Boolean;
                 case "binary":
                 case "varbinary":
+                case "image":
                     return ColumnType.Binary;
                 case "char":
                 case "nchar":
+                case "ntext":
                 case "nvarchar":
                 case "datetime":
                 case "datetime2":

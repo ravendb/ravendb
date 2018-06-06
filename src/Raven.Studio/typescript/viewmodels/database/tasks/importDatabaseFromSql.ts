@@ -28,7 +28,7 @@ interface exportDataDto {
 
 class importDatabaseFromSql extends viewModelBase {
     
-    static pageCount = 5; //TODO: set to 100!
+    static pageCount = 100;
     
     spinners = {
         schema: ko.observable<boolean>(false),
