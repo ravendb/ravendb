@@ -6,7 +6,7 @@ class getClientBuildVersionCommand extends commandBase {
         const args = {
             t: new Date().getTime()
         };
-        return this.query("/studio/version.json", args);
+        return this.query("/studio/version.txt", args);
     }
 }
 
