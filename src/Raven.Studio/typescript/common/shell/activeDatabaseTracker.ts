@@ -30,6 +30,9 @@ class activeDatabaseTracker {
                 } else if (e.cause === "DatabaseDisabled") {
                     messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " was disabled");
                     router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
+                } else if (e.cause === "DatabaseIsNotRelevant") {
+                    messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " is not longer relevant on this node");
+                    router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
                 }
             }
         });
