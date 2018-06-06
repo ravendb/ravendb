@@ -219,7 +219,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
-                Maps = { "docs.Users.Where(user => Enumerable.Contains(user.Name, 'C'))" }
+                Maps = { "docs.Users.Where(user => user.Name.Contains('C'))" }
             };
             Assert.True(original.Maps.SetEquals(generated.Maps));
         }
