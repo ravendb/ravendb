@@ -647,6 +647,643 @@ namespace SlowTests.Client.Counters
             }
         }
 
+        [Fact]
+        public void SessionQuerySelectSingleCounter_UsingRavenQueryCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select RavenQuery.Counter("Downloads");
+
+                    Assert.Equal("from Users select counter(Downloads) as Downloads", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0]);
+                    Assert.Equal(200, queryResult[1]);
+                    Assert.Null(queryResult[2]);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectSingleCounterWithDocAlias_UsingRavenQueryCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select RavenQuery.Counter(user, "Downloads");
+
+                    Assert.Equal("from Users as user select counter(user, Downloads) as Downloads", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0]);
+                    Assert.Equal(200, queryResult[1]);
+                    Assert.Null(queryResult[2]);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterAndProjectToNewAnonymousType_UsingRavenQueryCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    DownloadsCount = RavenQuery.Counter(user, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0].DownloadsCount);
+                    Assert.Equal(200, queryResult[1].DownloadsCount);
+                    Assert.Null(queryResult[2].DownloadsCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterAndProjectToMemberInit_UsingRavenQueryCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new CounterResult2
+                                {
+                                    DownloadsCount = RavenQuery.Counter(user, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0].DownloadsCount);
+                    Assert.Equal(200, queryResult[1].DownloadsCount);
+                    Assert.Null(queryResult[2].DownloadsCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterFromLoadedDoc_UsingRavenQueryCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", FriendId = "users/2-A" }, "users/1-A");
+                    session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let f = RavenQuery.Load<User>(u.FriendId)
+                                select RavenQuery.Counter(f, "Downloads");
+
+                    Assert.Equal("from Users as u load u.FriendId as f " +
+                                 "select counter(f, Downloads) as Downloads", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal(200, queryResult[0]);
+                    Assert.Null(queryResult[1]);
+                    Assert.Equal(100, queryResult[2]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectMultipuleCounters_UsingRavenQueryCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 400);
+                    session.Advanced.Counters.Increment("users/2-A", "Likes", 800);
+
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 1600);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Downloads = RavenQuery.Counter(user, "Downloads"),
+                                    Likes = RavenQuery.Counter(user, "Likes")
+                                };
+
+                    Assert.Equal("from Users as user " +
+                                 "select counter(user, Downloads) as Downloads, " +
+                                        "counter(user, Likes) as Likes" 
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0].Downloads);
+                    Assert.Equal(200, queryResult[0].Likes);
+
+                    Assert.Equal(400, queryResult[1].Downloads);
+                    Assert.Equal(800, queryResult[1].Likes);
+
+                    Assert.Null(queryResult[2].Downloads);
+                    Assert.Equal(1600, queryResult[2].Likes);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectSingleCounterWithDocAlias_UsingSessionGetCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select session.Advanced.Counters.Get(user, "Downloads");
+
+                    Assert.Equal("from Users as user select counter(user, Downloads) as Downloads", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0]);
+                    Assert.Equal(200, queryResult[1]);
+                    Assert.Null(queryResult[2]);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterAndProjectToNewAnonymousType_UsingSessionGetCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    DownloadsCount = session.Advanced.Counters.Get(user, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0].DownloadsCount);
+                    Assert.Equal(200, queryResult[1].DownloadsCount);
+                    Assert.Null(queryResult[2].DownloadsCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterAndProjectToMemberInit_UsingSessionGetCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new CounterResult2
+                                {
+                                    DownloadsCount = session.Advanced.Counters.Get(user, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0].DownloadsCount);
+                    Assert.Equal(200, queryResult[1].DownloadsCount);
+                    Assert.Null(queryResult[2].DownloadsCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterFromLoadedDoc_UsingSessionGetCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", FriendId = "users/2-A" }, "users/1-A");
+                    session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let f = RavenQuery.Load<User>(u.FriendId)
+                                select session.Advanced.Counters.Get(f, "Downloads");
+
+                    Assert.Equal("from Users as u load u.FriendId as f " +
+                                 "select counter(f, Downloads) as Downloads", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal(200, queryResult[0]);
+                    Assert.Null(queryResult[1]);
+                    Assert.Equal(100, queryResult[2]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectMultipuleCounters_UsingSessionGetCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 400);
+                    session.Advanced.Counters.Increment("users/2-A", "Likes", 800);
+
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 1600);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Downloads = session.Advanced.Counters.Get(user, "Downloads"),
+                                    Likes = session.Advanced.Counters.Get(user, "Likes")
+                                };
+
+                    Assert.Equal("from Users as user " +
+                                 "select counter(user, Downloads) as Downloads, " +
+                                        "counter(user, Likes) as Likes"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(100, queryResult[0].Downloads);
+                    Assert.Equal(200, queryResult[0].Likes);
+
+                    Assert.Equal(400, queryResult[1].Downloads);
+                    Assert.Equal(800, queryResult[1].Likes);
+
+                    Assert.Null(queryResult[2].Downloads);
+                    Assert.Equal(1600, queryResult[2].Likes);
+                }
+            }
+        }
+
+
+        [Fact]
+        public void SessionQuerySelectSingleCounterJsProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", Age = 55}, "users/1-A");
+                    session.Store(new User { Name = "Bob", Age = 68}, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", Age = 27 }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Name = user.Name + user.Age, //creates js projection
+                                    Downloads = RavenQuery.Counter(user, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select { Name : user.Name+user.Age, Downloads : counter(user, \"Downloads\") }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal("Jerry55", queryResult[0].Name);
+                    Assert.Equal(100, queryResult[0].Downloads);
+
+                    Assert.Equal("Bob68", queryResult[1].Name);
+                    Assert.Equal(200, queryResult[1].Downloads);
+
+                    Assert.Equal("Pigpen27", queryResult[2].Name);
+                    Assert.Null(queryResult[2].Downloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectMultipleCountersJsProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", Age = 55 }, "users/1-A");
+                    session.Store(new User { Name = "Bob", Age = 68 }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", Age = 27 }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Likes = session.Advanced.Counters.Get(user, "Likes"),
+                                    Downloads = RavenQuery.Counter(user, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select " +
+                                 "counter(user, Likes) as Likes, counter(user, Downloads) as Downloads"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Null(queryResult[0].Likes);
+                    Assert.Equal(100, queryResult[0].Downloads);
+
+                    Assert.Null(queryResult[1].Likes);
+                    Assert.Equal(200, queryResult[1].Downloads);
+
+                    Assert.Equal(300, queryResult[2].Likes);
+                    Assert.Null(queryResult[2].Downloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterViaLet()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry"}, "users/1-A");
+                    session.Store(new User { Name = "Bob"}, "users/2-A");
+                    session.Store(new User { Name = "Pigpen"}, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                let c = RavenQuery.Counter(user, "Downloads")
+                                select new
+                                {
+                                    Name = user.Name,
+                                    Downloads = c
+                                };
+
+                    Assert.Equal(
+@"declare function output(user) {
+	var c = counter(user, ""Downloads"");
+	return { Name : user.Name, Downloads : c };
+}
+from Users as user select output(user)" , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(100, queryResult[0].Downloads);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal(200, queryResult[1].Downloads);
+
+                    Assert.Equal("Pigpen", queryResult[2].Name);
+                    Assert.Null(queryResult[2].Downloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterFromLoadedDocJsProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", FriendId = "users/2-A" }, "users/1-A");
+                    session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                let f = RavenQuery.Load<User>(user.FriendId)
+                                select new
+                                {
+                                    Name = user.Name,
+                                    Downloads = RavenQuery.Counter(user, "Downloads"),
+                                    FriendsDownloads = RavenQuery.Counter(f, "Downloads")
+                                };
+
+                    Assert.Equal("from Users as user " +
+                                 "load user.FriendId as f " +
+                                 "select { Name : user.Name, " +
+                                          "Downloads : counter(user, \"Downloads\"), " +
+                                          "FriendsDownloads : counter(f, \"Downloads\") }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(100, queryResult[0].Downloads);
+                    Assert.Equal(200, queryResult[0].FriendsDownloads);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal(200, queryResult[1].Downloads);
+                    Assert.Null(queryResult[1].FriendsDownloads);
+
+                    Assert.Equal("Pigpen", queryResult[2].Name);
+                    Assert.Null(queryResult[2].Downloads);
+                    Assert.Equal(100, queryResult[2].FriendsDownloads);
+
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
