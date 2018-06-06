@@ -20,6 +20,7 @@
                         </div>
                     </div>
 
+                    <!-- TODO
                     <div>
                         <div class="flex-horizontal flex-stretch-items">
                             <button class="btn btn-primary big-button">
@@ -39,6 +40,7 @@
                             <a href="#" target="_blank">See what's new</a>
                         </div>
                     </div>
+                    -->
 
                     <div>
                         <a data-bind="click: openFeedbackForm" class="btn btn-info big-button">
@@ -86,9 +88,7 @@
                         <div class="big-label" data-bind="visible: formattedExpiration">
                             <div class="content">
                                 <small>Expires</small>
-                                <strong>2019 May 11th</strong>
-                                <!--TODO: Add expiration warning-->
-                                <!--<small class="text-danger">25 days left</small>-->
+                                <strong data-bind="html: formattedExpiration"></strong>
                             </div>
                         </div>
                     </div>
@@ -106,23 +106,24 @@
 
             <div class="license-properties-container padding">
                 <div class="license-properties">
-                    <div class="name">Eligible for Commercial Use</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Eligible for Commercial Use</div>
+                    <div class="value"><i data-bind="attr: { class: developerLicense() ? 'icon-cancel' : 'icon-checkmark' }"></i></div>
                     <div class="name">Number of databases</div><div class="value"><i class="icon-infinity"></i></div>
                     <div class="name">Single database size</div><div class="value"><i class="icon-infinity"></i></div>
                     <div class="name">Management Studio (GUI)</div><div class="value"><i class="icon-checkmark"></i></div>
 
                     <h4>Clustering</h4>
 
-                    <div class="name">Max cluster size</div><div class="value"><strong>3</strong></div>
-                    <div class="name">Max cores in cluster</div><div class="value"><strong>3</strong></div>
-                    <div class="name">Max cluster memory usage</div><div class="value"><strong>6GB RAM</strong></div>
-                    <div class="name">Highly available tasks</div><div class="value"><i class="icon-cancel"></i></div>
-                    <div class="name">Dynamic database distribution</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Max cluster size</div><div class="value"><strong data-bind="text: maxClusterSize"></strong></div>
+                    <div class="name">Max cores in cluster</div><div class="value"><strong data-bind="text: maxCores"></strong></div>
+                    <div class="name">Max cluster memory usage</div><div class="value"><strong data-bind="text: maxMemory() + ' GB RAM'"></strong></div>
+                    <div class="name">Highly available tasks</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasHighlyAvailableTasks') }"></i></div>
+                    <div class="name">Dynamic database distribution</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDynamicNodesDistribution') }"></i></div>
 
                     <h4>Monitoring</h4>
 
                     <div class="name">Server Dashboard</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">SNMP</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">SNMP</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnmpMonitoring') }"></i></div>
 
                     <h4>Extensions</h4>
 
@@ -132,25 +133,25 @@
 
                     <h4>External Replication</h4>
 
-                    <div class="name">Immediate</div><div class="value"><i class="icon-cancel"></i></div>
-                    <div class="name">Delayed</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>
+                    <div class="name">Delayed</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDelayedExternalReplication') }"></i></div>
 
                     <h4>Backups</h4>
 
                     <div class="name">Local</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">Cloud & Remote</div><div class="value"><i class="icon-cancel"></i></div>
-                    <div class="name">Snapshot backups</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Cloud & Remote</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasCloudBackups') }"></i></div>
+                    <div class="name">Snapshot backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnapshotBackups') }"></i></div>
 
                     <h4>ETL</h4>
 
-                    <div class="name">SQL ETL</div><div class="value"><i class="icon-cancel"></i></div>
-                    <div class="name">RavenDB ETL</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">SQL ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSqlEtl') }"></i></div>
+                    <div class="name">RavenDB ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasRavenEtl') }"></i></div>
 
                     <h4>Security</h4>
 
                     <div class="name">Certificates</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Encryption in transit</div><div class="value"><strong>TLS 1.2 & X.509</strong></div>
-                    <div class="name">Storage encryption</div><div class="value"><i class="icon-cancel"></i></div>
+                    <div class="name">Storage encryption</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryption') }"></i></div>
 
                 </div>
 
@@ -168,8 +169,9 @@
                         <i class="icon-force"></i>
                         <span>FORCE UPDATE</span>
                     </button>
-                    <!-- TODO: Add binding -->
-                    <button class="btn btn-danger flex-grow" data-bind=""><i class="icon-cancel"></i> <span>DEACTIVATE</span></button>
+                    <!-- TODO 
+                        <button class="btn btn-danger flex-grow" data-bind=""><i class="icon-cancel"></i> <span>DEACTIVATE</span></button>
+                    -->
                     <!-- /ko -->
                 </div>
             </div>
@@ -199,8 +201,7 @@
                 </div>
             </div>
 
-
-            <div class="support-properties community flex-grow">
+            <div data-bind="attr: { class: supportTableCssClass() + ' support-properties flex-grow' }">
 
                 <div class="top-row community">
                     <h4>Community</h4>
@@ -246,7 +247,9 @@
                 </div>
 
                 <div class="community"><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block"><i class="icon-newtab"></i> <span>ACCESS</span></a></div>
-                <div class="grid-span-2 professional production"><a href="http://ravendb.net/support" target="_blank" class="btn btn-success btn-block"><i class="icon-umbrella"></i> <span>UPGRADE</span></a></div>
+                <div class="grid-span-2 professional production" data-bind="visible: canUpgradeSupport">
+                    <a href="http://ravendb.net/support" target="_blank" class="btn btn-success btn-block"><i class="icon-umbrella"></i> <span>UPGRADE</span></a>
+                </div>
             </div>
         </div>
     </div>
