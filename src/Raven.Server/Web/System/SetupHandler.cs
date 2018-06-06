@@ -373,8 +373,8 @@ namespace Raven.Server.Web.System
                 try
                 {
                     certificate = certDef.Password == null
-                        ? new X509Certificate2(Convert.FromBase64String(certDef.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet)
-                        : new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password, X509KeyStorageFlags.MachineKeySet);
+                        ? new X509Certificate2(Convert.FromBase64String(certDef.Certificate), (string)null)
+                        : new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
 
                     cn = certificate.GetNameInfo(X509NameType.SimpleName, false);
                 }
@@ -513,8 +513,8 @@ namespace Raven.Server.Web.System
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
                 var nodeCert = setupInfo.Password == null
-                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet)
-                    : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password, X509KeyStorageFlags.MachineKeySet);
+                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), (string)null)
+                    : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
 
                 var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
 

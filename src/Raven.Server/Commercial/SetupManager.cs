@@ -327,7 +327,7 @@ namespace Raven.Server.Commercial
             {
                 currentNodeSettingsJson.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
 
-                serverCert = new X509Certificate2(certBytes, certPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                serverCert = new X509Certificate2(certBytes, certPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             }
             catch (Exception e)
             {
@@ -336,7 +336,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                clientCert = new X509Certificate2(clientCertBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                clientCert = new X509Certificate2(clientCertBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             }
             catch (Exception e)
             {
@@ -582,7 +582,7 @@ namespace Raven.Server.Commercial
             Debug.Assert(certBytes != null);
             setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
-            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable);
         }
 
         private static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
@@ -1331,7 +1331,7 @@ namespace Raven.Server.Commercial
                         {
                             var base64 = setupInfo.Certificate;
                             serverCertBytes = Convert.FromBase64String(base64);
-                            serverCert = new X509Certificate2(serverCertBytes, setupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                            serverCert = new X509Certificate2(serverCertBytes, setupInfo.Password, X509KeyStorageFlags.Exportable);
 
                             publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
                                 setupInfo.NodeSetupInfos[LocalNodeTag].TcpPort, out var _, out domainFromCert);
@@ -1397,7 +1397,7 @@ namespace Raven.Server.Commercial
                             // requires server certificate to be loaded
                             var clientCertificateName = $"{name}.client.certificate";
                             certBytes = await GenerateCertificateTask(clientCertificateName, serverStore);
-                            clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                            clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
                         }
                         catch (Exception e)
                         {

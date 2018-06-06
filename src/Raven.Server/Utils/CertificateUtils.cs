@@ -27,7 +27,7 @@ namespace Raven.Server.Utils
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out var certBytes, log);
-            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null);
             selfSignedCertificateBasedOnPrivateKey.Verify();
             return certBytes;
         }
@@ -58,7 +58,7 @@ namespace Raven.Server.Utils
             store.Save(memoryStream, Array.Empty<char>(), GetSeededSecureRandom());
             certBytes = memoryStream.ToArray();
 
-            var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
             return cert;
         }
 
@@ -66,7 +66,7 @@ namespace Raven.Server.Utils
         {
             var collection = new X509Certificate2Collection();
             // without the server private key here
-            collection.Import(serverCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+            collection.Import(serverCertBytes);
 
             if (new X509Certificate2Collection().OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
@@ -85,7 +85,7 @@ namespace Raven.Server.Utils
                 -1,
                 out var certBytes);
 
-            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+            return new X509Certificate2(certBytes, (string)null);
         }
 
         public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 

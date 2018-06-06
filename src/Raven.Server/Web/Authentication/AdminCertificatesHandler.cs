@@ -255,9 +255,9 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                collection.Import(certBytes);
             else
-                collection.Import(certBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                collection.Import(certBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
 
             var first = true;
             var collectionPrimaryKey = string.Empty;
@@ -661,7 +661,7 @@ namespace Raven.Server.Web.Authentication
             {
                 if (ServerStore.CurrentRachisState == RachisState.Passive)
                 {
-                    collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                    collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert));
                 }
                 else
                 {
@@ -681,8 +681,8 @@ namespace Raven.Server.Web.Authentication
 
                             foreach (var cert in clusterNodes)
                             {
-                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
-                                collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null);
+                                collection.Import(x509Certificate2.Export(X509ContentType.Cert));
                             }
                         }
                         finally
