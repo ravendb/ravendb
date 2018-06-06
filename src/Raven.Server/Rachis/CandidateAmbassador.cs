@@ -179,7 +179,7 @@ namespace Raven.Server.Rachis
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
 
-                                    ClusterCommandsVersion = rvr.ClusterCommandsVersion;
+                                    ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
 
                                     if (_engine.Log.IsInfoEnabled)
                                         _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
@@ -232,7 +232,7 @@ namespace Raven.Server.Rachis
                                 });
 
                                 rvr = connection.Read<RequestVoteResponse>(context);
-                                ClusterCommandsVersion = rvr.ClusterCommandsVersion;
+                                ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
 
                                 if (_engine.Log.IsInfoEnabled)
                                     _engine.Log.Info($"Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
