@@ -517,16 +517,10 @@ class appUrl {
 
             if (value instanceof Array) {
                 for (let i = 0; i < value.length; i++) {
-
-                    // we want : doc/76 (so use encodeURI)
-                    // encodeURI(doc/76) ==> "doc/76"
-                    // encodeURIComponent(doc/76) ==> "doc%2F76"     
-                    propNameAndValues.push(prop + "=" + (prop === 'id' ? encodeURI(value[i]) : encodeURIComponent(value[i]))); 
-                    
+                    propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
                 }
             } else if (value !== undefined) {
-                propNameAndValues.push(prop + "=" + (prop === 'id' ? encodeURI(value) : encodeURIComponent(value)));
-                
+                propNameAndValues.push(prop + "=" + encodeURIComponent(value));
             }
         }
 
