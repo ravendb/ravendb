@@ -156,7 +156,7 @@ namespace Raven.Server
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.Build;
+                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.Version;
 
                 var sp = Stopwatch.StartNew();
                 database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
