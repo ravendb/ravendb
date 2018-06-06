@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 if (result.TransactionIndex > 0 == false)
                     throw new ClientHasHigherVersionException(
-                        $"The command was send to a node that is not supporting cluster transactions, therefore is was executed ONLY on that node.");
+                        $"Cluster transaction was send to a node that is not supporting it. So it was executed ONLY on the requested node on {_session.RequestExecutor.Url}.");
             }
 
             for (var i = 0; i < _sessionCommandsCount; i++)

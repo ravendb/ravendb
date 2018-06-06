@@ -693,7 +693,7 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
-                FollowerCommandsVersion = llr.CommandsVersion;
+                FollowerCommandsVersion = llr.CommandsVersion ?? 400;
 
                 if (_engine.Log.IsInfoEnabled)
                 {
