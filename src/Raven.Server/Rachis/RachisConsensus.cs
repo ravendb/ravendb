@@ -43,17 +43,13 @@ namespace Raven.Server.Rachis
         }
 
         public TStateMachine StateMachine;
-        private RachisVersionValidation _validator;
 
         internal override RachisStateMachine GetStateMachine()
         {
             return StateMachine;
         }
 
-        internal override RachisVersionValidation GetValidator()
-        {
-            return _validator;
-        }
+        internal override RachisVersionValidation Validator => StateMachine.Validator;
 
         public override void Notify(Notification notification)
         {
@@ -63,7 +59,6 @@ namespace Raven.Server.Rachis
         protected override void InitializeState(TransactionOperationContext context)
         {
             StateMachine = new TStateMachine();
-            _validator = StateMachine.Validator();
             StateMachine.Initialize(this, context);
         }
         
@@ -234,9 +229,7 @@ namespace Raven.Server.Rachis
     {        
         internal abstract RachisStateMachine GetStateMachine();
 
-        internal abstract RachisVersionValidation GetValidator();
-
-        public RachisVersionValidation Validator => GetValidator();
+        internal abstract RachisVersionValidation Validator { get; }
 
         public const string InitialTag = "?";
 

@@ -309,7 +309,7 @@ namespace Tests.Infrastructure
                 tree.Increment(name, val);
             }
 
-            public override RachisVersionValidation Validator()
+            protected override RachisVersionValidation InitializeValidator()
             {
                 return new CountingValidator();
             }

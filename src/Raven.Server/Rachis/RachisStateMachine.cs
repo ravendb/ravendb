@@ -4,7 +4,6 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -17,11 +16,13 @@ namespace Raven.Server.Rachis
     {
         protected TransactionContextPool ContextPoolForReadOnlyOperations;
         protected RachisConsensus _parent;
-
+        public RachisVersionValidation Validator;
+        
         public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             _parent = parent;            
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
+            Validator = InitializeValidator();
         }
 
         public long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore, Stopwatch duration)
@@ -68,7 +69,7 @@ namespace Raven.Server.Rachis
             
         }
 
-        public abstract RachisVersionValidation Validator();
+        protected abstract RachisVersionValidation InitializeValidator();
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
