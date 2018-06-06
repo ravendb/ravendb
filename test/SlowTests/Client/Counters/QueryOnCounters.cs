@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.Client.Counters
@@ -457,6 +458,53 @@ namespace SlowTests.Client.Counters
 
         [Fact]
         public void RawQuerySelectCounterFromLoadedDoc()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", FriendId = "users/2-A" }, "users/1-A");
+                    session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
+
+                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
+                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .RawQuery<CounterResult7>(@"from users as u 
+                                                    load u.FriendId as f 
+                                                    select Name,
+                                                           counter(u, $p0),
+                                                           counter(f, $p0) as FriendsDownloads")
+                        .AddParameter("p0", "Downloads")
+                        .ToList();
+
+                    Assert.Equal(3, query.Count);
+
+                    Assert.Equal("Jerry", query[0].Name);
+                    Assert.Equal(100, query[0].Downloads);
+                    Assert.Equal(200, query[0].FriendsDownloads);
+
+                    Assert.Equal("Bob", query[1].Name);
+                    Assert.Equal(200, query[1].Downloads);
+                    Assert.Null(query[1].FriendsDownloads);
+
+                    Assert.Equal("Pigpen", query[2].Name);
+                    Assert.Null(query[2].Downloads);
+                    Assert.Equal(100, query[2].FriendsDownloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQuerySelectCounterFromLoadedDocJsProjection()
         {
             using (var store = GetDocumentStore())
             {

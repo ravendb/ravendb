@@ -352,6 +352,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldToFetch.QueryField.IsCounter)
             {
                 string name;
+                string id = document.Id;
                 if (fieldToFetch.QueryField.IsParameter)
                 {
                     if (_query.QueryParameters == null)
@@ -367,13 +368,20 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     name = fieldToFetch.Name;
                 }
+
+                if (fieldToFetch.QueryField.SourceAlias != null 
+                    && BlittableJsonTraverser.Default.TryRead(document.Data, fieldToFetch.QueryField.SourceAlias, out var sourceId, out _))
+                {                   
+                    id = sourceId.ToString();                   
+                }
+
                 if (fieldToFetch.QueryField.FunctionArgs != null) 
                 {
-                    value = GetCounterRaw(document.Id, name);
+                    value = GetCounterRaw(id, name);
                 }
                 else
                 {
-                    value = GetCounter(document.Id, name);
+                    value = GetCounter(id, name);
                 }
 
                 return true;
