@@ -647,9 +647,9 @@ namespace Raven.Client.Http
                 if (_disableClientConfigurationUpdates == false)
                     request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
 
-                if (sessionInfo?.GetLastClusterTransactionFunc != null)
+                if (sessionInfo?.LastClusterTransactionIndex != null)
                 {
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.GetLastClusterTransactionFunc.Invoke()?.ToString());
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransactionIndex.ToString());
                 }
 
                 if (_disableTopologyUpdates == false)
@@ -684,7 +684,7 @@ namespace Raven.Client.Http
                                 }
 
                                 response = await preferredTask.ConfigureAwait(false);
-                                if (sessionInfo?.GetLastClusterTransactionFunc?.Invoke() != null)
+                                if (sessionInfo?.LastClusterTransactionIndex != null)
                                 {
                                     // if we reach here it means that sometime a cluster transaction has occurred against this database.
                                     // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
