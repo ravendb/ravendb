@@ -10,7 +10,7 @@ using System.Reflection;
 namespace Raven.Client.Documents.Linq
 {
     /// <summary>
-    /// This class represents a node in an expression, usually a member - but in the case of dynamic queries the path to a member
+    /// This class represents a node in an expression, usually a member - but in the case of dynamic queries the path to a member, or method info
     /// </summary>
     internal class ExpressionInfo
     {
@@ -34,13 +34,19 @@ namespace Raven.Client.Documents.Linq
         public PropertyInfo MaybeProperty { get; set; }
 
         /// <summary>
+        /// Gets the arguments of the expression. Only used for call expressions
+        /// </summary>
+        public string[] Args { get; }
+
+        /// <summary>
         /// Creates an ExpressionMemberInfo
         /// </summary>
-        public ExpressionInfo(string path, Type type, bool isNestedPath)
+        public ExpressionInfo(string path, Type type, bool isNestedPath, string[] args = null)
         {
             IsNestedPath = isNestedPath;
             Path = path;
             Type = type;
+            Args = args;
         }
     }
 }
