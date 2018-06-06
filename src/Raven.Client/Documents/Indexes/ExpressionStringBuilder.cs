@@ -129,7 +129,12 @@ namespace Raven.Client.Documents.Indexes
 
             string name = null;
             if (_conventions.PropertyNameConverter != null)
-                name = _conventions.PropertyNameConverter(member);
+            {   
+                //do not use convention for types in system namespaces
+                if(member.DeclaringType?.Namespace?.StartsWith("System") == false &&
+                   member.DeclaringType?.Namespace?.StartsWith("Microsoft") == false)
+                    name = _conventions.PropertyNameConverter(member);
+            }
 
             if (string.IsNullOrWhiteSpace(name))
                 name = GetPropertyName(member.Name, exprType);
