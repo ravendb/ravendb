@@ -2392,6 +2392,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.ConstSupport(_documentQuery.Conventions),
                 JavascriptConversionExtensions.MetadataSupport.Instance,
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                JavascriptConversionExtensions.CounterSupport.Instance,
                 JavascriptConversionExtensions.ValueTypeParseSupport.Instance,
                 JavascriptConversionExtensions.JsonPropertyAttributeSupport.Instance,
                 JavascriptConversionExtensions.NullComparisonSupport.Instance,
