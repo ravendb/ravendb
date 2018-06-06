@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -19,6 +20,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Properties;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
@@ -154,6 +156,7 @@ namespace Raven.Server
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.Build;
 
                 var sp = Stopwatch.StartNew();
                 database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);

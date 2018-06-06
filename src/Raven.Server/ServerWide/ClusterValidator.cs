@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide
 
             if (myCommandVersion > version)
             {
-                RejectSendToFollowerException.Throw($"The command '{type}' with the version {myCommandVersion} is not supported on follower {follower}.");
+                RejectSendToFollowerException.Throw($"The command '{type}' with the version {myCommandVersion} is not supported on follower {follower} with version build {version}.");
             }
         }
 

@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -683,6 +684,16 @@ namespace Raven.Client.Http
                                 }
 
                                 response = await preferredTask.ConfigureAwait(false);
+                                if (sessionInfo?.GetLastClusterTransactionFunc?.Invoke() != null)
+                                {
+                                    // if we reach here it means that sometime a cluster transaction has occurred against this database.
+                                    // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
+                                    // But we can't do that if the server is an old one.
+                                    if (response.Headers.TryGetValues(Constants.Headers.ServerVersion, out var _) == false)
+                                        throw new ClientHasHigherVersionException(
+                                            $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
+                                            "since this command dependent on a cluster transaction which this node doesn't support");
+                                }
                             }
                             catch (OperationCanceledException e)
                             {

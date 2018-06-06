@@ -9,13 +9,9 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Cluster
@@ -158,7 +154,7 @@ namespace SlowTests.Cluster
                 await session.StoreAsync(user1, "users/1");
                 await session.SaveChangesAsync();
 
-                session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<User>("usernames/ayende", store.LastTransactionIndex ?? 0,
+                session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<User>("usernames/ayende", store.GetLastTransactionIndex(store.Database) ?? 0,
                     user2));
                 await session.StoreAsync(user2, "users/2");
                 user1.Age = 10;
@@ -287,7 +283,7 @@ namespace SlowTests.Cluster
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("usernames/ayende", store.LastTransactionIndex ?? 0);
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("usernames/ayende", store.GetLastTransactionIndex(store.Database) ?? 0);
                     await session.StoreAsync(user1);
                     await session.StoreAsync(user2);
                     await session.StoreAsync(user3);
