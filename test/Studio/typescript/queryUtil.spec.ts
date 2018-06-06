@@ -8,7 +8,7 @@ import queryUtil = require("src/Raven.Studio/typescript/common/queryUtil");
 describe("queryUtil", () => {
 
 
-    describe('replaceSelectWithFetchAllStoredFields()', () => {
+    describe('replaceSelectAndIncludeWithFetchAllStoredFields()', () => {
 
         it ('with out select', () => {
             const query = "from index 'Orders/ByCompany'";
@@ -29,7 +29,7 @@ describe("queryUtil", () => {
         });
 
         function test(query: string, expected: string) {
-            const result = queryUtil.replaceSelectWithFetchAllStoredFields(query);
+            const result = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(query);
             assert.equal(expected, result);
         }
 
