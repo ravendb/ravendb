@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -30,6 +31,8 @@ namespace SlowTests.MailingList
 
         public class WhenUsingIdCopy : RavenTestBase
         {
+            private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
+
             private void CreateData(IDocumentStore store)
             {
                 new Person_IdCopy_Index().Execute(store);
@@ -63,6 +66,37 @@ namespace SlowTests.MailingList
                         var s = results2.Single(x => x.Id.Contains("sally"));
 
                         Assert.Equal(Sally.Family["Dad"].Id, s.Family_Dad_Id);
+                    }
+                }
+            }
+
+            [Fact]
+            public void It_should_be_stored_in_index_custom_serialization_convention()
+            {
+                using (var store = GetDocumentStore(options: new Options
+                {
+                    ModifyDocumentStore = ss =>
+                    {
+                        ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                        ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                    }
+                }))
+                {
+                    CreateData(store);
+
+                    using (var session = store.OpenSession())
+                    {
+                        //WaitForUserToContinueTheTest(store);
+
+                        var results2 = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
+                            .WaitForNonStaleResults()
+                            .SelectFields<PersonIndexItemWithCustomConvention>()
+                            .ToArray();
+
+                        var s = results2.Single(x => x.Id.Contains("sally"));
+
+                        //projection object for SelectFields should match the resulting convention of the fields
+                        Assert.Equal(Sally.Family["Dad"].Id, s.Family_dad_Id);
                     }
                 }
             }
@@ -191,6 +225,13 @@ namespace SlowTests.MailingList
             public string Id { get; set; }
             public string UserId { get; set; }
             public string Family_Dad_Id { get; set; }
+        }
+
+        private class PersonIndexItemWithCustomConvention
+        {
+            public string Id { get; set; }
+            public string UserId { get; set; }
+            public string Family_dad_Id { get; set; }
         }
 
         private class Person

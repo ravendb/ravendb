@@ -851,6 +851,144 @@ from Users as user select output(user)", queryAsString);
             }
         }
 
+        public class Person
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+
+            public string AddressId { get; set; }
+        }
+
+        private class Index1 : AbstractIndexCreationTask<Person>
+        {
+            public class Result
+            {
+                public string CurrentName { get; set; }
+
+                public string PreviousName { get; set; }
+            }
+
+            public Index1()
+            {
+                Map = persons => from person in persons
+                    let metadata = MetadataFor(person)
+                    from name in metadata.Value<string>("Names").Split(',', StringSplitOptions.None)
+                    select new
+                    {
+                        CurrentName = person.Name,
+                        PreviousName = person.Name
+                    };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class Person2
+        {
+            public Person2()
+            {
+                Family = new Dictionary<string, Person2>();
+            }
+
+            public Guid? UserId { get; set; }
+
+            /// <summary>
+            ///     Key is CompanyName from DomainConstants.Companies, Value is upline Agent.
+            /// </summary>
+            public Dictionary<string, Person2> Family { get; set; }
+
+            public string Name { get; set; }
+
+
+            public string Id
+            {
+                get { return string.Format("people/{0}", Name); }
+            }
+
+            public string IdCopy
+            {
+                get { return string.Format("people/{0}", Name); }
+            }
+        }
+
+        private class Person_IdCopy_Index : AbstractIndexCreationTask<Person2>
+        {
+            public Person_IdCopy_Index()
+            {
+                Map = people =>
+                    from person in people
+                    select new
+                    {
+                        person.Id,
+                        StsId = person.UserId,
+                        _ = person.Family.Select(x => CreateField("family_" + x.Key + "_Id", x.Value.IdCopy, true, true)),
+                    };
+            }
+        }
+
+        private class PersonIndexItem
+        {
+            public string Id { get; set; }
+            public string UserId { get; set; }
+            public string Family_Dad_Id { get; set; }
+        }
+
+        private class Person_Id_Index : AbstractIndexCreationTask<Person2>
+        {
+            public Person_Id_Index()
+            {
+                Map = people =>
+                    from person in people
+                    select new
+                    {
+                        person.Id,
+                        StsId = person.UserId,
+                        _ = person.Family.Select(x => CreateField("Family_" + x.Key + "_Id", x.Value.Id, true, true)),
+                    };
+            }
+        }
+
+       
+
+        [Fact]
+        public void ProjectInto_ShouldWork()
+        {
+            using (var store = GetDocumentStore(options: new Options
+            {
+                ModifyDocumentStore = ss =>
+                {
+                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                }
+            }))
+            {
+                new Index1().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var person = new Person { Name = "John" };
+                    session.Store(person);
+                    var metadata = session.Advanced.GetMetadataFor(person);
+                    metadata["Names"] = "James,Jonathan";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Query<Person, Index1>()
+                        .ProjectInto<Index1.Result>()
+                        .ToList();
+
+                    Assert.Equal(2, results.Count);
+                }
+            }
+        }
+
         [Fact]
         public void CanAddToArray()
         {
