@@ -216,6 +216,13 @@ namespace Raven.Server.Web.System
         {
             string serverRelativeFileName = new StringSegment(
                 RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+            // if user asks for entry point but we are already configured redirect to studio
+            if (ServerStore.Configuration.Core.SetupMode != SetupMode.Initial)
+            {
+                HttpContext.Response.Headers["Location"] = "/studio/" + serverRelativeFileName;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
+            }
             return GetStudioFileInternal(serverRelativeFileName);
         }
 
