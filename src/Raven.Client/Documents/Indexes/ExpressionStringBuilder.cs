@@ -828,7 +828,7 @@ namespace Raven.Client.Documents.Indexes
             Out("(");
             Out(ConvertTypeToCSharpKeyword(type, out var isValueTypeServerSide));
 
-            if (isNullableType && nonNullableType != typeof(Guid) && isValueTypeServerSide)
+            if (isNullableType && nonNullableType != typeof(Guid) && isValueTypeServerSide == false)
             {
                 Out("?");
             }
@@ -1002,7 +1002,7 @@ namespace Raven.Client.Documents.Indexes
 
             var nonNullable = Nullable.GetUnderlyingType(node.Type);
             Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type, out var isValueTypeServerSide));
-            if (nonNullable != null && nonNullable != typeof(Guid) && isValueTypeServerSide)
+            if (nonNullable != null && nonNullable != typeof(Guid) && isValueTypeServerSide == false)
                 Out("?");
 
             Out(")");
