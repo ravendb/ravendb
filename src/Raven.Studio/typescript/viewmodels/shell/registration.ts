@@ -6,6 +6,7 @@ import moment = require("moment");
 import license = require("models/auth/licenseModel");
 import messagePublisher = require("common/messagePublisher");
 import placeholderUtils = require("common/placeholderUtils");
+import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 
 class licenseKeyModel {
 
@@ -52,6 +53,7 @@ class registration extends dialogViewModelBase {
     dismissVisible = ko.observable<boolean>(true);
     canBeClosed = ko.observable<boolean>(false);
     daysToRegister: KnockoutComputed<number>;
+    canForceUpdate: KnockoutComputed<boolean>;
     registrationUrl = ko.observable<string>();
     error = ko.observable<string>();
 
@@ -59,6 +61,10 @@ class registration extends dialogViewModelBase {
     private licenseStatus: Raven.Server.Commercial.LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
+
+    spinners = {
+        forceLicenseUpdate: ko.observable<boolean>(false)
+    };
 
     constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
         super();
@@ -90,6 +96,10 @@ class registration extends dialogViewModelBase {
         this.daysToRegister = ko.pureComputed(() => {
             const now = moment();
             return firstStart.diff(now, "days");
+        });
+
+        this.canForceUpdate = ko.pureComputed(() => {
+            return licenseStatus.Expired || !!this.error();
         });
 
         this.registrationUrl(license.generateLicenseRequestUrl());
@@ -145,6 +155,23 @@ class registration extends dialogViewModelBase {
 
         const vm = new registration(license, canBeDismissed, canBeClosed);
         app.showBootstrapDialog(vm);
+    }
+
+    forceLicenseUpdate() {
+        this.spinners.forceLicenseUpdate(true);
+        new forceLicenseUpdateCommand().execute()
+            .done(() => {
+                license.fetchLicenseStatus()
+                    .done(() => {
+                        const licenseStatus = license.licenseStatus();
+                        if (!licenseStatus.Expired &&
+                            !licenseStatus.ErrorMessage) {
+                            app.closeDialog(this);
+                        }
+                        license.fetchSupportCoverage();
+                    });
+            })
+            .always(() => this.spinners.forceLicenseUpdate(false));
     }
 
     dismiss(days: number) {
