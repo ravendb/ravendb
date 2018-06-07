@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Queries
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        public static long? Counter<T>(T path, string name)
+        public static long? Counter(object documentInstance, string name)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
