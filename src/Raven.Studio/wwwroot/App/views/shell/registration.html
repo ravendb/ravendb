@@ -46,7 +46,6 @@
             </div>
             <div class="modal-footer">
 
-
                 <div class="btn-group" data-bind="visible: dismissVisible()">
                     <button class="btn btn-default" data-bind="click: $root.dismiss.bind($root, 1)">
                         <i class="icon-recent"></i>
@@ -54,9 +53,17 @@
                     </button>
                 </div>
 
-                <button type="submit" data-bind="css: { 'btn-spinner': isBusy }, enable: !isBusy()" class="btn btn-primary">
-                    <i class="icon-check"></i>
-                    <span>Submit</span>
+                <!-- ko if: canForceUpdate -->
+                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate,
+                                    css: { 'btn-spinner': spinners.forceLicenseUpdate }">
+                    <i class="icon-force"></i>
+                    <span>Force Update</span>
+                </button>
+                <!-- /ko -->
+
+                <button type="submit" data-bind="css: { 'btn-spinner': isBusy }, enable: !isBusy(), disable: spinners.forceLicenseUpdate"
+                        class="btn btn-primary">
+                    Submit
                 </button>
             </div>
         </div>
