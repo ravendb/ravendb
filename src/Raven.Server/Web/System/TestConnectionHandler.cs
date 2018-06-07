@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Features;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -21,7 +22,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/test-connection", "POST", AuthorizationStatus.Operator)]
         public async Task TestConnection()
         {
+            
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+            var database = GetStringQueryString("database", required:false); // can be null
             url = UrlHelper.TryGetLeftPart(url);
             DynamicJsonValue result = null;
 
@@ -35,7 +38,7 @@ namespace Raven.Server.Web.System
 
                     using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                     {
-                        connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.Certificate.Certificate,
+                        connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, "Test-Connection", Server.Certificate.Certificate,
                             cts.Token);
                     }
                     Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);
@@ -58,7 +61,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    result = await ConnectToClientNodeAsync(connectionInfo.Result, ServerStore.Engine.TcpConnectionTimeout, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
+                    result = await ConnectToClientNodeAsync(connectionInfo.Result, ServerStore.Engine.TcpConnectionTimeout, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database);
                 }
                 catch (Exception e)
                 {
@@ -90,7 +93,7 @@ namespace Raven.Server.Web.System
             return (tcpClient, connection);
         }
 
-        private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log)
+        private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database)
         {
             var (tcpClient, connection) = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo, timeout, log);
             using (tcpClient)
@@ -100,7 +103,7 @@ namespace Raven.Server.Web.System
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
-                    WriteOperationHeaderToRemote(writer);
+                    WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database);
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
@@ -114,9 +117,9 @@ namespace Raven.Server.Web.System
                                 result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
                                 break;
                             case TcpConnectionStatus.TcpVersionMismatch:
-                                WriteOperationHeaderToRemote(writer, drop:true);
+                                WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database);
                                 result["Success"] = false;
-                                result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of mismatching tcp version {headerResponse.Message}";
+                                result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of mismatching tcp version: {headerResponse.Message}";
                                 break;
                         }
                     }
@@ -126,19 +129,18 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer, bool drop = false)
+        private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer, TcpConnectionHeaderMessage.OperationTypes operation, string databaseName)
         {
-            var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Heartbeats;
             writer.WriteStartObject();
             {
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                 writer.WriteString(operation.ToString());
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
-                writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
+                writer.WriteInteger(TcpConnectionHeaderMessage.GetOperationTcpVersion(operation));
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
-                writer.WriteNull();
+                writer.WriteString(databaseName);
             }
             writer.WriteEndObject();
             writer.Flush();
