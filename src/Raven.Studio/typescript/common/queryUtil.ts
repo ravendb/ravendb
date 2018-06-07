@@ -11,7 +11,8 @@ interface rqlTokensIndexInfo {
     where?: RegExpExecArray,
     load?: RegExpExecArray,
     orderby?: RegExpExecArray,
-    select?: RegExpExecArray
+    select?: RegExpExecArray,
+    include?: RegExpExecArray
 }
 
 class queryUtil {
@@ -83,20 +84,27 @@ class queryUtil {
         return query;
     }
 
-    private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE)(\s+|{)/gi;
+    private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE|INCLUDE)(\s+|{)/gi;
 
-    static replaceSelectWithFetchAllStoredFields(query: string) {
+    static replaceSelectAndIncludeWithFetchAllStoredFields(query: string) {
         if (!query)
             throw new Error("Query is required.");
 
+        const getStoredFieldsText = " select __all_stored_fields";
         const tokenIndexes = queryUtil.findTokenIndexes(query);
+
         if (tokenIndexes.select) {
             const selectIdx = tokenIndexes.select.index;
+            return query.substring(0, selectIdx) + getStoredFieldsText;
             
-            return query.substring(0, selectIdx) + " select __all_stored_fields";
-        } else {
-            // select statement wasn't found append at the end of query
-            return query + " select __all_stored_fields";
+        } else if (tokenIndexes.include) {
+            // 'select' not found. Check for 'include' which can come after 'select'. 
+            const includeIdx = tokenIndexes.include.index;
+            return query.substring(0, includeIdx) + getStoredFieldsText;
+        }
+        else {
+            // Both 'select' & 'include' not found. Append at end of query.
+            return query + getStoredFieldsText;
         }
     }
     

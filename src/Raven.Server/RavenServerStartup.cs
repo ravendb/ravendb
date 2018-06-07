@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -19,6 +20,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Properties;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
@@ -154,6 +156,7 @@ namespace Raven.Server
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
 
                 var sp = Stopwatch.StartNew();
                 database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
@@ -174,6 +177,13 @@ namespace Raven.Server
 
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
+
+                if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
+                {
+                    var version = versions.ToString();
+                    if (version.Length > 0 && version[0] != RavenVersionAttribute.Instance.MajorVersionAsChar)
+                        e = new ClientVersionMismatchException($"RavenDB does not support interaction between Client API and Server when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}", e);
+                }
 
                 MaybeSetExceptionStatusCode(context, e);
 
@@ -211,24 +221,24 @@ namespace Raven.Server
 
         private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
         {
-                var requestId = Interlocked.Increment(ref _requestId);
+            var requestId = Interlocked.Increment(ref _requestId);
 
-                var twn = new TrafficWatchChange
-                {
-                    TimeStamp = DateTime.UtcNow,
-                    RequestId = requestId, // counted only for traffic watch
-                    HttpMethod = context.Request.Method ?? "N/A", // N/A ?
-                    ElapsedMilliseconds = elapsedMilliseconds,
-                    ResponseStatusCode = context.Response.StatusCode,
-                    RequestUri = context.Request.GetEncodedUrl(),
-                    AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
-                    DatabaseName = database ?? "N/A",
-                    CustomInfo = "", 
-                    InnerRequestsCount = 0, 
-                    QueryTimings = null
-                };
+            var twn = new TrafficWatchChange
+            {
+                TimeStamp = DateTime.UtcNow,
+                RequestId = requestId, // counted only for traffic watch
+                HttpMethod = context.Request.Method ?? "N/A", // N/A ?
+                ElapsedMilliseconds = elapsedMilliseconds,
+                ResponseStatusCode = context.Response.StatusCode,
+                RequestUri = context.Request.GetEncodedUrl(),
+                AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
+                DatabaseName = database ?? "N/A",
+                CustomInfo = "",
+                InnerRequestsCount = 0,
+                QueryTimings = null
+            };
 
-                TrafficWatchManager.DispatchMessage(twn);
+            TrafficWatchManager.DispatchMessage(twn);
         }
 
         private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
@@ -250,18 +260,18 @@ namespace Raven.Server
         private static void MaybeSetExceptionStatusCode(HttpContext httpContext, Exception exception)
         {
             var response = httpContext.Response;
-            
+
             if (response.HasStarted)
                 return;
 
             if (exception is InsufficientTransportLayerProtectionException)
             {
                 Web.RequestHandler.SetupCORSHeaders(httpContext);
-                response.StatusCode = (int) HttpStatusCode.BadRequest;
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
 
-            if (exception is LowMemoryException || 
+            if (exception is LowMemoryException ||
                 exception is OutOfMemoryException ||
                 exception is VoronUnrecoverableErrorException)
             {
@@ -269,7 +279,7 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is DocumentConflictException || 
+            if (exception is DocumentConflictException ||
                 exception is ConflictException ||
                 exception is ConcurrencyException)
             {
@@ -281,7 +291,8 @@ namespace Raven.Server
                 exception is DatabaseLoadFailureException ||
                 exception is DatabaseLoadTimeoutException ||
                 exception is DatabaseConcurrentLoadTimeoutException ||
-                exception is NodeIsPassiveException)
+                exception is NodeIsPassiveException ||
+                exception is ClientVersionMismatchException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
@@ -315,7 +326,7 @@ namespace Raven.Server
             if (exception is DatabaseNotRelevantException)
             {
                 response.StatusCode = (int)HttpStatusCode.Gone;
-                response.Headers.Add("Cache-Control",new StringValues(new []{ "must-revalidate", "no-cache" }));
+                response.Headers.Add("Cache-Control", new StringValues(new[] { "must-revalidate", "no-cache" }));
                 return;
             }
 

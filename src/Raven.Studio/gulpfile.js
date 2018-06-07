@@ -176,7 +176,7 @@ gulp.task('z_release:libs', function() {
 });
 
 gulp.task('z_release:copy-version', function () {
-    return gulp.src("./wwwroot/version.json")
+    return gulp.src("./wwwroot/version.txt")
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 

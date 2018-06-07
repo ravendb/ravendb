@@ -36,6 +36,7 @@ namespace Raven.Server.Rachis
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public long TrialElectionWonAtTerm { get; set; }
         public long RealElectionWonAtTerm { get; set; }
+        public volatile int ClusterCommandsVersion; // default is 0
         public string Tag => _tag;
 
         public RemoteConnection Connection;
@@ -178,6 +179,8 @@ namespace Raven.Server.Rachis
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
 
+                                    ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
+
                                     if (_engine.Log.IsInfoEnabled)
                                         _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
@@ -229,6 +232,8 @@ namespace Raven.Server.Rachis
                                 });
 
                                 rvr = connection.Read<RequestVoteResponse>(context);
+                                ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
+
                                 if (_engine.Log.IsInfoEnabled)
                                     _engine.Log.Info($"Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 

@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.ETL
                 // double the fallback time (but don't cross Etl.MaxFallbackTime)
                 var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastLoadErrorTime.Value).TotalSeconds;
                 
-                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.Seconds, Math.Max(5, secondsSinceLastError * 2)));
+                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
             }
         }
 

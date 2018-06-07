@@ -64,7 +64,8 @@ namespace Raven.Client.Documents.Session
                 type,
                 queryStatistics,
                 highlightings,
-                isMapReduce);
+                isMapReduce,
+                Conventions);
 
             var inspector = new RavenQueryInspector<T>();
             inspector.Init(

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -17,6 +18,24 @@ namespace SlowTests
             var index = new CameraCostIndex();
 
             store.Maintenance.Send(new PutIndexesOperation(new[] { index.CreateIndexDefinition() }));
+        }
+
+        protected class CameraCostIndexStronglyTyped : AbstractIndexCreationTask<Camera>
+        {
+            public CameraCostIndexStronglyTyped()
+            {
+                Map = cameras => from camera in cameras
+                    select new
+                    {
+                        camera.Manufacturer,
+                        camera.Model,
+                        camera.Cost,
+                        camera.DateOfListing,
+                        camera.Megapixels
+                    };
+            }
+
+            public override string IndexName => "CameraCost";
         }
 
         public class CameraCostIndex : AbstractIndexCreationTask

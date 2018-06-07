@@ -14,6 +14,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Sparrow.Collections.LockFree;
 
 namespace Raven.Client.Documents
 {
@@ -136,32 +137,28 @@ namespace Raven.Client.Documents
 
         public DocumentSubscriptions Subscriptions { get; }
 
-        private long _lastTransactionIndex;
+        private readonly ConcurrentDictionary<string, long?> _lastRaftIndexPerDatabase = new ConcurrentDictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
 
-        public long? LastTransactionIndex
+        public long? GetLastTransactionIndex(string database)
         {
-            get
-            {
-                var local = _lastTransactionIndex;
-                if (local == 0)
-                    return null;
-                return local;
-            }
+            if (_lastRaftIndexPerDatabase.TryGetValue(database, out var index) == false)
+                return null;
+            if (index == 0)
+                return null;
+            return index;
         }
 
-        public void SetLastTransactionIndex(long? index)
+        public void SetLastTransactionIndex(string database, long? index)
         {
             if (index.HasValue == false)
                 return;
 
-            long initialValue;
-            do
+            _lastRaftIndexPerDatabase.AddOrUpdate(database, _ => index, (_, initialValue) =>
             {
-                initialValue = _lastTransactionIndex;
                 if (initialValue >= index.Value)
-                    return;
-            }
-            while (Interlocked.CompareExchange(ref _lastTransactionIndex, index.Value, initialValue) != initialValue);
+                    return initialValue;
+                return index.Value;
+            });
         }
 
         protected void EnsureNotClosed()

@@ -24,6 +24,7 @@
         public long Term { get; set; }
         public bool VoteGranted { get; set; }
         public bool NotInTopology { get; set; }
+        public int? ClusterCommandsVersion { get; set; }
         public string Message { get; set; }
     }
 }

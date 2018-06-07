@@ -14,8 +14,11 @@ using System.Threading;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Routing;
+using Raven.Client.Properties;
 using Raven.Client.Util;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -53,7 +56,11 @@ namespace Raven.Server.Routing
         {
             var tryMatch = _trie.TryMatch(method, path);
             if (tryMatch.Value == null)
-                throw new RouteNotFoundException($"There is no handler for path: {method} {path}{context.Request.QueryString}");
+            {
+                var exception = new RouteNotFoundException($"There is no handler for path: {method} {path}{context.Request.QueryString}");
+                AssertClientVersion(context, exception);
+                throw exception;
+            }
 
             var reqCtx = new RequestHandlerContext
             {
@@ -127,6 +134,24 @@ namespace Raven.Server.Routing
             }
 
             return reqCtx.Database?.Name;
+        }
+
+        public static void AssertClientVersion(HttpContext context, Exception innerException)
+        {
+            // client in this context could be also a follower sending a command to his leader.
+            if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versionHeader) &&
+                Version.TryParse(versionHeader, out var clientVersion))
+            {
+                var currentServerVersion = RavenVersionAttribute.Instance;
+
+                if (currentServerVersion.MajorVersion != clientVersion.Major || currentServerVersion.BuildVersion < clientVersion.Revision || currentServerVersion.BuildVersion == ServerVersion.DevBuildNumber || (clientVersion.Revision >= 40 && clientVersion.Revision < 50))
+                {
+                    throw new ClientVersionMismatchException(
+                        $"Failed to make a request from a newer client with build version {clientVersion} to an older server with build version {RavenVersionAttribute.Instance.AssemblyVersion}.{Environment.NewLine}" +
+                        $"Upgrading this node might fix this issue.",
+                        innerException);
+                }
+            }
         }
 
         private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)

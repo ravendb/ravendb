@@ -1,16 +1,18 @@
-﻿namespace Raven.Client.Documents.Session
+﻿using System;
+
+namespace Raven.Client.Documents.Session
 {
     public class SessionInfo
     {
         public int? SessionId { get;}
 
-        public long? LastClusterTransaction { get;}
+        public long? LastClusterTransactionIndex { get; set; }
 
         public bool AsyncCommandRunning { get; set; }
 
-        public SessionInfo(int sessionId, bool asyncCommandRunning, long? lastClusterTransaction = null)
+        public SessionInfo(int sessionId, bool asyncCommandRunning, long? lastClusterTransactionIndex = null)
         {
-            LastClusterTransaction = lastClusterTransaction;
+            LastClusterTransactionIndex = lastClusterTransactionIndex;
             SessionId = sessionId;
             AsyncCommandRunning = asyncCommandRunning;
         }

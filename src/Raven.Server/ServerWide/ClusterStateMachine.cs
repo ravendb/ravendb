@@ -18,6 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -272,9 +273,13 @@ namespace Raven.Server.ServerWide
                     case nameof(AddDatabaseCommand):
                         AddDatabase(context, cmd, index, leader);
                         break;
+                    default:
+                        var massage = $"The command '{type}' is unknown and cannot be executed on server with version '{ServerVersion.FullVersion}'.{Environment.NewLine}" +
+                                      "Updating this node version to match the rest should resolve this issue.";
+                        throw new UnknownClusterCommand(massage);
                 }
             }
-            catch (VoronErrorException e)
+            catch (Exception e) when (e is VoronErrorException || e is UnknownClusterCommand)
             {
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
                 throw;
@@ -828,7 +833,7 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
-
+        
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand
@@ -845,7 +850,7 @@ namespace Raven.Server.ServerWide
                 }
             };
         }
-
+        
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
@@ -955,7 +960,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
-
+        
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
@@ -1502,8 +1507,10 @@ namespace Raven.Server.ServerWide
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
-
-        public static bool InterlockedExchangeMax(ref long location, long newValue)
+        protected override RachisVersionValidation InitializeValidator()
+        {
+            return new ClusterValidator();
+        }        public static bool InterlockedExchangeMax(ref long location, long newValue)
         {
             long initialValue;
             do
@@ -1514,8 +1521,7 @@ namespace Raven.Server.ServerWide
             }
             while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
             return true;
-        }
-    }
+        }    }
 
     public class RachisLogIndexNotifications
     {

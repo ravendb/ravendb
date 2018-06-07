@@ -46,28 +46,21 @@
                                 </div>
                             </div>
                             <div data-bind="visible: databaseType() === 'MySQL', with: mySql">
-                                <div class="form-group" data-bind="validationElement: server">
-                                    <label class="control-label">Server location<i class="required"></i></label>
+                                <div class="form-group"
+                                     data-bind="validationElement: connectionString">
+                                    <label class="control-label">Connection string<i class="required"></i></label>
                                     <div class="flex-grow">
-                                        <input class="form-control"
-                                               data-bind="textInput: server"
-                                               placeholder="Server location">
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="validationElement: username,">
-                                    <label class="control-label">Username<i class="required"></i></label>
-                                    <div class="flex-grow">
-                                        <input class="form-control"
-                                               data-bind="textInput: username"
-                                               placeholder="Username">
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="validationElement: password">
-                                    <label class="control-label">Password</label>
-                                    <div class="flex-grow">
-                                        <input type="password" class="form-control"
-                                               data-bind="textInput: password"
-                                               placeholder="Password">
+                                        <textarea class="form-control"
+                                                  data-bind="textInput: connectionString" rows="3"
+                                                  title="The connection string for the MySQL server"
+                                                  placeholder="Enter the complete connection string for the MySQL server">                                        
+                                        </textarea>
+                                        <div>
+                                            <small>
+                                                <i class="icon-info"></i>
+                                                Please provide 'Database name' in the field below, instead of using <code>database</code> parameter.
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

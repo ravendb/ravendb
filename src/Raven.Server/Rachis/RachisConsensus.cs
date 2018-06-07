@@ -49,6 +49,8 @@ namespace Raven.Server.Rachis
             return StateMachine;
         }
 
+        internal override RachisVersionValidation Validator => StateMachine.Validator;
+
         public override void Notify(Notification notification)
         {
             _serverStore.NotificationCenter.Add(notification);
@@ -59,7 +61,7 @@ namespace Raven.Server.Rachis
             StateMachine = new TStateMachine();
             StateMachine.Initialize(this, context);
         }
-
+        
         public override void Dispose()
         {
             SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis");
@@ -227,6 +229,8 @@ namespace Raven.Server.Rachis
     {        
         internal abstract RachisStateMachine GetStateMachine();
 
+        internal abstract RachisVersionValidation Validator { get; }
+
         public const string InitialTag = "?";
 
         public readonly RachisDebug InMemoryDebug = new RachisDebug();
@@ -326,6 +330,8 @@ namespace Raven.Server.Rachis
             private set => _operationTimeout = value;
         }
 
+        public int? MaximalVersion { get; set; }
+
         private Leader _currentLeader;
         public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -362,7 +368,8 @@ namespace Raven.Server.Rachis
                 OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
-                
+                MaximalVersion = configuration.Cluster.MaximalAllowedClusterVersion;
+
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
@@ -442,7 +449,7 @@ namespace Raven.Server.Rachis
                 throw;
             }
         }
-
+        
         private void SwitchToSingleLeader(TransactionOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
@@ -730,14 +737,18 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SwitchToLeaderState(long electionTerm, string reason, Dictionary<string, RemoteConnection> connections = null)
+        public void SwitchToLeaderState(long electionTerm, int version, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
-            SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () => _currentLeader = leader);
+            SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
+            {
+                ClusterCommandsVersionManager.CurrentClusterMinimalVersion = version;
+                _currentLeader = leader;
+            });
             leader.Start(connections);
         }
 
@@ -747,6 +758,7 @@ namespace Raven.Server.Rachis
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
+            Validator.AssertPutCommandToLeader(cmd);
             return leader.PutAsync(cmd, OperationTimeout);
         }
 

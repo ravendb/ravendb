@@ -186,10 +186,18 @@ namespace Sparrow.Platform.Posix
         // pwrite(2)
         //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr pwrite64(int fd, IntPtr buf, UIntPtr count, long offset);
+        private static extern IntPtr pwrite64(int fd, IntPtr buf, UIntPtr count, long offset);
+
+        // pwrite(2)
+        //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+        [DllImport(LIBC_6, SetLastError = true)]
+        private static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
 
         public static long pwrite(int fd, void* buf, ulong count, long offset)
         {
+            if(PlatformDetails.RunningOnMacOsx)
+                return (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
+
             return (long)pwrite64(fd, (IntPtr)buf, (UIntPtr)count, offset);
         }
 

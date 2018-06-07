@@ -34,6 +34,21 @@ namespace Raven.Client.Documents.Queries
         public static T CmpXchg<T>(string key)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-        } 
+        }
+
+        public static long? Counter(string name)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static long? Counter(string docId, string name)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        public static long? Counter(object documentInstance, string name)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
     }
 }

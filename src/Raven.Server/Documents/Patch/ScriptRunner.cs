@@ -137,7 +137,9 @@ namespace Raven.Server.Documents.Patch
 
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
-
+                ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
+                consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, OutputDebug),false,false,false);
+                ScriptEngine.SetValue("console", consoleObject);
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnLoadDocument));

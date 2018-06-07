@@ -23,7 +23,7 @@
             </div>
             <div class="text-info bg-info padding padding-sm small">
                 <div class="padding padding-sm">
-                    If either option is specified, RavenDB will use <em>HTTPS/SSL</em> for all network activities.<br/>
+                    If either option is specified, RavenDB will use <em>HTTPS/SSL</em> for all network activities.<br />
                     The certificate path setting takes precedence over executable configuration options.
                 </div>
             </div>
@@ -32,32 +32,31 @@
             </div>
         </div>
     </div>
+
+    <div class="margin-bottom">
+        <button class="btn btn-primary" data-bind="click: enterGenerateCertificateMode">
+            <i class="icon-magic-wand"></i>
+            <span>Generate client certificate</span>
+        </button>
+        <button class="btn btn-default" data-bind="click: enterUploadCertificateMode">
+            <i class="icon-upload"></i>
+            <span>Upload client certificate</span>
+        </button>
+        <button class="btn btn-default js-export-certificates" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Export the server certificate(s) of the cluster without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
+            <i class="icon-export"></i>
+            <span>Export cluster certificates</span>
+        </button>
+        <button class="btn btn-default" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
+            <i class="icon-replace"></i>
+            <span>Replace cluster certificate</span>
+        </button>
+    </div>
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">
-            <div class="flex-header">
-                <div>
-                    <button class="btn btn-primary" data-bind="click: enterGenerateCertificateMode">
-                        <i class="icon-magic-wand"></i>
-                        <span>Generate client certificate</span>
-                    </button>
-                    <button class="btn btn-default" data-bind="click: enterUploadCertificateMode">
-                        <i class="icon-upload"></i>
-                        <span>Upload client certificate</span>
-                    </button>
-                    <button class="btn btn-default js-export-certificates" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Export the server certificate(s) of the cluster without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
-                        <i class="icon-export"></i>
-                        <span>Export cluster certificates</span>
-                    </button>
-                    <button class="btn btn-default" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
-                        <i class="icon-replace"></i>
-                        <span>Replace cluster certificate</span>
-                    </button>
-                </div>
-            </div>
             <div class="scroll flex-grow" data-bind="foreach: certificates">
                 <div class="panel certificate-item">
                     <div class="padding padding-sm flex-horizontal">
-                        <div class="flex-grow">
+                        <div class="certificate-name">
                             <a href="#" title="Certificate name" class="flex-horizontal" data-bind="click: _.partial($root.enterEditCertificateMode, $data)">
                                 <div>
                                     <i class="icon-certificate"></i>
@@ -66,26 +65,29 @@
                                     <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
                                 </div>
                                 <div title="This certificate is currently used by the server for incoming HTTPS connections" class="label label-info"
-                                    data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">
+                                     data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">
                                     server certificate
                                 </div>
                             </a>
                             <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
                             </div>
                         </div>
+                        <div class="flex-grow"></div>
                         <div data-bind="visible: $root.showRenewCertificateButton(Thumbprints)">
                             <button class="btn btn-default btn-sm" data-bind="click: _.partial($root.renewServerCertificate)" title="Renew this server certificate">Renew</button>
                         </div>
-                        <div class="expiration flex-noshrink">
-                            <small data-bind="attr: { class: expirationClass }">
-                                <i data-bind="attr: { class: expirationIcon }"></i> <span data-bind="text: expirationText"></span>
-                            </small>
-                        </div>
-                        <div class="actions">
-                            <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
-                            <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance)">
-                                <i class="icon-trash"></i>
-                            </button>
+                        <div class="flex-horizontal">
+                            <div class="expiration flex-noshrink">
+                                <small data-bind="attr: { class: expirationClass }">
+                                    <i data-bind="attr: { class: expirationIcon }"></i> <span data-bind="text: expirationText"></span>
+                                </small>
+                            </div>
+                            <div class="actions">
+                                <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
+                                <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance)">
+                                    <i class="icon-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="panel-addon">
@@ -121,12 +123,12 @@
                             </div>
                         </div>
                         <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
-                            Replace the cluster certificate without shutting down the servers. 
+                            Replace the cluster certificate without shutting down the servers.
                             The update will happen when all nodes of the cluster confirm the replacement or when
                             there are 3 days left for expiration.
                         </div>
                         <div class="bg-warning padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
-                            Please verify that the new certificate contains 
+                            Please verify that the new certificate contains
                             all of the following cluster domain names in the CN or ASN properties of the certificate:
                             <ul data-bind="foreach: $root.domainsForServerCertificate">
                                 <li data-bind="text: $data"></li>
@@ -177,7 +179,7 @@
                                 <label class="control-label">
                                     Certificate Passphrase
                                 </label>
-                                <input class="form-control" type="password" data-bind="textInput: certificatePassphrase" >
+                                <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
 
                             <!-- TODO
@@ -193,7 +195,7 @@
                                     <i class="icon-info"></i>
                                 </div>
                                 <div class="small">
-                                    This entry contains <span data-bind="text: thumbprints().length"></span> certificates. You can see its thumbprints below. 
+                                    This entry contains <span data-bind="text: thumbprints().length"></span> certificates. You can see its thumbprints below.
                                 </div>
                             </div>
                             <!-- ko foreach: thumbprints -->
@@ -217,13 +219,13 @@
                                         <i class="icon-info"></i>
                                     </div>
                                     <div class="small">
-                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding. In that case, you will have to manually replace the certificate in those nodes. Use with care. 
+                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding. In that case, you will have to manually replace the certificate in those nodes. Use with care.
                                     </div>
                                 </div>
                             </div>
                             <div data-bind="visible: mode() !== 'replace'">
                                 <hr />
-                                <h4>Database Permissions</h4>                               
+                                <h4>Database Permissions</h4>
                                 <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
                                     <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
                                         <div class="dropdown btn-block">
@@ -250,12 +252,12 @@
                                         </div>
                                         <div data-bind="validationOptions: { insertMessages: false }">
                                             <div class="radio radio-default radio-inline">
-                                                <input type="radio" value="Admin" 
+                                                <input type="radio" value="Admin"
                                                        data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }">
                                                 <label data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
                                             </div>
                                             <div class="radio radio-default radio-inline">
-                                                <input type="radio" value="ReadWrite" 
+                                                <input type="radio" value="ReadWrite"
                                                        data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
                                                 <label data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
                                             </div>
@@ -277,26 +279,26 @@
                             <div class="flex-horizontal margin-top">
                                 <div class="flex-separator"></div>
                                 <div>
-                                    <button class="btn btn-default" data-bind="click: $root.onCloseEdit"> 
+                                    <button class="btn btn-default" data-bind="click: $root.onCloseEdit">
                                         <i class="icon-cancel"></i>
                                         <span>Cancel</span>
                                     </button>
-                                    <button class="btn btn-success" type="submit" 
+                                    <button class="btn btn-success" type="submit"
                                             data-bind="visible: mode() === 'generate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-magic-wand"></i>
                                         <span>Generate</span>
                                     </button>
-                                    <button class="btn btn-success" type="submit" 
+                                    <button class="btn btn-success" type="submit"
                                             data-bind="visible: mode() === 'editExisting', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-save"></i>
                                         <span>Save</span>
                                     </button>
-                                    <button class="btn btn-success" type="submit" 
+                                    <button class="btn btn-success" type="submit"
                                             data-bind="visible: mode() === 'upload', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-upload"></i>
                                         <span>Upload</span>
                                     </button>
-                                    <button class="btn btn-success" type="submit" 
+                                    <button class="btn btn-success" type="submit"
                                             data-bind="visible: mode() === 'replace', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-replace"></i>
                                         <span>Replace certificate</span>
@@ -315,7 +317,6 @@
     <input name="Options" data-bind="textInput: generateCertPayload" />
 </form>
 
-<form id="certificates_export_form" target="certificate_download_iframe" style="display: none">
-</form>
+<form id="certificates_export_form" target="certificate_download_iframe" style="display: none"></form>
 
 <iframe name="certificate_download_iframe" style="display: none"></iframe>

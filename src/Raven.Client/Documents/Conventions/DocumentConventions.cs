@@ -168,6 +168,17 @@ namespace Raven.Client.Documents.Conventions
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
         private bool? _useCompression;
+        private Func<MemberInfo, string> _propertyNameConverter;
+
+        public Func<MemberInfo, string> PropertyNameConverter
+        {
+            get => _propertyNameConverter;
+            set
+            {
+                AssertNotFrozen();
+                _propertyNameConverter = value;
+            }
+        }
 
         public TimeSpan? RequestTimeout
         {

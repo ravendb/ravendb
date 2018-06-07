@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -724,6 +723,34 @@ namespace Raven.Client.Util
                 {
                     writer.Write("cmpxchg(");
                     context.Visitor.Visit(key);
+                    writer.Write(")");
+                }
+            }
+        }
+
+        public class CounterSupport : JavascriptConversionExtension
+        {
+            public static readonly CounterSupport Instance = new CounterSupport();
+
+            private CounterSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MethodCallExpression mce))
+                    return;
+
+                if (LinqPathProvider.IsCounterCall(mce) == false)
+                    return;
+
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(mce))
+                {
+                    writer.Write("counter(");
+                    WriteArguments(context, mce.Arguments, writer);
                     writer.Write(")");
                 }
             }
@@ -1990,19 +2017,6 @@ namespace Raven.Client.Util
                     }
                 }
             }
-
-            private static void WriteArguments(JavascriptConversionContext context, IReadOnlyList<Expression> arguments, JavascriptWriter writer, int start = 0)
-            {
-                for (var i = start; i < arguments.Count; i++)
-                {
-                    if (i != start)
-                    {
-                        writer.Write(", ");
-                    }
-
-                    context.Visitor.Visit(arguments[i]);
-                }
-            }
         }
 
         public class MetadataSupport : JavascriptConversionExtension
@@ -2095,5 +2109,17 @@ namespace Raven.Client.Util
             return expression.Expression as ParameterExpression;
         }
 
+        private static void WriteArguments(JavascriptConversionContext context, IReadOnlyList<Expression> arguments, JavascriptWriter writer, int start = 0)
+        {
+            for (var i = start; i < arguments.Count; i++)
+            {
+                if (i != start)
+                {
+                    writer.Write(", ");
+                }
+
+                context.Visitor.Visit(arguments[i]);
+            }
+        }
     }
 }

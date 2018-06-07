@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -86,7 +87,9 @@ namespace Raven.Server.Rachis
         public string LastSendMsg => _lastSentMsg;
         public bool ForceElectionsNow { get; set; }
         public string Url => _url;
-        
+
+        public int FollowerCommandsVersion { get; set; }
+
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
 
@@ -166,6 +169,7 @@ namespace Raven.Server.Rachis
                                 {
                                     _engine.Log.Info($"FollowerAmbassador for {_tag}: Creating new connection to {_tag}");
                                 }
+
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
@@ -177,6 +181,7 @@ namespace Raven.Server.Rachis
                                     {
                                         topology = _engine.GetTopology(context);
                                     }
+
                                     SendHello(context, topology);
                                 }
                             }
@@ -234,6 +239,7 @@ namespace Raven.Server.Rachis
                                         foreach (var value in table.SeekByPrimaryKey(key, 0))
                                         {
                                             var entry = BuildRachisEntryToSend(context, value);
+                                            _engine.Validator.AssertEntryBeforeSendToFollower(entry, FollowerCommandsVersion, _tag);
                                             entries.Add(entry);
                                             totalSize += entry.Size;
                                             if (totalSize > Constants.Size.Megabyte)
@@ -269,6 +275,7 @@ namespace Raven.Server.Rachis
 #endif
                                     );
                                 }
+
                                 _debugRecorder.Record("Sending entries");
                                 _connection.Send(context, UpdateFollowerTicks, appendEntries, entries);
                                 _debugRecorder.Record("Waiting for response");
@@ -297,6 +304,7 @@ namespace Raven.Server.Rachis
                                         break;
                                     UpdateFollowerTicks();
                                 }
+
                                 _debugRecorder.Record("Response was received");
                                 if (aer.Success == false)
                                 {
@@ -308,8 +316,10 @@ namespace Raven.Server.Rachis
                                     {
                                         _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: " + msg);
                                     }
+
                                     throw new InvalidOperationException(msg);
                                 }
+
                                 if (aer.CurrentTerm != _term)
                                     ThrowInvalidTermChanged(aer);
 
@@ -683,10 +693,12 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
+                FollowerCommandsVersion = llr.CommandsVersion ?? 400;
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"Got 1st LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm:#,#;;0} " +
-                                     $"({llr.MidpointIndex:#,#;;0} / {llr.MidpointTerm:#,#;;0}) {llr.Status}");
+                                     $"({llr.MidpointIndex:#,#;;0} / {llr.MidpointTerm:#,#;;0}) {llr.Status}, version: {FollowerCommandsVersion}");
                 }
                 // need to negotiate
                 do
@@ -764,7 +776,7 @@ namespace Raven.Server.Rachis
                 } while (true);
             }
         }
-
+        
         private void SendHello(TransactionOperationContext context, ClusterTopology clusterTopology)
         {
             UpdateLastSend("Hello");

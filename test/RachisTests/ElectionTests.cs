@@ -25,6 +25,17 @@ namespace RachisTests
             Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
         }
 
+        [Theory]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(5)]
+        public async Task ForceStepDownAndElectNewLeader(int numberOfNodes)
+        {
+            var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
+            firstLeader.CurrentLeader.StepDown();
+            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(3)), "Old leader hasn't stepped down.");
+        }
+
         /// <summary>
         /// This test checks a few things (I didn't want to have to repeat the same logic in multiple tests)
         /// 1) it checks that a new leader is elected when the old leader is cut-off the cluster
