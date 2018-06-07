@@ -600,8 +600,7 @@ class editIndex extends viewModelBase {
         $("#additionalSourceFilePicker").val(null);
     }
     
-    private onFileAdded(fileName: string, contents: string) {
-        const sources = this.editedIndex().additionalSources;
+    private onFileAdded(fileName: string, contents: string) {        
         const newItem = additionalSource.create(this.findUniqueNameForAdditionalSource(fileName), contents);
         this.editedIndex().additionalSources.push(newItem);
         this.selectedSourcePreview(newItem);
@@ -612,7 +611,7 @@ class editIndex extends viewModelBase {
         const existingItem = sources().find(x => x.name() === fileName);
         if (existingItem) {
             const extensionPosition = fileName.lastIndexOf(".");
-            const fileNameWoExtension = fileName.substr(0, extensionPosition - 1);
+            const fileNameWoExtension = fileName.substr(0, extensionPosition);
             
             let idx = 1;
             while (true) {
