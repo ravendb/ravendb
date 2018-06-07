@@ -117,7 +117,7 @@ namespace SlowTests.Client.Subscriptions
                 var subscriptionState = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
 
 
-                // updating only subscription script and making sure conneciton drops
+                // updating only subscription script and making sure connection drops
                 await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
