@@ -209,21 +209,25 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                var licenseLimits = _serverStore.LoadLicenseLimits();
-
-                if (licenseLimits?.NodeLicenseDetails != null &&
-                    licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
+                using (var process = Process.GetCurrentProcess())
                 {
-                    var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
-
-                    using (var process = Process.GetCurrentProcess())
+                    var licenseLimits = _serverStore.LoadLicenseLimits();
+                    if (licenseLimits?.NodeLicenseDetails != null &&
+                        licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
                     {
+                        var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
                         SetAffinity(process, cores, addPerformanceHint);
 
                         var ratio = (int)Math.Ceiling(_licenseStatus.MaxMemory / (double)_licenseStatus.MaxCores);
                         var clusterSize = GetClusterSize();
                         var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, cores * ratio);
                         SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
+                    }
+                    else
+                    {
+                        // set the default values
+                        SetAffinity(process, _licenseStatus.MaxCores, addPerformanceHint);
+                        SetMaxWorkingSet(process, _licenseStatus.MaxMemory);
                     }
                 }
             }
