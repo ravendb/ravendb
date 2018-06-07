@@ -16,16 +16,16 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RachisTests.DatabaseCluster.EtlFailover())
+                    using (var test = new RavenDB_11191())
                     {
-                        await test.EtlDestinationFailoverBetweenNodesWithinSameCluster();
+                        test.NullableEnumWithSaveEnumAsInt();
                     }
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
                 }
-                
+
             }
         }
     }
