@@ -118,7 +118,7 @@ namespace Raven.Server.NotificationCenter
                 return PerformanceHint.Create(
                     _database,
                     "An extremely slow write to disk",
-                    "We have detected very slow writes in the following locations:",
+                    "We have detected very slow writes",
                     PerformanceHintType.SlowIO,
                     NotificationSeverity.Info,
                     source,
