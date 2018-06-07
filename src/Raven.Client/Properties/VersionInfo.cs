@@ -19,13 +19,12 @@ namespace Raven.Client.Properties
         private static int? _buildVersion;
         private static readonly Version _assemblyVersion;
 
-        private static RavenVersionAttribute _instance;
-
-        public static RavenVersionAttribute Instance => _instance ?? (_instance = (RavenVersionAttribute)typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetCustomAttributes(typeof(RavenVersionAttribute)).Single());
+        public static readonly RavenVersionAttribute Instance;
 
         static RavenVersionAttribute()
         {
             _assemblyVersion = typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetName().Version;
+            Instance = (RavenVersionAttribute)typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetCustomAttributes(typeof(RavenVersionAttribute)).Single();
         }
 
         public RavenVersionAttribute()
