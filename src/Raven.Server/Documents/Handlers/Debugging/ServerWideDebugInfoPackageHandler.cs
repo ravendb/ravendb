@@ -274,6 +274,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     if (databaseRecord == null ||
                         databaseRecord.Topology.RelevantFor(ServerStore.NodeTag) == false ||
+                        databaseRecord.Disabled ||
                         IsDatabaseBeingDeleted(ServerStore.NodeTag, databaseRecord))
                         continue;
 
