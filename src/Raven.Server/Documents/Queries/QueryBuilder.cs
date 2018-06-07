@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Queries
                     server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember("Object", out value);
 
                     if (value == null)
-                        return new ValueExpression(null, ValueTokenType.Null);
+                        return new ValueExpression(string.Empty, ValueTokenType.Null);
 
                     return new ValueExpression(value.ToString(), ValueTokenType.String);
             }
