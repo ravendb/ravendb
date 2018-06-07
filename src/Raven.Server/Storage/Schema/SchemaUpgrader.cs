@@ -12,7 +12,7 @@ namespace Raven.Server.Storage.Schema
         {
             public const int ServerVersion = 11;
 
-            public const int ConfigurationVersion = 10;
+            public const int ConfigurationVersion = 11;
 
             public const int DocumentsVersion = 15;
 
