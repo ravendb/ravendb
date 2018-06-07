@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Raven.Client.Extensions;
 using Raven.Client.Properties;
 
 [assembly: RavenVersion(Build = "40", CommitHash = "a377982", Version = "4.0", FullVersion = "4.0.0-custom-40")]
@@ -16,10 +17,32 @@ namespace Raven.Client.Properties
         public string FullVersion { get; set; }
 
         private static int? _buildVersion;
+        private static readonly Version _assemblyVersion;
 
         private static RavenVersionAttribute _instance;
 
         public static RavenVersionAttribute Instance => _instance ?? (_instance = (RavenVersionAttribute)typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetCustomAttributes(typeof(RavenVersionAttribute)).Single());
+
+        static RavenVersionAttribute()
+        {
+            _assemblyVersion = typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetName().Version;
+        }
+
+        public RavenVersionAttribute()
+        {
+            MajorVersion = _assemblyVersion.Major;
+            MinorVersion = _assemblyVersion.Minor;
+            PatchVersion = _assemblyVersion.Build;
+            AssemblyVersion = $"{MajorVersion.ToInvariantString()}.{MinorVersion.ToInvariantString()}.{PatchVersion.ToInvariantString()}.{BuildVersion.ToInvariantString()}";
+        }
+
+        public readonly string AssemblyVersion;
+
+        public readonly int MajorVersion;
+
+        public readonly int MinorVersion;
+
+        public readonly int PatchVersion;
 
         public int BuildVersion
         {
@@ -27,14 +50,13 @@ namespace Raven.Client.Properties
             {
                 if (_buildVersion == null)
                 {
-                    int _;
-                    if (int.TryParse(Build, out _) == false)
+                    if (int.TryParse(Build, out var buildVersion) == false)
                     {
                         _buildVersion = 40;
                     }
                     else
                     {
-                        _buildVersion = _;
+                        _buildVersion = buildVersion;
                     }
                 }
 

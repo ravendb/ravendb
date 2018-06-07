@@ -24,6 +24,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
+using Raven.Client.Properties;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Sparrow;
@@ -163,7 +164,7 @@ namespace Raven.Client.Http
                 GlobalHttpClientWithCompression :
                 GlobalHttpClientWithoutCompression;
 
-           
+
 
             _serverCallbackRWLock.EnterReadLock();
             try
@@ -187,7 +188,7 @@ namespace Raven.Client.Http
             }
         }
 
-      
+
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
@@ -955,7 +956,7 @@ namespace Raven.Client.Http
             return new HttpCache.ReleaseCacheItem();
         }
 
-        public static readonly string ClientVersion = typeof(RequestExecutor).GetTypeInfo().Assembly.GetName().Version.ToString();
+        public static readonly string ClientVersion = RavenVersionAttribute.Instance.AssemblyVersion;
 
         private HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
         {
