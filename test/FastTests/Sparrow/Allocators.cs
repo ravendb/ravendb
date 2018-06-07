@@ -90,7 +90,6 @@ namespace FastTests.Sparrow
                 Assert.Equal(i < 200 ? 3 : 0, whole[i]);
         }
 
-
         [Fact]
         public void Alloc_NativeUnsupported()
         {
@@ -102,5 +101,104 @@ namespace FastTests.Sparrow
             Assert.Throws<NotSupportedException>(() => allocator.Reset());
             Assert.Throws<NotSupportedException>(() => allocator.Renew());
         }
+
+        [Fact]
+        public void Alloc_StubLifecycle()
+        {
+            var allocator = new Allocator<StubAllocator<NativeBlockAllocator.Default>>();         
+            allocator.Initialize(default(NativeBlockAllocator.Default));
+
+            Assert.Throws<NotSupportedException>(() => allocator.Reset());
+            Assert.Throws<NotSupportedException>(() => allocator.Renew());
+
+            Assert.Throws<NotSupportedException>(() => allocator.LowMemory());
+            Assert.Throws<NotSupportedException>(() => allocator.LowMemoryOver());
+        }
+
+        public struct StubAllocator<TOptions> : IAllocator<StubAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<StubAllocator<TOptions>>, IRenewable<StubAllocator<TOptions>>, ILifecycleHandler<StubAllocator<TOptions>>
+            where TOptions : struct, INativeBlockOptions
+        {
+            private TOptions Options;
+
+            public void Configure<TConfig>(ref NativeBlockAllocator<TOptions> blockAllocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+            {
+            }
+
+            public int Allocated
+            {
+                get;
+                private set;
+            }
+
+            public void Initialize(ref StubAllocator<TOptions> allocator)
+            {               
+            }
+
+            public void Configure<TConfig>(ref StubAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+            {             
+            }
+
+            public void Allocate(ref StubAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
+            {
+                header = null;
+            }
+
+            public void Release(ref StubAllocator<TOptions> allocator, in BlockPointer.Header* header)
+            {                
+            }
+
+            public void Renew(ref StubAllocator<TOptions> allocator)
+            {
+                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+            }
+
+            public void Reset(ref StubAllocator<TOptions> allocator)
+            {
+                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+            }
+  
+            public void Dispose()
+            {
+            }
+
+            public void NotifyLowMemory(ref StubAllocator<TOptions> allocator)
+            {
+                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+            }
+
+            public void NotifyLowMemoryOver(ref StubAllocator<TOptions> allocator)
+            {
+                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+            }
+
+            public bool BeforeInitializedCalled;
+
+            public void BeforeInitialize(ref StubAllocator<TOptions> allocator)
+            {
+                BeforeInitializedCalled = true;
+            }
+
+            public bool AfterInitializeCalled;
+
+            public void AfterInitialize(ref StubAllocator<TOptions> allocator)
+            {
+                AfterInitializeCalled = true;
+            }
+
+            public bool BeforeDisposeCalled;
+
+            public void BeforeDispose(ref StubAllocator<TOptions> allocator)
+            {
+                BeforeDisposeCalled = true;
+            }
+
+            public bool BeforeFinalizationCalled;
+
+            public void BeforeFinalization(ref StubAllocator<TOptions> allocator)
+            {
+                BeforeFinalizationCalled = true;
+            }
+        }
+
     }
 }

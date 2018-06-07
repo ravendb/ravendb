@@ -531,8 +531,8 @@ namespace Sparrow
 
         ~Allocator()
         {
-            if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
-                ((ILifecycleHandler<TAllocator>)_allocator).BeforeFinalization(ref _allocator);
+            if (_allocator is ILifecycleHandler<TAllocator> a)
+                a.BeforeFinalization(ref _allocator);
 
             Dispose();
         }
@@ -540,14 +540,15 @@ namespace Sparrow
         public void Initialize<TBlockAllocatorOptions>(TBlockAllocatorOptions options)
             where TBlockAllocatorOptions : struct, IAllocatorOptions
         {
-            if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
-                ((ILifecycleHandler<TAllocator>)_allocator).BeforeInitialize(ref _allocator);
+
+            if (_allocator is ILifecycleHandler<TAllocator> a)
+                a.BeforeInitialize(ref _allocator);
 
             _allocator.Initialize(ref _allocator);
             _allocator.Configure(ref _allocator, ref options);
 
-            if (_allocator.GetType() == typeof(ILifecycleHandler<TAllocator>))
-                ((ILifecycleHandler<TAllocator>)_allocator).AfterInitialize(ref _allocator);
+            if (_allocator is ILifecycleHandler<TAllocator> b)
+                b.AfterInitialize(ref _allocator);
         }
 
         public int Allocated
@@ -563,8 +564,8 @@ namespace Sparrow
                 _allocator.Allocate(ref _allocator, size, out var header);
 
                 var ptr = new BlockPointer(header);
-                if (_allocator.GetType() == typeof(IAllocationHandler<TAllocator>))
-                    ((IAllocationHandler<TAllocator>)_allocator).OnAllocate(ref _allocator, ptr);
+                if (_allocator is ILifecycleHandler<TAllocator> a)
+                    a.BeforeInitialize(ref _allocator);
 
                 return ptr;
             }
@@ -577,8 +578,8 @@ namespace Sparrow
                 _allocator.Allocate(ref _allocator, size * Unsafe.SizeOf<TType>(), out var header);
 
                 var ptr = new BlockPointer(header);
-                if (_allocator.GetType() == typeof(IAllocationHandler<TAllocator>))
-                    ((IAllocationHandler<TAllocator>)_allocator).OnAllocate(ref _allocator, ptr);
+                if (_allocator is IAllocationHandler<TAllocator> a)
+                    a.OnAllocate(ref _allocator, ptr);
 
                 return new BlockPointer<TType>(ptr);
             }
@@ -588,8 +589,8 @@ namespace Sparrow
         {
             unsafe
             {
-                if (_allocator.GetType() == typeof(IAllocationHandler<TAllocator>))
-                    ((IAllocationHandler<TAllocator>)_allocator).OnRelease(ref _allocator, ptr);
+                if (_allocator is IAllocationHandler<TAllocator> a)
+                    a.OnRelease(ref _allocator, ptr);
 
                 _allocator.Release(ref _allocator, in ptr._header);
             }
@@ -598,8 +599,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew()
         {
-            if (_allocator.GetType() == typeof(IRenewable<TAllocator>))
-                ((IRenewable<TAllocator>)_allocator).Renew(ref _allocator);
+            if (_allocator is IRenewable<TAllocator> a)
+                a.Renew(ref _allocator);
             else
                 throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
@@ -621,15 +622,15 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemory()
         {
-            if (_allocator.GetType() == typeof(ILowMemoryHandler<TAllocator>))
-                ((ILowMemoryHandler<TAllocator>)_allocator).NotifyLowMemory(ref _allocator);
+            if (_allocator is ILowMemoryHandler<TAllocator> a)
+                a.NotifyLowMemory(ref _allocator);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemoryOver()
         {
-            if (_allocator.GetType() == typeof(ILowMemoryHandler<TAllocator>))
-                ((ILowMemoryHandler<TAllocator>)_allocator).NotifyLowMemoryOver(ref _allocator);
+            if (_allocator is ILowMemoryHandler<TAllocator> a)
+                a.NotifyLowMemoryOver(ref _allocator);
         }
     }
 
