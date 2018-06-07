@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
+        private Dictionary<string, Queue<Attachment>> _loadedAttachments;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
@@ -37,14 +38,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
 
             LoadToDestinations = tables;
+
+            if (_transformation.IsHandlingAttachments)
+               _loadedAttachments = new Dictionary<string, Queue<Attachment>>(StringComparer.OrdinalIgnoreCase);
         }
 
         public override void Initalize()
         {
             base.Initalize();
-
-            SingleRun.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadAttachment));
-
+            
             SingleRun.ScriptEngine.SetValue("varchar",
                 new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
 
@@ -77,16 +79,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 if (_transformation.IsHandlingAttachments && 
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
-                    var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId,
-                        attachmentName, AttachmentType.Document, Current.Document.ChangeVector);
-
-                    if (attachment == null)
-                        ThrowNoSuchAttachment(Current.DocumentId, attachmentName);
-
-                    var attachmentStream = attachment.Stream;
+                    var attachment = _loadedAttachments[attachmentName].Dequeue();
 
                     sqlColumn.Type = 0;
-                    sqlColumn.Value = attachmentStream;
+                    sqlColumn.Value = attachment.Stream;
                 }
 
                 columns.Add(sqlColumn);
@@ -98,36 +94,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             });
         }
 
-        private JsValue LoadAttachment(JsValue self, JsValue[] args)
+        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
-            if (args.Length != 1 || args[0].IsString() == false)
-                throw new InvalidOperationException($"{Transformation.AddAttachment}(name) must have a single string argument");
-
-            return Transformation.AttachmentMarker + args[0].AsString();
-        }
-
-        private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
-        {
-            if (value.Length <= Transformation.AttachmentMarker.Length)
+            if (_loadedAttachments.TryGetValue(name, out var loadedAttachments) == false)
             {
-                attachmentName = null;
-                return false;
+                loadedAttachments = new Queue<Attachment>();
+                _loadedAttachments.Add(name, loadedAttachments);
             }
 
-            var buffer = value.Buffer;
-
-            if (*(long*)buffer != 7883660417928814884 || // $attachm
-                *(int*)(buffer + 8) != 796159589) // ent/
-            {
-                attachmentName = null;
-                return false;
-            }
-
-            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
-
-            return true;
+            loadedAttachments.Enqueue(attachment);
         }
-
 
         private SqlTableWithRecords GetOrAdd(string tableName)
         {

@@ -24,19 +24,17 @@ this.Name = 'James';
 
 // case 1 : doc id will be preserved
 
-for (var i = 0; i < attachments.length; i++) {
-    addAttachment(this, attachments[i].Name);
-}
+var doc = loadToUsers(this);
 
-loadToUsers(this);
+for (var i = 0; i < attachments.length; i++) {
+    doc.addAttachment(attachments[i].Name + '-etl', loadAttachment(attachments[i].Name));
+}
 
 // case 2 : doc id will be generated on the destination side
 
-var person = { Name: this.Name + ' ' + this.LastName };
+var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 
-addAttachment(person, 'photo2.jpg');
-
-loadToPeople(person);
+person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
 "                   
 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
@@ -59,9 +57,9 @@ loadToPeople(person);
 
                 AssertAttachments(dest, new []
                 {
-                    ("users/1", "photo1.jpg", new byte[] {1}, false),
-                    ("users/1", "photo2.jpg", new byte[] {2}, false),
-                    ("users/1/people/", "photo2.jpg", new byte[] {2}, true)
+                    ("users/1", "photo1.jpg-etl", new byte[] {1}, false),
+                    ("users/1", "photo2.jpg-etl", new byte[] {2}, false),
+                    ("users/1/people/", "photo2.jpg-etl", new byte[] {2}, true)
                 });
 
                 string personId;
@@ -89,15 +87,15 @@ loadToPeople(person);
 
                     Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Attachments));
 
-                    var attachment = session.Advanced.Attachments.Get("users/1", "photo1.jpg");
+                    var attachment = session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl");
 
                     Assert.Null(attachment); // this attachment was removed
                 }
 
                 AssertAttachments(dest, new []
                 {
-                    ("users/1", "photo2.jpg", new byte[] {2}, false),
-                    ("users/1/people/", "photo2.jpg", new byte[] {2}, true)
+                    ("users/1", "photo2.jpg-etl", new byte[] {2}, false),
+                    ("users/1/people/", "photo2.jpg-etl", new byte[] {2}, true)
                 });
 
                 etlDone.Reset();
@@ -115,12 +113,12 @@ loadToPeople(person);
                 {
                     Assert.Null(session.Load<User>("users/1"));
 
-                    Assert.Null(session.Advanced.Attachments.Get("users/1", "photo1.jpg"));
-                    Assert.Null(session.Advanced.Attachments.Get("users/1", "photo2.jpg"));
+                    Assert.Null(session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl"));
+                    Assert.Null(session.Advanced.Attachments.Get("users/1", "photo2.jpg-etl"));
 
                     Assert.Empty(session.Advanced.LoadStartingWith<Person>("users/1/people/"));
 
-                    Assert.Null(session.Advanced.Attachments.Get(personId, "photo2.jpg"));
+                    Assert.Null(session.Advanced.Attachments.Get(personId, "photo2.jpg-etl"));
                 }
             }
         }
@@ -159,11 +157,14 @@ loadToPeople(person);
 var attachments = getAttachments();
 
 for (var i = 0; i < attachments.length; i++) {
-    addAttachment(this, attachments[i].Name);
     this.LastName = this.LastName + attachments[i].Name;
 }
 
-loadToUsers(this);
+var doc = loadToUsers(this);
+
+for (var i = 0; i < attachments.length; i++) {
+    doc.addAttachment(loadAttachment(attachments[i].Name));
+}
 "                   
 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
@@ -207,9 +208,11 @@ loadToUsers(this);
             {
                 AddEtl(src, dest, "Users", script:
                     @"
-addAttachment(this, 'photo.jpg');
 
-loadToUsers(this);
+var doc = loadToUsers(this);
+doc.addAttachment('photo.jpg', loadAttachment('photo.jpg'));
+
+
 "                   
                 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
