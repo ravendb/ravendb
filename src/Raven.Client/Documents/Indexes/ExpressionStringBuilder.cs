@@ -580,7 +580,7 @@ namespace Raven.Client.Documents.Indexes
                 if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
                 {
                     Out("((");
-                    Out(ConvertTypeToCSharpKeyword(rightOp.Type));
+                    Out(ConvertTypeToCSharpKeyword(rightOp.Type, out _));
                     Out(")(");
                 }
                 Visit(leftOp, innerPrecedence);
@@ -826,17 +826,18 @@ namespace Raven.Client.Documents.Indexes
                 return;
 
             Out("(");
-            Out(ConvertTypeToCSharpKeyword(type));
+            Out(ConvertTypeToCSharpKeyword(type, out var isValueTypeServerSide));
 
-            if (isNullableType && nonNullableType != typeof(Guid))
+            if (isNullableType && nonNullableType != typeof(Guid) && isValueTypeServerSide)
             {
                 Out("?");
             }
             Out(")");
         }
 
-        private string ConvertTypeToCSharpKeyword(Type type)
+        private string ConvertTypeToCSharpKeyword(Type type, out bool isValueTypeOnTheServerSide)
         {
+            isValueTypeOnTheServerSide = true;
             if (type.GetTypeInfo().IsGenericType)
             {
                 if (TypeExistsOnServer(type) == false)
@@ -854,18 +855,14 @@ namespace Raven.Client.Documents.Indexes
                 {
                     if (i != 0)
                         sb.Append(", ");
-                    sb.Append(ConvertTypeToCSharpKeyword(arguments[i]));
+                    sb.Append(ConvertTypeToCSharpKeyword(arguments[i], out _));
                 }
 
                 sb.Append(">");
-
+                isValueTypeOnTheServerSide = type.GetTypeInfo().IsValueType;// KeyValuePair<K,V>
                 return sb.ToString();
             }
 
-            if (type == typeof(string))
-            {
-                return "string";
-            }
             if (type == typeof(Guid) || type == typeof(Guid?))
             {
                 // on the server, Guids are represented as strings
@@ -939,7 +936,14 @@ namespace Raven.Client.Documents.Indexes
             {
                 return "byte?";
             }
+
+            isValueTypeOnTheServerSide = false;
+
             if (type.GetTypeInfo().IsEnum)
+            {
+                return "string";
+            }
+            if (type == typeof(string))
             {
                 return "string";
             }
@@ -947,7 +951,6 @@ namespace Raven.Client.Documents.Indexes
             {
                 return "object";
             }
-
             const string knownNamespace = "System";
             if (knownNamespace == type.Namespace)
                 return type.Name;
@@ -998,8 +1001,8 @@ namespace Raven.Client.Documents.Indexes
             Out("default(");
 
             var nonNullable = Nullable.GetUnderlyingType(node.Type);
-            Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type));
-            if (nonNullable != null && nonNullable != typeof(Guid))
+            Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type, out var isValueTypeServerSide));
+            if (nonNullable != null && nonNullable != typeof(Guid) && isValueTypeServerSide)
                 Out("?");
 
             Out(")");
@@ -1749,7 +1752,7 @@ namespace Raven.Client.Documents.Indexes
                     Out("?");
                     return;
                 }
-                Out(ConvertTypeToCSharpKeyword(type));
+                Out(ConvertTypeToCSharpKeyword(type, out _));
                 return;
             }
             var genericArguments = type.GetGenericArguments();
@@ -1802,7 +1805,7 @@ namespace Raven.Client.Documents.Indexes
         {
             if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
             {
-                Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+                Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType(), out _));
             }
             else
             {
