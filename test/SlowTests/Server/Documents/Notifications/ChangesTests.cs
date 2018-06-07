@@ -7,7 +7,10 @@ using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Notifications
@@ -148,16 +151,12 @@ namespace SlowTests.Server.Documents.Notifications
         }
 
         [Fact]
-        public void NotificationOnWrongDatabase_ShouldNotCrashServer()
+        public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())
-            {
-                var mre = new ManualResetEventSlim();
-
-                var taskObservable = store.Changes("does-not-exists");
-                taskObservable.OnError += e => mre.Set();
-
-                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
+            {                
+                var taskObservable = store.Changes("does-not-exists");                                
+                Assert.True( await Assert.ThrowsAsync<DatabaseDoesNotExistException>(async () => await taskObservable.EnsureConnectedNow()).WaitAsync(TimeSpan.FromSeconds(15)));                               
 
                 // ensure the db still works
                 store.Maintenance.Send(new GetStatisticsOperation());
