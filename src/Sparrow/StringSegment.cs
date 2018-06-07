@@ -137,7 +137,7 @@ namespace Sparrow
         public StringSegment(string buffer)
         {
             Offset = 0;
-            Length = buffer.Length;
+            Length = buffer?.Length ?? 0;
             Buffer = buffer;
             _valueString = buffer;
         }
