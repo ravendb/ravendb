@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
@@ -169,11 +170,16 @@ namespace RachisTests.DatabaseCluster
             {
                 Urls = new[] { firstLeader.WebUrl },
                 Database = dbName,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
             }.Initialize())
             {
 
                 using (var session = store.OpenAsyncSession())
                 {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(30), replicas: replicationFactor - 1);
                     await session.StoreAsync(new User { Name = "Karmel" }, "foo/bar");
                     await session.SaveChangesAsync();
                 }

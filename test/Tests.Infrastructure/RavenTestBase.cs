@@ -60,7 +60,7 @@ namespace FastTests
             if (Servers.Count == 0)
                 return;
 
-            var tasks = Servers
+            var tasks = Servers.Where(s => s.ServerStore.Engine.CurrentState != RachisState.Passive)
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
 
