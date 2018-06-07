@@ -30,6 +30,7 @@ namespace Raven.Client.Properties
         public RavenVersionAttribute()
         {
             MajorVersion = _assemblyVersion.Major;
+            MajorVersionAsChar = char.Parse(MajorVersion.ToInvariantString());
             MinorVersion = _assemblyVersion.Minor;
             PatchVersion = _assemblyVersion.Build;
             AssemblyVersion = $"{MajorVersion.ToInvariantString()}.{MinorVersion.ToInvariantString()}.{PatchVersion.ToInvariantString()}.{BuildVersion.ToInvariantString()}";
@@ -38,6 +39,8 @@ namespace Raven.Client.Properties
         public readonly string AssemblyVersion;
 
         public readonly int MajorVersion;
+
+        internal readonly char MajorVersionAsChar;
 
         public readonly int MinorVersion;
 
