@@ -81,8 +81,9 @@ function BuildStudio ( $srcDir, $version ) {
 
         NpmInstall
 
-        Write-Host "Update version.json..."
-        $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
+        Write-Host "Update version.txt..."
+        $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.txt")
+
         "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
         & npm run gulp release
