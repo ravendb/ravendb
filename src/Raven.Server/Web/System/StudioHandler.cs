@@ -146,8 +146,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/favicon.ico", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task FavIcon()
         {
-            HttpContext.Response.StatusCode = 404;
-            return Task.CompletedTask;
+            return GetStudioFileInternal("favicon.ico");
         }
 
         [RavenAction("/auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
