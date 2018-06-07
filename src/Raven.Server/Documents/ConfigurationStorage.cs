@@ -23,10 +23,15 @@ namespace Raven.Server.Documents
         public ConfigurationStorage(DocumentDatabase db)
         {
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
+            string tempPath = null;
+            if (db.Configuration.Storage.TempPath != null)
+            {
+                tempPath = db.Configuration.Storage.TempPath.Combine("Configuration").ToFullPath();
+            }
 
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, db.Configuration.Storage.TempPath?.FullPath, db.IoChanges, db.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, db.Configuration.Storage.TempPath?.FullPath, null, db.IoChanges, db.CatastrophicFailureNotification);
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, db.IoChanges, db.CatastrophicFailureNotification)
+                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, db.IoChanges, db.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
             options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
