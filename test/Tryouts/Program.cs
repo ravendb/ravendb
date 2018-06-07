@@ -17,9 +17,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_483())
+                    using (var test = new RavenDB_11191())
                     {
-                        test.WillNotForgetCastToNullableDateTime();
+                        test.NullableEnumWithSaveEnumAsInt();
                     }
                 }
                 catch (Exception e)

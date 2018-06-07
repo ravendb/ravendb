@@ -828,7 +828,7 @@ namespace Raven.Client.Documents.Indexes
             Out("(");
             Out(ConvertTypeToCSharpKeyword(type, out var isValueTypeServerSide));
 
-            if (isNullableType && nonNullableType != typeof(Guid) && isValueTypeServerSide == false)
+            if (isNullableType && nonNullableType != typeof(Guid) && isValueTypeServerSide)
             {
                 Out("?");
             }
@@ -953,7 +953,10 @@ namespace Raven.Client.Documents.Indexes
             }
             const string knownNamespace = "System";
             if (knownNamespace == type.Namespace)
+            {
+                isValueTypeOnTheServerSide = type.GetTypeInfo().IsValueType;
                 return type.Name;
+            }
             return type.FullName;
         }
 
