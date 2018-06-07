@@ -53,9 +53,9 @@ namespace Raven.Server.NotificationCenter
                     SpeedInMbPerSec = dataSizeInMb / durationInSec,
                     Date = now
                 };
-            }
 
-            _slowWrites.AddOrUpdate(path, info, (s, i) => info);
+                _slowWrites.TryAdd(path, info);
+            }
 
             _updateNotificationInStorageRequired = true;
 
