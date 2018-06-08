@@ -6,6 +6,9 @@ import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
+import showDataDialog = require("viewmodels/common/showDataDialog");
+import copyToClipboard = require("common/copyToClipboard");
+import app = require("durandal/app");
 
 type termsForField = {
     name: string;
@@ -97,7 +100,15 @@ class indexTerms extends viewModelBase {
                 }
             });
     }
+    
+    showData(term: string) {
+        app.showBootstrapDialog(new showDataDialog("Index Term Value", term, "plain"));
+    }
 
+    copyTerm(term: string) {
+        copyToClipboard.copy(term, "Index term was copied to clipboard.");
+    }
+    
     loadMore(fieldName: string) {
         eventsCollector.default.reportEvent("terms", "load-more");
         

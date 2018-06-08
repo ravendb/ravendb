@@ -25,9 +25,9 @@
                         <li class="terms-item">
                             <span class="name" data-bind="text: $data">
                             </span>
-                            <button class="query" data-bind="click: _.partial($root.navigateToQuery, $parent.name, $data)"><i class="icon-query"></i></button>
-                            <!-- <button class="preview"><i class="icon-preview"></i></button>      TODO: add preview binding -->
-                            <!-- <button class="copy"><i class="icon-copy-to-clipboard"></i></button>      TODO: add copy to clipboard binding -->
+                            <button title="Query index with given term" class="query" data-bind="click: _.partial($root.navigateToQuery, $parent.name, $data)"><i class="icon-query"></i></button>
+                            <button title="Preview item" class="preview" data-bind="click: $root.showData"><i class="icon-preview"></i></button>
+                            <button title="Copy to clipboard" class="copy" data-bind="click: $root.copyTerm"><i class="icon-copy-to-clipboard"></i></button>
                         </li>
                         <!-- /ko -->
                         <!--DO NOT REMOVE EMPTY LI BELOW: Additional li fixes bottom row flex-grow -->
