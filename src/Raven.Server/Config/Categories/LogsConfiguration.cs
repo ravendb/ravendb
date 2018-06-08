@@ -14,5 +14,9 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(LogMode.Operations)]
         [ConfigurationEntry("Logs.Mode", ConfigurationEntryScope.ServerWideOnly)]
         public LogMode Mode { get; set; }
+
+        [DefaultValue(true)]
+        [ConfigurationEntry("Logs.UseUtcTime", ConfigurationEntryScope.ServerWideOnly)]
+        public bool UseUtcTime { get; set; }
     }
 }
