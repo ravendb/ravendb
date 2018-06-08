@@ -232,7 +232,7 @@ namespace Sparrow.Logging
 
         private void UpdateLocalDateTimeOffset()
         {
-            if (_updateLocalTimeOffset == false || UseUtcTime == false)
+            if (_updateLocalTimeOffset == false || UseUtcTime)
                 return;
 
             var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
