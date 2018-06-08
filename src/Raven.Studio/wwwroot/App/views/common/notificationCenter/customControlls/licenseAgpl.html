@@ -1,0 +1,20 @@
+<small>
+    <div>Following restrictions are applied:</div>
+    <ul>
+        <li>Server is licensed under the <a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank">AGPLv3</a></li>
+        <li>3 CPU core limit</li>
+        <li>6 GB RAM limit</li>
+        <li data-bind="visible: canUseUntil">Studio will work until <strong data-bind="text: canUseUntil"></strong></li>
+    </ul>
+</small>
+<div class="flex-horizontal">
+    <a href="https://ravendb.net/buy" target="_blank" class="btn btn-primary btn-sm">
+        <i class="icon-newtab"></i>
+        <span>Get a License</span>
+    </a>
+    <div class="flex-separator"></div>
+    <button class="btn btn-primary btn-sm" data-bind="click: register">
+        <i class="icon-raven"></i>
+        <span>Register</span>
+    </button>
+</div>

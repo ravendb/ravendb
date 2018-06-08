@@ -23,6 +23,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         LicenseManager_LicenseUpdateMessage,
         LicenseManager_HighlyAvailableTasks,
         LicenseManager_LicenseLimit,
+        LicenseManager_AGPL3,
 
         Certificates_DeveloperLetsEncryptRenewal,
         Certificates_ReplaceSuccess,

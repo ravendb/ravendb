@@ -108,7 +108,7 @@ class registration extends dialogViewModelBase {
                 const firstStart = moment(license.FirstServerStartDate);
                 // add mutates the original moment
                 const dayAfterFirstStart = firstStart.clone().add("1", "day");
-                const weekAfterFirstStart = dayAfterFirstStart.clone().add("1", "week");
+                const weekAfterFirstStart = firstStart.clone().add("1", "week");
 
                 const now = moment();
                 if (now.isBefore(dayAfterFirstStart)) {
