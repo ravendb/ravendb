@@ -322,6 +322,10 @@ class notificationCenter {
     }
 
     dismiss(notification: abstractNotification) {
+        if (!notification.canBeDismissed()) {
+            return;
+        }
+        
         if (notification instanceof recentError) {
             // local dismiss
             this.globalNotifications.remove(notification);
