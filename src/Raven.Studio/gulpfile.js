@@ -237,10 +237,18 @@ gulp.task('z_generate-test-list', function () {
 });
 
 gulp.task('z_mochaTests', function () {
-    var mocha = plugins.mochaPhantomjs({
+    var mochaPhantomJs;
+    
+    try {
+        var mochaPhantomJs = require("gulp-mocha-phantomjs");
+    } catch (e) {
+        throw new Error("Looks like gulp-mocha-phantomjs is missing. Please run 'npm install gulp-mocha-phantomjs --no-save' in src/Raven.Studio directory, and rerun the tests. " + e);
+    }
+
+    var mocha = mochaPhantomJs({
         reporter: 'spec', //use json for debugging,
         suppressStdout: false,
-        suppressStderr: false 
+        suppressStderr: false
     });
 
     return gulp.src(PATHS.test.html).pipe(mocha);
