@@ -69,7 +69,7 @@ namespace Raven.Server
             configuration.Initialize();
 
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
-            LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
+            LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime || LoggingSource.UseUtcTime == false && LoggingSource.LocalToUtcOffsetInTicks == 0;
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
