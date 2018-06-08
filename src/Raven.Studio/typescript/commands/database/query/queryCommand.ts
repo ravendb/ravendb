@@ -20,7 +20,13 @@ class queryCommand extends commandBase {
                 highlightings: results.Highlightings,
                 includes: results.Includes }) as pagedResultWithIncludesAndHighlights<document>;
         return this.query(this.getUrl(), null, this.db, selector)
-            .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => {
+                if (response.status === 404) {
+                    this.reportError("Error querying index", "Index was not found", response.statusText)
+                } else {
+                    this.reportError("Error querying index", response.responseText, response.statusText)
+                }
+            });
     }
 
     private getQueryText() {
