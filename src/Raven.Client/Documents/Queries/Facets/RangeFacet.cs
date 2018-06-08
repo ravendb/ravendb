@@ -314,9 +314,9 @@ namespace Raven.Client.Documents.Queries.Facets
                 case null:
                     return "null";
                 case DateTime dt:
-                    return "'" + dt.GetDefaultRavenFormat() + "'";
+                    return "'" + dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc) + "'";
                 case DateTimeOffset dto:
-                    return "'" + dto.UtcDateTime.GetDefaultRavenFormat() + "'";
+                    return "'" + dto.UtcDateTime.GetDefaultRavenFormat(true) + "'";
                 case string s:
                     return "'" + EscapeString(s) + "'";
                 case int i:
