@@ -22,7 +22,7 @@ namespace Sparrow.Logging
         [ThreadStatic]
         private static string _currentThreadId;
 
-        public static bool UseUtcTime;
+        public static bool UseUtcTime = true;
         internal static long LocalToUtcOffsetInTicks;
 
         static LoggingSource()
@@ -425,7 +425,7 @@ namespace Sparrow.Logging
                                     currentFile.Flush(flushToDisk: false);
                                     if (_hasEntries.IsSet == false)
                                         // about to go to sleep, so can check if need to update offset
-                                        UpdateLocalDateTimeOffset(); 
+                                        UpdateLocalDateTimeOffset();
                                     _hasEntries.Wait();
                                     if (_keepLogging == false)
                                         return;
