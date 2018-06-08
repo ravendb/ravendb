@@ -48,7 +48,7 @@ namespace Sparrow.Logging
 
         public void Info(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.UtcNow;
+            _logEntry.At = DateTime.Now;
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -59,7 +59,7 @@ namespace Sparrow.Logging
 
         public Task InfoAsync(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.UtcNow;
+            _logEntry.At = DateTime.Now;
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
