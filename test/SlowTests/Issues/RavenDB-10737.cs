@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests;
 using Raven.Client;
+using Sparrow;
 using Sparrow.Extensions;
 using Xunit;
 
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
                     session.Advanced.GetMetadataFor(item)[_expires] = expirationDate;
                     session.SaveChanges();
 
-                    Assert.Equal(expirationDate.GetDefaultRavenFormat(),
+                    Assert.Equal(expirationDate.GetDefaultRavenFormat(true),
                                  session.Advanced.GetMetadataFor(item)[_expires]);
                 }
             }
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
                     session.Advanced.GetMetadataFor(item)[_expires] = expirationDate;
                     session.SaveChanges();
 
-                    Assert.Equal(expirationDate.GetDefaultRavenFormat(), 
+                    Assert.Equal(expirationDate.GetDefaultRavenFormat(true), 
                                  session.Advanced.GetMetadataFor(item)[_expires]);
                 }
             }
@@ -86,7 +87,7 @@ namespace SlowTests.Issues
                     session.Advanced.GetMetadataFor(item)[_expires] = expirationDate;
                     session.SaveChanges();
 
-                    Assert.Equal(expirationDate.UtcDateTime.GetDefaultRavenFormat(),
+                    Assert.Equal(expirationDate.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite),
                                  session.Advanced.GetMetadataFor(item)[_expires]);
                 }
             }
