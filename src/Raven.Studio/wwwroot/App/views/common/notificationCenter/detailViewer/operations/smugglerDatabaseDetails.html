@@ -108,7 +108,10 @@
                     </button>
                 </div>
             </div>
-            <pre class="margin-top export-messages" data-bind="visible: detailsVisible, if: detailsVisible"><code data-bind="text: messagesJoined"></code></pre>
+            <div class="export-messages-container" data-bind="visible: detailsVisible, if: detailsVisible">
+                <pre class="margin-top export-messages"><code data-bind="text: messagesJoined"></code></pre>    
+            </div>
+            
             <div class="toggle" data-bind="visible: detailsVisible() && !operationFailed()">
                 <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
                 <label for="smuggler-monitoring">
