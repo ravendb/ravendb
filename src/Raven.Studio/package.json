@@ -23,7 +23,6 @@
     "gulp-insert": "^0.5.0",
     "gulp-less": "3.1.0",
     "gulp-load-plugins": "^1.2.0",
-    "gulp-mocha-phantomjs": "^0.12.1",
     "gulp-natural-sort": "^0.1.1",
     "gulp-newy": "^1.0.8",
     "gulp-processhtml": "^1.1.0",
@@ -36,7 +35,6 @@
     "gulp-util": "^3.0.7",
     "gulp-zip": "^3.2.0",
     "jshint": "^2.9.1",
-    "mocha-phantomjs": "^4.1.0",
     "run-sequence": "^1.1.5",
     "through2": "^2.0.1",
     "typescript": "~2.6.1"
