@@ -151,8 +151,8 @@ namespace Sparrow
             {
                 var historyStats = new PerformanceMetricsHistoryStats
                 {
-                    Start = meter.TotalTimeStart.GetDefaultRavenFormat(),
-                    End = meter.TotalTimeEnd.GetDefaultRavenFormat(),
+                    Start = meter.TotalTimeStart.GetDefaultRavenFormat(isUtc: true),
+                    End = meter.TotalTimeEnd.GetDefaultRavenFormat(isUtc: true),
                     Counter = meter.TotalCounter,
                     Duration = Math.Round((meter.TotalTimeEnd - meter.TotalTimeStart).TotalMilliseconds, 2),
                     ActiveDuration = Math.Round(meter.TotalTime.TotalMilliseconds, 2),

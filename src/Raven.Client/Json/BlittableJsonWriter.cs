@@ -215,10 +215,10 @@ namespace Raven.Client.Json
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
                     break;
                 case DateTime dt:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat());
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc));
                     break;
                 case DateTimeOffset dto:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.UtcDateTime.GetDefaultRavenFormat());
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                     break;
                 case IDictionary<string, string> dics:
                     WriteDictionary(dics);
