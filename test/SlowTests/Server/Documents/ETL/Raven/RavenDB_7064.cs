@@ -254,5 +254,60 @@ doc.addAttachment('photo.jpg', loadAttachment('photo.jpg'));
                 }
             }
         }
+
+        [Fact]
+        public void Can_use_has_attachment()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script:
+                    @"
+
+var doc = loadToUsers(this);
+
+if (hasAttachment('photo1.jpg')) {
+  doc.addAttachment(loadAttachment('photo1.jpg'));
+}
+
+if (hasAttachment('photo2.jpg')) {
+  doc.addAttachment(loadAttachment('photo2.jpg'));
+}
+
+"                   
+                );
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe"
+                    }, "users/1");
+                    
+                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] {1}));
+
+                    session.Store(new User()
+                    {
+                        Name = "Joe"
+                    }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                AssertAttachments(dest, new []
+                {
+                    ("users/1", "photo2.jpg", new byte[] {1}, false)
+                });
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.NotNull(session.Load<User>("users/2"));
+                }
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@ using Jint.Native;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -44,9 +45,11 @@ namespace Raven.Server.Documents.ETL
                 SingleRun.ScriptEngine.SetValue(Transformation.LoadTo + collection, clrFunctionInstance);
             }
 
+            SingleRun.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadAttachment));
+
             SingleRun.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(SingleRun.ScriptEngine, GetAttachments));
 
-            SingleRun.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadAttachment));
+            SingleRun.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(SingleRun.ScriptEngine, HasAttachment));
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
@@ -149,6 +152,35 @@ namespace Raven.Server.Documents.ETL
             }
 
             return SingleRun.ScriptEngine.Array.Construct(attachments);
+        }
+
+        private JsValue HasAttachment(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1)
+                throw new InvalidOperationException("hasAttachment(name) must be called with one argument");
+
+            if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
+                return false;
+
+            if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+            {
+                return false;
+            }
+
+            var checkedName = args[0].AsString();
+
+            foreach (var attachment in attachments)
+            {
+                var attachmentInfo = (BlittableJsonReaderObject)attachment;
+                
+                if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && name == checkedName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         protected abstract string[] LoadToDestinations { get; }
