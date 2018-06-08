@@ -23,9 +23,11 @@ namespace Sparrow.Logging
         private static string _currentThreadId;
 
         public static bool UseUtcTime;
+        internal static long LocalToUtcOffsetInTicks;
 
         static LoggingSource()
         {
+            LocalToUtcOffsetInTicks = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _currentThreadId = null;
         }
 
@@ -36,6 +38,7 @@ namespace Sparrow.Logging
         private readonly ConcurrentQueue<WeakReference<LocalThreadWriterState>> _newThreadStates =
             new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
+        private bool _updateLocalTimeOffset;
         private string _path;
         private readonly string _name;
         private TimeSpan _retentionTime;
@@ -51,7 +54,10 @@ namespace Sparrow.Logging
         private Stream _pipeSink;
         private static readonly int TimeToWaitForLoggingToEndInMilliseconds = 5_000;
 
-        public static readonly LoggingSource Instance = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.FromDays(3), "Logging");
+        public static readonly LoggingSource Instance = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.FromDays(3), "Logging")
+        {
+            _updateLocalTimeOffset = true
+        };
         public static readonly LoggingSource AuditLog = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.MaxValue, "Audit Log");
 
         private static readonly byte[] _headerRow =
@@ -204,11 +210,13 @@ namespace Sparrow.Logging
                         _today = DateTime.Today;
                         _dateString = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                         _logNumber = GetNextLogNumberForToday();
-
                         CleanupOldLogFiles();
                     }
                 }
             }
+
+            UpdateLocalDateTimeOffset();
+
             while (true)
             {
                 var nextLogNumber = Interlocked.Increment(ref _logNumber);
@@ -220,6 +228,16 @@ namespace Sparrow.Logging
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
                 return fileStream;
             }
+        }
+
+        private void UpdateLocalDateTimeOffset()
+        {
+            if (_updateLocalTimeOffset == false || UseUtcTime == false)
+                return;
+
+            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
+            if (offset != LocalToUtcOffsetInTicks)
+                Interlocked.Exchange(ref LocalToUtcOffsetInTicks, offset);
         }
 
         private int GetNextLogNumberForToday()
@@ -405,6 +423,9 @@ namespace Sparrow.Logging
                                     // we don't want to have fsync here, we just
                                     // want to send it to the OS
                                     currentFile.Flush(flushToDisk: false);
+                                    if (_hasEntries.IsSet == false)
+                                        // about to go to sleep, so can check if need to update offset
+                                        UpdateLocalDateTimeOffset(); 
                                     _hasEntries.Wait();
                                     if (_keepLogging == false)
                                         return;

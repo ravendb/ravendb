@@ -13,13 +13,6 @@ namespace Sparrow.Logging
         [ThreadStatic]
         private static LogEntry _logEntry;
 
-        private static readonly long LocalToUtcOffsetInTicks;
-
-        static Logger()
-        {
-            LocalToUtcOffsetInTicks = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
-        }
-
         public Logger(LoggingSource parent, string source, string logger)
         {
             _parent = parent;
@@ -124,7 +117,7 @@ namespace Sparrow.Logging
         {
             var now = DateTime.UtcNow;
             if (LoggingSource.UseUtcTime == false)
-                now = new DateTime(now.Ticks + LocalToUtcOffsetInTicks);
+                now = new DateTime(now.Ticks + LoggingSource.LocalToUtcOffsetInTicks);
 
             return now;
         }
