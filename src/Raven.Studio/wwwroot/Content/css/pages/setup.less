@@ -107,6 +107,21 @@
         overflow: hidden;
     }
 
+    .configuration-log {
+        position: relative;
+        &:before {
+            content: 'All dates are in UTC';
+            top: 0;
+            right: 0;
+            position: absolute;
+            background-color: @panel-info-bg;
+            font-size: 12px;
+            color: @panel-info-text;
+            padding: 2px 5px;
+            transform: translateY(-100%);
+        }
+    }
+    
     .configuration-log, .readme {
         pre {
             white-space: pre-wrap;
