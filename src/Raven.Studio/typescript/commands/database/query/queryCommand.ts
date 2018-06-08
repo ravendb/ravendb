@@ -14,7 +14,13 @@ class queryCommand extends commandBase {
         const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
             ({ items: results.Results.map(d => new document(d)), totalResultCount: results.TotalResults, additionalResultInfo: results, resultEtag: results.ResultEtag.toString(), includes: results.Includes }) as pagedResultWithIncludes<document>;
         return this.query(this.getUrl(), null, this.db, selector)
-            .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => {
+                if (response.status === 404) {
+                    this.reportError("Error querying index", "Index was not found", response.statusText)
+                } else {
+                    this.reportError("Error querying index", response.responseText, response.statusText)
+                }
+            });
     }
 
     private getQueryText() {
