@@ -334,7 +334,7 @@ namespace Sparrow.Logging
                                    ", ";
             }
 
-            writer.Write(entry.At.GetDefaultRavenFormat(true));
+            writer.Write(entry.At.GetDefaultRavenFormat()); // we write logs in server local time zone
             writer.Write(_currentThreadId);
 
             switch (entry.Type)
