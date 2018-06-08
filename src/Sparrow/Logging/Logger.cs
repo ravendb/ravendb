@@ -13,6 +13,13 @@ namespace Sparrow.Logging
         [ThreadStatic]
         private static LogEntry _logEntry;
 
+        private static readonly long LocalToUtcOffsetInTicks;
+
+        static Logger()
+        {
+            LocalToUtcOffsetInTicks = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
+        }
+
         public Logger(LoggingSource parent, string source, string logger)
         {
             _parent = parent;
@@ -48,7 +55,7 @@ namespace Sparrow.Logging
 
         public void Info(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.Now;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -59,7 +66,7 @@ namespace Sparrow.Logging
 
         public Task InfoAsync(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.Now;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -75,7 +82,7 @@ namespace Sparrow.Logging
 
         public void Operations(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.Now;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -86,7 +93,7 @@ namespace Sparrow.Logging
 
         public Task OperationsAsync(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.Now;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -110,6 +117,16 @@ namespace Sparrow.Logging
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _parent.IsOperationsEnabled; }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static DateTime GetLogDate()
+        {
+            var now = DateTime.UtcNow;
+            if (LoggingSource.UseUtcTime == false)
+                now = new DateTime(now.Ticks + LocalToUtcOffsetInTicks);
+
+            return now;
         }
     }
 }
