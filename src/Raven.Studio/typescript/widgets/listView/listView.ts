@@ -108,7 +108,9 @@ class listView<T> {
     
     private scrollDown() {
         const viewPort = this.$viewportElement[0];
-        viewPort.scrollTop = viewPort.scrollHeight;
+        if (viewPort) {
+            viewPort.scrollTop = viewPort.scrollHeight;    
+        }
     }
     
     private getItemHeight(idx: number) {

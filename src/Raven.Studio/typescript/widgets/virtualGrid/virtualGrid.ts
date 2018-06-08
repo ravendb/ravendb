@@ -336,7 +336,9 @@ class virtualGrid<T> {
     
     private scrollDown() {
         const element = this.$viewportElement[0];
-        element.scrollTop = element.scrollHeight;
+        if (element) {
+            element.scrollTop = element.scrollHeight;
+        }
     }
 
     private checkGridVisibility(): boolean {
