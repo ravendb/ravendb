@@ -112,7 +112,7 @@ namespace Sparrow.Logging
             switch (field)
             {
                 case LogEntryFields.Time:
-                    return entry.At.GetDefaultRavenFormat(true);
+                    return entry.At.GetDefaultRavenFormat(); // we write logs in server local time zone
                 case LogEntryFields.Source:
                     return entry.Source;
                 case LogEntryFields.Logger:

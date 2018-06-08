@@ -10,8 +10,8 @@ namespace Raven.Client.Json.Converters
 {
     internal sealed class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
     {
-        private readonly MethodInfo _genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericWriteJson");
-        private readonly MethodInfo _genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericReadJson");
+        private readonly MethodInfo _genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericWriteJson));
+        private readonly MethodInfo _genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericReadJson));
 
         public static readonly JsonDictionaryDateTimeKeysConverter Instance = new JsonDictionaryDateTimeKeysConverter();
 
@@ -38,7 +38,7 @@ namespace Raven.Client.Json.Converters
                     var dateTime = (DateTime)key;
                     if (dateTime.Kind == DateTimeKind.Unspecified)
                         dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-                    writer.WritePropertyName(dateTime.GetDefaultRavenFormat());
+                    writer.WritePropertyName(dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc));
                 }
                 else if (key is DateTimeOffset)
                 {

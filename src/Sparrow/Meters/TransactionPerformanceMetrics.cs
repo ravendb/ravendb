@@ -30,8 +30,8 @@ namespace Sparrow.Meters
             {
                 return new DynamicJsonValue
                 {
-                    [nameof(Start)] = Start.GetDefaultRavenFormat(),
-                    [nameof(End)] = End.GetDefaultRavenFormat(),
+                    [nameof(Start)] = Start.GetDefaultRavenFormat(isUtc: true),
+                    [nameof(End)] = End.GetDefaultRavenFormat(isUtc: true),
                     [nameof(Duration)] = Math.Round(Duration.TotalMilliseconds, 2)
                 };
             }
@@ -124,7 +124,7 @@ namespace Sparrow.Meters
             {
                 var recentStats = new TransactionPerformanceMetricsRecentStats
                 {
-                    Start = meter.Start.GetDefaultRavenFormat(),
+                    Start = meter.Start.GetDefaultRavenFormat(isUtc: true),
                     Counter = meter.Counter,
                     CommandsCounter = meter.CommandsCounter,
                     Duration = Math.Round(meter.Duration.TotalMilliseconds, 2),
