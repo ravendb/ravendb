@@ -149,6 +149,9 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Attributes = null;
                 _licenseStatus.ErrorMessage = null;
                 _licenseStatus.Id = null;
+                
+                CreateAgplAlert();
+                
                 return;
             }
 
@@ -157,6 +160,8 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
                 _licenseStatus.ErrorMessage = null;
                 _licenseStatus.Id = license.Id;
+                
+                RemoveAgplAlert();
             }
             catch (Exception e)
             {
@@ -181,6 +186,23 @@ namespace Raven.Server.Commercial
             LicenseChanged?.Invoke();
 
             ReloadLicenseLimits(addPerformanceHint);
+        }
+
+        private void CreateAgplAlert()
+        {
+            var alert = AlertRaised.Create(
+                null,
+                "Your server is running without a license",
+                null,
+                AlertType.LicenseManager_AGPL3,
+                NotificationSeverity.Warning);
+
+            _serverStore.NotificationCenter.Add(alert);
+        }
+
+        private void RemoveAgplAlert()
+        {
+            _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
         }
 
         public void ReloadLicenseLimits(bool addPerformanceHint = false)
