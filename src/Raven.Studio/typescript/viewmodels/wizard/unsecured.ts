@@ -15,13 +15,15 @@ class unsecured extends setupStep {
         return $.when({ redirect: "#welcome" });
     }
 
-    attached() {
-        super.attached();
-
-        if (!this.model.unsecureSetup().ip()) {
+    activate(args: any) {
+        super.activate(args);
+        const unsecuredSetup = this.model.unsecureSetup();
+        
+        if (!unsecuredSetup.ip()) {
             const initialIp = ipEntry.runningOnDocker ? "" : "127.0.0.1";
             
-            this.model.unsecureSetup().ip(ipEntry.forIp(initialIp));                       
+            unsecuredSetup.ip(ipEntry.forIp(initialIp));
+            unsecuredSetup.ip().validationGroup.errors.showAllMessages(false);
         }
     }    
     
