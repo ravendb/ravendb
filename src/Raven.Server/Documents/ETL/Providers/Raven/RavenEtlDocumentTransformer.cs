@@ -95,25 +95,36 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private JsValue AddAttachment(JsValue self, JsValue[] args)
         {
-            JsValue attachmentReference;
-            string name;
+            JsValue attachmentReference = null;
+            string name = null; // will preserve original name
+
             switch (args.Length)
             {
                 case 2:
-                    if (args[1].IsString() == false)
-                        throw new InvalidOperationException($"Second argument of {Transformation.AddAttachment}(name, attachment) be reference of attachment");
+                    if (args[0].IsString() == false)
+                        ThrowInvalidSriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
+
                     name = args[0].AsString();
                     attachmentReference = args[1];
                     break;
                 case 1:
-                    name = null; // will preserve original name
                     attachmentReference = args[0];
                     break;
                 default:
-                    throw new InvalidOperationException($"{Transformation.AddAttachment} must have one or two arguments");
+                    ThrowInvalidSriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
+                    break;
             }
 
-            Debug.Assert(attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker));
+            if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
+            {
+                var message =
+                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Type}' type";
+
+                if (attachmentReference.IsString())
+                    message += $" (value: '{attachmentReference.AsString()}')";
+
+                ThrowInvalidSriptMethodCall(message);
+            }
 
             _currentDocumentRun.AddAttachment(self, name, attachmentReference);
 
