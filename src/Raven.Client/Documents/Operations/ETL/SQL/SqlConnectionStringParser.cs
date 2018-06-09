@@ -24,10 +24,26 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     database = GetConnectionStringValue(connectionString, new[] { "Database" });
                     server = GetConnectionStringValue(connectionString, new[] { "Host", "Data Source", "Server" });
 
-                    var port = GetConnectionStringValue(connectionString, new[] { "Port" });
+                    var postgrePort = GetConnectionStringValue(connectionString, new[] { "Port" });
 
-                    if (string.IsNullOrEmpty(port))
-                        server += $":{port}";
+                    if (string.IsNullOrEmpty(postgrePort))
+                        server += $":{postgrePort}";
+                    break;
+                case SqlProvider.MySqlClient:
+                    database = GetConnectionStringValue(connectionString, new[] {"Database", "Initial Catalog"});
+
+                    if (database == null)
+                        database = "mysql";
+
+                    server = GetConnectionStringValue(connectionString, new[] {"Host", "Server", "Data Source", "DataSource", "Address", "Addr", "Network Address"});
+
+                    if (server == null)
+                        server = "localhost";
+
+                    var mysqlPort = GetConnectionStringValue(connectionString, new[] { "Port" });
+
+                    if (string.IsNullOrEmpty(mysqlPort))
+                        server += $":{mysqlPort}";
                     break;
                 default:
                     throw new NotSupportedException($"Factory '{factoryName}' is not supported");

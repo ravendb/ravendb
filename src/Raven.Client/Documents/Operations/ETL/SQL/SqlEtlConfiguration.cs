@@ -53,20 +53,25 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override bool UsingEncryptedCommunicationChannel()
         {
+            string encrypt;
+            bool encryptBool;
+
+            string sslMode;
+
             switch (SqlProviderParser.GetSupportedProvider(FactoryName))
             {
                 case SqlProvider.SqlClient:
-                    var encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
+                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
 
                     if (string.IsNullOrEmpty(encrypt))
                         return false;
 
-                    if (bool.TryParse(encrypt, out var encryptBool) == false)
+                    if (bool.TryParse(encrypt, out encryptBool) == false)
                         return false;
 
                     return encryptBool;
                 case SqlProvider.Npgsql:
-                    var sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" });
+                    sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" });
 
                     if (string.IsNullOrEmpty(sslMode))
                         return false;
@@ -80,6 +85,34 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     }
 
                     return false;
+                
+                case SqlProvider.MySqlClient:
+                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt", "UseSSL"});
+
+                    if (string.IsNullOrEmpty(encrypt) == false)
+                    {
+                        if (bool.TryParse(encrypt, out encryptBool) == false)
+                            return false;
+
+                        return encryptBool;
+                    }
+                    else
+                    {
+                        sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SSL Mode", "SslMode", "Ssl-Mode" });
+
+                        if (string.IsNullOrEmpty(sslMode))
+                            return false;
+
+                        switch (sslMode.ToLower())
+                        {
+                            case "Required":
+                            case "VerifyCA":
+                            case "VerifyFull":
+                                return true;
+                        }
+
+                        return false;
+                    }
                 default:
                     throw new NotSupportedException($"Factory '{FactoryName}' is not supported");
             }

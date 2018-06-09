@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
                     //return SqlProvider.OracleClient;
                 case "MySql.Data.MySqlClient":
-                    throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
+                    return SqlProvider.MySqlClient;
                     //return SqlProvider.MySqlClient;
                 case "System.Data.SqlServerCe.3.5":
                     throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
