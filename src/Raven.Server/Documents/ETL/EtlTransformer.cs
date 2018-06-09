@@ -55,26 +55,27 @@ namespace Raven.Server.Documents.ETL
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
         {
             if (args.Length != 2)
-                throw new InvalidOperationException("loadTo(name, obj) must be called with exactly 2 parameters");
-
+                ThrowInvalidSriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
             if (args[0].IsString() == false)
-                throw new InvalidOperationException("loadTo(name, obj) first argument must be a string");
+                ThrowInvalidSriptMethodCall("loadTo(name, obj) first argument must be a string");
             if (args[1].IsObject() == false)
-                throw new InvalidOperationException("loadTo(name, obj) second argument must be an object");
+                ThrowInvalidSriptMethodCall("loadTo(name, obj) second argument must be an object");
 
             using (var result = new ScriptRunnerResult(SingleRun, args[1].AsObject()))
+            {
                 LoadToFunction(args[0].AsString(), result);
 
-            return self;
+                return result.Instance;
+            }
         }
 
         private JsValue LoadToFunctionTranslator(string name, JsValue self, JsValue[] args)
         {
             if (args.Length != 1)
-                throw new InvalidOperationException($"loadTo{name}(obj) must be called with exactly 1 parameter");
+                ThrowInvalidSriptMethodCall($"loadTo{name}(obj) must be called with exactly 1 parameter");
 
             if (args[0].IsObject() == false)
-                throw new InvalidOperationException($"loadTo{name}(obj) argument must be an object");
+                ThrowInvalidSriptMethodCall($"loadTo{name}(obj) argument must be an object");
 
             using (var result = new ScriptRunnerResult(SingleRun, args[0].AsObject()))
             {
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents.ETL
         private JsValue LoadAttachment(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
-                throw new InvalidOperationException($"{Transformation.LoadAttachment}(name) must have a single string argument");
+                ThrowInvalidSriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
 
             var attachmentName = args[0].AsString();
             JsValue loadAttachmentReference = (JsValue)Transformation.AttachmentMarker + attachmentName;
@@ -136,7 +137,7 @@ namespace Raven.Server.Documents.ETL
         private JsValue GetAttachments(JsValue self, JsValue[] args)
         {
             if (args.Length != 0)
-                throw new InvalidOperationException("getAttachments() must be called without any argument");
+                ThrowInvalidSriptMethodCall("getAttachments() must be called without any argument");
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
@@ -157,7 +158,7 @@ namespace Raven.Server.Documents.ETL
         private JsValue HasAttachment(JsValue self, JsValue[] args)
         {
             if (args.Length != 1)
-                throw new InvalidOperationException("hasAttachment(name) must be called with one argument");
+                ThrowInvalidSriptMethodCall("hasAttachment(name) must be called with one argument");
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
                 return false;
@@ -205,6 +206,11 @@ namespace Raven.Server.Documents.ETL
         {
             throw new InvalidOperationException(
                 $"Document '{documentId}' doesn't have any attachment while the transformation tried to add '{attachmentName}'");
+        }
+
+        protected static void ThrowInvalidSriptMethodCall(string message)
+        {
+            throw new InvalidOperationException(message);
         }
 
         public void Dispose()
