@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
+using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
 using SlowTests.Issues;
@@ -17,14 +18,15 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_11191())
+                    using (var test = new AuthenticationLetsEncryptTests())
                     {
-                        test.NullableEnumWithSaveEnumAsInt();
+                        await test.CanGetLetsEncryptCertificateAndRenewIt();
                     }
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
+                    break;
                 }
 
             }
