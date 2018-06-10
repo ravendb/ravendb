@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Queries;
+﻿using System.Collections;
+using System.Collections.Generic;
+using Raven.Client.Documents.Queries;
 using Sparrow;
 using Sparrow.Json;
 
@@ -76,6 +78,11 @@ namespace Raven.Server.Documents.Queries
             if (query.QueryParameters == null || query.QueryParameters.Count == 0)
                 return hash;
             return Hashing.Combine(hash, query.QueryParameters.GetHashOfPropertyNames());
+        }
+
+        public QueryMetadata[] GetQueryCache()
+        {
+            return _cache;
         }
     }
 }
