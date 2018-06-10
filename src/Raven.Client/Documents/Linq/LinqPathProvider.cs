@@ -136,25 +136,20 @@ namespace Raven.Client.Documents.Linq
             var counterName = (callExpression.Arguments[callExpression.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
 
             string[] args;
-            if (callExpression.Arguments.Count == 2)
+            if (callExpression.Method.DeclaringType != typeof(RavenQuery))
             {
-                string path;
-                if (callExpression.Arguments[0] is ConstantExpression constExp)
-                {
-                    path = constExp.Value.ToString();
-                }
-
-                else
-                {
-                    path = callExpression.Arguments[0].ToString();
-                }
-
-                var docAlias = RemoveTransparentIdentifiersIfNeeded(path);
-                args = new[] {docAlias, counterName};
+                // session.CountersFor().Get()
+                var path = (callExpression.Object as MethodCallExpression)?.Arguments[0].ToString();
+                args = new[] {RemoveTransparentIdentifiersIfNeeded(path), counterName};
+            }
+            else if (callExpression.Arguments.Count == 2)
+            {                
+                var path = callExpression.Arguments[0].ToString();
+                args = new[] {RemoveTransparentIdentifiersIfNeeded(path), counterName};               
             }
             else
             {
-                args = new[] {counterName};
+                args = new[] { counterName };
             }
 
             return new Result
@@ -468,7 +463,7 @@ namespace Raven.Client.Documents.Linq
         public static bool IsCounterCall(MethodCallExpression mce)
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Counter"
-                   || mce.Object?.Type == typeof(ICountersSessionOperations) && mce.Method.Name == "Get";
+                   || mce.Object?.Type == typeof(SessionDocumentCounters) && mce.Method.Name == "Get";
         }
 
     }

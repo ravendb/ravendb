@@ -886,7 +886,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionQuerySelectSingleCounterWithDocAlias_UsingSessionGetCounter()
+        public void SessionQuerySelectSingleCounterWithDocAlias_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -959,7 +959,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionQuerySelectCounterAndProjectToMemberInit_UsingSessionGetCounter()
+        public void SessionQuerySelectCounterAndProjectToMemberInit_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -997,7 +997,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionQuerySelectCounterFromLoadedDoc_UsingSessionGetCounter()
+        public void SessionQuerySelectCounterFromLoadedDoc_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -1036,7 +1036,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionQuerySelectMultipuleCounters_UsingSessionGetCounter()
+        public void SessionQuerySelectMultipuleCounters_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -1088,7 +1088,7 @@ namespace SlowTests.Client.Counters
 
 
         [Fact]
-        public void SessionQuerySelectSingleCounterJsProjection()
+        public void SessionQuerySelectSingleCounterJsProjection_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
             {
@@ -1134,7 +1134,53 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionQuerySelectMultipleCountersJsProjection()
+        public void SessionQuerySelectSingleCounterJsProjection_UsingSessionCountersFor()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", Age = 55 }, "users/1-A");
+                    session.Store(new User { Name = "Bob", Age = 68 }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", Age = 27 }, "users/3-A");
+
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Name = user.Name + user.Age, //creates js projection
+                                    Downloads = session.CountersFor(user).Get("Downloads")
+                                };
+
+                    Assert.Equal("from Users as user select { Name : user.Name+user.Age, Downloads : counter(user, \"Downloads\") }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal("Jerry55", queryResult[0].Name);
+                    Assert.Equal(100, queryResult[0].Downloads);
+
+                    Assert.Equal("Bob68", queryResult[1].Name);
+                    Assert.Equal(200, queryResult[1].Downloads);
+
+                    Assert.Equal("Pigpen27", queryResult[2].Name);
+                    Assert.Null(queryResult[2].Downloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectMultipleCounters_UsingBothSessionCountersForAndRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
             {
@@ -1214,6 +1260,57 @@ namespace SlowTests.Client.Counters
 	return { Name : user.Name, Downloads : c };
 }
 from Users as user select output(user)" , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(100, queryResult[0].Downloads);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal(200, queryResult[1].Downloads);
+
+                    Assert.Equal("Pigpen", queryResult[2].Name);
+                    Assert.Null(queryResult[2].Downloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQuerySelectCounterViaLet_UsingSessionCountersFor()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
+
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                        let c = session.CountersFor(user).Get("Downloads")
+                        select new
+                        {
+                            Name = user.Name,
+                            Downloads = c
+                        };
+
+                    Assert.Equal(
+                        @"declare function output(user) {
+	var c = counter(user, ""Downloads"");
+	return { Name : user.Name, Downloads : c };
+}
+from Users as user select output(user)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
