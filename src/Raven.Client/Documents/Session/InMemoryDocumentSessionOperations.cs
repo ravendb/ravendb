@@ -120,6 +120,15 @@ namespace Raven.Client.Documents.Session
         protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity =
             new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
 
+        /// <summary>
+        /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
+        /// </summary>
+        protected internal readonly Dictionary<string, CountersCache> CountersByDocId =
+            new Dictionary<string, CountersCache> (StringComparer.OrdinalIgnoreCase);
+
+        protected internal readonly HashSet<(string docId, string counter)> CountersToDelete = new HashSet<(string docId, string Name)>();
+        protected internal readonly HashSet<(string docId, string counter)> CountersToIncrement = new HashSet<(string docId, string Name)>();
+
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -506,6 +515,7 @@ more responsive application.
 
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
+            CountersToDelete.Add((value.Id, null));
             _knownMissingIds.Add(value.Id);
         }
 
@@ -545,6 +555,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
+            CountersToDelete.Add((id, null));
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
@@ -749,6 +760,9 @@ more responsive application.
 
             PrepareCompareExchangeEntities(result);
 
+            RemoveCountersFromCache(CountersToIncrement);
+            RemoveCountersFromCache(CountersToDelete);
+
             if (DeferredCommands.Count > 0)
             {
                 // this allow OnBeforeStore to call Defer during the call to include
@@ -818,6 +832,24 @@ more responsive application.
                 }
             }
             clusterTransactionOperations.Clear();
+        }
+
+        private void RemoveCountersFromCache(HashSet<(string docId, string counter)> countersToRemove)
+        {
+            foreach (var (docId, counter) in countersToRemove)
+            {
+                if (counter == null)
+                {
+                    // remove all
+                    CountersByDocId.Remove(docId);
+                    return;
+                }
+
+                if (CountersByDocId.TryGetValue(docId, out var cache))
+                {
+                    cache.Values.Remove(counter);
+                }
+            }
         }
 
         protected abstract ClusterTransactionOperationsBase GetClusterSession();
@@ -1094,6 +1126,7 @@ more responsive application.
             {
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
+                CountersByDocId.Remove(documentInfo.Id);
             }
 
             DeletedEntities.Remove(entity);
@@ -1110,6 +1143,7 @@ more responsive application.
             DocumentsById.Clear();
             _knownMissingIds.Clear();
             IncludedDocumentsById.Clear();
+            CountersByDocId.Clear();
         }
 
         /// <summary>
@@ -1473,6 +1507,16 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type);
 
             return (indexName, collectionName);
+        }
+
+        /// <summary>
+        /// an internal structure that is used for caching counter values in a session
+        /// </summary>
+        protected internal struct CountersCache
+        {
+            public Dictionary<string, long?> Values { get; set; }
+
+            public bool GotAll { get; set; }
         }
     }
 }
