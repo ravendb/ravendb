@@ -19,6 +19,15 @@ namespace Raven.Server.ServerWide.Commands
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology = Topology;
+            if (record.Topology.Stamp == null)
+            {
+                record.Topology.Stamp = new LeaderStamp
+                {
+                    Term = -1,
+                    LeadersTicks = -1,
+                    Index = -1
+                };
+            }
             record.Topology.Stamp.Index = etag;
             return null;
         }
