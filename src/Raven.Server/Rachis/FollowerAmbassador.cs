@@ -9,13 +9,13 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -31,6 +31,7 @@ namespace Raven.Server.Rachis
         FailedToConnect,
         Disconnected,
         Closed,
+        Error,
     }
 
     public class FollowerAmbassador : IDisposable
@@ -153,6 +154,7 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info($"{ToString()} was unable to set the thread priority, will continue with the same priority", e);
                     }
                 }
+
                 var hadConnectionFailure = false;
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
@@ -317,11 +319,20 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: " + msg);
                                     }
 
-                                    throw new InvalidOperationException(msg);
+                                    RachisInvalidOperationException.Throw(msg);
                                 }
 
                                 if (aer.CurrentTerm != _term)
-                                    ThrowInvalidTermChanged(aer);
+                                {
+                                    var msg = $"The current engine term has changed " +
+                                              $"({aer.CurrentTerm:#,#;;0} -> {_term:#,#;;0}), " +
+                                              $"this ambassador term is no longer valid";
+                                    if (_engine.Log.IsInfoEnabled)
+                                    {
+                                        _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: " + msg);
+                                    }
+                                    RachisConcurrencyException.Throw(msg);
+                                }
 
                                 UpdateLastMatchFromFollower(aer.LastLogIndex);
                             }
@@ -347,15 +358,22 @@ namespace Raven.Server.Rachis
                             _debugRecorder.Start();
                         }
                     }
+                    catch (LockAlreadyDisposedException)
+                    {
+                        throw;
+                    }
                     catch (OperationCanceledException)
                     {
                         throw;
                     }
-                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
                     {
                         throw;
                     }
-                   
+                    catch (RachisException)
+                    {
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         _connection?.Dispose();
@@ -372,26 +390,27 @@ namespace Raven.Server.Rachis
                         {
                             StatusMessage = "Disconnected due to :" + StatusMessage;
                         }
+
                         Status = AmbassadorStatus.Disconnected;
                         _debugRecorder.Record(StatusMessage);
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                StatusMessage = "Closed";
-                Status = AmbassadorStatus.Closed;
-            }
-            catch (ObjectDisposedException)
-            {
-                StatusMessage = "Closed";
-                Status = AmbassadorStatus.Closed;
-            }
             catch (AggregateException ae)
-                when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+                when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
             {
                 StatusMessage = "Closed";
                 Status = AmbassadorStatus.Closed;
+            }
+            catch (Exception e) when (e is LockAlreadyDisposedException || e is OperationCanceledException)
+            {
+                StatusMessage = "Closed";
+                Status = AmbassadorStatus.Closed;
+            }
+            catch (RachisException e)
+            {
+                StatusMessage = $"Reached an erronous state due to :{Environment.NewLine}{e.Message}";
+                Status = AmbassadorStatus.Error;
             }
             catch (Exception e)
             {
@@ -431,13 +450,6 @@ namespace Raven.Server.Rachis
             {
                 hadConnectionFailure = true;
             }
-        }
-
-        private void ThrowInvalidTermChanged(AppendEntriesResponse aer)
-        {
-            throw new ConcurrencyException($"The current engine term has changed " +
-                                           $"({aer.CurrentTerm:#,#;;0} -> {_term:#,#;;0}), " +
-                                           $"this ambassador term is no longer valid");
         }
 
         private void SendSnapshot(Stream stream)
@@ -709,7 +721,7 @@ namespace Raven.Server.Rachis
                         var msg = $"{ToString()}: found election term {llr.CurrentTerm:#,#;;0} that is higher than ours {_term:#,#;;0}";
                         _engine.SetNewState(RachisState.Follower, null, _term, msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
-                        throw new InvalidOperationException(msg);
+                        RachisInvalidOperationException.Throw(msg);
                     }
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Acceptable)
@@ -728,7 +740,7 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"{ToString()}: {message}");
                         }
-                        throw new InvalidOperationException(message);
+                        RachisInvalidOperationException.Throw(message);
                     }
 
                     UpdateLastMatchFromFollower(0);
