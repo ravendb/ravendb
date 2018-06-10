@@ -14,52 +14,20 @@ namespace Raven.Client.Documents.Session
     public interface ICountersSessionOperations : ICountersSessionOperationsBase
     {
         /// <summary>
-        /// Returns all the counters for a specific document.
+        /// Returns all the counters for a document.
         /// </summary>
-        Dictionary<string, long> Get(string documentId);
+        Dictionary<string, long> GetAll();
 
         /// <summary>
-        /// Returns all the counters for an entity.
+        /// Returns the counter by the  counter name.
         /// </summary>
-        Dictionary<string, long> Get(object entity);
+        long? Get(string counter);
 
         /// <summary>
-        /// Returns the counter by the document id and counter name.
-        /// </summary>
-        long? Get(string documentId, string counter);
-
-        /// <summary>
-        /// Returns the counter by entity and counter name.
-        /// </summary>
-        long? Get(object entity, string counter);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters, by document id and counter names
-        /// <param name="documentId">the document which holds the counters</param>
+        /// Returns the a dictionary of counter values by counter names
         /// <param name="counters">counters names</param>
         /// </summary>
-        Dictionary<string, long> Get(string documentId, IEnumerable<string> counters);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters
-        /// <param name="entity">instance of entity of the document which holds the counter</param>
-        /// <param name="counters">counters names</param>
-        /// </summary>
-        Dictionary<string, long> Get(object entity, IEnumerable<string> counters);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters
-        /// <param name="documentId">the document which holds the counters</param>
-        /// <param name="counters">counters names</param>
-        /// </summary>
-        Dictionary<string, long> Get(string documentId, params string[] counters);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters
-        /// <param name="entity">instance of entity of the document which holds the counter</param>
-        /// <param name="counters">counters names</param>
-        /// </summary>
-        Dictionary<string, long> Get(object entity, params string[] counters);
+        Dictionary<string, long?> Get(IEnumerable<string> counters);
 
     }
 }

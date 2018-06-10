@@ -18,50 +18,18 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all the counters for a specific document.
         /// </summary>
-        Task<Dictionary<string, long>> GetAsync(string documentId, CancellationToken token = default);
+        Task<Dictionary<string, long>> GetAllAsync(CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        /// Returns all the counters for an entity.
+        /// Returns the counter value by counter name.
         /// </summary>
-        Task<Dictionary<string, long>> GetAsync(object entity, CancellationToken token = default);
+        Task<long?> GetAsync(string counter, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        /// Returns the counter by the document id and counter name.
-        /// </summary>
-        Task<long?> GetAsync(string documentId, string counter, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns the counter by entity and counter name.
-        /// </summary>
-        Task<long?> GetAsync(object entity, string counter, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters, by document id and counter names
-        /// <param name="documentId">the document which holds the counters</param>
+        /// Returns the a dictionary of counter values by counter names
         /// <param name="counters">counters names</param>
         /// </summary>
-        Task<Dictionary<string, long>> GetAsync(string documentId, IEnumerable<string> counters, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters
-        /// <param name="entity">instance of entity of the document which holds the counter</param>
-        /// <param name="counters">counters names</param>
-        /// </summary>
-        Task<Dictionary<string, long>> GetAsync(object entity, IEnumerable<string> counters, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters
-        /// <param name="documentId">the document which holds the counters</param>
-        /// <param name="counters">counters names</param>
-        /// </summary>
-        Task<Dictionary<string, long>> GetAsync(string documentId, params string[] counters);
-
-        /// <summary>
-        /// Returns CountersDetail on all the specified counters
-        /// <param name="entity">instance of entity of the document which holds the counter</param>
-        /// <param name="counters">counters names</param>
-        /// </summary>
-        Task<Dictionary<string, long>> GetAsync(object entity, params string[] counters);
+        Task<Dictionary<string, long?>> GetAsync(IEnumerable<string> counters, CancellationToken token = default(CancellationToken));
 
     }
 }

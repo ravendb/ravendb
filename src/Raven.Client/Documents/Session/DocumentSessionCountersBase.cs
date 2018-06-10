@@ -13,16 +13,31 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract class DocumentSessionCountersBase : AdvancedSessionExtentionBase
+    public abstract class DocumentSessionCountersBase 
     {
-        protected DocumentSessionCountersBase(InMemoryDocumentSessionOperations session) : base(session)
-        {
-        }
+        protected string _docId;
+        protected InMemoryDocumentSessionOperations _session;
 
-        public void Increment(string documentId, string counter, long delta = 1)
+        protected DocumentSessionCountersBase(InMemoryDocumentSessionOperations session, string documentId)
         {
+            _session = session;
+
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
+            _docId = documentId;
+        }
+
+        protected DocumentSessionCountersBase(InMemoryDocumentSessionOperations session, object entity)
+        {
+            _session = session;
+
+            if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+            _docId = document?.Id;
+        }
+
+        public void Increment(string counter, long delta = 1)
+        {
             if (string.IsNullOrWhiteSpace(counter))
                 throw new ArgumentNullException(nameof(counter));
             var counterOp = new CounterOperation
@@ -32,46 +47,36 @@ namespace Raven.Client.Documents.Session
                 Delta = delta
             };
 
-            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                DeletedEntities.Contains(documentInfo.Entity))
-                ThrowDocumentAlreadyDeletedInSession(documentId, counter);
+            if (_session.DocumentsById.TryGetValue(_docId, out DocumentInfo documentInfo) &&
+                _session.DeletedEntities.Contains(documentInfo.Entity))
+                ThrowDocumentAlreadyDeletedInSession(_docId, counter);
 
-            if (DeferredCommandsDictionary.TryGetValue((documentId, CommandType.Counters, null), out var command))
+            if (_session.DeferredCommandsDictionary.TryGetValue((_docId, CommandType.Counters, null), out var command))
             {
                 var countersBatchCommandData = (CountersBatchCommandData)command;
                 if (countersBatchCommandData.HasDelete(counter))
                 {
-                    ThrowIncrementCounterAfterDeleteAttempt(documentId, counter);
+                    ThrowIncrementCounterAfterDeleteAttempt(_docId, counter);
                 }
 
                 countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
-                Defer(new CountersBatchCommandData(documentId, counterOp));
+                _session.Defer(new CountersBatchCommandData(_docId, counterOp));
             }
         }
 
-        public void Increment(object entity, string counter, long delta = 1)
+        public void Delete(string counter)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
-
-            Increment(document.Id, counter, delta);
-        }
-
-        public void Delete(string documentId, string counter)
-        {
-            if (string.IsNullOrWhiteSpace(documentId))
-                throw new ArgumentNullException(nameof(documentId));
             if (string.IsNullOrWhiteSpace(counter))
                 throw new ArgumentNullException(nameof(counter));
 
-            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.DELETE, null)))
+            if (_session.DeferredCommandsDictionary.ContainsKey((_docId, CommandType.DELETE, null)))
                 return; // no-op
 
-            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                DeletedEntities.Contains(documentInfo.Entity))
+            if (_session.DocumentsById.TryGetValue(_docId, out DocumentInfo documentInfo) &&
+                _session.DeletedEntities.Contains(documentInfo.Entity))
                 return; // no-op
 
             var counterOp = new CounterOperation
@@ -80,28 +85,20 @@ namespace Raven.Client.Documents.Session
                 CounterName = counter
             };
 
-            if (DeferredCommandsDictionary.TryGetValue((documentId, CommandType.Counters, null), out var command))
+            if (_session.DeferredCommandsDictionary.TryGetValue((_docId, CommandType.Counters, null), out var command))
             {
                 var countersBatchCommandData = (CountersBatchCommandData)command;
                 if (countersBatchCommandData.HasIncrement(counter))
                 {
-                    ThrowDeleteCounterAfterIncrementAttempt(documentId, counter);
+                    ThrowDeleteCounterAfterIncrementAttempt(_docId, counter);
                 }
 
                 countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
-                Defer(new CountersBatchCommandData(documentId, counterOp));
+                _session.Defer(new CountersBatchCommandData(_docId, counterOp));
             }
-        }
-
-        public void Delete(object entity, string counter)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
-
-            Delete(document.Id, counter);
         }
 
         protected void ThrowEntityNotInSession(object entity)

@@ -82,15 +82,33 @@ namespace Raven.Client.Documents.Operations
             return details.Counters[0].TotalValue;
         }
 
-        public Dictionary<string, long> Get(string docId, IEnumerable<string> counters)
+        public Dictionary<string, long?> Get(string docId, IEnumerable<string> counters, CancellationToken token = default)
         {
-            return AsyncHelpers.RunSync(() => GetAsync(docId, counters));
+            return AsyncHelpers.RunSync(() => GetAsync(docId, counters, token));
         }
 
-        public async Task<Dictionary<string, long>> GetAsync(string docId, IEnumerable<string> counters, CancellationToken token = default)
+        public async Task<Dictionary<string, long?>> GetAsync(string docId, IEnumerable<string> counters, CancellationToken token = default)
+        {
+            var result = new Dictionary<string, long?>();
+            var details = await _operations.SendAsync(new GetCountersOperation(docId, counters.ToArray()), token: token).ConfigureAwait(false);
+
+            foreach (var counterDetail in details.Counters)
+            {
+                result[counterDetail.CounterName] = counterDetail.TotalValue;
+            }
+
+            return result;
+        }
+
+        public Dictionary<string, long> GetAll(string docId)
+        {
+            return AsyncHelpers.RunSync(() => GetAllAsync(docId));
+        }
+
+        public async Task<Dictionary<string, long>> GetAllAsync(string docId)
         {
             var result = new Dictionary<string, long>();
-            var details = await _operations.SendAsync(new GetCountersOperation(docId, counters.ToArray()), token: token).ConfigureAwait(false);
+            var details = await _operations.SendAsync(new GetCountersOperation(docId, new string[0])).ConfigureAwait(false);
 
             foreach (var counterDetail in details.Counters)
             {

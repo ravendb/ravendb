@@ -30,11 +30,6 @@ namespace Raven.Client.Documents.Session
         IAttachmentsSessionOperations Attachments { get; }
 
         /// <summary>
-        ///     Access the counters operations
-        /// </summary>
-        ICountersSessionOperations Counters { get; }
-
-        /// <summary>
         ///     Access the revisions operations
         /// </summary>
         IRevisionsSessionOperations Revisions { get; }
