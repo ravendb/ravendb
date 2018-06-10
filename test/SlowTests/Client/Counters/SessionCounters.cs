@@ -25,9 +25,9 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 500);
-                    session.Advanced.Counters.Increment("users/2-A", "votes", 1000);
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("downloads", 500);
+                    session.CountersFor("users/2-A").Increment("votes", 1000);
 
                     session.SaveChanges();
                 }
@@ -70,9 +70,9 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Delete("users/1-A", "likes");
-                    session.Advanced.Counters.Delete("users/1-A", "downloads");
-                    session.Advanced.Counters.Delete("users/2-A", "votes");
+                    session.CountersFor("users/1-A").Delete("likes");
+                    session.CountersFor("users/1-A").Delete("downloads");
+                    session.CountersFor("users/2-A").Delete("votes");
 
                     session.SaveChanges();
                 }
@@ -104,21 +104,20 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var dic = session.Advanced.Counters.Get("users/1-A");
+                    var dic = session.CountersFor("users/1-A").GetAll();
 
                     Assert.Equal(2, dic.Count);
                     Assert.Equal(100, dic["likes"]);
                     Assert.Equal(500, dic["downloads"]);
 
-                    var val = session.Advanced.Counters.Get("users/2-A", "votes");
+                    var val = session.CountersFor("users/2-A").Get("votes");
                     Assert.Equal(1000, val);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    //test with Get(string docId, params string[] counters) overload
-                    var dic = session.Advanced.Counters.Get("users/1-A", "likes", "downloads");
-
+                    var dic = session.CountersFor("users/1-A").Get(new []{"likes", "downloads"});
+                    
                     Assert.Equal(2, dic.Count);
                     Assert.Equal(100, dic["likes"]);
                     Assert.Equal(500, dic["downloads"]);
@@ -144,20 +143,20 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var dic = await session.Advanced.Counters.GetAsync("users/1-A");
+                    var dic = await session.CountersFor("users/1-A").GetAllAsync();
 
                     Assert.Equal(2, dic.Count);
                     Assert.Equal(100, dic["likes"]);
                     Assert.Equal(500, dic["downloads"]);
 
-                    var val = await session.Advanced.Counters.GetAsync("users/2-A", "votes");
+                    var val = await session.CountersFor("users/2-A").GetAsync( "votes");
                     Assert.Equal(1000, val);
                 }
 
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    //test with GetAsync(string docId, params string[] counters) overload
-                    var dic = await session.Advanced.Counters.GetAsync("users/1-A", "likes", "downloads");
+                    var dic = await session.CountersFor("users/1-A").GetAsync(new []{ "likes", "downloads"});
 
                     Assert.Equal(2, dic.Count);
                     Assert.Equal(100, dic["likes"]);
@@ -165,6 +164,7 @@ namespace SlowTests.Client.Counters
                 }
             }
         }
+
 
         [Fact]
         public void SessionGetCountersWithNonDefaultDatabase()
@@ -181,10 +181,10 @@ namespace SlowTests.Client.Counters
                 }
 
                 using (var session = store.OpenSession("newDatabase"))
-                {   
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 500);
-                    session.Advanced.Counters.Increment("users/2-A", "votes", 1000);
+                {
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("downloads", 500);
+                    session.CountersFor("users/2-A").Increment("votes", 1000);
 
                     session.SaveChanges();
                 }
@@ -192,13 +192,13 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession("newDatabase"))
                 {
-                    var dic = session.Advanced.Counters.Get("users/1-A");
+                    var dic = session.CountersFor("users/1-A").GetAll();
 
                     Assert.Equal(2, dic.Count);
                     Assert.Equal(100, dic["likes"]);
                     Assert.Equal(500, dic["downloads"]);
 
-                    var val = session.Advanced.Counters.Get("users/2-A", "votes");
+                    var val = session.CountersFor("users/2-A").Get("votes");
                     Assert.Equal(1000, val);
                 }
             }
@@ -219,9 +219,9 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 500);
-                    session.Advanced.Counters.Increment("users/2-A", "votes", 1000);
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/2-A").Increment("votes", 1000);
 
                     session.SaveChanges();
                 }
@@ -263,29 +263,29 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 500);
-                    session.Advanced.Counters.Increment("users/2-A", "votes", 1000);
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/2-A").Increment("votes", 1000);
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 100);
-                    session.Advanced.Counters.Delete("users/1-A", "downloads");
-                    session.Advanced.Counters.Increment("users/2-A", "votes", -600);
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Delete("downloads");
+                    session.CountersFor("users/2-A").Increment("votes", -600);
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var val = session.Advanced.Counters.Get("users/1-A", "likes");
+                    var val = session.CountersFor("users/1-A").Get("likes");
                     Assert.Equal(200, val);
-                    val = session.Advanced.Counters.Get("users/1-A", "downloads");
+                    val = session.CountersFor("users/1-A").Get("downloads");
                     Assert.Null(val);
-                    val = session.Advanced.Counters.Get("users/2-A", "votes");
+                    val = session.CountersFor("users/2-A").Get("votes");
                     Assert.Equal(400, val);
                 }
             }
@@ -305,7 +305,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
-                    session.Advanced.Counters.Increment(user, "likes", 100);
+                    session.CountersFor(user).Increment("likes", 100);
                     user.Name += "2";
 
                     session.SaveChanges();
@@ -316,7 +316,7 @@ namespace SlowTests.Client.Counters
                     var user = session.Load<User>("users/1-A");
                     Assert.Equal("Aviv2", user.Name);
 
-                    var val = session.Advanced.Counters.Get(user, "likes");
+                    var val = session.CountersFor(user).Get("likes");
                     Assert.Equal(100, val);
                 }
             }
@@ -336,25 +336,26 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
-                    session.Advanced.Counters.Increment(user, "likes", 100);
+                    session.CountersFor(user).Increment("likes", 100);
                     session.SaveChanges();
 
-                    Assert.Equal(100, session.Advanced.Counters.Get(user, "likes"));
+                    Assert.Equal(100, session.CountersFor(user).Get("likes"));
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 50);
-                    Assert.Throws<InvalidOperationException>(() => session.Advanced.Counters.Delete("users/1-A", "likes"));
+                    session.CountersFor("users/1-A").Increment("likes", 50);
+                    Assert.Throws<InvalidOperationException>(() => session.CountersFor("users/1-A").Delete("likes"));
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Counters.Delete("users/1-A", "likes");
-                    Assert.Throws<InvalidOperationException>(() => session.Advanced.Counters.Increment("users/1-A", "likes", 50));
+                    session.CountersFor("users/1-A").Delete("likes");
+                    Assert.Throws<InvalidOperationException>(() => session.CountersFor("users/1-A").Increment("likes", 50));
                 }
             }
 
         }
+
     }
 }

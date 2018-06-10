@@ -19,9 +19,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment( "Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -51,9 +51,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -83,9 +83,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "likes", 300);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/2-A").Increment("downloads", 200);
+                    session.CountersFor("users/3-A").Increment("likes", 300);
 
                     session.SaveChanges();
                 }
@@ -115,9 +115,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "likes", 300);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/2-A").Increment("downloads", 200);
+                    session.CountersFor("users/3-A").Increment("likes", 300);
 
                     session.SaveChanges();
                 }
@@ -148,13 +148,13 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 800);
+                    session.CountersFor("users/2-A").Increment("Downloads", 400);
+                    session.CountersFor("users/2-A").Increment("Likes", 800);
 
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 1600);
+                    session.CountersFor("users/3-A").Increment("Likes", 1600);
 
                     session.SaveChanges();
                 }
@@ -189,11 +189,10 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 400);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 400);
 
                     session.SaveChanges();
                 }
@@ -229,9 +228,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "likes", 400);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/2-A").Increment("downloads", 200);
+                    session.CountersFor("users/3-A").Increment("likes", 400);
 
                     session.SaveChanges();
                 }
@@ -267,13 +266,14 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 200);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/1-A").Increment("likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 300);
-                    session.Advanced.Counters.Increment("users/2-A", "likes", 400);
+                    session.CountersFor("users/2-A").Increment("downloads", 300);
+                    session.CountersFor("users/2-A").Increment("likes", 400);
 
-                    session.Advanced.Counters.Increment("users/3-A", "likes", 500);
+
+                    session.CountersFor("users/3-A").Increment("likes", 500);
 
                     session.SaveChanges();
                 }
@@ -312,13 +312,13 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 300);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 400);
+                    session.CountersFor("users/2-A").Increment("Downloads", 300);
+                    session.CountersFor("users/2-A").Increment("Likes", 400);
 
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 500);
+                    session.CountersFor("users/3-A").Increment("Downloads", 500);
 
                     session.SaveChanges();
                 }
@@ -355,13 +355,13 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 300);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 400);
+                    session.CountersFor("users/2-A").Increment("Downloads", 300);
+                    session.CountersFor("users/2-A").Increment("Likes", 400);
 
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 500);
+                    session.CountersFor("users/3-A").Increment("Downloads", 500);
 
                     session.SaveChanges();
                 }
@@ -398,9 +398,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 300);
-                    session.Advanced.Counters.Increment("users/3-A", "downloads", 500);
+                    session.CountersFor("users/1-A").Increment("downloads", 100);
+                    session.CountersFor("users/2-A").Increment("downloads", 300);
+                    session.CountersFor("users/3-A").Increment("downloads", 500);
 
                     session.SaveChanges();
                 }
@@ -431,9 +431,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", Age = 68 }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", Age = 71 }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -467,9 +467,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -514,9 +514,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", FriendId = "users/3-A"}, "users/2-A");
                     session.Store(new User { Name = "Pigpen", FriendId = "users/1-A"}, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -562,8 +562,9 @@ namespace SlowTests.Client.Counters
                 {
                     session.Store(new User { Name = "Jerry" }, "users/1-A");
                     session.Store(new User { Name = "Bob" }, "users/2-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 500);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Likes", 500);
+
                     session.SaveChanges();
                 }
 
@@ -597,13 +598,13 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 300);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 400);
+                    session.CountersFor("users/2-A").Increment("Downloads", 300);
+                    session.CountersFor("users/2-A").Increment("Likes", 400);
 
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 500);
+                    session.CountersFor("users/3-A").Increment("Downloads", 500);
 
                     session.SaveChanges();
                 }
@@ -658,9 +659,10 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
+
 
                     session.SaveChanges();
                 }
@@ -693,9 +695,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -728,9 +730,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -766,9 +768,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -804,9 +806,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -843,13 +845,13 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 800);
+                    session.CountersFor("users/2-A").Increment("Downloads", 400);
+                    session.CountersFor("users/2-A").Increment("Likes", 800);
 
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 1600);
+                    session.CountersFor("users/3-A").Increment("Likes", 1600);
 
                     session.SaveChanges();
                 }
@@ -894,9 +896,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -904,7 +906,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var query = from user in session.Query<User>()
-                                select session.Advanced.Counters.Get(user, "Downloads");
+                                select session.CountersFor(user).Get("Downloads");
 
                     Assert.Equal("from Users as user select counter(user, Downloads) as Downloads", query.ToString());
 
@@ -929,9 +931,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -941,7 +943,7 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select new
                                 {
-                                    DownloadsCount = session.Advanced.Counters.Get(user, "Downloads")
+                                    DownloadsCount = session.CountersFor(user).Get("Downloads")
                                 };
 
                     Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
@@ -967,9 +969,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -979,7 +981,7 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select new CounterResult2
                                 {
-                                    DownloadsCount = session.Advanced.Counters.Get(user, "Downloads")
+                                    DownloadsCount = session.CountersFor(user).Get("Downloads")
                                 };
 
                     Assert.Equal("from Users as user select counter(user, Downloads) as DownloadsCount", query.ToString());
@@ -1005,9 +1007,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -1016,7 +1018,7 @@ namespace SlowTests.Client.Counters
                 {
                     var query = from u in session.Query<User>()
                                 let f = RavenQuery.Load<User>(u.FriendId)
-                                select session.Advanced.Counters.Get(f, "Downloads");
+                                select session.CountersFor(f).Get("Downloads");
 
                     Assert.Equal("from Users as u load u.FriendId as f " +
                                  "select counter(f, Downloads) as Downloads", query.ToString());
@@ -1044,13 +1046,13 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 200);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 200);
 
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/2-A", "Likes", 800);
+                    session.CountersFor("users/2-A").Increment("Downloads", 400);
+                    session.CountersFor("users/2-A").Increment("Likes", 800);
 
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 1600);
+                    session.CountersFor("users/3-A").Increment("Likes", 1600);
 
                     session.SaveChanges();
                 }
@@ -1060,8 +1062,8 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select new
                                 {
-                                    Downloads = session.Advanced.Counters.Get(user, "Downloads"),
-                                    Likes = session.Advanced.Counters.Get(user, "Likes")
+                                    Downloads = session.CountersFor(user).Get("Downloads"),
+                                    Likes = session.CountersFor(user).Get("Likes")
                                 };
 
                     Assert.Equal("from Users as user " +
@@ -1096,9 +1098,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", Age = 68}, "users/2-A");
                     session.Store(new User { Name = "Pigpen", Age = 27 }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -1142,9 +1144,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob", Age = 68 }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", Age = 27 }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -1154,7 +1156,7 @@ namespace SlowTests.Client.Counters
                     var query = from user in session.Query<User>()
                                 select new
                                 {
-                                    Likes = session.Advanced.Counters.Get(user, "Likes"),
+                                    Likes = session.CountersFor(user).Get("Likes"),
                                     Downloads = RavenQuery.Counter(user, "Downloads")
                                 };
 
@@ -1189,9 +1191,9 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Bob"}, "users/2-A");
                     session.Store(new User { Name = "Pigpen"}, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -1240,9 +1242,9 @@ from Users as user select output(user)" , query.ToString());
                     session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Likes", 300);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }

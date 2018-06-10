@@ -420,7 +420,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Aviv" }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 10);
+                    session.CountersFor("users/1-A").Increment("Likes", 10);
                     session.SaveChanges();
                 }
 
@@ -428,7 +428,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
-                    var val = session.Advanced.Counters.Get(user, "Likes");
+                    var val = session.CountersFor(user).Get("Likes");
                     Assert.Equal(10, val);
 
                     var counters = session.Advanced.GetCountersFor(user);
@@ -515,7 +515,7 @@ namespace SlowTests.Client.Counters
                 {
                     var artificialDocs = session.Advanced.LoadStartingWith<UsersByAgeResult>("UsersByAgeResult");
                     Assert.Equal(2, artificialDocs.Length);
-                    session.Advanced.Counters.Increment(artificialDocs[0], "Likes");
+                    session.CountersFor(artificialDocs[0]).Increment("Likes");
 
                     var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.Contains("Cannot put Counters on artificial documents", ex.Message);

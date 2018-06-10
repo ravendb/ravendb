@@ -71,9 +71,9 @@ namespace SlowTests.Client.Counters
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1-A");
                     await session.StoreAsync(new User { Name = "Aviv2" }, "users/2-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 10);
-                    session.Advanced.Counters.Increment("users/1-A", "dislikes", 20);
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 30);
+                    session.CountersFor("users/1-A").Increment("likes", 10);
+                    session.CountersFor("users/1-A").Increment("dislikes", 20);
+                    session.CountersFor("users/2-A").Increment("downloads", 30);
 
                     await session.SaveChangesAsync();
                 }
@@ -82,8 +82,8 @@ namespace SlowTests.Client.Counters
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    session.Advanced.Counters.Delete("users/1-A", "likes");
-                    session.Advanced.Counters.Delete("users/2-A", "downloads");
+                    session.CountersFor("users/1-A").Delete("likes");
+                    session.CountersFor("users/2-A").Delete("downloads");
 
                     await session.SaveChangesAsync();
                 }
@@ -122,17 +122,17 @@ namespace SlowTests.Client.Counters
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1-A");
                     await session.StoreAsync(new User { Name = "Aviv2" }, "users/2-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "likes", 10);
-                    session.Advanced.Counters.Increment("users/1-A", "dislikes", 20);
-                    session.Advanced.Counters.Increment("users/2-A", "downloads", 30);
+                    session.CountersFor("users/1-A").Increment("likes", 10);
+                    session.CountersFor("users/1-A").Increment("dislikes", 20);
+                    session.CountersFor("users/2-A").Increment("downloads", 30);
 
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    session.Advanced.Counters.Delete("users/1-A", "likes");
-                    session.Advanced.Counters.Delete("users/2-A", "downloads");
+                    session.CountersFor("users/1-A").Delete("likes");
+                    session.CountersFor("users/2-A").Delete("downloads");
 
                     await session.SaveChangesAsync();
                 }

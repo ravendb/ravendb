@@ -19,7 +19,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -50,7 +50,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -81,7 +81,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -120,7 +120,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -160,8 +160,8 @@ namespace SlowTests.Client.Counters
                         Friend = "users/1-A"
                     }, "users/2-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Score", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Score", 300);
+                    session.CountersFor("users/1-A").Increment("Score", 100);
+                    session.CountersFor("users/2-A").Increment("Score", 300);
                     session.SaveChanges();
                 }
 
@@ -209,10 +209,10 @@ namespace SlowTests.Client.Counters
                         Name = "Ringo"
                     }, "users/4-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/4-A", "Downloads", 800);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Downloads", 400);
+                    session.CountersFor("users/4-A").Increment("Downloads", 800);
 
                     session.SaveChanges();
                 }
@@ -254,7 +254,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -291,7 +291,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -322,10 +322,10 @@ namespace SlowTests.Client.Counters
                         Name = "Aviv"
                     }, "users/1-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Dislikes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Score", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 100);
+                    session.CountersFor("users/1-A").Increment("Dislikes", 100);
+                    session.CountersFor("users/1-A").Increment("Score", 100);
 
                     session.SaveChanges();
                 }
@@ -387,10 +387,10 @@ namespace SlowTests.Client.Counters
                         Name = "Ringo"
                     }, "users/4-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/4-A", "Downloads", 800);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Downloads", 400);
+                    session.CountersFor("users/4-A").Increment("Downloads", 800);
 
                     session.SaveChanges();
                 }

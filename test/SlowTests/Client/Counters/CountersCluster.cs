@@ -99,8 +99,8 @@ namespace SlowTests.Client.Counters
                     s.Store(new User { Name = "Aviv" }, "users/1");
                     s.Store(new User { Name = "Rotem" }, "users/2");
 
-                    s.Advanced.Counters.Increment("users/1", "likes", 30);
-                    s.Advanced.Counters.Increment("users/2", "downloads", 100);
+                    s.CountersFor("users/1").Increment("likes", 30);
+                    s.CountersFor("users/2").Increment("downloads", 100);
                     s.SaveChanges();
                 }
 
@@ -116,8 +116,8 @@ namespace SlowTests.Client.Counters
                 using (var s = stores[0].OpenSession())
                 {
                     s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
-                    s.Advanced.Counters.Delete("users/1", "likes");
-                    s.Advanced.Counters.Delete("users/2", "downloads");
+                    s.CountersFor("users/1").Delete("likes");
+                    s.CountersFor("users/2").Delete("downloads");
                     s.SaveChanges();
                 }
 
