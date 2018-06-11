@@ -182,9 +182,9 @@ namespace Raven.Server.Documents.Queries
                 _getDetails = getDetails;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                var count = _command.Execute(context);
+                var count = _command.Execute(context, null);
 
                 if (_retieveDetails)
                     AfterExecute?.Invoke(_getDetails(_command));

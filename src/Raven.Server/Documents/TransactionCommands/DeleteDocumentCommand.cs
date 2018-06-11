@@ -1,11 +1,14 @@
 ﻿using System.Runtime.ExceptionServices;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.TransactionCommands
 {
-    public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
     {
+        private const string IdKey = "Id";
         private readonly string _id;
         private readonly string _expectedChangeVector;
         private readonly DocumentDatabase _database;
@@ -23,7 +26,7 @@ namespace Raven.Server.Documents.TransactionCommands
             _catchConcurrencyErrors = catchConcurrencyErrors;
         }
 
-        public override int Execute(DocumentsOperationContext context)
+        protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             try
             {
@@ -37,6 +40,26 @@ namespace Raven.Server.Documents.TransactionCommands
                 ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
             }
             return 1;
+        }
+
+        public DynamicJsonValue Serialize()
+        {
+            var json = new DynamicJsonValue
+            {
+                [IdKey] = _id
+            };
+
+            return json;
+        }
+
+        public static DeleteDocumentCommand Deserialize(BlittableJsonReaderObject reader, DocumentDatabase database)
+        {
+            if (!reader.TryGet(IdKey, out string id))
+            {
+                return null;
+            }
+            
+            return new DeleteDocumentCommand(id, null, database);
         }
     }
 }

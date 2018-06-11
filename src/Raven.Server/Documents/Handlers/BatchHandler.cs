@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -20,7 +21,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Replication;
 using System.Runtime.ExceptionServices;
+using Newtonsoft.Json;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -38,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, RequestBodyStream(), Database, ServerStore);
                 }
-                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) || 
+                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                     contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
                     await ParseMultipart(context, command);
@@ -255,13 +260,13 @@ namespace Raven.Server.Documents.Handlers
                     {
                         indexesToCheck.Add(index);
                     }
-                        
+
                 }
             }
             return indexesToCheck;
         }
 
-        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable, TransactionOperationsMerger.IRecordableCommand
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
@@ -306,7 +311,7 @@ namespace Raven.Server.Documents.Handlers
                 return false;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 _disposables.Clear();
                 Reply = new DynamicJsonArray();
@@ -366,7 +371,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.PATCH:
                             try
                             {
-                                cmd.PatchCommand.Execute(context);
+                                cmd.PatchCommand.Execute(context, null);
                             }
                             catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
                             {
@@ -515,6 +520,143 @@ namespace Raven.Server.Documents.Handlers
             {
                 public string Hash;
                 public Stream Stream;
+            }
+
+            DynamicJsonValue TransactionOperationsMerger.IRecordableCommand.Serialize()
+            {
+                var parsedCommands = ParsedCommands.Select(RecordingCommandData).ToArray();
+
+                var ret = new DynamicJsonValue
+                {
+                    [nameof(ParsedCommands)] = parsedCommands
+                };
+
+                return ret;
+            }
+
+            //public PatchRequest PatchIfMissing;
+            //public BlittableJsonReaderObject PatchIfMissingArgs;
+            //public LazyStringValue ChangeVector;
+            //public bool IdPrefixed;
+
+            private DynamicJsonValue RecordingCommandData(BatchRequestParser.CommandData command)
+            {
+                var ret = new DynamicJsonValue
+                {
+                    [nameof(command.Type)] = command.Type.ToString(),
+                    [nameof(command.Id)] = command.Id
+                };
+
+                if (command.Document != null)
+                {
+                    ret[nameof(command.Document)] = command.Document;
+                }
+
+                if (command.Type == CommandType.PATCH)
+                {
+                    var patchCommand = command.PatchCommand;
+                    if (patchCommand == null)
+                    {
+                        patchCommand = new PatchDocumentCommand(
+                            context: null, 
+                            id: command.Id, 
+                            expectedChangeVector: command.ChangeVector,
+                            skipPatchIfChangeVectorMismatch: false,
+                            patch: (command.Patch, command.PatchArgs),
+                            patchIfMissing: (command.PatchIfMissing, command.PatchIfMissingArgs),
+                            database: Database,
+                            isTest: false,
+                            debugMode: false,
+                            collectResultsNeeded: true
+                        );
+                    }
+
+                    ret[nameof(command.PatchCommand)] = patchCommand.Serialize();
+                }
+
+                return ret;
+            }
+
+            public static TransactionOperationsMerger.MergedTransactionCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context)
+            {
+                var newCmd = new MergedBatchCommand
+                {
+                    Database = database
+                };
+
+                if (!mergedCmdReader.TryGet(nameof(ParsedCommands), out BlittableJsonReaderArray parsedCommandsReader))
+                {
+                    //Todo To decide what happen
+                    return null;
+                }
+
+                var commandsData = new BatchRequestParser.CommandData[parsedCommandsReader.Length];
+                newCmd.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(commandsData);
+
+                for (var i = 0; i < parsedCommandsReader.Length; i++)
+                {
+                    var reader = (BlittableJsonReaderObject)parsedCommandsReader[i];
+                    newCmd.ParsedCommands.Array[i] = newCmd.ReadCommand(reader, context);
+                    // newCmd.ParsedCommands.Array[i] = JsonDeserializationServer.BatchRequestParserCommandData(reader);
+                }
+
+                return newCmd;
+            }
+
+            private BatchRequestParser.CommandData ReadCommand(BlittableJsonReaderObject commandReader, JsonOperationContext context)
+            {
+                var command = new BatchRequestParser.CommandData();
+
+                if (commandReader.TryGet(nameof(command.Type), out string type))
+                {
+                    //ToDo to check what happen when fail to parse
+                    Enum.TryParse(type, true, out command.Type);
+                }
+
+                if (commandReader.TryGet(nameof(command.Id), out string id))
+                {
+                    command.Id = id;
+                }
+                if (commandReader.TryGet(nameof(command.PatchArgs), out BlittableJsonReaderObject patchArgs))
+                {
+                    command.PatchArgs = patchArgs.Clone(context);
+                }
+
+                if (commandReader.TryGet(nameof(command.PatchCommand), out BlittableJsonReaderObject patch))
+                {
+                    command.PatchCommand = PatchDocumentCommand.Deserialize(patch, Database, context);
+
+                    //                    if (patch.TryGet(nameof(command.Patch.Type), out string strPatchType) &&
+                    //                        Enum.TryParse(strPatchType, out PatchRequestType patchType) &&
+                    //                        patch.TryGet(nameof(command.Patch.Script), out string script))
+                    //                    {
+                    //                        command.Patch = new PatchRequest(script, patchType);
+                    //                        command.PatchCommand = new PatchDocumentCommand(
+                    //                            context: context,
+                    //                            id: id,
+                    //                            expectedChangeVector: null,
+                    //                            skipPatchIfChangeVectorMismatch: false,
+                    //                            patch: (command.Patch, patchArgs),
+                    //                            patchIfMissing: (null, null),
+                    //                            database: Database,
+                    //                            isTest: false,
+                    //                            debugMode: false,
+                    //                            collectResultsNeeded: true
+                    //                        );
+                    //                    }
+                    //                    else
+                    //                    {
+                    //                        throw new Exception($"Can't read patch of {command.Type}, id:{command.Id}");
+                    //                    }
+                }
+
+
+                if (commandReader.TryGet(nameof(command.Document), out BlittableJsonReaderObject document))
+                {
+                    command.Document = document.Clone(context);
+                }
+
+                return command;
             }
         }
 

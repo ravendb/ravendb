@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Expiration
                 _database = database;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 return DeletionCount = _database.DocumentsStorage.ExpirationStorage.DeleteExpiredDocuments(context, _expired);
             }

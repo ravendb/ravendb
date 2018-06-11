@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Revisions
                 _database = database;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 _database.DocumentsStorage.RevisionsStorage.DeleteRevisionsBefore(context, _collection, _time);
                 return 1;

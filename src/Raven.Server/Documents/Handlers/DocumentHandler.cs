@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.Handlers
                         // testing patching is rare enough not to optimize it
                         using (context.OpenWriteTransaction())
                         {
-                            command.Execute(context);
+                            command.Execute(context, null);
                         }
                     }
 
@@ -473,8 +473,11 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable, TransactionOperationsMerger.IRecordableCommand
     {
+        private const string IdKey = "Id";
+        private const string DocumentKey = "Document";
+        private const string ChangeVectorKey = "ChangeVector";
         private string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
@@ -496,7 +499,7 @@ namespace Raven.Server.Documents.Handlers
             _database = database;
         }
 
-        public override int Execute(DocumentsOperationContext context)
+        protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             try
             {
@@ -527,6 +530,37 @@ namespace Raven.Server.Documents.Handlers
         public void Dispose()
         {
             _document?.Dispose();
+        }
+
+        public DynamicJsonValue Serialize()
+        {
+            var ret = new DynamicJsonValue
+            {
+                [IdKey] = _id,
+                [DocumentKey] = _document,
+                [ChangeVectorKey] = _expectedChangeVector
+            };
+
+            return ret;
+        }
+
+        public static MergedPutCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context)
+        {
+            if (mergedCmdReader.TryGet(IdKey, out string id) == false)
+            {
+                throw new Exception($"Cant read {IdKey} from {nameof(MergedPutCommand)}");
+            }
+
+            if (mergedCmdReader.TryGet(DocumentKey, out BlittableJsonReaderObject document) == false)
+            {
+                throw new Exception($"Cant read {DocumentKey} from {nameof(MergedPutCommand)}");
+            }
+
+            mergedCmdReader.TryGet(ChangeVectorKey, out LazyStringValue changeVector);
+
+            var ret = new MergedPutCommand(document, id, changeVector, database);
+
+            return ret;
         }
     }
 }

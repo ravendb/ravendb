@@ -476,7 +476,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Documents())
             {
-                foreach (var item in _source.GetDocuments(_options.Collections, actions))
+                foreach (DocumentItem item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Documents.ReadCount++;

@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Tests.Core.Utils.Entities;
@@ -21,7 +23,10 @@ namespace FastTests.Server.Basic
                     await session.StoreAsync(new User { Name = "Arek" }, "users/arek");
 
                     await session.SaveChangesAsync();
+
                 }
+
+                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

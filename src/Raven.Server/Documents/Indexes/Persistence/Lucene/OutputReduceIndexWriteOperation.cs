@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 public BlittableJsonReaderObject Document;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 foreach (var reduceDocument in _reduceDocuments)
                 {

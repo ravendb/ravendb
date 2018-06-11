@@ -133,7 +133,7 @@ namespace Raven.Server.Documents
                 _logger = logger;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var deletionCount = 0;
 

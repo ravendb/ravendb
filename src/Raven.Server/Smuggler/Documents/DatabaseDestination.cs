@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -24,6 +25,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -411,7 +413,8 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        //Todo To check if it is K.O. ot public this class
+        public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable, TransactionOperationsMerger.IRecordableCommand
         {
             public bool IsRevision;
 
@@ -440,7 +443,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public DocumentsOperationContext Context => _context;
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
@@ -632,6 +635,127 @@ namespace Raven.Server.Smuggler.Documents
             public void Add(DocumentItem document)
             {
                 Documents.Add(document);
+            }
+
+            public DynamicJsonValue Serialize()
+            {
+                var ret = new DynamicJsonValue
+                {
+                    [nameof(BuildVersionType)] = _buildType,
+                    [nameof(Documents)] = Documents.Select(DocumentItemToDJson)
+                };
+
+                if (IsRevision)
+                {
+                    ret[nameof(IsRevision)] = true;
+                }
+
+                return ret;
+            }
+
+            private DynamicJsonValue DocumentItemToDJson(DocumentItem documentItem)
+            {
+                var ret = new DynamicJsonValue
+                {
+                    [nameof(DocumentItem.Document)] = DocumentToDJson(documentItem.Document)
+                };
+
+                return ret;
+            }
+
+            private static DynamicJsonValue DocumentToDJson(Document documentItem)
+            {
+                var document = new DynamicJsonValue
+                {
+                    [nameof(Document.Id)] = documentItem.Id,
+                    [nameof(Document.Data)] = documentItem.Data,
+                    [nameof(Document.Flags)] = documentItem.Flags,
+                    [nameof(Document.Etag)] = documentItem.Etag,
+                    [nameof(Document.LastModified)] = documentItem.LastModified,
+                };
+                if (string.IsNullOrEmpty(documentItem.ChangeVector) == false)
+                {
+                    document[nameof(Document.ChangeVector)] = documentItem.ChangeVector;
+                }
+
+                return document;
+            }
+
+            public static MergedBatchPutCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context)
+            {
+                if (mergedCmdReader.TryGet(nameof(BuildVersionType), out BuildVersionType type) == false)
+                {
+                    throw new Exception($"Can't read {nameof(BuildVersionType)} from {nameof(MergedBatchPutCommand)}");
+                }
+
+                //Todo To check if log is necessary 
+                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var ret = new MergedBatchPutCommand(database, type, log);
+
+                if (mergedCmdReader.TryGet(nameof(Documents), out BlittableJsonReaderArray documentsReader) == false)
+                {
+                    throw new Exception($"Can't read {nameof(Documents)} from {nameof(MergedBatchPutCommand)}");
+                }
+
+                for (var i = 0; i < documentsReader.Length; i++)
+                {
+                    ret.ReadDocumentItem(documentsReader.GetByIndex<BlittableJsonReaderObject>(i));
+                }
+
+
+                return ret;
+            }
+
+            private void ReadDocumentItem(BlittableJsonReaderObject documentItemReader)
+            {
+                var toAdd = new DocumentItem();
+
+                if (documentItemReader.TryGet(nameof(DocumentItem.Document), out BlittableJsonReaderObject documentReader) == false)
+                {
+                    ThrowCantReadProperty(nameof(DocumentItem), nameof(DocumentItem.Document));
+                }
+                toAdd.Document = ReadDocument(documentReader, _context);
+
+                Add(toAdd);
+            }
+
+            private static Document ReadDocument(BlittableJsonReaderObject documentReader, JsonOperationContext context)
+            {
+                var ret = new Document();
+                if (documentReader.TryGet(nameof(Document.Id), out ret.Id) == false)
+                {
+                    ThrowCantReadProperty(nameof(Document), nameof(Document.Id));
+                }
+
+                if (documentReader.TryGet(nameof(Document.Flags), out ret.Flags) == false)
+                {
+                    ThrowCantReadProperty(nameof(Document), nameof(Document.Flags));
+                }
+
+                if (documentReader.TryGet(nameof(Document.Etag), out ret.Etag) == false)
+                {
+                    ThrowCantReadProperty(nameof(Document), nameof(Document.Etag));
+                }
+
+                if (documentReader.TryGet(nameof(Document.LastModified), out ret.LastModified) == false)
+                {
+                    ThrowCantReadProperty(nameof(Document), nameof(Document.LastModified));
+                }
+
+                documentReader.TryGet(nameof(Document.ChangeVector), out ret.ChangeVector);
+
+                if (documentReader.TryGet(nameof(Document.Data), out BlittableJsonReaderObject dataReader) == false)
+                {
+                    ThrowCantReadProperty(nameof(Document), nameof(Document.Data));
+                }
+                ret.Data = dataReader.Clone(context);
+
+                return ret;
+            }
+
+            private static void ThrowCantReadProperty(string objName, string propName)
+            {
+                throw new Exception($"Can't read {propName} from {objName}");
             }
         }
     }

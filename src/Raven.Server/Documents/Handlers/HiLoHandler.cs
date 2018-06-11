@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers
             public string Prefix;
             public long OldMax;
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var hiLoDocumentId = RavenHiloIdPrefix + Key;
                 var prefix = Key + Separator;
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
             public long End;
             public long Last;
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var hiLoDocumentId = RavenHiloIdPrefix + Key;
 

@@ -38,8 +38,9 @@ namespace Raven.Server.Documents
 
         public int Processed { get; private set; }
 
-        public override int Execute(DocumentsOperationContext context)
+        public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
         {
+
             while (_documentIds.Count > 0)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
@@ -57,24 +58,29 @@ namespace Raven.Server.Documents
                 var command = _commandToExecute(id);
                 try
                 {
-                    var count = command?.Execute(context) ?? 0;
+                    var count = command?.Execute(context, recording) ?? 0;
                     Processed += count;
                 }
                 finally
                 {
-                    if(command is IDisposable d)
+                    if (command is IDisposable d)
                         d.Dispose();
                 }
 
                 if (_batchSize != null && Processed >= _batchSize)
                     break;
 
-                if (_maxTransactionSizeInPages != null && 
+                if (_maxTransactionSizeInPages != null &&
                     context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages > _maxTransactionSizeInPages)
                     break;
             }
 
             return Processed;
+        }
+
+        protected override int ExecuteCmd(DocumentsOperationContext context)
+        {
+            throw new NotSupportedException("Should only call Execute() here");
         }
     }
 }

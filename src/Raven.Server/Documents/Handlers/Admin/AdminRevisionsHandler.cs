@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 _database = database;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 foreach (var id in _ids)
                 {
