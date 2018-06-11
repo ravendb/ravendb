@@ -105,14 +105,33 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
                         switch (sslMode.ToLower())
                         {
-                            case "Required":
-                            case "VerifyCA":
-                            case "VerifyFull":
+                            case "required":
+                            case "verifyca":
+                            case "verifyfull":
                                 return true;
                         }
 
                         return false;
                     }
+                case SqlProvider.OracleClient:
+                    var dataSource = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "Data Source" });
+
+                    if (string.IsNullOrEmpty(dataSource))
+                        return false;
+
+                    var protocol = SqlConnectionStringParser.GetOracleDataSourceSubValue(dataSource, "PROTOCOL");
+
+                    if (string.IsNullOrEmpty(protocol))
+                        return false;
+
+                    switch (protocol.ToLower())
+                    {
+                        case "tcps":
+                            return true;
+                    }
+
+                    return false;
+
                 default:
                     throw new NotSupportedException($"Factory '{FactoryName}' is not supported");
             }
