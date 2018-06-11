@@ -54,14 +54,16 @@
                 </div>
 
                 <!-- ko if: canForceUpdate -->
-                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate,
-                                    css: { 'btn-spinner': spinners.forceLicenseUpdate }">
+                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, 
+                                disable: spinners.forceLicenseUpdate() || spinners.activateLicense(),
+                                css: { 'btn-spinner': spinners.forceLicenseUpdate }">
                     <i class="icon-force"></i>
                     <span>Force Update</span>
                 </button>
                 <!-- /ko -->
 
-                <button type="submit" data-bind="css: { 'btn-spinner': isBusy }, enable: !isBusy(), disable: spinners.forceLicenseUpdate"
+                <button type="submit" data-bind="disable: spinners.activateLicense() || spinners.forceLicenseUpdate(), 
+                                                 css: { 'btn-spinner': spinners.activateLicense }"
                         class="btn btn-primary">
                     <i class="icon-check"></i>
                     <span>Submit</span>
