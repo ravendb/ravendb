@@ -23,7 +23,6 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -602,7 +601,8 @@ namespace Raven.Server.Commercial
                 License = currentLicense,
                 BuildInfo = BuildInfo,
                 ClusterId = _serverStore.GetClusterTopology().TopologyId,
-                UtilizedCores = GetUtilizedCores()
+                UtilizedCores = GetUtilizedCores(),
+                NodeTag = _serverStore.NodeTag
             };
 
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
