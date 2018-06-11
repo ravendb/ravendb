@@ -450,7 +450,7 @@ namespace FastTests
             } while (true);
         }
 
-        public static void WaitForUserToContinueTheTest(string url, bool debug = true, int port = 8079)
+        public static void WaitForUserToContinueTheTest(string url, bool debug = true)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
@@ -466,7 +466,7 @@ namespace FastTests
             } while (debug == false || Debugger.IsAttached);
         }
 
-        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079, string database = null)
+        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
@@ -482,6 +482,8 @@ namespace FastTests
             {
                 Thread.Sleep(500);
             } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+
+            documentStore.Commands(database).Delete("Debug/Done", null);
         }
 
         protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
