@@ -9,6 +9,8 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
+using Sparrow.Collections;
+using Sparrow.Collections.LockFree;
 
 namespace Raven.Server.Rachis
 {
@@ -95,11 +97,12 @@ namespace Raven.Server.Rachis
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                         {
                             ElectionTerm = _engine.CurrentTerm;
+                            _connections.Clear(); // new election round, clean the previous connections.
 
                             // timeout? 
                             if (IsForcedElection)
                             {
-                                CastVoteForSelf(ElectionTerm + 1, "Timeout during forced elections");
+                                CastVoteForSelf(ElectionTerm + 1, "Timeout during forced elections", setStateChange: false);
                             }
                             else
                             {
@@ -151,15 +154,12 @@ namespace Raven.Server.Rachis
                             _running.Lower();
                             StateChange();
 
-                            var connections = new Dictionary<string, RemoteConnection>();
                             var versions = new List<int>
                             {
                                 ClusterCommandsVersionManager.MyCommandsVersion
                             };
-
                             foreach (var candidateAmbassador in _voters)
                             {
-                                connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
                                 if (candidateAmbassador.ClusterCommandsVersion > 0)
                                 {
                                     versions.Add(candidateAmbassador.ClusterCommandsVersion);
@@ -169,7 +169,7 @@ namespace Raven.Server.Rachis
                             var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
                             _engine.SwitchToLeaderState(ElectionTerm, minimalVersion,
                                 $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {minimalVersion}",
-                                connections);
+                                new Dictionary<string, RemoteConnection>(_connections));
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&
@@ -188,7 +188,7 @@ namespace Raven.Server.Rachis
                     if (_engine.CurrentState == RachisState.Candidate)
                     {
                         // if we are still a candidate, start the candidacy again.
-                        _engine.SwitchToCandidateState("An error occured during the last candidacy: " + e);
+                        _engine.SwitchToCandidateState("An error occurred during the last candidacy: " + e);
                     }
                     else if (_engine.CurrentState != RachisState.Passive)
                     {
@@ -209,7 +209,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void CastVoteForSelf(long electionTerm, string reason)
+        private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
         {
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -224,7 +224,9 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
             }
-            StateChange();
+
+            if (setStateChange)
+                StateChange();
         }
 
         public bool IsForcedElection { get; set; }
@@ -256,6 +258,14 @@ namespace Raven.Server.Rachis
         {
             _peersWaiting.Set();
             _stateChange.Task.Wait();
+        }
+
+        private readonly ConcurrentDictionary<string,RemoteConnection> _connections = new ConcurrentDictionary<string, RemoteConnection>();
+
+        public void PublishConnectionAndWait(string tag, RemoteConnection connection)
+        {
+            _connections[tag] = connection;
+            WaitForChangeInState();
         }
 
         public void Start()
