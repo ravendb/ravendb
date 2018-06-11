@@ -600,6 +600,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
+                    FactoryName = "System.Data.SqlClient",
                 }));
 
                 var database = GetDatabase(store.Database).Result;
@@ -617,7 +618,6 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                             {
                                 Name = "simulate",
                                 ConnectionStringName = "simulate",
-                                FactoryName = "System.Data.SqlClient",
                                 SqlTables =
                                 {
                                     new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -816,7 +816,6 @@ CREATE TABLE [dbo].[Attachments]
                 AddEtl(store, new SqlEtlConfiguration()
                 {
                     Name = "LoadingMultipleAttachments",
-                    FactoryName = "System.Data.SqlClient",
                     ConnectionStringName = "test",
                     SqlTables =
                     {
@@ -848,6 +847,7 @@ for (var i = 0; i < attachments.length; i++)
                 }, new SqlConnectionString
                 {
                     Name = "test",
+                    FactoryName = "System.Data.SqlClient",
                     ConnectionString = GetConnectionString(store)
                 });
 
@@ -1002,7 +1002,6 @@ CREATE TABLE [dbo].[Users]
                 AddEtl(store, new SqlEtlConfiguration()
                 {
                     Name = "CanUserNonVarcharAndNVarcharFunctions",
-                    FactoryName = "System.Data.SqlClient",
                     ConnectionStringName = "test",
                     SqlTables =
                     {
@@ -1031,6 +1030,7 @@ loadToUsers(
                 }, new SqlConnectionString
                 {
                     Name = "test",
+                    FactoryName = "System.Data.SqlClient",
                     ConnectionString = GetConnectionString(store)
                 });
 
@@ -1099,7 +1099,6 @@ loadToUsers(
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
-                FactoryName = "System.Data.SqlClient",
                 SqlTables =
                 {
                     new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
@@ -1117,7 +1116,8 @@ loadToUsers(
             }, new SqlConnectionString
             {
                 Name = connectionStringName,
-                ConnectionString = GetConnectionString(store)
+                ConnectionString = GetConnectionString(store),
+                FactoryName = "System.Data.SqlClient"
             });
         }
 
