@@ -11,5 +11,7 @@ namespace Raven.Server.Commercial
         public string ClusterId { get; set; }
 
         public int UtilizedCores { get; set; }
+
+        public string NodeTag { get; set; }
     }
 }
