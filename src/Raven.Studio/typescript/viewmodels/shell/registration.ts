@@ -49,7 +49,6 @@ class registrationDismissStorage {
 
 class registration extends dialogViewModelBase {
 
-    isBusy = ko.observable<boolean>(false);
     dismissVisible = ko.observable<boolean>(true);
     canBeClosed = ko.observable<boolean>(false);
     daysToRegister: KnockoutComputed<number>;
@@ -63,7 +62,8 @@ class registration extends dialogViewModelBase {
     private hasInvalidLicense = ko.observable<boolean>(false);
 
     spinners = {
-        forceLicenseUpdate: ko.observable<boolean>(false)
+        forceLicenseUpdate: ko.observable<boolean>(false),
+        activateLicense: ko.observable<boolean>(false)
     };
 
     constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
@@ -159,6 +159,7 @@ class registration extends dialogViewModelBase {
 
     forceLicenseUpdate() {
         this.spinners.forceLicenseUpdate(true);
+
         new forceLicenseUpdateCommand().execute()
             .done(() => {
                 license.fetchLicenseStatus()
@@ -200,17 +201,19 @@ class registration extends dialogViewModelBase {
 
         //TODO: parse pasted key into json and validate
 
-        this.isBusy(true);
+        this.spinners.activateLicense(true);
 
         const parsedLicense = JSON.parse(this.licenseKeyModel().key()) as Raven.Server.Commercial.License;
         new licenseActivateCommand(parsedLicense)
             .execute()
             .done(() => {
-                license.fetchLicenseStatus();
+                license.fetchLicenseStatus()
+                    .done(() => license.fetchSupportCoverage());
+
                 dialog.close(this);
                 messagePublisher.reportSuccess("Your license was successfully registered. Thank you for choosing RavenDB.");
             })
-            .always(() => this.isBusy(false));
+            .always(() => this.spinners.activateLicense(false));
     }
 }
 
