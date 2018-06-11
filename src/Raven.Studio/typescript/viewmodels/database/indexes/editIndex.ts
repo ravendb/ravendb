@@ -111,7 +111,7 @@ class editIndex extends viewModelBase {
             } else { 
                 return `<div class="sourcePreview"><i class="icon-xl icon-empty-set text-muted"></i><h2 class="text-center">No Additional sources uploaded</h2></div>`;
             }
-        })
+        });
     }
 
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
@@ -136,7 +136,6 @@ class editIndex extends viewModelBase {
         }
 
         return $.Deferred<canActivateResultDto>().resolve({ can: true });
-
     }
 
     activate(indexToEditName: string) {
@@ -299,7 +298,6 @@ class editIndex extends viewModelBase {
         });
     }
 
-
     addMap() {
         eventsCollector.default.reportEvent("index", "add-map");
         this.editedIndex().addMap();
@@ -412,33 +410,45 @@ class editIndex extends viewModelBase {
 
         const editedIndex = this.editedIndex();
 
-        if (!this.isValid(this.editedIndex().validationGroup))
+        if (!this.isValid(editedIndex.validationGroup))
             valid = false;
-
-        editedIndex.fields().forEach(field => {
-            if (!this.isValid(field.validationGroup)) {
-                valid = false;
-            }
-
-            if (field.hasSpatialOptions()) {               
-                if (!this.isValid(field.spatial().validationGroup)) {
-                    valid = false;
-                }
-            }                      
-        });
 
         editedIndex.maps().forEach(map => {
             if (!this.isValid(map.validationGroup)) {
                 valid = false;
             }
         });
-
-        editedIndex.configuration().forEach(config => {
-            if (!this.isValid(config.validationGroup)) {
+        
+        let fieldsTabInvalid = false;
+        editedIndex.fields().forEach(field => {
+            if (!this.isValid(field.validationGroup)) {
                 valid = false;
+                fieldsTabInvalid = true;
+            }
+
+            if (field.hasSpatialOptions()) {
+                if (!this.isValid(field.spatial().validationGroup)) {
+                    valid = false;
+                    fieldsTabInvalid = true;
+                }
             }
         });
 
+        let configurationTabInvalid = false;
+        editedIndex.configuration().forEach(config => {
+            if (!this.isValid(config.validationGroup)) {
+                valid = false;
+                configurationTabInvalid = true;
+            }
+        });
+
+        // Navigate to invalid tab
+        if (fieldsTabInvalid) {
+            $('#tabsId a[href="#fields"]').tab('show');
+        } else if (configurationTabInvalid) {
+            $('#tabsId a[href="#configure"]').tab('show');
+        }
+        
         return valid;
     }
 

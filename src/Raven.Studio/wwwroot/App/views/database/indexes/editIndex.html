@@ -103,19 +103,20 @@
                 </div>
             </div>
         </div>
+        
         <div class="tabs">
-            <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" class="active">
+            <ul class="nav nav-tabs" role="tablist" id="tabsId">
+                <li role="presentation" class="active" id="fieldsTab">
                     <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
                         <i class="icon-admin-logs"></i><span>Fields</span>
                     </a>
                 </li>
-                <li role="presentation">
+                <li role="presentation" id="configurationTab">
                     <a href="#configure" aria-controls="configure" role="tab" data-toggle="tab">
                         <i class="icon-settings"></i><span>Configuration</span>
                     </a>
                 </li>
-                <li role="presentation">
+                <li role="presentation" id="additionalSourcesTab">
                     <a href="#additionalSources" aria-controls="additionalSources" role="tab" data-toggle="tab">
                         <i class="icon-chash"></i>
                         <span>Additional sources</span> 
@@ -123,7 +124,6 @@
                     </a>
                 </li>
             </ul>
-
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane fade in active" id="fields">
                     <div class="margin-bottom">
@@ -133,7 +133,6 @@
                     <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
                         <div data-bind="template: { name: 'field-template'}"></div>
                     </div>
-
                     <div data-bind="foreach: editedIndex().fields">
                         <div class="panel">
                             <div data-bind="template: { name: 'field-template'}"></div>
@@ -163,7 +162,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
                                 <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add a customized option</span></button>
@@ -183,7 +181,6 @@
                             Upload additional source files which can be referenced inside the index definition <small class="info"><i class="icon-info text-info"></i></small>
                         </div>
                     </div>
-                   
                     <div class="flex-horizontal flex-stretch-items margin-top">
                         <ul class="item-list flex-noshrink" data-bind="foreach: editedIndex().additionalSources">
                             <li class="item" data-bind="css: { active: $data === $root.selectedSourcePreview() }">
@@ -197,9 +194,7 @@
                 </div>
             </div>
         </div>
-
     </div>
-
     <div class="backdrop"></div>
 </div>
 
