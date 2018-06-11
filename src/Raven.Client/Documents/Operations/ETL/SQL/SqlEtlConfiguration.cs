@@ -14,6 +14,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             SqlTables = new List<SqlEtlTable>();
         }
 
+        [Obsolete("FactoryName should be defined as part of SQL connection string - SqlConnectionString.FactoryName field)")]
         public string FactoryName { get; set; }
 
         public bool ParameterizeDeletes { get; set; } = true;
@@ -28,12 +29,14 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override EtlType EtlType => EtlType.Sql;
 
+        internal string GetFactoryName()
+        {
+            return Connection.FactoryName ?? FactoryName; // legacy configs from RavenDB 4.0 don't have SqlConnectionString.FactoryName field
+        }
+
         public override bool Validate(out List<string> errors)
         {
             base.Validate(out errors);
-
-            if (string.IsNullOrEmpty(FactoryName))
-                errors.Add($"{nameof(FactoryName)} cannot be empty");
 
             if (SqlTables.Count == 0)
                 errors.Add($"{nameof(SqlTables)} cannot be empty");
@@ -46,7 +49,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             if (_name != null)
                 return _name;
 
-            var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(FactoryName, Connection.ConnectionString);
+            var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(GetFactoryName(), Connection.ConnectionString);
 
             return _name = $"{database}@{server}";
         }
@@ -58,7 +61,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
             string sslMode;
 
-            switch (SqlProviderParser.GetSupportedProvider(FactoryName))
+            switch (SqlProviderParser.GetSupportedProvider(GetFactoryName()))
             {
                 case SqlProvider.SqlClient:
                     encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
@@ -133,7 +136,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     return false;
 
                 default:
-                    throw new NotSupportedException($"Factory '{FactoryName}' is not supported");
+                    throw new NotSupportedException($"Factory '{GetFactoryName()}' is not supported");
             }
         }
 

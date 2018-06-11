@@ -24,7 +24,6 @@ namespace SlowTests.Server.Documents.ETL.SQL
                         Script = @"this.Name = 'aaa'; replicateToUsers(this);"
                     }
                 },
-                FactoryName = "System.Data.SqlClient",
                 SqlTables =
                 {
                     new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},

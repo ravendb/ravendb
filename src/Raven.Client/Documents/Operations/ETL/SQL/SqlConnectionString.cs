@@ -8,6 +8,8 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
     {
         public string ConnectionString { get; set; }
 
+        public string FactoryName { get; set; }
+
         public override ConnectionStringType Type => ConnectionStringType.Sql;
 
         protected override void ValidateImpl(ref List<string> errors)
@@ -30,6 +32,8 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
         {
             var json = base.ToJson();
             json[nameof(ConnectionString)] = ConnectionString;
+            json[nameof(FactoryName)] = FactoryName;
+
             return json;
         }
     }

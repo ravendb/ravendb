@@ -787,7 +787,7 @@ namespace Raven.Server.Web.System
                             $"Could not find connection string named '{sqlEtl.ConnectionStringName}' in the database record for '{sqlEtl.Name}' ETL");
 
                     var (database, server) =
-                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName, sqlConnection.ConnectionString);
+                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName ?? sqlEtl.FactoryName, sqlConnection.ConnectionString);
 
                     var connectionStatus = OngoingTaskConnectionStatus.None;
                     string error = null;

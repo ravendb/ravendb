@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private const int LongStatementWarnThresholdInMs = 3000;
 
         public RelationalDatabaseWriter(SqlEtl etl, DocumentDatabase database)
-            : base(etl.Configuration.FactoryName)
+            : base(etl.Configuration.GetFactoryName())
         {
             _etl = etl;
             _database = database;
@@ -88,13 +88,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private DbProviderFactory GetDbProviderFactory(SqlEtlConfiguration configuration)
         {
             DbProviderFactory providerFactory;
+
             try
             {
-                providerFactory = DbProviderFactories.GetFactory(configuration.FactoryName);
+                providerFactory = DbProviderFactories.GetFactory(configuration.GetFactoryName());
             }
             catch (Exception e)
             {
-                var message = $"Could not find provider factory {configuration.FactoryName} to replicate to sql for {configuration.Name}, ignoring.";
+                var message = $"Could not find provider factory {configuration.GetFactoryName()} to replicate to sql for {configuration.Name}, ignoring.";
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info(message, e);

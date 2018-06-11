@@ -38,11 +38,10 @@ namespace SlowTests.Issues
         {
             var c = new SqlEtlConfiguration();
 
-            c.FactoryName = "System.Data.OracleClient";
-
             c.Connection = new SqlConnectionString()
             {
-                ConnectionString = "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)));"
+                ConnectionString = "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)));",
+                FactoryName = "System.Data.OracleClient"
             };
 
             Assert.True(c.UsingEncryptedCommunicationChannel());

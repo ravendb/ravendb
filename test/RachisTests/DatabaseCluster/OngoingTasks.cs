@@ -113,7 +113,8 @@ loadToOrders(orderData);
                 sqlConnectionString = new SqlConnectionString
                 {
                     Name = "abc",
-                    ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};"
+                    ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
+                    FactoryName = "System.Data.SqlClient"
                 };
                 store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
 
@@ -122,7 +123,6 @@ loadToOrders(orderData);
                 {
                     Name = "abc",
                     ConnectionStringName = "abc",
-                    FactoryName = "System.Data.SqlClient",
                     SqlTables =
                     {
                         new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
