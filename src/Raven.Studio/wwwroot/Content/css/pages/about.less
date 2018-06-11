@@ -71,6 +71,14 @@
         align-items: stretch;
         flex-grow: 1;
         flex-wrap: wrap;
+        
+        &.no-license {
+            align-items: start;
+            
+            .support-properties {
+                display: none;
+            }
+        }
     }
 
     .about-info, .license-info, .support-info {
