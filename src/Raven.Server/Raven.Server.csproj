@@ -57,7 +57,7 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="7.1.0" />
+    <PackageReference Include="CsvHelper" Version="7.1.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="11.1.0">
       <PrivateAssets>All</PrivateAssets>
