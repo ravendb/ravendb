@@ -190,6 +190,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var memoryInformation = MemoryInformation.GetMemoryInfo();
                     json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
                     json[nameof(NodeInfo.UsableMemoryInGb)] = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
+                    json[nameof(NodeInfo.BuildInfo)] = LicenseManager.BuildInfo;
                     json[nameof(NodeInfo.ServerId)] = ServerStore.GetServerId().ToString();
                     json[nameof(NodeInfo.CurrentState)] = ServerStore.CurrentRachisState;
                 }
@@ -492,7 +493,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             AssignedCores = assignedCores.Value,
                             NumberOfCores = nodeInfo.NumberOfCores,
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
-                            UsableMemoryInGb = nodeInfo.UsableMemoryInGb
+                            UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
+                            BuildInfo = nodeInfo.BuildInfo
                         };
                         await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true, waitToUpdate: true);
                     }
