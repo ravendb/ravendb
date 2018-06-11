@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 
 namespace Raven.Client.Documents.Operations.ETL.SQL
 {
@@ -30,12 +29,12 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                         server += $":{postgrePort}";
                     break;
                 case SqlProvider.MySqlClient:
-                    database = GetConnectionStringValue(connectionString, new[] {"Database", "Initial Catalog"});
+                    database = GetConnectionStringValue(connectionString, new[] { "Database", "Initial Catalog" });
 
                     if (database == null)
                         database = "mysql";
 
-                    server = GetConnectionStringValue(connectionString, new[] {"Host", "Server", "Data Source", "DataSource", "Address", "Addr", "Network Address"});
+                    server = GetConnectionStringValue(connectionString, new[] { "Host", "Server", "Data Source", "DataSource", "Address", "Addr", "Network Address" });
 
                     if (server == null)
                         server = "localhost";
@@ -45,6 +44,49 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     if (string.IsNullOrEmpty(mysqlPort))
                         server += $":{mysqlPort}";
                     break;
+                case SqlProvider.OracleClient:
+
+                    server = null;
+                    database = null;
+
+                    var dataSource = GetConnectionStringValue(connectionString, new[] { "Data Source" });
+
+                    if (string.IsNullOrEmpty(dataSource) == false)
+                    {
+                        server = GetOracleDataSourceSubValue(dataSource, "HOST");
+
+                        if (server != null)
+                        {
+                            var port = GetOracleDataSourceSubValue(dataSource, "PORT");
+
+                            if (port != null)
+                                server += $":{port}";
+                        }
+
+                        database = GetOracleDataSourceSubValue(dataSource, "SERVICE_NAME") ?? GetOracleDataSourceSubValue(dataSource, "SID");
+
+                        if (server == null)
+                        {
+                            var parts = dataSource.Split(new []{'@'}, 2);
+
+                            if (parts.Length == 2)
+                            {
+                                // Data Source=username/password@myserver//instancename;
+                                // Data Source=username/password@myserver/myservice:dedicated/instancename;
+
+                                server = parts[1];
+                            }
+                            else
+                            {
+                                // Data Source=myOracleDB;
+                                server = dataSource;
+                            }
+                        }
+                    }
+
+                    break;
+
+                    
                 default:
                     throw new NotSupportedException($"Factory '{factoryName}' is not supported");
             }
@@ -58,12 +100,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
             foreach (var part in parts)
             {
-                var keyValue = part.Split('=');
-               
-                if (keyValue.Length != 2)
-                {
-                    continue;
-                }
+                var keyValue = part.Split(new[] { '=' }, 2);
 
                 foreach (var key in keyNames)
                 {
@@ -73,6 +110,25 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             }
 
             return null;
+        }
+
+        internal static string GetOracleDataSourceSubValue(string dataSourceValue, string key)
+        {
+            var indexOf = dataSourceValue.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+
+            if (indexOf == -1)
+                return null;
+
+            var subString = dataSourceValue.Substring(indexOf);
+
+            var closingBracket = subString.IndexOf(')');
+
+            if (closingBracket == -1)
+                return null;
+
+            var subValue = subString.Substring(0, closingBracket);
+
+            return GetConnectionStringValue(subValue, new []{ key });
         }
     }
 }
