@@ -18,9 +18,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new AuthenticationLetsEncryptTests())
+                    using (var test = new SlowTests.Core.Commands.Documents())
                     {
-                        await test.CanGetLetsEncryptCertificateAndRenewIt();
+                        test.CanCancelPutDocument();
                     }
                 }
                 catch (Exception e)

@@ -41,7 +41,13 @@ namespace SlowTests.Core.Commands
 
                     try
                     {
-                        Assert.True(SpinWait.SpinUntil(() => putTask.IsCanceled, TimeSpan.FromSeconds(10)));
+                        try
+                        {
+                            putTask.Wait(TimeSpan.FromMinutes(1));
+                        }
+                        catch (AggregateException e) when (e.InnerException is OperationCanceledException)
+                        {
+                        }
                         Assert.True(putTask.IsCanceled);
                     }
                     catch (Exception e)
