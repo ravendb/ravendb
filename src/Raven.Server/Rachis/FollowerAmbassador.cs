@@ -187,6 +187,15 @@ namespace Raven.Server.Rachis
                                     SendHello(context, topology);
                                 }
                             }
+                            else
+                            {
+                                // if we are here we have won the elections, let's notify the elector about it.
+                                if (_engine.Log.IsInfoEnabled)
+                                {
+                                    _engine.Log.Info($"Follower ambassador reuses the connection for {_tag} and send a winning message to his elector.");
+                                }
+                                CandidateAmbassador.SendElectionResult(_engine, _connection, _term, ElectionResult.Won);
+                            }
                         }
                         catch (Exception e)
                         {

@@ -26,6 +26,7 @@ namespace Raven.Server.Rachis
 
         public string Source => _src;
         public Stream Stream => _stream;
+        public string Dest => _destTag;
 
         public RemoteConnection(string src, Stream stream, long term, Action disconnect, [CallerMemberName] string caller = null)
         {
