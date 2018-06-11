@@ -76,12 +76,8 @@ namespace Sparrow.Utils
         }
     }
 
-    public class LockAlreadyDisposedException : Exception
+    public class LockAlreadyDisposedException : ObjectDisposedException
     {
-        public LockAlreadyDisposedException()
-        {
-        }
-
         public LockAlreadyDisposedException(string message) : base(message)
         {
         }
