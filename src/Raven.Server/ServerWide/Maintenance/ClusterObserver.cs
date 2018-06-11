@@ -84,7 +84,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public async Task Run(CancellationToken token)
         {
-            var prevStats = new Dictionary<string, ClusterNodeStatusReport>();
+            // we give some time to populate the stats.
+            await TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
+            var prevStats = _maintenance.GetStats();
+            // wait before collecting the stats again.
+            await TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
+
             while (_term == _engine.CurrentTerm && token.IsCancellationRequested == false)
             {
                 var delay = TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
@@ -93,12 +98,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (Suspended == false)
                     {
                         _iteration++;
-                        if (_iteration == 1)
-                        {
-                            prevStats = _maintenance.GetStats();
-                            continue;
-                        }
-
                         var newStats = _maintenance.GetStats();
                         await AnalyzeLatestStats(newStats, prevStats);
                         prevStats = newStats;
@@ -433,13 +432,13 @@ namespace Raven.Server.ServerWide.Maintenance
                     // there isn't much we can do here, except for log it.
                     if (previous.TryGetValue(member, out _))
                     {
-                        // if we found this node in the previous report, we will ingore it this time and wait for the next report.
+                        // if we found this node in the previous report, we will ignore it this time and wait for the next report.
                         continue;
                     }
 
                     var msg =
-                        $"The member node {member} was not found in both current and previuos reports of the cluster observer. " +
-                        $"If this error continue to raise, check the latancy between the cluster nodes.";
+                        $"The member node {member} was not found in both current and previous reports of the cluster observer. " +
+                        $"If this error continue to raise, check the latency between the cluster nodes.";
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(msg);
