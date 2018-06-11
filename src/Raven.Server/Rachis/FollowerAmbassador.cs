@@ -329,8 +329,9 @@ namespace Raven.Server.Rachis
                                               $"this ambassador term is no longer valid";
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: " + msg);
+                                        _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: {msg}");
                                     }
+
                                     RachisConcurrencyException.Throw(msg);
                                 }
 
@@ -358,24 +359,26 @@ namespace Raven.Server.Rachis
                             _debugRecorder.Start();
                         }
                     }
-                    catch (LockAlreadyDisposedException)
+
+                    catch (RachisException)
                     {
-                        throw;
-                    }
-                    catch (OperationCanceledException)
-                    {
+                        // this is a rachis protocol violation exception, we must close this ambassador. 
                         throw;
                     }
                     catch (AggregateException ae) when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
                     {
+                        // Those are expected exceptions which indicate that this ambassador is shutting down.
                         throw;
                     }
-                    catch (RachisException)
+                    catch (Exception e) when (e is LockAlreadyDisposedException || e is OperationCanceledException)
                     {
+                        // Those are expected exceptions which indicate that this ambassador is shutting down.
                         throw;
                     }
                     catch (Exception e)
                     {
+                        // This is an unexpected exception which indicate the something is wrong with the connection.
+                        // So we will retry to reconnect. 
                         _connection?.Dispose();
                         NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
@@ -409,7 +412,7 @@ namespace Raven.Server.Rachis
             }
             catch (RachisException e)
             {
-                StatusMessage = $"Reached an erronous state due to :{Environment.NewLine}{e.Message}";
+                StatusMessage = $"Reached an erroneous state due to :{Environment.NewLine}{e.Message}";
                 Status = AmbassadorStatus.Error;
             }
             catch (Exception e)
