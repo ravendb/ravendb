@@ -2,6 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
@@ -15,6 +16,7 @@ namespace Raven.Client.ServerWide.Commands
         public int NumberOfCores;
         public double InstalledMemoryInGb;
         public double UsableMemoryInGb;
+        public BuildNumber BuildInfo;
         public Guid ServerId;
         public RachisState CurrentState;
     }
