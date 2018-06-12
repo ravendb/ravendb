@@ -6,7 +6,7 @@ class certificateModel {
 
     static securityClearanceTypes: valueAndLabelItem<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, string>[] = [
         {
-            label: "Cluster Administator",
+            label: "Cluster Administrator",
             value: "ClusterAdmin"
         }, {
             label: "Operator", 
