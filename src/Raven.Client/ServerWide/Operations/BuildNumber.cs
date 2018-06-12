@@ -1,6 +1,8 @@
+using Sparrow.Json.Parsing;
+
 namespace Raven.Client.ServerWide.Operations
 {
-    public class BuildNumber
+    public class BuildNumber : IDynamicJson
     {
         public string ProductVersion { get; set; }
 
@@ -36,6 +38,17 @@ namespace Raven.Client.ServerWide.Operations
                 hashCode = (hashCode * 397) ^ (FullVersion != null ? FullVersion.GetHashCode() : 0);
                 return hashCode;
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ProductVersion)] = ProductVersion,
+                [nameof(BuildVersion)] = BuildVersion,
+                [nameof(CommitHash)] = CommitHash,
+                [nameof(FullVersion)] = FullVersion
+            };
         }
     }
 }
