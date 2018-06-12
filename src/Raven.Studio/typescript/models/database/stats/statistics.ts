@@ -15,8 +15,10 @@ class statistics {
     countOfTombstones: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
-    sizeOnDisk: string;
-
+    dataSizeOnDisk: string;
+    tempBuffersSizeOnDisk: string;
+    totalSizeOnDisk: string;
+    
     // The observable indexes array, ordered by type
     indexesByType = ko.observableArray<indexesWithType>(); 
     
@@ -32,7 +34,9 @@ class statistics {
         this.countOfDocumentsConflicts = dbStats.CountOfDocumentsConflicts.toLocaleString();
         this.countOfTombstones = dbStats.CountOfTombstones.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
-        this.sizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);
+        this.dataSizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);
+        this.tempBuffersSizeOnDisk = generalUtils.formatBytesToSize(dbStats.TempBuffersSizeOnDisk.SizeInBytes);
+        this.totalSizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes + dbStats.TempBuffersSizeOnDisk.SizeInBytes);
         
         
         // 1. Create the array with all indexes that we got from the endpoint
