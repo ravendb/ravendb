@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Commercial
+﻿using Raven.Client.ServerWide.Operations;
+
+namespace Raven.Server.Commercial
 {
     public class NodeDetails
     {
@@ -11,5 +13,7 @@
         public double InstalledMemoryInGb { get; set; }
 
         public double UsableMemoryInGb { get; set; }
+
+        public BuildNumber BuildInfo { get; set; }
     }
 }

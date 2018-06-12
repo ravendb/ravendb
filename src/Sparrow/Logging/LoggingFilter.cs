@@ -112,7 +112,7 @@ namespace Sparrow.Logging
             switch (field)
             {
                 case LogEntryFields.Time:
-                    return entry.At.GetDefaultRavenFormat(true);
+                    return entry.At.GetDefaultRavenFormat(isUtc: LoggingSource.UseUtcTime);
                 case LogEntryFields.Source:
                     return entry.Source;
                 case LogEntryFields.Logger:

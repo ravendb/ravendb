@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Jint.Native;
+using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -22,7 +25,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
         private readonly List<ICommandData> _commands = new List<ICommandData>();
-        private Dictionary<JsValue, HashSet<string>> _addedAttachments = null;
+        private PropertyDescriptor _addAttachmentMethod;
+        private RavenEtlScriptRun _currentDocumentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
             : base(database, context, script.Transformation)
@@ -37,7 +41,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             base.Initalize();
 
-            SingleRun?.ScriptEngine.SetValue(Transformation.AddAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment));
+            if (SingleRun == null)
+                return;
+
+            if (_transformation.IsHandlingAttachments)
+                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment), null, null, null);
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -75,50 +83,50 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var transformResult = Context.ReadObject(transformed, id);
 
-            var transformationCommands = new List<ICommandData>();
+            _currentDocumentRun.Put(id, document.Instance, transformResult);
 
-            transformationCommands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
-
-            if (_transformation.IsHandlingAttachments && _addedAttachments != null && _addedAttachments.TryGetValue(document.Instance, out var addedAttachments))
+            if (_transformation.IsHandlingAttachments)
             {
-                if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                {
-                    foreach (var attachment in addedAttachments)
-                    {
-                        var attachmentData =
-                            Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachment, AttachmentType.Document, null);
+                var docInstance = (ObjectInstance)document.Instance;
 
-                        if (attachmentData == null)
-                            ThrowNoSuchAttachment(Current.DocumentId, attachment);
-
-                        transformationCommands.Add(new PutAttachmentCommandData(id, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
-                            null));
-                    }
-                }
-                else
-                {
-                    ThrowNoAttachments(Current.DocumentId, addedAttachments);
-                }
+                docInstance.DefineOwnProperty(Transformation.AddAttachment, _addAttachmentMethod, throwOnError: true);
             }
-
-            _commands.AddRange(transformationCommands);
         }
 
         private JsValue AddAttachment(JsValue self, JsValue[] args)
         {
-            if (args.Length != 2 || args[1].IsString() == false)
-                throw new InvalidOperationException($"{Transformation.AddAttachment}(obj, name) must have two arguments");
+            JsValue attachmentReference = null;
+            string name = null; // will preserve original name
 
-            if (_addedAttachments == null)
-                _addedAttachments = new Dictionary<JsValue, HashSet<string>>();
-
-            if (_addedAttachments.TryGetValue(args[0], out var attachments) == false)
+            switch (args.Length)
             {
-                attachments = new HashSet<string>();
-                _addedAttachments.Add(args[0], attachments);
+                case 2:
+                    if (args[0].IsString() == false)
+                        ThrowInvalidSriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
+
+                    name = args[0].AsString();
+                    attachmentReference = args[1];
+                    break;
+                case 1:
+                    attachmentReference = args[0];
+                    break;
+                default:
+                    ThrowInvalidSriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
+                    break;
             }
 
-            attachments.Add(args[1].AsString());
+            if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
+            {
+                var message =
+                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Type}' type";
+
+                if (attachmentReference.IsString())
+                    message += $" (value: '{attachmentReference.AsString()}')";
+
+                ThrowInvalidSriptMethodCall(message);
+            }
+
+            _currentDocumentRun.AddAttachment(self, name, attachmentReference);
 
             return self;
         }
@@ -136,6 +144,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item)
         {
             Current = item;
+            _currentDocumentRun = new RavenEtlScriptRun();
 
             if (item.IsDelete == false)
             {
@@ -153,12 +162,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
                 else
                 {
-                    _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentId, null, item.Document.Data));
-
-                    if ((item.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                    {
-                        HandleDocumentAttachments(item);
-                    }
+                    _currentDocumentRun.PutDocumentAndAttachmentsIfAny(item.DocumentId, item.Document.Data, GetAttachmentsFor(item));
                 }
             }
             else
@@ -166,20 +170,29 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (_script.Transformation != null)
                     ApplyDeleteCommands(item, OperationType.Delete);
                 else
-                    _commands.Add(new DeleteCommandData(item.DocumentId, null));
+                    _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
             }
+
+            _commands.AddRange(_currentDocumentRun.GetCommands());
         }
 
-        private void HandleDocumentAttachments(RavenEtlItem item)
+        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
+        {
+            _currentDocumentRun.LoadAttachment(reference, attachment);
+        }
+
+        private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
         {
             if (item.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
-                return;
+                return null;
             }
 
             metadata.Modifications = new DynamicJsonValue(metadata);
             metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+
+            var results = new List<Attachment>();
 
             foreach (var attachment in attachments)
             {
@@ -187,13 +200,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name))
                 {
-                    var attachmentData =
-                        Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, item.DocumentId, name, AttachmentType.Document, null);
+                    var attachmentData = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, item.DocumentId, name, AttachmentType.Document, null);
 
-                    _commands.Add(new PutAttachmentCommandData(item.DocumentId, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
-                        null));
+                    results.Add(attachmentData);
                 }
             }
+
+            return results;
         }
 
         private void ApplyDeleteCommands(RavenEtlItem item, OperationType operation)
@@ -205,10 +218,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
                     if (operation == OperationType.Delete || _transformation.IsHandlingAttachments)
-                        _commands.Add(new DeleteCommandData(item.DocumentId, null));
+                        _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
-                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
+                    _currentDocumentRun.Delete(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
             }
         }
 

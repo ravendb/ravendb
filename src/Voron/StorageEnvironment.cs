@@ -899,7 +899,8 @@ namespace Voron
                 NextPageNumber = NextPageNumber,
                 CountOfTrees = countOfTrees,
                 CountOfTables = countOfTables,
-                Journals = Journal.Files.ToList()
+                Journals = Journal.Files.ToList(),
+                TempPath = Options.TempPath
             });
         }
 
@@ -963,7 +964,8 @@ namespace Voron
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
                 CalculateExactSizes = calculateExactSizes,
-                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction))
+                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
+                TempPath = Options.TempPath
             });
         }
 

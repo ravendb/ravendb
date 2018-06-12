@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Sparrow.Json;
@@ -264,6 +265,8 @@ namespace Sparrow.Extensions
         /// <returns></returns>
         public static unsafe string GetDefaultRavenFormat(this DateTime dt, bool isUtc = false)
         {
+            ValidateDate(dt, isUtc);
+
             string result = new string('Z', 27 + (isUtc ? 1 : 0));
 
             var ticks = dt.Ticks;
@@ -285,6 +288,8 @@ namespace Sparrow.Extensions
         /// <returns></returns>
         public static unsafe ByteStringContext.InternalScope GetDefaultRavenFormat(this DateTime dt, ByteStringContext context, out ByteString value, bool isUtc = false)
         {
+            ValidateDate(dt, isUtc);
+
             int size = 27 + (isUtc ? 1 : 0);
             var ticks = dt.Ticks;
 
@@ -306,6 +311,8 @@ namespace Sparrow.Extensions
         /// <returns></returns>
         public static unsafe int GetDefaultRavenFormat(this DateTime dt, JsonOperationContext context, out AllocatedMemoryData memory, bool isUtc = false)
         {
+            ValidateDate(dt, isUtc);
+
             int size = 27 + (isUtc ? 1 : 0);
             var ticks = dt.Ticks;
 
@@ -330,6 +337,8 @@ namespace Sparrow.Extensions
         /// <returns></returns>
         public static unsafe int GetDefaultRavenFormat(this DateTime dt, AllocatedMemoryData memory, bool isUtc = false)
         {
+            ValidateDate(dt, isUtc);
+
             int size = 27 + (isUtc ? 1 : 0);
             if (memory.SizeInBytes < size)
                 goto Error;
@@ -346,6 +355,16 @@ namespace Sparrow.Extensions
 
             Error:
             return ThrowMemoryIsNotBigEnough();
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateDate(DateTime dt, bool isUtc)
+        {
+            if (dt.Kind == DateTimeKind.Utc && isUtc == false)
+                throw new InvalidOperationException("Date is in UTC, but will not be formatted into UTC");
+
+            if (dt.Kind == DateTimeKind.Local && isUtc)
+                throw new InvalidOperationException("Date is not in UTC, but will be formatted into UTC");
         }
 
         private static int ThrowMemoryIsNotBigEnough()

@@ -465,8 +465,9 @@ namespace Raven.Server.ServerWide
                 {
                     if (record.DeletionInProgress != null)
                     {
-                        record.DeletionInProgress.Remove(removed);
-                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0)
+                        // delete immediately if this node was removed.
+                        var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
+                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow) 
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
                             NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
@@ -474,11 +475,22 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
+                    if (_parent.Tag == removed)
+                    {
+                        //If no deletion was issued, then the removed node will keep all his data until either he will be bootstrapped or rejoined with the cluster.
+                        continue;
+                    }
+
                     if (record.Topology.RelevantFor(removed))
                     {
                         record.Topology.RemoveFromTopology(removed);
-                        // Explict removing of the node means that we modify the replication factor
+                        // Explicit removing of the node means that we modify the replication factor
                         record.Topology.ReplicationFactor = record.Topology.Count;
+                        if (record.Topology.Count == 0)
+                        {
+                            DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                            continue;
+                        }
                     }
                     var updated = EntityToBlittable.ConvertCommandToBlittable(record, context);
 
@@ -977,6 +989,65 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsIndex);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
+            parent.StateChanged += OnStateChange;
+        }
+
+        private void OnStateChange(object sender, RachisConsensus.StateTransition transition)
+        {
+            if (transition.From == RachisState.Passive && transition.To == RachisState.LeaderElect)
+            {
+                // moving from 'passive'->'leader elect', means that we were bootstrapped!  
+                using (_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    var toDelete = new List<string>();
+                    var toShrink = new List<DatabaseRecord>();
+                    using (context.OpenReadTransaction())
+                    {
+                        foreach (var record in ReadAllDatabases(context))
+                        {
+                            if (record.Topology.RelevantFor(_parent.Tag) == false)
+                            {
+                                toDelete.Add(record.DatabaseName);
+                            }
+                            else
+                            {
+                                record.Topology = new DatabaseTopology();
+                                record.Topology.Members.Add(_parent.Tag);
+                                toShrink.Add(record);
+                            }
+                        }
+                    }
+
+                    if (toShrink.Count == 0 && toDelete.Count == 0)
+                        return;
+
+                    using (context.OpenWriteTransaction())
+                    {
+                        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                        var index = _parent.GetLastCommitIndex(context);
+
+                        foreach (var databaseName in toDelete)
+                        {
+                            var dbKey = "db/" + databaseName;
+                            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                            {
+                                DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
+                            }
+                        }
+                        foreach (var record in toShrink)
+                        {
+                            var dbKey = "db/" + record.DatabaseName;
+                            using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+                            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                            {
+                                var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
+                                UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                            }
+                        }
+                        context.Transaction.Commit();
+                    }
+                }
+            }
         }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)

@@ -141,7 +141,7 @@ namespace Raven.Server.Documents
                 {
                     var preparedRecentStats = new IOMetricsRecentStats
                     {
-                        Start = item.Start.GetDefaultRavenFormat(),
+                        Start = item.Start.GetDefaultRavenFormat(true),
                         Size = item.Size,
                         HumaneSize = Sizes.Humane(item.Size),
                         FileSize = item.FileSize,

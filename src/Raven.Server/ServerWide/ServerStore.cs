@@ -1415,6 +1415,9 @@ namespace Raven.Server.ServerWide
                         if (idleDbInstance.Operations.HasActive)
                             continue;
 
+                        if (idleDbInstance.CanUnload == false)
+                            continue;
+
                         DatabasesLandlord.UnloadDirectly(db);
                     }
 

@@ -68,6 +68,9 @@ namespace Raven.Server.Documents.Queries
                                   && HasExplanations == false
                                   && HasHighlightings == false
                                   && IsDistinct == false;
+
+            CreatedAt = DateTime.UtcNow;
+            LastQueriedAt = CreatedAt;
         }
 
         public readonly bool IsOptimizedSortOnly;
@@ -129,6 +132,10 @@ namespace Raven.Server.Documents.Queries
         public bool HasIncludeOrLoad;
 
         public bool HasOrderByRandom;
+
+        public DateTime CreatedAt;
+
+        public DateTime LastQueriedAt;
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {

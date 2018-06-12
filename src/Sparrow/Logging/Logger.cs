@@ -48,7 +48,7 @@ namespace Sparrow.Logging
 
         public void Info(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.UtcNow;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -59,7 +59,7 @@ namespace Sparrow.Logging
 
         public Task InfoAsync(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.UtcNow;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -75,7 +75,7 @@ namespace Sparrow.Logging
 
         public void Operations(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.Now;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -86,7 +86,7 @@ namespace Sparrow.Logging
 
         public Task OperationsAsync(string msg, Exception ex = null)
         {
-            _logEntry.At = DateTime.Now;
+            _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
             _logEntry.Logger = _logger;
             _logEntry.Message = msg;
@@ -110,6 +110,16 @@ namespace Sparrow.Logging
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _parent.IsOperationsEnabled; }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static DateTime GetLogDate()
+        {
+            var now = DateTime.UtcNow;
+            if (LoggingSource.UseUtcTime == false)
+                now = new DateTime(now.Ticks + LoggingSource.LocalToUtcOffsetInTicks);
+
+            return now;
         }
     }
 }

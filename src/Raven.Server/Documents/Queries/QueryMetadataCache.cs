@@ -1,4 +1,7 @@
-﻿using Raven.Client.Documents.Queries;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using Raven.Client.Documents.Queries;
 using Sparrow;
 using Sparrow.Json;
 
@@ -36,7 +39,16 @@ namespace Raven.Server.Documents.Queries
             // for the query plan that we use, at any rate, they will either error
             // if the query uses them and it is missing or they are there and will
             // noop because they aren't being used
-            return (query.Query == metadata.QueryText);
+            var shouldUseCachedItem = (query.Query == metadata.QueryText);
+
+            if (shouldUseCachedItem)
+            {
+                metadata.LastQueriedAt = DateTime.UtcNow;
+            }
+            return shouldUseCachedItem;
+
+
+            
         }
 
         public void MaybeAddToCache(QueryMetadata metadata, string indexName)
@@ -76,6 +88,11 @@ namespace Raven.Server.Documents.Queries
             if (query.QueryParameters == null || query.QueryParameters.Count == 0)
                 return hash;
             return Hashing.Combine(hash, query.QueryParameters.GetHashOfPropertyNames());
+        }
+
+        public QueryMetadata[] GetQueryCache()
+        {
+            return _cache;
         }
     }
 }

@@ -1012,7 +1012,7 @@ namespace Raven.Server.Web.System
                         {
                             using (token)
                             {
-                                var before = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                                var before = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
                                 var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
                                 // first fill in data 
@@ -1041,7 +1041,7 @@ namespace Raven.Server.Web.System
                                 await compactDatabaseTask.Execute(onProgress, overallResult);
                                 overallResult.Processed = true;
 
-                                overallResult.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                                overallResult.SizeAfterCompactionInMb = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
                                 overallResult.SizeBeforeCompactionInMb = before;
 
                                 return (IOperationResult)overallResult;
@@ -1064,41 +1064,11 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public async Task<long> CalculateStorageSizeInBytes(string databaseName)
+        private async Task<Size> CalculateStorageSize(string databaseName)
         {
-            long sizeOnDiskInBytes = 0;
-
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            var storageEnvironments = database?.GetAllStoragesEnvironment();
-            if (storageEnvironments != null)
-            {
-                foreach (var environment in storageEnvironments)
-                {
-                    Transaction tx = null;
-                    try
-                    {
-                        try
-                        {
-                            tx = environment?.Environment.ReadTransaction();
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            continue;
-                        }
-                        var storageReport = environment?.Environment.GenerateReport(tx);
-                        if (storageReport == null)
-                            continue;
 
-                        var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-                        sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
-                    }
-                    finally
-                    {
-                        tx?.Dispose();
-                    }
-                }
-            }
-            return sizeOnDiskInBytes;
+            return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
         }
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -1189,64 +1159,69 @@ namespace Raven.Server.Web.System
                     {
                         try
                         {
-                            // send some initial progess so studio can open details 
-                            result.AddInfo("Starting migration");
-                            result.AddInfo($"Path of temporary export file: {tmpFile}");
-                            onProgress(overallProgress);
-
-                            while (true)
+                            using (database.PreventFromUnloading())
                             {
-                                var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration, token.Token);
-                                if (readMessage == null)
-                                {
-                                    // reached end of stream
-                                    break;
-                                }
-                                if (token.Token.IsCancellationRequested)
-                                    throw new TaskCanceledException("Was requested to cancel the offline migration task");
-                                if (hasTimeout)
-                                {
-                                    //renewing the timeout so not to spam timeouts once the timeout is reached
-                                    timeout = Task.Delay(configuration.Timeout.Value, token.Token);
-                                }
-
-                                result.AddInfo(readMessage);
+                                // send some initial progess so studio can open details 
+                                result.AddInfo("Starting migration");
+                                result.AddInfo($"Path of temporary export file: {tmpFile}");
                                 onProgress(overallProgress);
-                            }
 
-                            var ended = await processDone.WaitAsync(configuration.Timeout ?? TimeSpan.MaxValue);
-                            if (ended == false)
-                            {
-                                if (token.Token.IsCancellationRequested)
-                                    throw new TaskCanceledException("Was requested to cancel the offline migration process midway");
-                                token.Cancel(); //To release the MRE
-                                throw new TimeoutException($"After waiting for {configuration.Timeout.HasValue} the export tool didn't exit, aborting.");
-                            }
+                                while (true)
+                                {
+                                    var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration, token.Token);
+                                    if (readMessage == null)
+                                    {
+                                        // reached end of stream
+                                        break;
+                                    }
 
-                            if (process.ExitCode != 0)
-                            {
-                                throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
-                            }
+                                    if (token.Token.IsCancellationRequested)
+                                        throw new TaskCanceledException("Was requested to cancel the offline migration task");
+                                    if (hasTimeout)
+                                    {
+                                        //renewing the timeout so not to spam timeouts once the timeout is reached
+                                        timeout = Task.Delay(configuration.Timeout.Value, token.Token);
+                                    }
 
-                            result.DataExporter.Processed = true;
+                                    result.AddInfo(readMessage);
+                                    onProgress(overallProgress);
+                                }
 
-                            if (File.Exists(configuration.OutputFilePath) == false)
-                            {
-                                throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
-                            }
+                                var ended = await processDone.WaitAsync(configuration.Timeout ?? TimeSpan.MaxValue);
+                                if (ended == false)
+                                {
+                                    if (token.Token.IsCancellationRequested)
+                                        throw new TaskCanceledException("Was requested to cancel the offline migration process midway");
+                                    token.Cancel(); //To release the MRE
+                                    throw new TimeoutException($"After waiting for {configuration.Timeout.HasValue} the export tool didn't exit, aborting.");
+                                }
 
-                            result.AddInfo("Starting the import phase of the migration");
-                            onProgress(overallProgress);
-                            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                            using (var reader = File.OpenRead(configuration.OutputFilePath))
-                            using (var stream = new GZipStream(reader, CompressionMode.Decompress))
-                            using (var source = new StreamSource(stream, context, database))
-                            {
-                                var destination = new DatabaseDestination(database);
-                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress,
-                                    token: token.Token);
+                                if (process.ExitCode != 0)
+                                {
+                                    throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
+                                }
 
-                                smuggler.Execute();
+                                result.DataExporter.Processed = true;
+
+                                if (File.Exists(configuration.OutputFilePath) == false)
+                                {
+                                    throw new FileNotFoundException(
+                                        $"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
+                                }
+
+                                result.AddInfo("Starting the import phase of the migration");
+                                onProgress(overallProgress);
+                                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                                using (var reader = File.OpenRead(configuration.OutputFilePath))
+                                using (var stream = new GZipStream(reader, CompressionMode.Decompress))
+                                using (var source = new StreamSource(stream, context, database))
+                                {
+                                    var destination = new DatabaseDestination(database);
+                                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress,
+                                        token: token.Token);
+
+                                    smuggler.Execute();
+                                }
                             }
                         }
                         catch (Exception e)

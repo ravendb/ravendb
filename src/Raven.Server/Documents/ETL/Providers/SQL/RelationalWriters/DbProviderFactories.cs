@@ -1,7 +1,9 @@
 using System;
 using System.Data.Common;
 using System.Data.SqlClient;
+using MySql.Data.MySqlClient;
 using Npgsql;
+using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
@@ -16,6 +18,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     return SqlClientFactory.Instance;
                 case SqlProvider.Npgsql:
                     return NpgsqlFactory.Instance;
+                case SqlProvider.MySqlClient:
+                    return MySqlClientFactory.Instance;
+                case SqlProvider.OracleClient:
+                    return OracleClientFactory.Instance;
                 default:
                     throw new NotSupportedException($"Factory '{factoryName}' is not supported");
             }

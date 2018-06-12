@@ -6,6 +6,7 @@ import moment = require("moment");
 import license = require("models/auth/licenseModel");
 import messagePublisher = require("common/messagePublisher");
 import placeholderUtils = require("common/placeholderUtils");
+import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 
 class licenseKeyModel {
 
@@ -48,10 +49,10 @@ class registrationDismissStorage {
 
 class registration extends dialogViewModelBase {
 
-    isBusy = ko.observable<boolean>(false);
     dismissVisible = ko.observable<boolean>(true);
     canBeClosed = ko.observable<boolean>(false);
     daysToRegister: KnockoutComputed<number>;
+    canForceUpdate: KnockoutComputed<boolean>;
     registrationUrl = ko.observable<string>();
     error = ko.observable<string>();
 
@@ -59,6 +60,11 @@ class registration extends dialogViewModelBase {
     private licenseStatus: Raven.Server.Commercial.LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
+
+    spinners = {
+        forceLicenseUpdate: ko.observable<boolean>(false),
+        activateLicense: ko.observable<boolean>(false)
+    };
 
     constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
         super();
@@ -92,6 +98,10 @@ class registration extends dialogViewModelBase {
             return firstStart.diff(now, "days");
         });
 
+        this.canForceUpdate = ko.pureComputed(() => {
+            return licenseStatus.Expired || !!this.error();
+        });
+
         this.registrationUrl(license.generateLicenseRequestUrl());
     }
 
@@ -108,7 +118,7 @@ class registration extends dialogViewModelBase {
                 const firstStart = moment(license.FirstServerStartDate);
                 // add mutates the original moment
                 const dayAfterFirstStart = firstStart.clone().add("1", "day");
-                const weekAfterFirstStart = dayAfterFirstStart.clone().add("1", "week");
+                const weekAfterFirstStart = firstStart.clone().add("1", "week");
 
                 const now = moment();
                 if (now.isBefore(dayAfterFirstStart)) {
@@ -147,6 +157,24 @@ class registration extends dialogViewModelBase {
         app.showBootstrapDialog(vm);
     }
 
+    forceLicenseUpdate() {
+        this.spinners.forceLicenseUpdate(true);
+
+        new forceLicenseUpdateCommand().execute()
+            .done(() => {
+                license.fetchLicenseStatus()
+                    .done(() => {
+                        const licenseStatus = license.licenseStatus();
+                        if (!licenseStatus.Expired &&
+                            !licenseStatus.ErrorMessage) {
+                            app.closeDialog(this);
+                        }
+                        license.fetchSupportCoverage();
+                    });
+            })
+            .always(() => this.spinners.forceLicenseUpdate(false));
+    }
+
     dismiss(days: number) {
         registrationDismissStorage.dismissFor(days);
         app.closeDialog(this);
@@ -173,17 +201,19 @@ class registration extends dialogViewModelBase {
 
         //TODO: parse pasted key into json and validate
 
-        this.isBusy(true);
+        this.spinners.activateLicense(true);
 
         const parsedLicense = JSON.parse(this.licenseKeyModel().key()) as Raven.Server.Commercial.License;
         new licenseActivateCommand(parsedLicense)
             .execute()
             .done(() => {
-                license.fetchLicenseStatus();
+                license.fetchLicenseStatus()
+                    .done(() => license.fetchSupportCoverage());
+
                 dialog.close(this);
                 messagePublisher.reportSuccess("Your license was successfully registered. Thank you for choosing RavenDB.");
             })
-            .always(() => this.isBusy(false));
+            .always(() => this.spinners.activateLicense(false));
     }
 }
 

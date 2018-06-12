@@ -2891,7 +2891,7 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
 
-            result.SizeBeforeCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
+            result.SizeBeforeCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
 
             result.AddMessage($"Starting compaction of index '{Name}'.");
             result.AddMessage($"Draining queries for {Name}.");
@@ -2950,7 +2950,7 @@ namespace Raven.Server.Documents.Indexes
                         IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
                     }
 
-                    result.SizeAfterCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
+                    result.SizeAfterCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
                 }
                 catch (Exception e)
                 {
@@ -3003,7 +3003,7 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        public long CalculateIndexStorageSizeInBytes(string indexName)
+        public Size CalculateIndexStorageSize()
         {
             long sizeOnDiskInBytes = 0;
 
@@ -3011,13 +3011,13 @@ namespace Raven.Server.Documents.Indexes
             {
                 var storageReport = _environment.GenerateReport(tx);
                 if (storageReport == null)
-                    return 0;
+                    return new Size(0, SizeUnit.Bytes);
 
                 var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
                 sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
             }
 
-            return sizeOnDiskInBytes;
+            return new Size(sizeOnDiskInBytes, SizeUnit.Bytes);
         }
 
         public long GetLastEtagInCollection(DocumentsOperationContext databaseContext, string collection)

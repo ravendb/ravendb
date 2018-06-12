@@ -14,6 +14,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             SqlTables = new List<SqlEtlTable>();
         }
 
+        [Obsolete("FactoryName should be defined as part of SQL connection string - SqlConnectionString.FactoryName field)")]
         public string FactoryName { get; set; }
 
         public bool ParameterizeDeletes { get; set; } = true;
@@ -28,12 +29,14 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override EtlType EtlType => EtlType.Sql;
 
+        internal string GetFactoryName()
+        {
+            return Connection.FactoryName ?? FactoryName; // legacy configs from RavenDB 4.0 don't have SqlConnectionString.FactoryName field
+        }
+
         public override bool Validate(out List<string> errors)
         {
             base.Validate(out errors);
-
-            if (string.IsNullOrEmpty(FactoryName))
-                errors.Add($"{nameof(FactoryName)} cannot be empty");
 
             if (SqlTables.Count == 0)
                 errors.Add($"{nameof(SqlTables)} cannot be empty");
@@ -46,27 +49,32 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             if (_name != null)
                 return _name;
 
-            var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(FactoryName, Connection.ConnectionString);
+            var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(GetFactoryName(), Connection.ConnectionString);
 
             return _name = $"{database}@{server}";
         }
 
         public override bool UsingEncryptedCommunicationChannel()
         {
-            switch (SqlProviderParser.GetSupportedProvider(FactoryName))
+            string encrypt;
+            bool encryptBool;
+
+            string sslMode;
+
+            switch (SqlProviderParser.GetSupportedProvider(GetFactoryName()))
             {
                 case SqlProvider.SqlClient:
-                    var encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
+                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
 
                     if (string.IsNullOrEmpty(encrypt))
                         return false;
 
-                    if (bool.TryParse(encrypt, out var encryptBool) == false)
+                    if (bool.TryParse(encrypt, out encryptBool) == false)
                         return false;
 
                     return encryptBool;
                 case SqlProvider.Npgsql:
-                    var sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" });
+                    sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" });
 
                     if (string.IsNullOrEmpty(sslMode))
                         return false;
@@ -80,8 +88,55 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     }
 
                     return false;
+                
+                case SqlProvider.MySqlClient:
+                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt", "UseSSL"});
+
+                    if (string.IsNullOrEmpty(encrypt) == false)
+                    {
+                        if (bool.TryParse(encrypt, out encryptBool) == false)
+                            return false;
+
+                        return encryptBool;
+                    }
+                    else
+                    {
+                        sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SSL Mode", "SslMode", "Ssl-Mode" });
+
+                        if (string.IsNullOrEmpty(sslMode))
+                            return false;
+
+                        switch (sslMode.ToLower())
+                        {
+                            case "required":
+                            case "verifyca":
+                            case "verifyfull":
+                                return true;
+                        }
+
+                        return false;
+                    }
+                case SqlProvider.OracleClient:
+                    var dataSource = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "Data Source" });
+
+                    if (string.IsNullOrEmpty(dataSource))
+                        return false;
+
+                    var protocol = SqlConnectionStringParser.GetOracleDataSourceSubValue(dataSource, "PROTOCOL");
+
+                    if (string.IsNullOrEmpty(protocol))
+                        return false;
+
+                    switch (protocol.ToLower())
+                    {
+                        case "tcps":
+                            return true;
+                    }
+
+                    return false;
+
                 default:
-                    throw new NotSupportedException($"Factory '{FactoryName}' is not supported");
+                    throw new NotSupportedException($"Factory '{GetFactoryName()}' is not supported");
             }
         }
 

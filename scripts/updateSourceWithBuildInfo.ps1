@@ -47,16 +47,13 @@ function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit
 
     $fileVersion = "$($version.Split("-")[0]).$buildNumber"
 
-    $inputText = [System.IO.File]::ReadAllText($assemblyInfoFile)
-
-    $commitPattern = [regex]'{commit}'
-    $result = $commitPattern.Replace($inputText, $commit)
+    $result = [System.IO.File]::ReadAllText($assemblyInfoFile)
 
     $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]';
-    $result = $assemblyFileVersionPattern.Replace($inputText, "[assembly: AssemblyFileVersion(""$fileVersion"")]"); 
+    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$fileVersion"")]"); 
 
     $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
-    $result = $assemblyInfoVersionPattern.Replace($inputText, "[assembly: AssemblyInformationalVersion(""$version"")]")
+    $result = $assemblyInfoVersionPattern.Replace($result, "[assembly: AssemblyInformationalVersion(""$version"")]")
 
     [System.IO.File]::WriteAllText($assemblyInfoFile, $result, [System.Text.Encoding]::UTF8)
 }

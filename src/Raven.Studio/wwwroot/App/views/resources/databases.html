@@ -230,11 +230,11 @@
 </script>
 
 <script type="text/html" id="valid-database-properties-template">
-    <div class="properties-item" data-bind="visible: totalSize() && $root.createIsLocalDatabaseObservable(name)()">
+    <div class="properties-item" data-bind="visible: (totalSize() || totalTempBuffersSize()) && $root.createIsLocalDatabaseObservable(name)()">
         <div class="properties-value value-only">
-            <a class="set-size text-disabled" title="Total size. Click to view storage report" data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+            <a class="set-size text-disabled" data-toggle="size-tooltip" data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
                 <i class="icon-drive"></i>
-                <span data-bind="text: totalSize"></span>
+                <span data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"></span>
             </a>
         </div>
     </div>

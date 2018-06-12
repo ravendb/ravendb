@@ -137,7 +137,7 @@ namespace Raven.Server.Web.System
                                 })
                                 )
                             ),
-                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp.Index
+                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp?.Index ?? -1
                         });
                     }
                 }
@@ -352,13 +352,14 @@ namespace Raven.Server.Web.System
                     // so just report empty values then
                 }
 
-                var size = new Size(db?.GetSizeOnDiskInBytes() ?? 0);
+                var size = db?.GetSizeOnDisk() ?? (new Size(0), new Size(0));
 
                 var databaseInfo = new DatabaseInfo
                 {
                     Name = databaseName,
                     Disabled = disabled,
-                    TotalSize = size,
+                    TotalSize = size.Data,
+                    TempBuffersSize = size.TempBuffers,
 
                     IsAdmin = true, 
                     IsEncrypted = dbRecord.Encrypted,

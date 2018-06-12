@@ -40,7 +40,7 @@ namespace Sparrow.Meters
             {
                 var recentStats = new PerformanceMetricsRecentStats
                 {
-                    Start = meter.Start.GetDefaultRavenFormat(),
+                    Start = meter.Start.GetDefaultRavenFormat(isUtc: true),
                     Counter = meter.Counter,
                     Duration = Math.Round(meter.Duration.TotalMilliseconds, 2),
                     Type = Type

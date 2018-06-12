@@ -30,6 +30,8 @@ class databases extends viewModelBase {
 
     databases = ko.observable<databasesInfo>();
     clusterManager = clusterTopologyManager.default;
+    
+    formatBytes = generalUtils.formatBytesToSize;
 
     filters = {
         searchText: ko.observable<string>(),
@@ -131,6 +133,12 @@ class databases extends viewModelBase {
         this.updateUrl(appUrl.forDatabases());
     }
     
+    compositionComplete() {
+        super.compositionComplete();
+        
+        this.initTooltips();
+    }
+    
     deactivate() {
         if (this.statsSubscription) {
             this.statsSubscription.off();
@@ -175,7 +183,23 @@ class databases extends viewModelBase {
             .done((result: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
                 this.databases().updateDatabase(result);
                 this.filterDatabases();
+                this.initTooltips();
             });
+    }
+    
+    private initTooltips() {
+        const self = this;
+        $('.databases [data-toggle="size-tooltip"]').tooltip({
+            container: "body",
+            html: true,
+            title: function() {
+                const $data = ko.dataFor(this) as databaseInfo;
+                return `Data: <strong>${self.formatBytes($data.totalSize())}</strong><br />
+                Temp: <strong>${self.formatBytes($data.totalTempBuffersSize())}</strong><br />
+                Total: <strong>${self.formatBytes($data.totalSize() + $data.totalTempBuffersSize())}</strong>
+                `
+            }
+        });
     }
 
     private filterDatabases(): void {

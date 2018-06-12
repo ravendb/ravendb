@@ -35,7 +35,7 @@
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
             <div data-bind="if: isCompleted()">
-                <button class="close" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+                <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                     <i class="icon-cancel"></i>
                 </button>
                 <h3 data-bind="text: title"></h3>
@@ -86,7 +86,7 @@
 <script type="text/html" id="AlertRaised-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
-            <button class="close" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+            <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                 <i class="icon-cancel"></i>
             </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
@@ -109,13 +109,16 @@
                     </ul>
                 </div>
             </div>
+            <div data-bind="if: customControl">
+                <div data-bind="compose: customControl"></div>
+            </div>
         </div>
     </div>
 </script>
 <script type="text/html" id="RecentError-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
-            <button class="close" data-bind="click: _.partial($parent.dismiss, $data)">
+            <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data)">
                 <i class="icon-cancel"></i>
             </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
@@ -133,7 +136,7 @@
 <script type="text/html" id="PerformanceHint-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
-            <button class="close" data-bind="click: _.partial($parent.dismiss, $data)">
+            <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data)">
                 <i class="icon-cancel"></i>
             </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
