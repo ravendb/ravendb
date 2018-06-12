@@ -96,31 +96,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return Task.CompletedTask;
         }
-
-        private void WritePropertyNameAndScalarValue(BlittableJsonTextWriter writer, string propertyName,object propertyValue)
-        {
-            writer.WritePropertyName(propertyName);
-
-            if (propertyValue is Int64 || propertyValue is Int32 || propertyValue is Int16 ||
-                propertyValue is UInt64 || propertyValue is UInt32 || propertyValue is UInt16 ||
-                propertyValue is byte || propertyValue is sbyte)
-            {
-                writer.WriteValue(BlittableJsonToken.Integer, (long)propertyValue);
-            }
-            else if (propertyValue is LazyStringValue lsv)
-            {
-                writer.WriteString(lsv);
-            }
-            else if (propertyValue is string str)
-            {
-                writer.WriteString(str);
-            }
-            else
-            {
-                writer.WriteString(propertyValue.ToString());
-            }            
-            
-        }
        
         [RavenAction("/databases/*/debug/queries/cache/list", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task QueriesCacheList()
@@ -134,13 +109,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var queriesList = new List<DynamicJsonValue>();
 
                 writer.WritePropertyName("TotalCachedQueries");
-                writer.WriteValue(BlittableJsonToken.Integer,(long)queryCache.Length);
+                writer.WriteInteger(queryCache.Length);
                 writer.WriteComma();
                                                
                 foreach (var item in queryCache)
-                {
-                    List<(string propertyName, object propertyValue)> properties = new List<(string propertyName, object propertyValue)>();
-                    
+                {                    
                     if (item != null)
                     {
                         var curDjvItem = new DynamicJsonValue();
