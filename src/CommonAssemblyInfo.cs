@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Resources;
 
-[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2016 All rights reserved.")]
+[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2018 All rights reserved.")]
 
 [assembly: AssemblyVersion("4.0.6")]
 [assembly: AssemblyFileVersion("4.0.6.40")]

@@ -18,6 +18,7 @@ namespace Raven.Client.Properties
 
         private static int? _buildVersion;
         private static readonly Version _assemblyVersion;
+        private static string _assemblyVersionAsString;
 
         public static readonly RavenVersionAttribute Instance;
 
@@ -33,10 +34,9 @@ namespace Raven.Client.Properties
             MajorVersionAsChar = char.Parse(MajorVersion.ToInvariantString());
             MinorVersion = _assemblyVersion.Minor;
             PatchVersion = _assemblyVersion.Build;
-            AssemblyVersion = $"{MajorVersion.ToInvariantString()}.{MinorVersion.ToInvariantString()}.{PatchVersion.ToInvariantString()}.{BuildVersion.ToInvariantString()}";
         }
 
-        public readonly string AssemblyVersion;
+        public string AssemblyVersion => _assemblyVersionAsString ?? (_assemblyVersionAsString = $"{MajorVersion.ToInvariantString()}.{MinorVersion.ToInvariantString()}.{PatchVersion.ToInvariantString()}.{BuildVersion.ToInvariantString()}");
 
         public readonly int MajorVersion;
 
@@ -52,14 +52,12 @@ namespace Raven.Client.Properties
             {
                 if (_buildVersion == null)
                 {
-                    if (int.TryParse(Build, out var buildVersion) == false)
-                    {
-                        _buildVersion = 40;
-                    }
-                    else
-                    {
-                        _buildVersion = buildVersion;
-                    }
+                    if (string.IsNullOrWhiteSpace(Build))
+                        throw new ArgumentNullException(nameof(Build));
+
+                    _buildVersion = int.TryParse(Build, out var buildVersion)
+                        ? buildVersion
+                        : 40;
                 }
 
                 return _buildVersion.Value;
