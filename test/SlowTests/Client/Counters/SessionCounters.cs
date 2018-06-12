@@ -231,14 +231,14 @@ namespace SlowTests.Client.Counters
                     var counters = session.Advanced.GetCountersFor(user);
 
                     Assert.Equal(2, counters.Count);
-                    Assert.Equal("downloads", counters[0]);
-                    Assert.Equal("likes", counters[1]);
+                    Assert.True(counters.Contains("downloads"));
+                    Assert.True(counters.Contains("likes"));
 
                     user = session.Load<User>("users/2-A");
                     counters = session.Advanced.GetCountersFor(user);
 
                     Assert.Equal(1, counters.Count);
-                    Assert.Equal("votes", counters[0]);
+                    Assert.True(counters.Contains("votes"));
 
                     user = session.Load<User>("users/3-A");
                     counters = session.Advanced.GetCountersFor(user);
@@ -423,6 +423,259 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public void SessionShouldKnowWhenItHasAllCountersInCacheAndAvoidTripToServer_WhenUsingEntity()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("dislikes", 200);
+                    session.CountersFor("users/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var userCounters = session.CountersFor(user);
+
+                    var val = userCounters.Get("likes");
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                    Assert.Equal(100, val);
+
+                    val = userCounters.Get("dislikes");
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(200, val);
+
+                    val = userCounters.Get("downloads");
+                    // session should know at this point that it has all counters
+
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+                    Assert.Equal(300, val);
+
+                    var dic = userCounters.GetAll(); // should not go to server
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    val = userCounters.Get("score"); // should not go to server
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+                    Assert.Null(val);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionShouldUpdateMissingCountersInCacheAndRemoveDeletedCounters_AfterRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("dislikes", 200);
+                    session.CountersFor("users/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var userCounters = session.CountersFor(user);
+                    var dic = userCounters.GetAll(); 
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    using (var session2 = store.OpenSession())
+                    {
+                        session2.CountersFor("users/1-A").Increment("likes");
+                        session2.CountersFor("users/1-A").Delete("dislikes");
+                        session2.CountersFor("users/1-A").Increment("score", 1000); // new counter
+                        session2.SaveChanges();
+                    }
+
+                    // should remove 'dislikes' from cache and add 'score' to missingCounters
+                    session.Advanced.Refresh(user); 
+                    Assert.Equal(3, dic.Count);
+
+                    // should go to server again
+                    dic = userCounters.GetAll(); 
+                    Assert.Equal(4, session.Advanced.NumberOfRequests); 
+
+                    Assert.Equal(3, dic.Count);
+                    // 'likes' was in cache before, so we didn't ask for 
+                    // the updated value from the server
+                    Assert.Equal(100, dic["likes"]); 
+                    Assert.Equal(300, dic["downloads"]);
+                    Assert.Equal(1000, dic["score"]);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionShouldUpdateMissingCountersInCacheAndRemoveDeletedCounters_AfterLoadFromServer()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("dislikes", 200);
+                    session.CountersFor("users/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var userCounters = session.CountersFor("users/1-A");
+                    var dic = userCounters.GetAll();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    using (var session2 = store.OpenSession())
+                    {
+                        session2.CountersFor("users/1-A").Increment("likes");
+                        session2.CountersFor("users/1-A").Delete("dislikes");
+                        session2.CountersFor("users/1-A").Increment("score", 1000); // new counter
+                        session2.SaveChanges();
+                    }
+
+                    // should remove 'dislikes' from cache and add 'score' to missingCounters
+                    session.Load<User>("users/1-A"); 
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    // should go to server again
+                    dic = userCounters.GetAll();  
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, dic.Count);
+
+                    // 'likes' was in cache before, so we didn't ask for 
+                    // the updated value from the server
+                    Assert.Equal(100, dic["likes"]); 
+                    Assert.Equal(300, dic["downloads"]);
+                    Assert.Equal(1000, dic["score"]);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionClearShouldClearCountersCache()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("dislikes", 200);
+                    session.CountersFor("users/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var userCounters = session.CountersFor("users/1-A");
+                    var dic = userCounters.GetAll();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    using (var session2 = store.OpenSession())
+                    {
+                        session2.CountersFor("users/1-A").Increment("likes");
+                        session2.CountersFor("users/1-A").Delete("dislikes");
+                        session2.CountersFor("users/1-A").Increment("score", 1000); // new counter
+                        session2.SaveChanges();
+                    }
+
+                    session.Advanced.Clear(); // should clear CountersCache
+
+                    dic = userCounters.GetAll(); // should go to server again
+                    Assert.Equal(2, session.Advanced.NumberOfRequests); 
+
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(101, dic["likes"]); 
+                    Assert.Equal(300, dic["downloads"]);
+                    Assert.Equal(1000, dic["score"]);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionEvictShouldRemoveEntryFromCountersCache()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv" }, "users/1-A");
+                    session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("dislikes", 200);
+                    session.CountersFor("users/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var userCounters = session.CountersFor("users/1-A");
+                    var dic = userCounters.GetAll();
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    using (var session2 = store.OpenSession())
+                    {
+                        session2.CountersFor("users/1-A").Increment("likes");
+                        session2.CountersFor("users/1-A").Delete("dislikes");
+                        session2.CountersFor("users/1-A").Increment("score", 1000); // new counter
+                        session2.SaveChanges();
+                    }
+
+                    session.Advanced.Evict(user); // should remove 'users/1-A' entry from  CountersByDocId
+
+                    dic = userCounters.GetAll(); // should go to server again
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(101, dic["likes"]);
+                    Assert.Equal(300, dic["downloads"]);
+                    Assert.Equal(1000, dic["score"]);
+                }
+            }
+        }
+
+        [Fact]
         public void SessionShouldAlwaysLoadCountersFromCacheAfterGetAll()
         {
             using (var store = GetDocumentStore())
@@ -503,7 +756,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionShouldRemoveCounterFromCacheAfterIncrement()
+        public void SessionIncrementCounterShouldUpdateCounterValueAfterSaveChanges()
         {
             using (var store = GetDocumentStore())
             {
@@ -511,6 +764,7 @@ namespace SlowTests.Client.Counters
                 {
                     session.Store(new User { Name = "Aviv" }, "users/1-A");
                     session.CountersFor("users/1-A").Increment("likes", 100);
+                    session.CountersFor("users/1-A").Increment("dislikes", 300);
 
                     session.SaveChanges();
                 }
@@ -521,12 +775,25 @@ namespace SlowTests.Client.Counters
                     Assert.Equal(100, val);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-                    session.CountersFor("users/1-A").Increment("likes", 100);
-                    session.SaveChanges();
-                    Assert.Equal(2, session.Advanced.NumberOfRequests);
-
+                    session.CountersFor("users/1-A").Increment("likes", 50); // should not increment the counter value in cache
                     val = session.CountersFor("users/1-A").Get("likes");
-                    Assert.Equal(200, val);
+                    Assert.Equal(100, val);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.CountersFor("users/1-A").Increment("dislikes", 200); // should not add the counter to cache
+                    val = session.CountersFor("users/1-A").Get("dislikes");  // should go to server
+                    Assert.Equal(300, val); 
+                    Assert.Equal(2, session.Advanced.NumberOfRequests); 
+
+                    session.SaveChanges(); // should updated counters values in cache according to increment result
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    val = session.CountersFor("users/1-A").Get("likes"); 
+                    Assert.Equal(150, val); 
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    val = session.CountersFor("users/1-A").Get("dislikes");
+                    Assert.Equal(500, val);
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                 }
