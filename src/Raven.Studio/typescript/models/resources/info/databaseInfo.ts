@@ -13,7 +13,8 @@ class databaseInfo {
     name: string;
 
     uptime = ko.observable<string>();
-    totalSize = ko.observable<string>();
+    totalSize = ko.observable<number>();
+    totalTempBuffersSize = ko.observable<number>();
     bundles = ko.observableArray<string>();
     backupStatus = ko.observable<string>();
     lastFullOrIncrementalBackup = ko.observable<string>();
@@ -173,7 +174,8 @@ class databaseInfo {
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
         this.isEncrypted(dto.IsEncrypted);
-        this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
+        this.totalSize(dto.TotalSize ? dto.TotalSize.SizeInBytes : 0);
+        this.totalTempBuffersSize(dto.TempBuffersSize ? dto.TempBuffersSize.SizeInBytes : 0);
         this.indexingErrors(dto.IndexingErrors);
         this.alerts(dto.Alerts);
         this.loadError(dto.LoadError);

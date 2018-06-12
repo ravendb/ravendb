@@ -110,7 +110,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson(),
                 [nameof(UsedSpace)] = UsedSpace,
-                [nameof(UsedSpaceByTempBuffers)] = UsedSpace,
+                [nameof(UsedSpaceByTempBuffers)] = UsedSpaceByTempBuffers
             };
         }
     }

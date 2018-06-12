@@ -74,12 +74,15 @@ namespace Raven.Server.Dashboard
         
         public long Size { get; set; }
         
+        public long TempBuffersSize { get; set; }
+        
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue()
             {
                 [nameof(Database)] = Database,
                 [nameof(Size)] = Size,
+                [nameof(TempBuffersSize)] = TempBuffersSize
             };
         }
     }
