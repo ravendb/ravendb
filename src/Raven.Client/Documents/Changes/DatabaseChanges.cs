@@ -343,9 +343,9 @@ namespace Raven.Client.Documents.Changes
             catch (OperationCanceledException e)
             {
                 NotifyAboutError(e);
-                _tcs.TrySetException(e);
+                _tcs.TrySetCanceled();
                 return;
-            }            
+            }
             catch (Exception e)
             {
                 ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
