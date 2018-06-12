@@ -57,7 +57,9 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
-        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();       
+        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+
+        public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
@@ -631,8 +633,14 @@ namespace Raven.Server.Documents.ETL
             Logger.Info(message.ToString());
         }
 
-        public OngoingTaskConnectionStatus GetConnectionStatus()
+        public override OngoingTaskConnectionStatus GetConnectionStatus()
         {
+            if (Configuration.Disabled)
+                return OngoingTaskConnectionStatus.NotActive;
+
+            if (FallbackTime != null)
+                return OngoingTaskConnectionStatus.Reconnect;
+
             if (Statistics.WasLatestLoadSuccessful || Statistics.LoadErrors == 0)
                 return OngoingTaskConnectionStatus.Active;
 
