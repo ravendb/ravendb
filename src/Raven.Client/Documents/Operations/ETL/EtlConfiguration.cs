@@ -130,7 +130,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
             return config.ConnectionStringName == ConnectionStringName &&
                    config.Name == Name &&
-                   config.MentorNode == MentorNode;
+                   config.MentorNode == MentorNode &&
+                   config.Disabled == Disabled;
         }
 
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)

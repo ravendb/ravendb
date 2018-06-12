@@ -136,10 +136,10 @@ namespace Raven.Server.Documents.ETL
                     continue;
                 }
 
-                if (ValidateConfiguration(config, uniqueNames) == false)
+                if (config.Disabled)
                     continue;
 
-                if (config.Disabled)
+                if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
 
                 var processState = GetProcessState(config.Transforms, _database, config.Name);
