@@ -439,13 +439,29 @@ class trafficSection {
 }
 
 class driveUsageSection {
+    private data: Raven.Server.Dashboard.DrivesUsage;
     private table = ko.observableArray<driveUsage>();
     private storageChart: storagePieChart;
     
-    totalDocumentsSize = ko.observable<number>(0);
+    includeTemporaryBuffers = ko.observable<boolean>(true);
+    
+    totalDocumentsSize: KnockoutComputed<number>;
+    
+    constructor() {
+        this.totalDocumentsSize = ko.pureComputed(() => {
+            return _.sum(this.table().map(x => x.totalDocumentsSpaceUsed()));
+        });
+    }
     
     init() {
         this.storageChart = new storagePieChart("#storageChart");
+        
+        this.includeTemporaryBuffers.subscribe(() => {
+            this.table().forEach(item => {
+                item.gridController().reset(true);
+            });
+            this.updateChart(this.data, true);
+        });
     }
     
     onResize() {
@@ -457,9 +473,10 @@ class driveUsageSection {
     }
     
     onData(data: Raven.Server.Dashboard.DrivesUsage) {
+        this.data = data;
         const items = data.Items;
 
-        this.updateChart(data);
+        this.updateChart(data, false);
 
         const newMountPoints = items.map(x => x.MountPoint);
         const oldMountPoints = this.table().map(x => x.mountPoint());
@@ -475,43 +492,40 @@ class driveUsageSection {
             if (matched) {
                 matched.update(incomingItem);
             } else {
-                const usage = new driveUsage(incomingItem, this.storageChart.getColorProvider());
+                const usage = new driveUsage(incomingItem, this.storageChart.getColorProvider(), this.includeTemporaryBuffers);
                 this.table.push(usage);
             }
         });
-
-        this.updateTotals();
-        
     }
     
-    private updateChart(data: Raven.Server.Dashboard.DrivesUsage) {
+    private updateChart(data: Raven.Server.Dashboard.DrivesUsage, withTween: boolean) {
         const cache = new Map<string, number>();
 
+        const includeTemp = this.includeTemporaryBuffers();
+        
         // group by database size
         data.Items.forEach(mountPointUsage => {
             mountPointUsage.Items.forEach(item => {
+                const sizeToUse = includeTemp ? item.Size + item.TempBuffersSize : item.Size;
+                
                 if (cache.has(item.Database)) {
-                    cache.set(item.Database, item.Size + cache.get(item.Database));
+                    cache.set(item.Database, sizeToUse + cache.get(item.Database));
                 } else {
-                    cache.set(item.Database, item.Size);
+                    cache.set(item.Database, sizeToUse);
                 }
             });
         });
         
-        const result = [] as Raven.Server.Dashboard.DatabaseDiskUsage[];
+        const result = [] as Array<{ Database: string, Size: number }>;
         
         cache.forEach((value, key) => {
             result.push({
                 Database: key,
-                Size: value
+                Size: value,
             });
         });
 
-        this.storageChart.onData(result);
-    }
-    
-    private updateTotals() {
-        this.totalDocumentsSize(_.sum(this.table().map(x => x.totalDocumentsSpaceUsed())));
+        this.storageChart.onData(result, withTween);
     }
 }
 
