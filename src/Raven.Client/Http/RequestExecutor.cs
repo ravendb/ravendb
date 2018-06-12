@@ -314,6 +314,12 @@ namespace Raven.Client.Http
                     OnTopologyUpdated(topology);
                 }
             }
+            // we want to throw here only if we are not disposed yet
+            catch (Exception)
+            {
+                if (Disposed == false)
+                    throw;
+            }
             finally
             {
                 _updateDatabaseTopologySemaphore.Release();
@@ -1172,7 +1178,6 @@ namespace Raven.Client.Http
             if (_disposeOnceRunner.Disposed)
                 return;
 
-            _updateDatabaseTopologySemaphore.Wait();
             _disposeOnceRunner.Dispose();
         }
 
