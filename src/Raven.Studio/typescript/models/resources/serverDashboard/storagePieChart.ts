@@ -54,15 +54,16 @@ class storagePieChart {
         return (dbName: string) => this.colorScale(dbName);
     }
 
-    onData(data: Raven.Server.Dashboard.DatabaseDiskUsage[]) {
+    onData(data: Array<{ Database: string, Size: number }>, withTween = false) {
         const group = this.svg.select(".pie");
 
         const arc = d3.svg.arc<Raven.Server.Dashboard.DatabaseDiskUsage>()
             .innerRadius(16)
             .outerRadius(this.width / 2 - 10);
 
-        const pie = d3.layout.pie<Raven.Server.Dashboard.DatabaseDiskUsage>()
-            .value(x => x.Size);
+        const pie = d3.layout.pie<{ Database: string, Size: number }>()
+            .value(x => x.Size)
+            .sort(null);
 
         const arcs = group.selectAll(".arc")
             .data(pie(data));
@@ -76,11 +77,25 @@ class storagePieChart {
        
         enteringArcs.append("path")
             .attr("d", d => arc(d as any))
-            .attr("fill", d => this.colorScale(d.data.Database));
-        
-        arcs.select("path")
-            .attr("d", d => arc(d as any))
-            .attr("fill", d => this.colorScale(d.data.Database));
+            .attr("fill", d => this.colorScale(d.data.Database))
+            .each(function (d) { this._current = d; });
+
+        if (withTween) {
+            const arcTween = function (a: d3.layout.pie.Arc<{ Database: string, Size: number }>) {
+                const i = d3.interpolate(this._current , a as any);
+                this._current = i(0);
+                return (t: number) => arc(i(t) as any);
+            };
+            
+            arcs.select("path")
+                .transition()
+                .attrTween("d", arcTween)
+                .attr("fill", d => this.colorScale(d.data.Database));
+        } else {
+            arcs.select("path")
+                .attr("d", d => arc(d as any))
+                .attr("fill", d => this.colorScale(d.data.Database));
+        }
 
     }
    

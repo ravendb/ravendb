@@ -199,6 +199,7 @@ namespace Raven.Server.Dashboard
             }
 
             existingDatabaseUsage.Size += mountPointUsage.UsedSpace;
+            existingDatabaseUsage.TempBuffersSize += mountPointUsage.UsedSpaceByTempBuffers;
         }
 
         private static void SetOfflineDatabaseInfo(
