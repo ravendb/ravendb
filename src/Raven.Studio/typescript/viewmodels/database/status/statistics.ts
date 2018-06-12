@@ -34,6 +34,23 @@ class statistics extends viewModelBase {
             return appUrl.forStatsRawData(this.activeDatabase());
         });
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
+
+        const self = this;
+        $('.stats .js-size-tooltip').tooltip({
+            container: "body",
+            html: true,
+            placement: "right",
+            title: () => {
+                return `Data: <strong>${this.stats().dataSizeOnDisk}</strong><br />
+                Temp: <strong>${this.stats().tempBuffersSizeOnDisk}</strong><br />
+                Total: <strong>${this.stats().totalSizeOnDisk}</strong>
+                `
+            }
+        });
+    }
 
     detached() {
         super.detached();
