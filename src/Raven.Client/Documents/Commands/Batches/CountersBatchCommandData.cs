@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Id { get; }
         public string Name { get; }
         public string ChangeVector { get; }
+        public bool HasIncrementOperation { get; set; }
 
         public DocumentCountersOperation Counters { get;  }
         public CommandType Type { get; } = CommandType.Counters;
@@ -69,6 +70,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
+                [nameof(Id)] = Id,
                 [nameof(Counters)] = Counters.ToJson(),
                 [nameof(Type)] = Type.ToString()
             };

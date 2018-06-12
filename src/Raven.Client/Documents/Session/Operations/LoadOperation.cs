@@ -115,6 +115,13 @@ namespace Raven.Client.Documents.Session.Operations
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
                 _session.DocumentsById.Add(newDocumentInfo);
+
+                if (_session.CountersByDocId.TryGetValue(newDocumentInfo.Id, out var cache) == false)
+                    continue;
+
+                newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray bjra);
+                var metadataCounters = new HashSet<string>(bjra.Select(c => c.ToString()), StringComparer.OrdinalIgnoreCase);
+                cache.RegistarMissingCounters(metadataCounters);
             }
 
             _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);

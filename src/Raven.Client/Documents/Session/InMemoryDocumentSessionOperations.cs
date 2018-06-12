@@ -126,9 +126,6 @@ namespace Raven.Client.Documents.Session
         protected internal readonly Dictionary<string, CountersCache> CountersByDocId =
             new Dictionary<string, CountersCache> (StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly HashSet<(string docId, string counter)> CountersToDelete = new HashSet<(string docId, string Name)>();
-        protected internal readonly HashSet<(string docId, string counter)> CountersToIncrement = new HashSet<(string docId, string Name)>();
-
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -258,17 +255,17 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="T"></typeparam>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
-        public List<string> GetCountersFor<T>(T instance)
+        public HashSet<string> GetCountersFor<T>(T instance)
         {
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
 
             var documentInfo = GetDocumentInfo(instance);
 
-            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
-                return counters.Select(x=>x.ToString()).ToList();
-
-            return null;
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+                out BlittableJsonReaderArray counters) == false)
+                return null;
+            return new HashSet<string>(counters.Select(x=>x.ToString()), StringComparer.OrdinalIgnoreCase);
         }
 
 
@@ -515,7 +512,7 @@ more responsive application.
 
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
-            CountersToDelete.Add((value.Id, null));
+            CountersByDocId.Remove(value.Id);
             _knownMissingIds.Add(value.Id);
         }
 
@@ -555,7 +552,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
-            CountersToDelete.Add((id, null));
+            CountersByDocId.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
@@ -760,8 +757,7 @@ more responsive application.
 
             PrepareCompareExchangeEntities(result);
 
-            RemoveCountersFromCache(CountersToIncrement);
-            RemoveCountersFromCache(CountersToDelete);
+            PrepareForCountersIncrement(result);
 
             if (DeferredCommands.Count > 0)
             {
@@ -834,20 +830,18 @@ more responsive application.
             clusterTransactionOperations.Clear();
         }
 
-        private void RemoveCountersFromCache(HashSet<(string docId, string counter)> countersToRemove)
+        private void PrepareForCountersIncrement(SaveChangesData result)
         {
-            foreach (var (docId, counter) in countersToRemove)
+            foreach (var (id, type, name) in result.DeferredCommandsDictionary.Keys)
             {
-                if (counter == null)
-                {
-                    // remove all
-                    CountersByDocId.Remove(docId);
-                    return;
-                }
+                if (type != CommandType.Counters)
+                    continue;
 
-                if (CountersByDocId.TryGetValue(docId, out var cache))
+                if (result.DeferredCommandsDictionary[(id, type, name)] is CountersBatchCommandData cmd &&
+                    cmd.HasIncrementOperation)
                 {
-                    cache.Values.Remove(counter);
+                    result.SessionCommands.Add(cmd);
+                    result.DeferredCommands.Remove(cmd);
                 }
             }
         }
@@ -1438,6 +1432,12 @@ more responsive application.
                     continue;
                 prop.SetValue(entity, prop.GetValue(documentInfo.Entity));
             }
+
+            if (CountersByDocId.TryGetValue(documentInfo.Id, out var cache))
+            {
+                var metadataCounters = GetCountersFor(entity);
+                cache.RegistarMissingCounters(metadataCounters);
+            }
         }
 
         protected static T GetOperationResult<T>(object result)
@@ -1512,11 +1512,97 @@ more responsive application.
         /// <summary>
         /// an internal structure that is used for caching counter values in a session
         /// </summary>
-        protected internal struct CountersCache
+        protected internal class CountersCache
         {
+            public CountersCache()
+            {
+                Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+            }
+
             public Dictionary<string, long?> Values { get; set; }
 
-            public bool GotAll { get; set; }
+            public bool GotAll
+            {
+                get => _gotAll;
+                set
+                {
+                    _gotAll = value;
+
+                    if (value)
+                        _missingCounters = null;
+                }
+            }
+
+            private bool _gotAll { get; set; }
+            private HashSet<string> _missingCounters;
+            public IEnumerable<string> MissingCounters => _missingCounters;
+
+            private void RemoveFromMissing(string counterName)
+            {
+                _missingCounters.Remove(counterName);
+
+                if (_missingCounters.Count > 0)
+                    return;
+
+                _gotAll = true;
+                _missingCounters = null;
+            }
+
+            public void AddOrUptadeCounterValue(string counterName, long? value)
+            {
+                Values[counterName] = value;
+
+                if (_gotAll || _missingCounters == null)
+                    return;
+
+                RemoveFromMissing(counterName);
+            }
+
+            public void RegistarMissingCounters(HashSet<string> metadataCounters)
+            {
+                if (metadataCounters == null || metadataCounters.Count == 0)
+                {
+                    Values.Clear();
+                    _gotAll = true;
+                    return;
+                }
+
+                _gotAll = false;
+
+                if (Values.Count == 0)
+                {
+                    _missingCounters = new HashSet<string>(metadataCounters);
+                    return;
+                }
+
+                _missingCounters = new HashSet<string>();
+
+                foreach (var counterName in metadataCounters)
+                {
+                    if (Values.TryGetValue(counterName, out var val) &&
+                        val.HasValue)
+                        continue;
+
+                    _missingCounters.Add(counterName);
+                }
+
+                var keys = Values.Keys.ToList();
+
+                foreach (var counter in keys)
+                {
+                    if (Values[counter].HasValue == false ||
+                        metadataCounters.Contains(counter))
+                        continue;
+
+                    Values.Remove(counter);
+                }
+
+                if (_missingCounters.Count > 0)
+                    return;
+
+                _gotAll = true;
+                _missingCounters = null;
+            }
         }
     }
 }

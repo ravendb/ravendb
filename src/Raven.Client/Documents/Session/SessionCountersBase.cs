@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 
@@ -31,9 +32,26 @@ namespace Raven.Client.Documents.Session
         {
             Session = session;
 
-            if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+            if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false || document == null)
+            {
                 ThrowEntityNotInSession(entity);
-            DocId = document?.Id;
+                return;
+            }
+
+            DocId = document.Id; 
+
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache) == false)
+            {
+                cache = new InMemoryDocumentSessionOperations.CountersCache();
+            }
+
+            if (cache.GotAll == false && cache.MissingCounters == null)
+            {
+                var metadataCounters = Session.GetCountersFor(entity);
+                cache.RegistarMissingCounters(metadataCounters);
+            }
+
+            Session.CountersByDocId[DocId] = cache;
         }
 
         public void Increment(string counter, long delta = 1)
@@ -59,14 +77,16 @@ namespace Raven.Client.Documents.Session
                     ThrowIncrementCounterAfterDeleteAttempt(DocId, counter);
                 }
 
+                countersBatchCommandData.HasIncrementOperation = true;
                 countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
-                Session.Defer(new CountersBatchCommandData(DocId, counterOp));
+                Session.Defer(new CountersBatchCommandData(DocId, counterOp)
+                {
+                    HasIncrementOperation = true
+                });
             }
-
-            Session.CountersToIncrement.Add((DocId, counter));
         }
 
         public void Delete(string counter)
@@ -102,7 +122,10 @@ namespace Raven.Client.Documents.Session
                 Session.Defer(new CountersBatchCommandData(DocId, counterOp));
             }
 
-            Session.CountersToDelete.Add((DocId, counter));
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache))
+            {
+                cache.Values.Remove(counter);
+            }
 
         }
 
