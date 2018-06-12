@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.Changes
                 throw new ArgumentNullException(nameof(typeName));
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
-                DatabaseConnectionState.Dummy, 
+                DatabaseConnectionState.Dummy,
                 notification => false);
 
             return taskedObservable;
@@ -355,9 +355,9 @@ namespace Raven.Client.Documents.Changes
             catch (OperationCanceledException e)
             {
                 NotifyAboutError(e);
-                _tcs.TrySetException(e);
+                _tcs.TrySetCanceled();
                 return;
-            }            
+            }
             catch (Exception e)
             {
                 ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
