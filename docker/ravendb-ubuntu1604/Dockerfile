@@ -1,6 +1,5 @@
 FROM ubuntu:16.04
 
-
 RUN apt-get update \
     && apt-get install -y \
     && apt-get install --no-install-recommends curl bzip2 libunwind8 libicu55 libcurl3 ca-certificates jq -y
@@ -9,6 +8,7 @@ ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='Ra
 
 EXPOSE 8080 38888 161
 
+ADD https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt /usr/share/ca-certificates/lets-encrypt-x3-cross-signed.pem
 COPY RavenDB.tar.bz2 /opt/RavenDB.tar.bz2
 
 RUN cd /opt \
@@ -16,7 +16,9 @@ RUN cd /opt \
     && rm RavenDB.tar.bz2 \
     && apt-get remove bzip2 -y \
     && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && echo 'lets-encrypt-x3-cross-signed.pem' >> /etc/ca-certificates.conf \
+    && update-ca-certificates
 
 COPY run-raven.sh healthcheck.sh /opt/RavenDB/
 COPY settings.json /opt/RavenDB/Server
