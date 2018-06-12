@@ -22,12 +22,12 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
-    <PackageReference Include="System.AppDomain" Version="2.0.11" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
+    <PackageReference Include="System.AppDomain" Version="2.0.11" />
   </ItemGroup>
 
 </Project>

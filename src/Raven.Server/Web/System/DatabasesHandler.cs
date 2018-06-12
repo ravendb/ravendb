@@ -137,7 +137,7 @@ namespace Raven.Server.Web.System
                                 })
                                 )
                             ),
-                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp.Index
+                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp?.Index ?? -1
                         });
                     }
                 }

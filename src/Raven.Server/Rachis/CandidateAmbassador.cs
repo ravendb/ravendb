@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -24,11 +25,11 @@ namespace Raven.Server.Rachis
             get => _statusMessage;
             set
             {
-               if (_statusMessage == value)
-                   return;
-                
-               _statusMessage = value;
-               _engine.NotifyTopologyChange();
+                if (_statusMessage == value)
+                    return;
+
+                _statusMessage = value;
+                _engine.NotifyTopologyChange();
             }
         }
         public AmbassadorStatus Status;
@@ -55,7 +56,7 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             _candidateAmbassadorLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Candidate Ambassador for {_engine.Tag} > {_tag}");                
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Candidate Ambassador for {_engine.Tag} > {_tag}");
         }
 
         public void Dispose()
@@ -72,7 +73,7 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info(
                             $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_candidateAmbassadorLongRunningWork.ManagedThreadId} " +
-                            $"({(_candidateAmbassadorLongRunningWork.Join(0)?"running":"finished")}) to finish, after the elections were {_candidate.ElectionResult}");
+                            $"({(_candidateAmbassadorLongRunningWork.Join(0) ? "running" : "finished")}) to finish, after the elections were {_candidate.ElectionResult}");
                     }
                     DisposeConnectionIfNeeded();
                 }
@@ -115,7 +116,7 @@ namespace Raven.Server.Rachis
                             }
 
                             if (_candidate.Running == false)
-                                break; 
+                                break;
                         }
                         catch (Exception e)
                         {
@@ -125,16 +126,18 @@ namespace Raven.Server.Rachis
                             {
                                 _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to connect to remote peer: " + _url, e);
                             }
+
                             // wait a bit
                             _candidate.WaitForChangeInState();
                             continue; // we'll retry connecting
                         }
+
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected to {_tag}";
 
                         Stopwatch sp;
                         var connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, disconnect);
-                        Interlocked.Exchange(ref Connection, connection);//publish the new connection
+                        Interlocked.Exchange(ref Connection, connection); //publish the new connection
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
                             ClusterTopology topology;
@@ -146,6 +149,7 @@ namespace Raven.Server.Rachis
                                 lastLogIndex = _engine.GetLastEntryIndex(context);
                                 lastLogTerm = _engine.GetTermForKnownExisting(context, lastLogIndex);
                             }
+
                             Debug.Assert(topology.TopologyId != null);
                             connection.Send(context, new RachisHello
                             {
@@ -186,17 +190,20 @@ namespace Raven.Server.Rachis
 
                                     if (rvr.Term > currentElectionTerm)
                                     {
-                                        var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";
+                                        var message =
+                                            $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";
                                         // we need to abort the current elections
-                                        
+
                                         if (_engine.Log.IsInfoEnabled)
                                         {
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                         }
+
                                         _engine.FoundAboutHigherTerm(rvr.Term, "Higher term found from node " + Tag);
                                         _engine.SetNewState(RachisState.Follower, null, rvr.Term, message);
-                                        throw new InvalidOperationException(message);
+                                        RachisInvalidOperationException.Throw(message);
                                     }
+
                                     NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
                                     {
@@ -205,21 +212,25 @@ namespace Raven.Server.Rachis
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
                                                              $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                         }
+
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
                                         // change term or given up
                                         _candidate.WaitForChangeInState();
                                         continue;
                                     }
+
                                     if (_engine.Log.IsInfoEnabled)
                                     {
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
                                                          $"for trial elections from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                     }
+
                                     TrialElectionWonAtTerm = rvr.Term;
                                     _candidate.WaitForChangeInState();
                                     continue;
                                 }
+
                                 sp = Stopwatch.StartNew();
                                 connection.Send(context, new RequestVote
                                 {
@@ -245,11 +256,13 @@ namespace Raven.Server.Rachis
                                     {
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                     }
+
                                     // we need to abort the current elections
                                     _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     _engine.SetNewState(RachisState.Follower, null, rvr.Term, message);
-                                    throw new InvalidOperationException(message);
+                                    RachisInvalidOperationException.Throw(message);
                                 }
+
                                 NotInTopology = rvr.NotInTopology;
                                 if (rvr.VoteGranted == false)
                                 {
@@ -258,44 +271,38 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
                                                          $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                     }
+
                                     // we go a negative response here, so we can't proceed
                                     // we'll need to wait until the candidate has done something, like
                                     // change term or given up
                                     _candidate.WaitForChangeInState();
                                     continue;
                                 }
+
                                 if (_engine.Log.IsInfoEnabled)
                                 {
                                     _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
                                                      $"from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                 }
+
                                 RealElectionWonAtTerm = rvr.Term;
                                 _candidate.WaitForChangeInState();
-                               
+
                             }
+
                             SendElectionResult(currentElectionTerm);
                         }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        Status = AmbassadorStatus.Closed;
-                        StatusMessage = "Closed";
-                        SendElectionResult(currentElectionTerm);
-                        break;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        Status = AmbassadorStatus.Closed;
-                        StatusMessage = "Closed";
-                        SendElectionResult(currentElectionTerm);
-                        break;
-                    }
                     catch (AggregateException ae)
-                        when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
+                        when (ae.InnerException is OperationCanceledException || ae.InnerException is LockAlreadyDisposedException)
                     {
-                        Status = AmbassadorStatus.Closed;
-                        StatusMessage = "Closed";
-                        SendElectionResult(currentElectionTerm);
+                        NotifyAboutAmbassadorClosing(ae.InnerException, currentElectionTerm);
+                        break;
+                    }
+                    catch (Exception e)
+                        when (e is OperationCanceledException || e is LockAlreadyDisposedException)
+                    {
+                        NotifyAboutAmbassadorClosing(e, currentElectionTerm);
                         break;
                     }
                     catch (Exception e)
@@ -306,6 +313,7 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
                         }
+
                         Connection?.Dispose();
                         _candidate.WaitForChangeInState();
                     }
@@ -327,6 +335,14 @@ namespace Raven.Server.Rachis
                     Connection?.Dispose();
                 }
             }
+        }
+
+        private void NotifyAboutAmbassadorClosing(Exception e, long currentElectionTerm)
+        {
+            Status = AmbassadorStatus.Closed;
+            StatusMessage = "Closed";
+            if (e is OperationCanceledException)
+                SendElectionResult(currentElectionTerm);
         }
 
         private void SendElectionResult(long currentElectionTerm)

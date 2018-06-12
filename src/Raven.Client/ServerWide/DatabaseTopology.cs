@@ -285,7 +285,7 @@ namespace Raven.Client.ServerWide
                 [nameof(Members)] = new DynamicJsonArray(Members),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
                 [nameof(Rehabs)] = new DynamicJsonArray(Rehabs),
-                [nameof(Stamp)] = Stamp.ToJson(),
+                [nameof(Stamp)] = Stamp?.ToJson(),
                 [nameof(PromotablesStatus)] = DynamicJsonValue.Convert(PromotablesStatus),
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,

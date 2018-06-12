@@ -16,13 +16,13 @@ namespace SlowTests.TestDriver
                 var testDllFile = new FileInfo(testAssemblyLocation);
 
 #if DEBUG
-                var serverDllPath = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.0/Raven.Server.dll";
+                var serverDllPath = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.1/Raven.Server.dll";
                 if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    serverDllPath = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.0/Raven.Server.dll";
+                    serverDllPath = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.1/Raven.Server.dll";
 #else
-                var serverDllPath = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.0/Raven.Server.dll";
+                var serverDllPath = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.1/Raven.Server.dll";
                 if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    serverDllPath = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.0/Raven.Server.dll";
+                    serverDllPath = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.1/Raven.Server.dll";
 #endif
 
                 var serverPath = Path.Combine(

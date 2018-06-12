@@ -69,6 +69,7 @@ namespace Raven.Server.Documents
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
         private long _lastTopologyIndex = -1;
         private long _lastClientConfigurationIndex = -1;
+        private long _preventUnloadCounter;
 
         public void ResetIdleTime()
         {
@@ -207,6 +208,8 @@ namespace Raven.Server.Documents
 
         public long LastDatabaseRecordIndex { get; private set; }
 
+        public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
+
         public readonly QueryMetadataCache QueryMetadataCache;
 
         public void Initialize(InitializeOptions options = InitializeOptions.None)
@@ -277,6 +280,13 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        public IDisposable PreventFromUnloading()
+        {
+            Interlocked.Increment(ref _preventUnloadCounter);
+
+            return new DisposableAction(() => Interlocked.Decrement(ref _preventUnloadCounter));
         }
 
         public DatabaseUsage DatabaseInUse(bool skipUsagesCount)
@@ -592,8 +602,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(string backupPath, 
-            Action<(string Message, int FilesCount)> infoNotify = null, 
+        public SmugglerResult FullBackupTo(string backupPath,
+            Action<(string Message, int FilesCount)> infoNotify = null,
             CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
@@ -675,7 +685,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(), package, 
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(), package,
                     infoNotify: infoNotify, cancellationToken: cancellationToken);
 
                 file.Flush(true); // make sure that we fully flushed to disk
@@ -1034,9 +1044,9 @@ namespace Raven.Server.Documents
                     throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
             }
 
-            nc?.Add(AlertRaised.Create(Name, 
-                title, 
-                $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}", 
+            nc?.Add(AlertRaised.Create(Name,
+                title,
+                $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}",
                 AlertType.RecoveryError,
                 NotificationSeverity.Error,
                 key: resourceName));

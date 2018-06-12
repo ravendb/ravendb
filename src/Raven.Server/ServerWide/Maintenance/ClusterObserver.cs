@@ -79,7 +79,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public async Task Run(CancellationToken token)
         {
-            var prevStats = new Dictionary<string, ClusterNodeStatusReport>();
+            // we give some time to populate the stats.
+            await TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
+            var prevStats = _maintenance.GetStats();
+            // wait before collecting the stats again.
+            await TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
+
             while (_term == _engine.CurrentTerm && token.IsCancellationRequested == false)
             {
                 var delay = TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
@@ -234,7 +239,24 @@ namespace Raven.Server.ServerWide.Maintenance
                 _logger.Operations(alertMsg);
             }
         }
-        
+
+        private void RaiseNodeNotFoundAlert(string alertMsg, string node)
+        {
+            var alert = AlertRaised.Create(
+                null,
+                $"Node {node} not found.",
+                $"{alertMsg}",
+                AlertType.DatabaseTopologyWarning,
+                NotificationSeverity.Warning
+            );
+
+            NotificationCenter.Add(alert);
+            if (_logger.IsOperationsEnabled)
+            {
+                _logger.Operations(alertMsg);
+            }
+        }
+
         private string UpdateDatabaseTopology(string dbName, DatabaseRecord record, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous,
@@ -248,8 +270,27 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var member in topology.Members)
             {
                 var status = None;
-                if (current.TryGetValue(member, out var nodeStats) &&
-                    nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
+                if(current.TryGetValue(member, out var nodeStats) == false)
+                {
+                    // there isn't much we can do here, except for log it.
+                    if (previous.TryGetValue(member, out _))
+                    {
+                        // if we found this node in the previous report, we will ignore it this time and wait for the next report.
+                        continue;
+                    }
+
+                    var msg =
+                        $"The member node {member} was not found in both current and previous reports of the cluster observer. " +
+                        $"If this error continue to raise, check the latency between the cluster nodes.";
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(msg);
+                        
+                    }
+                    RaiseNodeNotFoundAlert(msg, member);
+                    continue;
+                }
+                if (nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
                     nodeStats.Report.TryGetValue(dbName, out var dbStats))
                 {
                     status = dbStats.Status;
@@ -537,7 +578,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (_logger.IsOperationsEnabled)
             {
-                _logger.Operations(reason);
+                _logger.Operations($"Node {member} of database '{dbName}': {reason}");
             }
 
             return true;

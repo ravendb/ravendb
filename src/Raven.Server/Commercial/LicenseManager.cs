@@ -149,6 +149,9 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Attributes = null;
                 _licenseStatus.ErrorMessage = null;
                 _licenseStatus.Id = null;
+                
+                CreateAgplAlert();
+                
                 return;
             }
 
@@ -157,6 +160,8 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
                 _licenseStatus.ErrorMessage = null;
                 _licenseStatus.Id = license.Id;
+                
+                RemoveAgplAlert();
             }
             catch (Exception e)
             {
@@ -183,25 +188,46 @@ namespace Raven.Server.Commercial
             ReloadLicenseLimits(addPerformanceHint);
         }
 
+        private void CreateAgplAlert()
+        {
+            var alert = AlertRaised.Create(
+                null,
+                "Your server is running without a license",
+                null,
+                AlertType.LicenseManager_AGPL3,
+                NotificationSeverity.Warning);
+
+            _serverStore.NotificationCenter.Add(alert);
+        }
+
+        private void RemoveAgplAlert()
+        {
+            _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
+        }
+
         public void ReloadLicenseLimits(bool addPerformanceHint = false)
         {
             try
             {
-                var licenseLimits = _serverStore.LoadLicenseLimits();
-
-                if (licenseLimits?.NodeLicenseDetails != null &&
-                    licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
+                using (var process = Process.GetCurrentProcess())
                 {
-                    var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
-
-                    using (var process = Process.GetCurrentProcess())
+                    var licenseLimits = _serverStore.LoadLicenseLimits();
+                    if (licenseLimits?.NodeLicenseDetails != null &&
+                        licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
                     {
+                        var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
                         SetAffinity(process, cores, addPerformanceHint);
 
                         var ratio = (int)Math.Ceiling(_licenseStatus.MaxMemory / (double)_licenseStatus.MaxCores);
                         var clusterSize = GetClusterSize();
                         var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, cores * ratio);
                         SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
+                    }
+                    else
+                    {
+                        // set the default values
+                        SetAffinity(process, _licenseStatus.MaxCores, addPerformanceHint);
+                        SetMaxWorkingSet(process, _licenseStatus.MaxMemory);
                     }
                 }
             }
@@ -993,7 +1019,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
+                Raven.Server.Extensions.MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
             }
             catch (Exception e)
             {

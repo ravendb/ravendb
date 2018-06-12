@@ -19,10 +19,15 @@ namespace Sparrow.Logging
 {
     public sealed class LoggingSource
     {
-        [ThreadStatic] private static string _currentThreadId;
+        [ThreadStatic]
+        private static string _currentThreadId;
+
+        public static bool UseUtcTime;
+        internal static long LocalToUtcOffsetInTicks;
 
         static LoggingSource()
         {
+            LocalToUtcOffsetInTicks = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _currentThreadId = null;
         }
 
@@ -33,24 +38,29 @@ namespace Sparrow.Logging
         private readonly ConcurrentQueue<WeakReference<LocalThreadWriterState>> _newThreadStates =
             new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
+        private bool _updateLocalTimeOffset;
         private string _path;
         private readonly string _name;
         private TimeSpan _retentionTime;
         private string _dateString;
-        private MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
+        private readonly MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
         private int _logNumber;
         private DateTime _today;
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
+
         private Stream _additionalOutput;
 
         private Stream _pipeSink;
         private static readonly int TimeToWaitForLoggingToEndInMilliseconds = 5_000;
 
-        public static readonly LoggingSource Instance = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.FromDays(3), "Logging");
+        public static readonly LoggingSource Instance = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.FromDays(3), "Logging")
+        {
+            _updateLocalTimeOffset = true
+        };
         public static readonly LoggingSource AuditLog = new LoggingSource(LogMode.None, Path.GetTempPath(), TimeSpan.MaxValue, "Audit Log");
 
-        private static byte[] _headerRow =
+        private static readonly byte[] _headerRow =
             Encodings.Utf8.GetBytes($"Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException{Environment.NewLine}");
 
         public class WebSocketContext
@@ -200,11 +210,13 @@ namespace Sparrow.Logging
                         _today = DateTime.Today;
                         _dateString = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                         _logNumber = GetNextLogNumberForToday();
-
                         CleanupOldLogFiles();
                     }
                 }
             }
+
+            UpdateLocalDateTimeOffset();
+
             while (true)
             {
                 var nextLogNumber = Interlocked.Increment(ref _logNumber);
@@ -218,12 +230,22 @@ namespace Sparrow.Logging
             }
         }
 
+        private void UpdateLocalDateTimeOffset()
+        {
+            if (_updateLocalTimeOffset == false || UseUtcTime)
+                return;
+
+            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
+            if (offset != LocalToUtcOffsetInTicks)
+                Interlocked.Exchange(ref LocalToUtcOffsetInTicks, offset);
+        }
+
         private int GetNextLogNumberForToday()
         {
             var lastLogFile = Directory.GetFiles(_path, $"{_dateString}.*.log").LastOrDefault();
-            if (lastLogFile == null) 
+            if (lastLogFile == null)
                 return 0;
-            
+
             int start = lastLogFile.LastIndexOf('.', lastLogFile.Length - "000.log".Length);
             if (start == -1)
                 return 0;
@@ -334,7 +356,7 @@ namespace Sparrow.Logging
                                    ", ";
             }
 
-            writer.Write(entry.At.GetDefaultRavenFormat(true));
+            writer.Write(entry.At.GetDefaultRavenFormat(isUtc: LoggingSource.UseUtcTime));
             writer.Write(_currentThreadId);
 
             switch (entry.Type)
@@ -401,6 +423,9 @@ namespace Sparrow.Logging
                                     // we don't want to have fsync here, we just
                                     // want to send it to the OS
                                     currentFile.Flush(flushToDisk: false);
+                                    if (_hasEntries.IsSet == false)
+                                        // about to go to sleep, so can check if need to update offset
+                                        UpdateLocalDateTimeOffset(); 
                                     _hasEntries.Wait();
                                     if (_keepLogging == false)
                                         return;

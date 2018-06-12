@@ -2,6 +2,7 @@
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import database = require("models/resources/database");
+import licenseAgpl = require("viewmodels/common/notificationCenter/customControlls/licenseAgpl");
 
 class alert extends abstractNotification {
 
@@ -13,15 +14,25 @@ class alert extends abstractNotification {
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
         super(db, dto);
         this.updateWith(dto);
+        
+        this.canBeDismissed = ko.pureComputed(() => this.alertType() !== "LicenseManager_AGPL3");
 
         this.hasDetails = ko.pureComputed(() => !!this.details());
         
         this.isLicenseAlert = ko.pureComputed(() => {
             return this.alertType().startsWith("LicenseManager") &&
-                this.alertType() === "LicenseManager_LicenseLimit";
+                (this.alertType() === "LicenseManager_LicenseLimit" || this.alertType() === "LicenseManager_AGPL3");
         });
 
         this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.isLicenseAlert());
+        
+        this.injectCustomControl();
+    }
+    
+    private injectCustomControl() {
+        if (this.alertType() === "LicenseManager_AGPL3") {
+            this.customControl(new licenseAgpl());
+        }
     }
 
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.AlertRaised) {

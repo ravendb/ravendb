@@ -27,6 +27,7 @@ import generateClientCertificateDetails = require("viewmodels/common/notificatio
 import compactDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/compactDatabaseDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
 import slowSqlDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowSqlDetails");
+import slowWriteDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowWriteDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
 import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
@@ -116,6 +117,7 @@ class notificationCenter {
             // performance hints:
             indexingDetails,
             slowSqlDetails,
+            slowWriteDetails,
             pagingDetails,
             requestLatencyDetails,
             
@@ -320,6 +322,10 @@ class notificationCenter {
     }
 
     dismiss(notification: abstractNotification) {
+        if (!notification.canBeDismissed()) {
+            return;
+        }
+        
         if (notification instanceof recentError) {
             // local dismiss
             this.globalNotifications.remove(notification);

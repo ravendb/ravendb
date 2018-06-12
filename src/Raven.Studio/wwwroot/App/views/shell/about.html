@@ -66,7 +66,7 @@
         </div>
     </div>
 
-    <div class="about-properties-container">
+    <div class="about-properties-container" data-bind="css: { 'no-license': !hasLicense() }">
 
         <div class="license-info panel flex-vertical">
             <div class="header">
@@ -93,8 +93,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="license-id-container padding">
-                    <div class="big-label" data-bind="visible: licenseId">
+                <div class="license-id-container padding" data-bind="visible: licenseId">
+                    <div class="big-label">
                         <div class="content text-center">
                             <small>License ID</small>
                             <strong data-bind="text: licenseId"></strong>
@@ -103,8 +103,7 @@
                 </div>
             </div>
 
-
-            <div class="license-properties-container padding">
+            <div class="license-properties-container padding" data-bind="visible: hasLicense">
                 <div class="license-properties">
                     <div class="name">Eligible for Commercial Use</div>
                     <div class="value"><i data-bind="attr: { class: developerLicense() ? 'icon-cancel' : 'icon-checkmark' }"></i></div>
@@ -169,9 +168,6 @@
                         <i class="icon-force"></i>
                         <span>FORCE UPDATE</span>
                     </button>
-                    <!-- TODO 
-                        <button class="btn btn-danger flex-grow" data-bind=""><i class="icon-cancel"></i> <span>DEACTIVATE</span></button>
-                    -->
                     <!-- /ko -->
                 </div>
             </div>
@@ -250,6 +246,10 @@
                 <div class="grid-span-2 professional production" data-bind="visible: canUpgradeSupport">
                     <a href="http://ravendb.net/support" target="_blank" class="btn btn-success btn-block"><i class="icon-umbrella"></i> <span>UPGRADE</span></a>
                 </div>
+            </div>
+
+            <div class="padding" data-bind="visible: !hasLicense()">
+                <a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block"><i class="icon-newtab"></i> <span>ACCESS</span></a>
             </div>
         </div>
     </div>

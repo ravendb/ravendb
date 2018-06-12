@@ -18,6 +18,8 @@ class clusterTopologyManager {
     votingInProgress: KnockoutComputed<boolean>;
     nodesCount: KnockoutComputed<number>;
     
+    throttledLicenseUpdate = _.throttle(() => licenseModel.fetchLicenseStatus(), 5000);
+    
     init(): JQueryPromise<clusterTopology> {
         return this.fetchTopology();
     }
@@ -43,7 +45,7 @@ class clusterTopologyManager {
 
     private onTopologyUpdated(e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
         this.topology().updateWith(e);
-        licenseModel.fetchLicenseStatus();
+        this.throttledLicenseUpdate();
     }
 
     private initObservables() {

@@ -15,6 +15,9 @@ abstract class abstractNotification {
 
     hasDetails: KnockoutComputed<boolean>;
     canBePostponed: KnockoutComputed<boolean>;
+    canBeDismissed = ko.observable<boolean>(true);
+    
+    customControl = ko.observable<any>();
 
     displayDate: KnockoutComputed<moment.Moment>;
 

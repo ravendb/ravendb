@@ -75,7 +75,7 @@ class about extends viewModelBase {
     licenseType = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         if (!licenseStatus || licenseStatus.Type === "None") {
-            return "No license";
+            return "No license - AGPLv3 Restrictions Applied";
         }
 
         if (licenseStatus.Type === "Invalid") {
@@ -83,6 +83,11 @@ class about extends viewModelBase {
         }
 
         return licenseStatus.Type;
+    });
+
+    hasLicense = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        return licenseStatus && licenseStatus.Type !== "None";
     });
 
     shortDescription = ko.pureComputed(() => {

@@ -1,7 +1,7 @@
 # RavenDB - An ACID NoSQL Document Database
 This repository contains source code for the [RavenDB](https://ravendb.net/) document database. With a RavenDB database you can set up a NoSQL data architecture or add a NoSQL layer to your current relational database.
 
-![RavenDb Studio](docs/readmeScreenshot.png)
+![RavenDB Studio](docs/readmeScreenshot.png)
 
 ## Supported Platforms
 - Windows
@@ -10,17 +10,20 @@ This repository contains source code for the [RavenDB](https://ravendb.net/) doc
 - MacOS
 - Raspberry Pi
 
-## Grab Your License and Latest Version
-**Download the latest version of [RavenDB](https://ravendb.net/downloads#server/dev)**
+## Grab Your License and Download Latest Version
+
+Request [your license](https://ravendb.net/free).
+
+Download [the latest version of RavenDB](https://ravendb.net/downloads).
 
 ## Getting Started
 Install and [set up your database](https://ravendb.net/docs/article-page/latest/csharp/start/getting-started).
 
 ## Learn RavenDB Quickly
-[RavenDB Bootcamp](https://ravendb.net/learn) is a free, self-directed learning course. In just three units you will learn how to use RavenDB to create fully-functional, real-world programs with NoSQL Databases. If you are unfamiliar with NoSQL, it’s okay. We will provide you with all the information you need.
+[RavenDB Bootcamp](https://ravendb.net/learn/bootcamp) is a free, self-directed learning course. In just three units you will learn how to use RavenDB to create fully-functional, real-world programs with NoSQL Databases. If you are unfamiliar with NoSQL, it’s okay. We will provide you with all the information you need.
 
 ## Stay Updated on New Developments
-We are always adding new features to improve your RavenDB experience. Check out [our latest improvements](https://ravendb.net/docs/article-page/latest/csharp/start/whats-new), updated weekly.
+We keep adding new features to improve your RavenDB experience. Check out [our latest improvements](https://ravendb.net/docs/article-page/latest/csharp/start/whats-new), updated weekly.
 
 ## Documentation
 Access [full documentation](https://ravendb.net/docs/article-page/latest/csharp) for RavenDB. Like our database, it is easy to use.
@@ -34,53 +37,22 @@ You can create issues and track them at our [YouTrack](http://issues.hibernating
 ## RavenDB Developer Community Group
 If you have any questions please visit our [community group](http://groups.google.com/group/ravendb/). The solutions for the most common challenges are available. You are welcome to join!
 
-## Submit a Pull Request
-Each Pull Request will be checked against the following rules:
-
-- `cla/signed` - all commit authors need to sign a CLA. This can be done using our [CLA sign form](http://ravendb.net/contributors/cla/sign).
-- `commit/whitespace` - all changed files cannot contain TABs inside them. Before doing any work we suggest executing our `git_setup.cmd`. This will install a git pre-commit hook that will normalize all whitespaces during commits.
-- `commit/message/conventions` - all commit messages (except in merge commits) must contain an issue number from our [YouTrack](http://issues.hibernatingrhinos.com) e.g. 'RavenDB-1234 Fixed issue with something'
-- `tests` - this executes `build.cmd Test` on our CI to check if no constraints were violated
-
- <br><br>
+## Pull requests
+Please check out our [contribution guidelines](./CONTRIBUTING.md).
 
 ## Setup & Run
-### Prerequisites:
 
-#### Windows
-Microsoft Visual C++ 2015 Redistributable Package should be installed prior to RavenDB launch.
-[Visual C++ Downloads](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
-See also: [Windows Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites)
+First please [review and set up prerequisites](https://ravendb.net/docs/article-page/4.0/csharp/start/getting-started#prerequisites).
 
-#### Linux/MacOS
-It is recommended that you update your OS before launching an instance of RavenDB.
-For example, Ubuntu-16.x as an updated OS doesn't require any additional packages.
-libsodium (1.0.13 or up) must be installed prior to RavenDB launch.
-```
-In Ubuntu 16.x: apt-get install libsodium18
-In MacOS 10.12: brew install libsodium
-```
-You might need to also install additional packages, for example:
-```
-apt-get install libunwind8 liblttng-ust0 libcurl3 libssl1.0.0 libuuid1 libkrb5-3 zlib1g libicu55
-```
-
-See also: [Linux Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites) or [MacOS Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites)
-
-### Lauch RavenDB:
+### Launch RavenDB:
 Running locally:
 ```
 <path/to/ravendb>/Server/Raven.Server
 ```
 
-Registering as service in Windows:
+Registering as service in Windows using `rvn` utility available in the package *Server* directory:
 ```
-.\rvn.exe windows-service register --service-name RavenDB4
-```
-
-Running as service in Linux, add to your daemon script:
-```
-<path/to/ravendb>/Server/Raven.Server --daemon
+<path\to\ravendb>\rvn.exe windows-service register --service-name RavenDB4
 ```
 
 ### Hello World (.NET)
@@ -89,33 +61,35 @@ Running as service in Linux, add to your daemon script:
 
 - Launch a RavenDB server instance as follows:
 ```
-   <path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
+<path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
 ```
 
 - Open a web browser and enter `http://localhost:8080`
-- Click on `Databases` on the left menu, and then create a new database named `SampleDataDB`
+
+- Click on `Databases` in the menu on the left-hand side, and then create a new database named `SampleDataDB`
+
 - Click on `Settings` and then on `Create Sample Data` in the left menu. Now Click on `Create`
 
 #### Client Side
 
-- Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
+- Install .NET Core SDK. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
 
 - Open a terminal and type:
 
-```
-   mkdir HelloWorld
-   cd HelloWorld
-   dotnet new console
+```bash
+mkdir HelloWorld
+cd HelloWorld
+dotnet new console
 ```
 
 - Add the RavenDB Client package:
 
-```
-   dotnet add package RavenDB.Client --version 4.0.0-*
+```powershell
+dotnet add package RavenDB.Client --version 4.0.*
 ```
 
 - Replace the content of Program.cs with the following:
-```
+```csharp
 using System;
 using Raven.Client.Documents;
 
@@ -151,10 +125,10 @@ namespace HelloWorld
 ```
 
 - Type:
-```
-   dotnet restore
-   dotnet build
-   dotnet run
+```bash
+dotnet restore
+dotnet build
+dotnet run
 ```
 
 ###### Enjoy :)
