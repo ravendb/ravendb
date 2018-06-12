@@ -39,6 +39,7 @@ class storageReport extends viewModelBase {
     showLoader = ko.observable<boolean>(false);
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
+    showTempFiles: KnockoutObservable<boolean>;
 
     constructor() {
         super();
@@ -89,6 +90,10 @@ class storageReport extends viewModelBase {
             const node = this.node();
             return !!node.internalChildren.find(x => x.type === "tree");
         });
+        
+        this.showTempFiles = ko.pureComputed(() => {
+            return this.node() == this.root;
+        })
     }
 
     private processData() {
@@ -116,12 +121,13 @@ class storageReport extends viewModelBase {
     private mapReport(reportItem: storageReportItemDto): storageReportItem {
         const dataFile = this.mapDataFile(reportItem.Report);
         const journals = this.mapJournals(reportItem.Report);
+        const tempFiles = this.mapTempFiles(reportItem.Report);
 
         return new storageReportItem(reportItem.Name,
             reportItem.Type.toLowerCase(),
             storageReport.showDisplayReportType(reportItem.Type),
-            dataFile.size + journals.size,
-            [dataFile, journals]);
+            dataFile.size + journals.size + tempFiles.size,
+            [dataFile, journals, tempFiles]);
     }
 
     private static showDisplayReportType(reportType: string): boolean {
@@ -161,7 +167,7 @@ class storageReport extends viewModelBase {
             }
             const originalSizeFormatted = generalUtils.formatBytesToSize(buffersReport.OriginallyAllocatedSpaceInBytes);
             return `<span title="${allocatedSizeFormatted} available out of ${originalSizeFormatted} reserved">${allocatedSizeFormatted} (out of ${originalSizeFormatted})</span>`;
-        }
+        };
         return preAllocatedBuffers;
     }
 
@@ -233,6 +239,23 @@ class storageReport extends viewModelBase {
             ));
 
         return new storageReportItem("Journals", "journals", false, mappedJournals.reduce((p, c) => p + c.size, 0), mappedJournals);
+    }
+    
+    private mapTempFiles(report: Voron.Debugging.StorageReport): storageReportItem {
+        const tempFiles = report.TempFiles;
+
+        const mappedTemps = tempFiles.map(temp =>
+            new storageReportItem(
+                temp.Name,
+                "temp",
+                false,
+                temp.AllocatedSpaceInBytes,
+                []
+            ));
+
+        return new storageReportItem("Temporary Files", "tempFiles", false, mappedTemps.reduce((p, c) => p + c.size, 0), mappedTemps);
+        
+        
     }
 
     private initGraph() {
@@ -528,6 +551,25 @@ class storageReport extends viewModelBase {
             .style("opacity", 0);	
     }
 
+
+    dataSizeFormatted(item: storageReportItem) {
+        if (!item.isStorageEnvironment()) {
+            return "n/a";
+        }
+        
+        const data = item.internalChildren.find(x => x.type === "data");
+        const journals = item.internalChildren.find(x => x.type === "journals");
+        return generalUtils.formatBytesToSize(data.size + journals.size);
+    }
+    
+    tempSizeFormatted(item: storageReportItem) {
+        if (!item.isStorageEnvironment()) {
+            return "n/a";
+        }
+
+        const tempFiles = item.internalChildren.find(x => x.type === "tempFiles");
+        return generalUtils.formatBytesToSize(tempFiles.size);
+    }
    
 }
 
