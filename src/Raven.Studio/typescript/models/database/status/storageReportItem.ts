@@ -39,6 +39,16 @@ class storageReportItem {
     hasChildren(): boolean {
         return (this.internalChildren && this.internalChildren.length > 0) || (this.lazyLoadChildren === true);
     }
+    
+    isStorageEnvironment() {
+        if (!this.internalChildren) {
+            return false;
+        }
+        const childrenTypes = this.internalChildren.map(x => x.type);
+        return _.includes(childrenTypes, "journals") 
+            && _.includes(childrenTypes, "data")
+            && _.includes(childrenTypes, "tempFiles");
+    }
 
 }
 
