@@ -25,7 +25,9 @@
                 <th>Name</th>
                 <th data-bind="visible: showPagesColumn()"># Pages</th>
                 <th data-bind="visible: showEntriesColumn()">Entries</th>
-                <th>Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)</th>
+                <th data-bind="visible: showTempFiles()">Data + Journals</th>
+                <th data-bind="visible: showTempFiles()">Temporary Buffers</th>
+                <th><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)</th>
                 <th>% Total</th>
             </tr>
         </thead>
@@ -38,6 +40,8 @@
                 </td>
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
                 <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
+                <td data-bind="visible: $root.showTempFiles, text: $root.dataSizeFormatted($data)"></td>
+                <td data-bind="visible: $root.showTempFiles, text: $root.tempSizeFormatted($data)"></td>
                 <td data-bind="html: formatSize(false)"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>
