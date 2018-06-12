@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
                     var mysqlPort = GetConnectionStringValue(connectionString, new[] { "Port" });
 
-                    if (string.IsNullOrEmpty(mysqlPort))
+                    if (string.IsNullOrEmpty(mysqlPort) == false)
                         server += $":{mysqlPort}";
                     break;
                 case SqlProvider.OracleClient:
