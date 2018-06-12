@@ -11,8 +11,9 @@
 @chart-table-color: #e69c41;
 @chart-tree-color: #af1923;
 @chart-trees-color: #dd5143;
-@chart-jurnal-color: #046293;
-@chart-jurnals-color: #008cc9;
+@chart-journal-color: #046293;
+@chart-journals-color: #008cc9;
+@chart-temp-files-color: #e69c41;
 @chart-structure-color: #80ced0;
 @chart-stream-color: #24cae0;
 
@@ -184,18 +185,34 @@
         }
 
         &.journal {
-            fill: @chart-jurnal-color;
+            fill: @chart-journal-color;
 
             &:hover {
-                fill: lighten(@chart-jurnal-color,5%);
+                fill: lighten(@chart-journal-color,5%);
             }
         }
 
         &.journals {
-            fill: @chart-jurnals-color;
+            fill: @chart-journals-color;
 
             &:hover {
-                fill: lighten(@chart-jurnals-color,5%);
+                fill: lighten(@chart-journals-color,5%);
+            }
+        }
+        
+        &.temp {
+            fill: @chart-temp-files-color;
+            
+            &:hover {
+                fill: lighten(@chart-temp-files-color,5%);
+            }
+        }
+
+        &.tempFiles {
+            fill: @chart-temp-files-color;
+
+            &:hover {
+                fill: lighten(@chart-temp-files-color,5%);
             }
         }
 
@@ -370,18 +387,26 @@
             }
 
             &.journal {
-                background-color: @chart-jurnal-color;
+                background-color: @chart-journal-color;
 
                 &:hover {
-                    background-color: lighten(@chart-jurnal-color,5%);
+                    background-color: lighten(@chart-journal-color,5%);
                 }
             }
 
             &.journals {
-                background-color: @chart-jurnals-color;
+                background-color: @chart-journals-color;
 
                 &:hover {
-                    background-color: lighten(@chart-jurnals-color,5%);
+                    background-color: lighten(@chart-journals-color,5%);
+                }
+            }
+            
+            &.tempFiles {
+                background-color: @chart-temp-files-color;
+
+                &:hover {
+                    background-color: lighten(@chart-temp-files-color,5%);
                 }
             }
 
