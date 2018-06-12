@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -95,6 +96,31 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return Task.CompletedTask;
         }
+
+        private void WritePropertyNameAndScalarValue(BlittableJsonTextWriter writer, string propertyName,object propertyValue)
+        {
+            writer.WritePropertyName(propertyName);
+
+            if (propertyValue is Int64 || propertyValue is Int32 || propertyValue is Int16 ||
+                propertyValue is UInt64 || propertyValue is UInt32 || propertyValue is UInt16 ||
+                propertyValue is byte || propertyValue is sbyte)
+            {
+                writer.WriteValue(BlittableJsonToken.Integer, (long)propertyValue);
+            }
+            else if (propertyValue is LazyStringValue lsv)
+            {
+                writer.WriteString(lsv);
+            }
+            else if (propertyValue is string str)
+            {
+                writer.WriteString(str);
+            }
+            else
+            {
+                writer.WriteString(propertyValue.ToString());
+            }            
+            
+        }
        
         [RavenAction("/databases/*/debug/queries/cache/list", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task QueriesCacheList()
@@ -105,98 +131,104 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var queryCache = Database.QueryMetadataCache.GetQueryCache();
 
                 var responseDjv = new DynamicJsonValue();
-                var queriesList = new DynamicJsonArray();
+                var queriesList = new List<DynamicJsonValue>();
 
-                responseDjv["CachedQueryMetadataItems"] = queriesList;
-
+                writer.WritePropertyName("TotalCachedQueries");
+                writer.WriteValue(BlittableJsonToken.Integer,(long)queryCache.Length);
+                writer.WriteComma();
+                                               
                 foreach (var item in queryCache)
-                {   
+                {
+                    List<(string propertyName, object propertyValue)> properties = new List<(string propertyName, object propertyValue)>();
+                    
                     if (item != null)
                     {
                         var curDjvItem = new DynamicJsonValue();
                         queriesList.Add(curDjvItem);
 
+                        curDjvItem[nameof(Queries.QueryMetadata.CreatedAt)] = item.CreatedAt;
+
+                        curDjvItem[nameof(Queries.QueryMetadata.LastQueriedAt)] = item.LastQueriedAt;
                         if (item.IsGroupBy)
                         {
-                            curDjvItem["IsGroupBy"] = true;                            
+                            curDjvItem[nameof(Queries.QueryMetadata.IsGroupBy)] = true;
                         }
 
                         if (item.IsDistinct)
                         {
-                            curDjvItem["IsDistinct"] = true;                                                        
+                            curDjvItem[nameof(Queries.QueryMetadata.IsDistinct)] = true;
                         }
 
                         if (item.HasFacet)
                         {
-                            curDjvItem["HasFacet"] = true;                            
+                            curDjvItem[nameof(Queries.QueryMetadata.HasFacet)] = true;
                         }
 
                         if (item.HasMoreLikeThis)
                         {
-                            curDjvItem["HasMoreLikeThis"] = true;                            
+                            curDjvItem[nameof(Queries.QueryMetadata.HasMoreLikeThis)] = true;
                         }
 
                         if (item.HasSuggest)
                         {
-                            curDjvItem["HasSuggest"] = true;                            
+                            curDjvItem[nameof(Queries.QueryMetadata.HasSuggest)] = true;
                         }
 
                         if (item.OrderBy != null)
                         {
-                            curDjvItem["OrderBy"] = true;                            
-                        }
-
-                        if (item.HasCmpXchg)
-                        {
-                            curDjvItem["HasCmpXchg"] = true;
-                        }
-
-                        if (item.HasExplanations)
-                        {
-                            curDjvItem["HasExplanations"] = true;
-                        }
-
-                        if (item.HasIntersect)
-                        {
-                            curDjvItem["HasIntersect"] = true;
-                        }
-
-                        if (item.IsDynamic)
-                        {
-                            curDjvItem["IsDynamic"] = true;
+                            curDjvItem["Sorted"] = true;
                         }
 
                         if (item.IsOptimizedSortOnly)
                         {
-                            curDjvItem["IsOptimizedSortOnly"] = true;
-                        }        
+                            curDjvItem[nameof(Queries.QueryMetadata.IsOptimizedSortOnly)] = true;
+                        }
+
+                        if (item.HasCmpXchg)
+                        {
+                            curDjvItem[nameof(Queries.QueryMetadata.HasCmpXchg)] = true;
+                        }
+
+                        if (item.HasExplanations)
+                        {
+                            curDjvItem[nameof(Queries.QueryMetadata.HasExplanations)] = true;
+                        }
+
+                        if (item.HasIntersect)
+                        {
+                            curDjvItem[nameof(Queries.QueryMetadata.HasIntersect)] = true;
+                        }
+
+                        if (item.IsDynamic)
+                        {
+                            curDjvItem[nameof(Queries.QueryMetadata.IsDynamic)] = true;
+                        }
 
                         if (item.SelectFields.Any(x => x.Function != null))
                         {
                             curDjvItem["IsJSProjection"] = true;
                         }
-                        
+
                         if (string.IsNullOrEmpty(item.CollectionName) == false)
-                            curDjvItem["CollectionName"] = item.CollectionName;                                                
+                        {
+                            curDjvItem[nameof(Queries.QueryMetadata.CollectionName)] = item.CollectionName;
+                        }
 
                         if (string.IsNullOrEmpty(item.AutoIndexName) == false)
                         {
-                            curDjvItem["AutoIndexName"] = item.AutoIndexName;                                
+                            curDjvItem[nameof(Queries.QueryMetadata.AutoIndexName)] = item.AutoIndexName;                                
                         }
 
                         if (string.IsNullOrEmpty(item.IndexName) == false)
                         {
-                            curDjvItem["IndexName"] = item.IndexName;
+                            curDjvItem[nameof(Queries.QueryMetadata.IndexName)] = item.IndexName;
                         }                        
                     
-                        curDjvItem["QueryText"] = item.QueryText;                        
+                        curDjvItem[nameof(Queries.QueryMetadata.QueryText)] = item.QueryText;                        
                     }
                 }
 
-                var blittableResult = context.ReadObject(responseDjv, "debug/queries/cache/list");
-
-                writer.WriteObject(blittableResult);
-
+                writer.WriteArray("Results", queriesList, context);
 
             }
 
