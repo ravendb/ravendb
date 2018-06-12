@@ -607,6 +607,19 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
             writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk));
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk.HumaneSize));
+            writer.WriteString(statistics.TempBuffersSizeOnDisk.HumaneSize);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk.SizeInBytes));
+            writer.WriteInteger(statistics.TempBuffersSizeOnDisk.SizeInBytes);
+
+            writer.WriteEndObject();
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.Indexes));
             writer.WriteStartArray();
