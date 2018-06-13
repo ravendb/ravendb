@@ -265,9 +265,9 @@ namespace Raven.Server.Documents.Queries
                             LucenePrefixOperator.None);
                 }
             }
-            if(expression is NegatedExpression ne)
+            if (expression is NegatedExpression ne)
             {
-                var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression, 
+                var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression,
                     metadata, indexDef, parameters, analyzer, factories, exact);
                 return new BooleanQuery
                 {
@@ -933,7 +933,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.False:
                     return (LuceneDocumentConverterBase.FalseString, ValueTokenType.String);
                 case ValueTokenType.Null:
-                    return (null, ValueTokenType.String);
+                    return (null, ValueTokenType.Null);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value.Type), value.Type, null);
             }
@@ -1110,8 +1110,8 @@ namespace Raven.Server.Documents.Queries
             if (parameterValue is long)
                 return ValueTokenType.Long;
 
-            if (parameterValue is bool)
-                return (bool)parameterValue ? ValueTokenType.True : ValueTokenType.False;
+            if (parameterValue is bool b)
+                return b ? ValueTokenType.True : ValueTokenType.False;
 
             if (unwrapArrays)
             {
