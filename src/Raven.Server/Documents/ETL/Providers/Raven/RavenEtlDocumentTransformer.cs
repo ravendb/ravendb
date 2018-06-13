@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
@@ -26,6 +25,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly ScriptInput _script;
         private readonly List<ICommandData> _commands = new List<ICommandData>();
         private PropertyDescriptor _addAttachmentMethod;
+        private PropertyDescriptor _addCounterMethod;
         private RavenEtlScriptRun _currentDocumentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -46,6 +46,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsHandlingAttachments)
                 _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment), null, null, null);
+
+            if (_transformation.IsHandlingCounters)
+                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(SingleRun.ScriptEngine, AddCounter), null, null, null);
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -79,6 +82,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
                 metadata.Delete(Constants.Documents.Metadata.Attachments, throwOnError: true);
 
+            if (metadata.HasProperty(Constants.Documents.Metadata.Counters))
+                metadata.Delete(Constants.Documents.Metadata.Counters, throwOnError: true);
+
             var transformed = document.TranslateToObject(Context);
 
             var transformResult = Context.ReadObject(transformed, id);
@@ -90,6 +96,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 var docInstance = (ObjectInstance)document.Instance;
 
                 docInstance.DefineOwnProperty(Transformation.AddAttachment, _addAttachmentMethod, throwOnError: true);
+            }
+
+            if (_transformation.IsHandlingCounters)
+            {
+                var docInstance = (ObjectInstance)document.Instance;
+
+                docInstance.DefineOwnProperty(Transformation.AddCounter, _addCounterMethod, throwOnError: true);
             }
         }
 
@@ -131,6 +144,44 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return self;
         }
 
+        private JsValue AddCounter(JsValue self, JsValue[] args)
+        {
+            JsValue counterReference = null;
+            string name = null; // will preserve original name
+
+            switch (args.Length)
+            {
+                case 2:
+                    if (args[0].IsString() == false)
+                        ThrowInvalidSriptMethodCall($"First argument of {Transformation.AddCounter}(name, counter) must be string");
+
+                    name = args[0].AsString();
+                    counterReference = args[1];
+                    break;
+                case 1:
+                    counterReference = args[0];
+                    break;
+                default:
+                    ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one or two arguments");
+                    break;
+            }
+
+            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
+            {
+                var message =
+                    $"{Transformation.AddCounter}() method expects to get the reference to an attachment while it got argument of '{counterReference.Type}' type";
+
+                if (counterReference.IsString())
+                    message += $" (value: '{counterReference.AsString()}')";
+
+                ThrowInvalidSriptMethodCall(message);
+            }
+
+            _currentDocumentRun.AddCounter(self, name, counterReference);
+
+            return self;
+        }
+
         private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
         {
             return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
@@ -162,7 +213,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
                 else
                 {
-                    _currentDocumentRun.PutDocumentAndAttachmentsIfAny(item.DocumentId, item.Document.Data, GetAttachmentsFor(item));
+                    _currentDocumentRun.PutDocumentAttachmentsAndCounters(item.DocumentId, item.Document.Data,
+                        GetAttachmentsFor(item),
+                        GetCountersFor(item));
                 }
             }
             else
@@ -181,8 +234,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _currentDocumentRun.LoadAttachment(reference, attachment);
         }
 
+        protected override void AddLoadedCounter(JsValue reference, string name, long value)
+        {
+            _currentDocumentRun.LoadCounter(reference, name, value);
+        }
+
         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
         {
+            if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
+                return null;
+
             if (item.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
@@ -209,6 +270,34 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return results;
         }
 
+        private List<(string Name, long Value)> GetCountersFor(RavenEtlItem item)
+        {
+            if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
+                return null;
+
+            if (item.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
+            {
+                return null;
+            }
+
+            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+
+            var results = new List<(string Name, long Value)>();
+
+            foreach (var counter in counters)
+            {
+                string counterName = (LazyStringValue)counter;
+
+                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, item.DocumentId, counterName);
+
+                results.Add((counterName, value.Value));
+            }
+
+            return results;
+        }
+
         private void ApplyDeleteCommands(RavenEtlItem item, OperationType operation)
         {
             for (var i = 0; i < _script.LoadToCollections.Length; i++)
@@ -217,7 +306,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
-                    if (operation == OperationType.Delete || _transformation.IsHandlingAttachments)
+                    if (operation == OperationType.Delete || _transformation.IsHandlingAttachments || _transformation.IsHandlingCounters)
                         _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
