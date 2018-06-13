@@ -14,10 +14,20 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string AddAttachment = "addAttachment";
         
         internal const string AttachmentMarker = "$attachment/";
+
+        internal const string LoadCounter = "loadCounter";
+
+        internal const string AddCounter = "addCounter";
+
+        internal const string CounterMarker = "$counter/";
         
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
+
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
         private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
+
+        private static readonly Regex LoadCounterMethodRegex = new Regex(LoadCounter, RegexOptions.Compiled);
+        private static readonly Regex AddCounterMethodRegex = new Regex(AddCounter, RegexOptions.Compiled);
 
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
 
@@ -34,6 +44,8 @@ namespace Raven.Client.Documents.Operations.ETL
         public string Script { get; set; }
 
         internal bool IsHandlingAttachments { get; private set; }
+
+        internal bool IsHandlingCounters { get; private set; }
 
         public virtual bool Validate(ref List<string> errors, EtlType type)
         {
@@ -84,6 +96,8 @@ namespace Raven.Client.Documents.Operations.ETL
                 }
 
                 IsHandlingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0 || AddAttachmentMethodRegex.Matches(Script).Count > 0;
+
+                IsHandlingCounters = LoadCounterMethodRegex.Matches(Script).Count > 0 || AddCounterMethodRegex.Matches(Script).Count > 0;
             }
 
             return errors.Count == 0;

@@ -10,12 +10,20 @@ namespace Raven.Client.Documents.Commands.Batches
     public class CountersBatchCommandData : ICommandData
     {
         public CountersBatchCommandData(string documentId, CounterOperation counterOperation)
+            : this(documentId, new List<CounterOperation>
+            {
+                counterOperation
+            })
+        {
+            if (counterOperation == null)
+                throw new ArgumentNullException(nameof(counterOperation));
+        }
+
+        public CountersBatchCommandData(string documentId, List<CounterOperation> counterOperations)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
-            if (counterOperation == null)
-                throw new ArgumentNullException(nameof(counterOperation));
-
+            
             Id = documentId;
             Name = null;
             ChangeVector = null;
@@ -23,7 +31,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Counters = new DocumentCountersOperation
             {
                 DocumentId = documentId,
-                Operations = new List<CounterOperation> { counterOperation }
+                Operations = counterOperations
             };
         }
 

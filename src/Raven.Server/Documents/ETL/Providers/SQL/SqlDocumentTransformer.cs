@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.Patch;
@@ -103,6 +101,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
 
             loadedAttachments.Enqueue(attachment);
+        }
+
+        protected override void AddLoadedCounter(JsValue reference, string name, long value)
+        {
+            throw new NotImplementedException();
         }
 
         private SqlTableWithRecords GetOrAdd(string tableName)
