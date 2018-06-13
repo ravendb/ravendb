@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
+using FastTests.Voron.Compaction;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
@@ -18,9 +19,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new SlowTests.Core.Commands.Documents())
+                    using (var test = new StorageCompactionTests())
                     {
-                        test.CanCancelPutDocument();
+                        test.ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace();
                     }
                 }
                 catch (Exception e)

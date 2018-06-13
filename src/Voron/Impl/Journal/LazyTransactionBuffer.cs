@@ -93,7 +93,7 @@ namespace Voron.Impl.Journal
                     _lazyTransactionPager.EnsureMapped(tempTx, 0, numberOfPages);
                     var src = _lazyTransactionPager.AcquirePagePointer(tempTx, 0);
                     var sp = Stopwatch.StartNew();
-                    journalFile.JournalWriter.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
+                    journalFile.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs / 4:#,#0} kb took {sp.Elapsed}");

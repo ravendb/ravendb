@@ -304,6 +304,8 @@ namespace Sparrow.Platform.Posix
             {
                 case Errno.ENOMEM:
                     throw new OutOfMemoryException("ENOMEM on " + msg);
+                case Errno.ENOENT:
+                    throw new FileNotFoundException("ENOENT on " + msg);
                 default:
                     throw new InvalidOperationException(error + " " + msg);
             }
