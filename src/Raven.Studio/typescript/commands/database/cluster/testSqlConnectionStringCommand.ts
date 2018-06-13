@@ -4,13 +4,13 @@ import database = require("models/resources/database");
 
 class testSqlConnectionStringCommand extends commandBase {
 
-    constructor(private db: database, private connectionString: string) {
+    constructor(private db: database, private connectionString: string, private factoryName: string) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         const args = {
-            factoryName: "System.Data.SqlClient" //TODO: only MsSQL is supported for now 
+            factoryName: this.factoryName
         };
         const url = endpoints.databases.sqlEtl.adminEtlSqlTestConnection + this.urlEncodeArgs(args);
 

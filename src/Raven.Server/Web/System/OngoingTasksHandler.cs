@@ -640,12 +640,7 @@ namespace Raven.Server.Web.System
                 case ConnectionStringType.Raven:
                     if (record.RavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
                     {
-                        ravenConnectionStrings.TryAdd(connectionStringName, new RavenConnectionString
-                        {
-                            Name = ravenConnectionString.Name,
-                            TopologyDiscoveryUrls = ravenConnectionString.TopologyDiscoveryUrls,
-                            Database = ravenConnectionString.Database
-                        });
+                        ravenConnectionStrings.TryAdd(connectionStringName, ravenConnectionString);
                     }
 
                     break;
@@ -653,11 +648,7 @@ namespace Raven.Server.Web.System
                 case ConnectionStringType.Sql:
                     if (record.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
                     {
-                        sqlConnectionStrings.TryAdd(connectionStringName, new SqlConnectionString
-                        {
-                            Name = sqlConnectionString.Name,
-                            ConnectionString = sqlConnectionString.ConnectionString
-                        });
+                        sqlConnectionStrings.TryAdd(connectionStringName, sqlConnectionString);
                     }
 
                     break;

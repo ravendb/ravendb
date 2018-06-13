@@ -113,9 +113,9 @@
                 <div class="panel-addon" data-bind="with: testConnectionResult">
                     <div class="padding bg-success small" data-bind="visible: Success">
                         <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to the node.</div>
-                        <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to the SQL Sever.</div>
+                        <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected</div>
                     </div>
-                    <div data-bind="visible: !Success">
+                    <div data-bind="if: !Success">
                         <div class="padding bg-danger small">
                             <h2>Connection test failed!</h2>
                             <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
@@ -123,20 +123,22 @@
                                 <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
                             </div>
                         </div>
-                        <div class="padding bg-info small">
-                            <h2>About this error</h2>
-                            <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>
-                            <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
-                            <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
-                            <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>
-                            <div>
-                                Please verify that:
-                                <ul>
-                                    <li>The URL is correct</li>
-                                    <li>Both RavenDB and the target machine are up and running</li>
-                                    <li>There is no firewall settings on either machine blocking usage of that URL</li>
-                                    <li>There is no network configurations that prevent communication</li>
-                                </ul>
+                        <div data-bind="if: $root.editedRavenEtlConnectionString()">
+                            <div class="padding bg-info small">
+                                <h2>About this error</h2>
+                                <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>
+                                <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
+                                <div data-bind="visible: $root.testConnectionHttpSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
+                                <div data-bind="visible: !$root.testConnectionHttpSuccess()">It appears that the current server could not connect to the desired node through HTTP.</div>
+                                <div>
+                                    Please verify that:
+                                    <ul>
+                                        <li>The URL is correct</li>
+                                        <li>Both RavenDB and the target machine are up and running</li>
+                                        <li>There is no firewall settings on either machine blocking usage of that URL</li>
+                                        <li>There is no network configurations that prevent communication</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
