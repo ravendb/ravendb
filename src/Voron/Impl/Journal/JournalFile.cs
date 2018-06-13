@@ -184,10 +184,6 @@ namespace Voron.Impl.Journal
 
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
-            var readTxHeader = (TransactionHeader*)pages.Base;
-            Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
-            _transactionHeaders[_numberOfTransactionHeaders++] = *readTxHeader;
-
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
 
             using (_locker2.Lock())
