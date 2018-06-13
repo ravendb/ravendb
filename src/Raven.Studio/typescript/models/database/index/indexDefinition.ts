@@ -86,13 +86,14 @@ class indexDefinition {
     }
     
     private initValidation() {
-        const rg1 = /^[^\\]*$/; // forbidden character - backslash
+        
+        const allowedCharacters =  /^([A-Za-z0-9_\/\-\.]+)$/;
         this.name.extend({
             required: true,
             validation: [
                 {
-                    validator: (val: string) => rg1.test(val),
-                    message: "Can't use backslash in index name."
+                    validator: (val: string) => allowedCharacters.test(val),
+                    message: `Index name can only contain any of the following characters: a-z A-Z 0-9 _ - / .`
                 }]
         });
 
