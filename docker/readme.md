@@ -6,13 +6,11 @@ The files here support building and running RavenDB 4.1 in a docker container on
 
  Official Docker images are available on our [Docker Hub](https://hub.docker.com/r/ravendb/ravendb/). We provide images in two flavors: ubuntu-based (to be run on Linux containers) and nanoserver-based (to be run using Windows containers). The following tags are available:
 
-- `ubuntu-latest` - contains the latest version of RavenDB 4.1 running on Ubuntu 16.04 container
+- `4.1-ubuntu-latest` - contains the latest version of RavenDB 4.1 running on Ubuntu 18.04 container
 
-- `windows-nanoserver-latest` - contains the latest version of RavenDB 4.1 running running on Windows nanoserver
+- `4.1-windows-nanoserver-latest` - contains the latest version of RavenDB 4.1 running running on Windows nanoserver
 
 - every 4.1 release is going to have its own image set for both Ubuntu and Windows containers
-
-- `latest` points to `ubuntu-latest`
 
 ### Running
 
@@ -20,19 +18,19 @@ Simplest way to run and try RavenDB out is:
 
 Linux image:
 ```
-$ docker run -p 8080:8080 ravendb/ravendb
+$ docker run -p 8080:8080 ravendb/ravendb:4.1-ubuntu-latest
 ```
 
 Windows image:
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:windows-nanoserver-latest
+$ docker run -p 8080:8080 ravendb/ravendb:4.1-windows-nanoserver-latest
 ```
 
 Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub.docker.com/r/ravendb/ravendb-nightly/)
 
 You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
-Run Ubuntu-based image: [run-ubuntu1604.ps1](https://github.com/ravendb/ravendb/blob/v4.1/docker/run-ubuntu1604.ps1)
+Run Ubuntu-based image: [run-linux.ps1](https://github.com/ravendb/ravendb/blob/v4.1/docker/run-linux.ps1)
 
 Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v4.1/docker/run-nanoserver.ps1)
 
@@ -127,4 +125,4 @@ These images were built using the following Dockerfiles:
 
 - [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.1/docker/ravendb-nanoserver/Dockerfile)
 
-- [Ubuntu 16.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.1/docker/ravendb-ubuntu1604/Dockerfile)
+- [Ubuntu 18.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.1/docker/ravendb-linux/Dockerfile)
