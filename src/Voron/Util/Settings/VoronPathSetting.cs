@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace Voron.Util.Settings
 {
@@ -17,6 +18,12 @@ namespace Voron.Util.Settings
         public override VoronPathSetting Combine(VoronPathSetting path)
         {
             return new VoronPathSetting(Path.Combine(_path, path._path), _baseDataDir?.FullPath);
+        }
+
+        public void ChangeExtention(string ext)
+        {
+            _path = $"{Path.GetFileNameWithoutExtension(_path)}.{ext}";
+            _fullPath = $"{Path.GetFileNameWithoutExtension(_fullPath)}.{ext}";
         }
     }
 
