@@ -1586,15 +1586,26 @@ more responsive application.
                     _missingCounters.Add(counterName);
                 }
 
-                var keys = Values.Keys.ToList();
+                HashSet<string> countersToRemove = null;
 
-                foreach (var counter in keys)
+                foreach (var counter in Values.Keys)
                 {
                     if (Values[counter].HasValue == false ||
                         metadataCounters.Contains(counter))
                         continue;
 
-                    Values.Remove(counter);
+                    if (countersToRemove == null)
+                        countersToRemove = new HashSet<string>();
+
+                    countersToRemove.Add(counter);
+                }
+
+                if (countersToRemove != null)
+                {
+                    foreach (var counterToRemove in countersToRemove)
+                    {
+                        Values.Remove(counterToRemove);
+                    }
                 }
 
                 if (_missingCounters.Count > 0)
