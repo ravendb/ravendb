@@ -17,18 +17,30 @@ namespace Raven.Server.NotificationCenter
         private TaskCompletionSource<object> _newWebSocket = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _allWebSocketsRemoved = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task WaitForAllRemoved => _allWebSocketsRemoved.Task;
+        public Task WaitForRemoveAllWebSocketClients
+        {
+            get
+            {
+                lock (_watchersLock)
+                {
+                    return _websocketClients == 0 ? Task.CompletedTask : _allWebSocketsRemoved.Task;
+                }
+            }
+        }
 
         protected ConcurrentSet<ConnectedWatcher> Watchers { get; }
         protected List<BackgroundWorkBase> BackgroundWorkers { get; }
 
-        private int _websocketClients;
+        private volatile int _websocketClients;
 
-        public Task WaitForNew()
+        public Task WaitForAnyWebSocketClient
         {
-            lock (_watchersLock)
+            get
             {
-                return _websocketClients > 0 ? Task.CompletedTask : _newWebSocket.Task;
+                lock (_watchersLock)
+                {
+                    return _websocketClients > 0 ? Task.CompletedTask : _newWebSocket.Task;
+                }
             }
         }
 

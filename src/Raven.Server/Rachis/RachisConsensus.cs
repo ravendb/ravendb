@@ -255,7 +255,7 @@ namespace Raven.Server.Rachis
 
         public event EventHandler LeaderElected;
 
-        private string _tag;
+        private volatile string _tag;
         private string _clusterId;
 
         public TransactionContextPool ContextPool { get; private set; }
@@ -478,6 +478,21 @@ namespace Raven.Server.Rachis
                 var task = _stateChanged.Task;
 
                 if (CurrentState == rachisState)
+                    return;
+
+                await task;
+            }
+        }
+
+        public async Task WaitForLeaderChange(CancellationToken cts)
+        {
+            var currentLeader = LeaderTag;
+            while (cts.IsCancellationRequested == false)
+            {
+                // we setup the wait _before_ checking the state
+                var task = _stateChanged.Task;
+
+                if (currentLeader != LeaderTag)
                     return;
 
                 await task;
@@ -1736,10 +1751,7 @@ namespace Raven.Server.Rachis
                         throw new ArgumentOutOfRangeException();
                 }
             }
-            internal set
-            {
-                _leaderTag = value;
-            }
+            internal set => _leaderTag = value;
         }
 
         public bool IsEncrypted => _persistentState.Options.EncryptionEnabled;
