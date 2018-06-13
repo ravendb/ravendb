@@ -138,6 +138,10 @@ h6 {
     white-space: nowrap;
 }
 
+.whitespace-initial {
+    white-space: initial !important;
+}
+
 .visible-block {
     display: block;
 }
@@ -1215,13 +1219,13 @@ pre {
                 display: block;
 
                 &:before {
-                    left: 150px;
+                    left: 170px;
                     top: 13px;
                 }
 
                 &:after {
                     top: 7px;
-                    left: 112px;
+                    left: 132px;
                 }
             }
 
@@ -1229,7 +1233,7 @@ pre {
                 position: absolute;
 
                 &:checked + label:after {
-                    left: 130px;
+                    left: 150px;
                 }
             }
         }
@@ -1241,10 +1245,15 @@ pre {
         margin-bottom: 2px;
         display: flex;
         position: relative;
-        height: 36px;
         flex-wrap: nowrap;
-        min-width: 250px;
-        flex-grow: 1;
+
+        @media (min-width: @screen-sm) {
+            height: 36px;
+        }
+
+        &.grow-2 {
+            grid-column-start: span 2;
+        }
 
         .dropdown-menu {
             //width: 100%;
@@ -1252,7 +1261,7 @@ pre {
 
         .properties-label {
             .btn-sm;
-            flex: 0 0 110px;
+            flex: 0 0 130px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
