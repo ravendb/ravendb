@@ -107,7 +107,14 @@ class certificates extends viewModelBase {
     private initPopover() {
         popoverUtils.longWithHover($(".certificate-file-label small"),
             {
-                content: 'Select .pfx store file with single or multiple certificates. All of them will be imported under a single name.',
+                content: () => {
+                    switch (this.model().mode()) {
+                        case "replace":
+                            return 'Certificate file cannot be password protected.';
+                        case "upload":
+                            return 'Select .pfx store file with single or multiple certificates. All of them will be imported under a single name.';
+                    }
+                },
                 placement: "top"
             });
     }

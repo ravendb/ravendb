@@ -123,16 +123,18 @@
                             </div>
                         </div>
                         <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
-                            Replace the cluster certificate without shutting down the servers.
-                            The update will happen when all nodes of the cluster confirm the replacement or when
-                            there are 3 days left for expiration.
-                        </div>
-                        <div class="bg-warning padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
-                            Please verify that the new certificate contains
-                            all of the following cluster domain names in the CN or ASN properties of the certificate:
-                            <ul data-bind="foreach: $root.domainsForServerCertificate">
-                                <li data-bind="text: $data"></li>
-                            </ul>
+                            <small>
+                                Replace the cluster certificate without shutting down the servers.
+                                The update will happen when all nodes of the cluster confirm the replacement or when
+                                there are 3 days left for expiration.
+                                <Br />
+                                <Br />
+                                Please verify that the new certificate contains
+                                all of the following cluster domain names in the CN or ASN properties of the certificate:
+                                <ul data-bind="foreach: $root.domainsForServerCertificate">
+                                    <li data-bind="text: $data"></li>
+                                </ul>
+                            </small>
                         </div>
                         <div class="flex-form">
                             <div class="form-group" data-bind="validationElement: name">
@@ -161,7 +163,7 @@
                             <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'replace', validationElement: certificateAsBase64">
                                 <label class="control-label certificate-file-label">
                                     Certificate File
-                                    <small data-bind="visible: mode() === 'upload'"><i class="icon-info text-info"></i></small>
+                                    <small data-bind="visible: mode() === 'upload' || mode() === 'replace'"><i class="icon-info text-info"></i></small>
                                 </label>
                                 <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
                                     <input type="file" tabindex="-1" name="importFile" id="importFile" accept="" data-bind="event: { change: _.partial($root.fileSelected, $element) }">
@@ -181,14 +183,6 @@
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
-
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="bg-info padding padding-sm " data-bind="visible: mode() === 'replace'">
-                                    <i class="icon-info"></i> <span>Certificate file cannot be password protected.</span>
-                                </div>
-                            </div>
-                            
 
                             <!-- TODO
                             <div class="form-group">
