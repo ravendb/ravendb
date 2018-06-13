@@ -256,3 +256,29 @@ function GetCurrentVersionPrefix($projectDir) {
     $match = select-string -Path $commonAssemblyInfoFile -Pattern 'AssemblyVersion\("(.*)"\)'
     $match.Matches.Groups[1].Value
 }
+
+function Validate-AssemblyVersion($assemblyPath, $versionInfo) {
+    # $versionInfo = @{ 
+    #     Version = $version;
+    #     VersionPrefix = $versionPrefix;
+    #     VersionSuffix = $versionSuffix;
+    #     BuildNumber = $buildNumber;
+    #     BuiltAt = $builtAt;
+    #     BuiltAtString = $builtAtString;
+    #     BuildType = $buildType;
+    # }
+    Assert-AssemblyVersion `
+        -ExpectedVersion $versionInfo.VersionPrefix `
+        -AssemblyPath $assemblyPath
+    
+    Assert-AssemblyFileVersion `
+        -ExpectedFileVersion "$($versionInfo.VersionPrefix).$($versionInfo.BuildNumber)" `
+        -AssemblyPath $assemblyPath
+
+    Assert-AssemblyProductVersion `
+        -ExpectedProductVersion $versionInfo.Version `
+        -AssemblyPath $assemblyPath
+
+    write-host "Version valid for $assemblyPath"
+
+}
