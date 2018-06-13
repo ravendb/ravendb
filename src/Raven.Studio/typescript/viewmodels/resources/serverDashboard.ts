@@ -535,6 +535,10 @@ class serverDashboard extends viewModelBase {
     static readonly timeFormat = "h:mm:ss A";
     liveClient = ko.observable<serverDashboardWebSocketClient>();
     
+    spinners = {
+        loading: ko.observable<boolean>(true)
+    };
+    
     clusterManager = clusterTopologyManager.default;
     accessManager = accessManager.default.dashboardView;
     
@@ -617,6 +621,8 @@ class serverDashboard extends viewModelBase {
     }
 
     private onData(data: Raven.Server.Dashboard.AbstractDashboardNotification) {
+        this.spinners.loading(false);
+        
         switch (data.Type) {
             case "DriveUsage":
                 this.driveUsageSection.onData(data as Raven.Server.Dashboard.DrivesUsage);
