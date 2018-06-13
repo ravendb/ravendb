@@ -989,9 +989,27 @@ namespace Voron.Impl.Journal
                         _parent.SetLastReadTxHeader(_parent._lastFlushedJournal, _lastSyncedTransactionId, ref _transactionHeader);
                         if (_lastSyncedTransactionId != _transactionHeader.TransactionId)
                         {
-                            VoronUnrecoverableErrorException.Raise(_parent._waj._env,
-                                $"Error syncing the data file. The last sync tx is {_lastSyncedTransactionId}, but the journal's last tx id is {_transactionHeader.TransactionId}, possible file corruption?"
-                            );
+                            // RavenDB-10923: Either we face a corruption in journal file, or in some cases,
+                            // it can happen on non updated pread (i.e. linux docker under windows host with external volume using cifs protocol to a windows storage)
+                            // So, we will try to close and reopen the journal in the hope it will be flushed as needed and then try again:
+                            try
+                            {
+                                _parent._lastFlushedJournal.ReopenFile();
+                                _parent.SetLastReadTxHeader(_parent._lastFlushedJournal, _lastSyncedTransactionId, ref _transactionHeader);
+                            }
+                            catch (Exception ex)
+                            {
+                                VoronUnrecoverableErrorException.Raise(_parent._waj._env,
+                                    $"Error syncing the data file. Failed to reopen journal {_parent._lastFlushedJournal?.JournalWriter?.FileName} after detecting that the last sync tx is {_lastSyncedTransactionId}, but the journal's last tx id is {_transactionHeader.TransactionId}, possible file corruption?"
+                                );
+                            }
+
+                            if (_lastSyncedTransactionId != _transactionHeader.TransactionId)
+                            {
+                                VoronUnrecoverableErrorException.Raise(_parent._waj._env,
+                                    $"Error syncing the data file. The last sync tx is {_lastSyncedTransactionId}, but the journal's last tx id is {_transactionHeader.TransactionId}, possible file corruption? Journal: {_parent._lastFlushedJournal?.JournalWriter?.FileName}"
+                                );
+                            }
                         }
 
                         _parent._lastFlushedJournal = null;
