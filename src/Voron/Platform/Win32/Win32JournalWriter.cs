@@ -44,6 +44,11 @@ namespace Voron.Platform.Win32
         }
 
         public VoronPathSetting FileName => _filename;
+        public void ReopenFile()
+        {
+            // deliberately doing nothing.
+            // should not be reached in Windows, as reopening journal ment to solve docker in linux under windows host and external volume, see RavenDB-10923
+        }
 
         public Win32FileJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite,
