@@ -492,7 +492,7 @@ namespace Raven.Server.Rachis
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
 
-                if (currentLeader != LeaderTag)
+                if (currentLeader != GetLeaderTag(safe: true))
                     return;
 
                 await task;
@@ -1732,26 +1732,28 @@ namespace Raven.Server.Rachis
           
         }
 
-        private volatile string _leaderTag;
+        private string _leaderTag;
         public string LeaderTag
         {
-            get
-            {
-                switch (CurrentState)
-                {
-                    case RachisState.Passive:
-                    case RachisState.Candidate:
-                        return null;
-                    case RachisState.Follower:
-                        return _leaderTag;
-                    case RachisState.LeaderElect:
-                    case RachisState.Leader:
-                        return _tag;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+            get => GetLeaderTag();
             internal set => _leaderTag = value;
+        }
+
+        public string GetLeaderTag(bool safe = false)
+        {
+            switch (CurrentState)
+            {
+                case RachisState.Passive:
+                case RachisState.Candidate:
+                    return null;
+                case RachisState.Follower:
+                    return safe ? Volatile.Read(ref _leaderTag) : _leaderTag;
+                case RachisState.LeaderElect:
+                case RachisState.Leader:
+                    return _tag; // this is already mark as volatile
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         public bool IsEncrypted => _persistentState.Options.EncryptionEnabled;
