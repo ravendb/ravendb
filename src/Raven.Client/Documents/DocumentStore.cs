@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
@@ -405,10 +406,10 @@ namespace Raven.Client.Documents
             }
         }
 
-        public override BulkInsertOperation BulkInsert(string database = null)
+        public override BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default)
         {
             AssertInitialized();
-            return new BulkInsertOperation(database ?? Database, this);
+            return new BulkInsertOperation(database ?? Database, this, token);
         }
     }
 }

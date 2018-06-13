@@ -129,7 +129,7 @@ namespace Raven.Client.Documents.Operations
 
                 var command = GetOperationStateCommand(_conventions, _id);
 
-                await _requestExecutor.ExecuteAsync(command, _context).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, _context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
                 state = command.Result;
             }

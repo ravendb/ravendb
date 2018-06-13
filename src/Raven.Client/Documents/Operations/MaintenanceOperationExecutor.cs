@@ -43,22 +43,22 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task SendAsync(IMaintenanceOperation operation, CancellationToken token = default(CancellationToken))
+        public async Task SendAsync(IMaintenanceOperation operation, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
-                await RequestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IMaintenanceOperation<TResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<TResult> SendAsync<TResult>(IMaintenanceOperation<TResult> operation, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
-                await RequestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return command.Result;
             }
         }
@@ -68,13 +68,13 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task<Operation> SendAsync(IMaintenanceOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> SendAsync(IMaintenanceOperation<OperationIdResult> operation, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(RequestExecutor.Conventions, context);
 
-                await RequestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return new Operation(RequestExecutor, () => _store.Changes(_databaseName), RequestExecutor.Conventions, command.Result.OperationId);
             }
         }

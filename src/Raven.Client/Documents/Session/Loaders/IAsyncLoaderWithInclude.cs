@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Session.Loaders
@@ -58,14 +59,14 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids);
+        Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids, CancellationToken token = default);
 
         /// <summary>
         /// Begins the async load operation
         /// </summary>
         /// <param name="id">The id.</param>
         /// <returns></returns>
-        Task<T> LoadAsync(string id);
+        Task<T> LoadAsync(string id, CancellationToken token = default);
 
         /// <summary>
         /// Begins the async multi-load operation
@@ -79,7 +80,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids);
+        Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token = default);
 
         /// <summary>
         /// Begins the async load operation
@@ -87,6 +88,6 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <typeparam name="TResult"></typeparam>
         /// <param name="id">The id.</param>
         /// <returns></returns>
-        Task<TResult> LoadAsync<TResult>(string id);
+        Task<TResult> LoadAsync<TResult>(string id, CancellationToken token = default);
     }
 }

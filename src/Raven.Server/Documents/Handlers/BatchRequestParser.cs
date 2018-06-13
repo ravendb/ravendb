@@ -741,7 +741,7 @@ namespace Raven.Server.Documents.Handlers
         {
             // Although we using here WithCancellation and passing the token,
             // the stream will stay open even after the cancellation until the entire server will be disposed.
-            var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count, token).WithCancellation(token);
+            var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count, token);
             if (read == 0)
                 ThrowUnexpectedEndOfStream();
             parser.SetBuffer(buffer, 0, read);

@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Session
 
                 var responseTimeDuration = new ResponseTimeInformation();
 
-                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests).WithCancellation(token).ConfigureAwait(false))
+                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, token).ConfigureAwait(false))
                 {
                     await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
                 }
@@ -108,22 +108,20 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests)
+        private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests, CancellationToken token = default)
         {
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
-            await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)
             {
-                long totalTime;
-                string tempReqTime;
                 var response = responses[i];
 
-                response.Headers.TryGetValue(Constants.Headers.RequestTime, out tempReqTime);
+                response.Headers.TryGetValue(Constants.Headers.RequestTime, out string tempReqTime);
 
-                long.TryParse(tempReqTime, out totalTime);
+                long.TryParse(tempReqTime, out long totalTime);
 
                 responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
                 {

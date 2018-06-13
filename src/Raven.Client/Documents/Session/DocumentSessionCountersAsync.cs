@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Session
@@ -18,43 +19,43 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public Task<Dictionary<string, long>> GetAsync(string documentId)
+        public Task<Dictionary<string, long>> GetAsync(string documentId, CancellationToken token = default)
         {
-            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, new string[0]);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, new string[0], token);
         }
 
-        public Task<Dictionary<string, long>> GetAsync(object entity)
+        public Task<Dictionary<string, long>> GetAsync(object entity, CancellationToken token = default)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
-            return GetAsync(document.Id);
+            return GetAsync(document.Id, token);
         }
 
-        public Task<long?> GetAsync(string documentId, string counter)
+        public Task<long?> GetAsync(string documentId, string counter, CancellationToken token = default)
         {
-            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counter);
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counter, token);
         }
 
-        public Task<long?> GetAsync(object entity, string counter)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
-
-            return GetAsync(document.Id, counter);
-        }
-
-        public Task<Dictionary<string, long>> GetAsync(string documentId, IEnumerable<string> counters)
-        {
-            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counters);
-        }
-
-        public Task<Dictionary<string, long>> GetAsync(object entity, IEnumerable<string> counters)
+        public Task<long?> GetAsync(object entity, string counter, CancellationToken token = default)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
-            return GetAsync(document.Id, counters);
+            return GetAsync(document.Id, counter, token);
+        }
+
+        public Task<Dictionary<string, long>> GetAsync(string documentId, IEnumerable<string> counters, CancellationToken token = default)
+        {
+            return DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(documentId, counters, token);
+        }
+
+        public Task<Dictionary<string, long>> GetAsync(object entity, IEnumerable<string> counters, CancellationToken token = default)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            return GetAsync(document.Id, counters, token);
         }
 
         public Task<Dictionary<string, long>> GetAsync(string documentId, params string[] counters)
