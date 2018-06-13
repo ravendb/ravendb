@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
         {
             public readonly object Entity;
             public readonly long Index;
-            
+
             public StoredCompareExchange(long index, object entity)
             {
                 Entity = entity;
@@ -90,12 +90,12 @@ namespace Raven.Client.Documents.Session
 
         protected Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
         {
-            return _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key), token: token);
+            return _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key), sessionInfo: _session.SessionInfo, token: token);
         }
 
         protected Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesInternal<T>(string[] keys, CancellationToken token = default)
         {
-            return _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<T>(keys), token: token);
+            return _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<T>(keys), sessionInfo: _session.SessionInfo, token: token);
         }
 
         protected void EnsureNotDeleted(string key)
@@ -171,21 +171,6 @@ namespace Raven.Client.Documents.Session
         public Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string[] keys)
         {
             return AsyncHelpers.RunSync(() => GetCompareExchangeValuesInternal<T>(keys));
-        }
-    }
-
-    public class ClusterTransactionException : Exception
-    {
-        public ClusterTransactionException()
-        {
-        }
-
-        public ClusterTransactionException(string message) : base(message)
-        {
-        }
-
-        public ClusterTransactionException(string message, Exception innerException) : base(message, innerException)
-        {
         }
     }
 }

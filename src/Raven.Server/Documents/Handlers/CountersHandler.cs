@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
 using Raven.Server.Config.Categories;
@@ -165,7 +164,7 @@ namespace Raven.Server.Documents.Handlers
 
             private static void ThrowMissingDocument(string docId)
             {
-                throw new CounterDocumentMissingException($"There is no document '{docId}' (or it has been deleted), cannot operate on counters of a missing document");
+                throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
             }
 
             private static void ThrowArtificialDocument(Document doc)
@@ -231,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         await Database.TxMerger.Enqueue(cmd);
                     }
-                    catch (CounterDocumentMissingException)
+                    catch (DocumentDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         throw;

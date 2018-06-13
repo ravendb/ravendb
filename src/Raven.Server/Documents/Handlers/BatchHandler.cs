@@ -778,7 +778,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 counterBatchCmd.Execute(context);
                             }
-                            catch (CounterDocumentMissingException e) when (CanAvoidThrowingToMerger(e, i))
+                            catch (DocumentDoesNotExistException e) when (CanAvoidThrowingToMerger(e, i))
                             {
                                 return 0;
                             }
