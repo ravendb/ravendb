@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
+using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
@@ -19,9 +20,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new StorageCompactionTests())
+                    using (var test = new RavenDB_3115())
                     {
-                        test.ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace();
+                        test.ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone();
                     }
                 }
                 catch (Exception e)
