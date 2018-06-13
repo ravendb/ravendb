@@ -1,5 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
+import jsonUtil = require("common/jsonUtil");
 import configuration = require("configuration");
 
 class configurationItem {
@@ -14,12 +14,18 @@ class configurationItem {
     value = ko.observable<string>();
 
     validationGroup: KnockoutObservable<any>;
+    dirtyFlag: () => DirtyFlag;
 
     constructor(key: string, value: string) {
         this.key(key);
         this.value(value);
 
         this.initValidation();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.key, 
+            this.value,
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     private initValidation() {

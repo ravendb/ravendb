@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import spatialOptions = require("models/database/index/spatialOptions");
+import jsonUtil = require("common/jsonUtil");
 
 function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) => string {
     return(arg) => labels.find(x => x.value === arg).label;
@@ -89,7 +89,8 @@ class indexFieldOptions {
     canProvideAnalyzer = ko.pureComputed(() => this.indexing() === "Search");
 
     validationGroup: KnockoutObservable<any>;
-
+    dirtyFlag: () => DirtyFlag;
+    
     constructor(name: string, dto: Raven.Client.Documents.Indexes.IndexFieldOptions, parentFields?: indexFieldOptions) {
         this.name(name);
         this.parent(parentFields);
@@ -197,6 +198,17 @@ class indexFieldOptions {
                 indexingChangeInProgess = false;
             }
         });
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.name,
+            this.analyzer,
+            this.indexing,
+            this.storage,
+            this.suggestions,
+            this.termVector,
+            this.hasSpatialOptions,
+            this.spatial().dirtyFlag().isDirty
+        ], false, jsonUtil.newLineNormalizingHashFunction);       
     }
 
     private effectiveComputed<T>(extractor: (field: indexFieldOptions) => T, labelProvider?: (arg: T) => string): KnockoutComputed<string> {
