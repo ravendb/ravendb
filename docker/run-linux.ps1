@@ -200,9 +200,9 @@ $dockerArgs += '-p'
 $dockerArgs += "$($BindTcpPort):38888"
 
 if ($UseNightly) {
-    $RAVEN_IMAGE = 'ravendb/ravendb-nightly:ubuntu-latest'
+    $RAVEN_IMAGE = 'ravendb/ravendb-nightly:4.1-ubuntu-latest'
 } else {
-    $RAVEN_IMAGE = 'ravendb/ravendb:ubuntu-latest'
+    $RAVEN_IMAGE = 'ravendb/ravendb:4.1-ubuntu-latest'
 }
 
 $dockerArgs += $RAVEN_IMAGE
