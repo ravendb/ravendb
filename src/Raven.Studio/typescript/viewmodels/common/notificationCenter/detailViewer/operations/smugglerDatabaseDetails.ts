@@ -194,18 +194,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         this.messagesJoined = ko.pureComputed(() => this.messages() ? this.messages().join("\n") : "");
         
-        this.registerDisposable(this.messages.subscribe(() => {
-            if (this.tail()) {
-                this.scrollDown();
-            }
-        }));
-
-        this.registerDisposable(this.tail.subscribe(enabled => {
-            if (enabled) {
-                this.scrollDown();
-            }
-        }));
-
         this.registerDisposable(this.operationFailed.subscribe(failed => {
             if (failed) {
                 this.detailsVisible(true);
@@ -239,11 +227,29 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     private scrollDown() {
         const messages = $(".export-messages")[0];
-        messages.scrollTop = messages.scrollHeight;
+        if (messages) {
+            messages.scrollTop = messages.scrollHeight;    
+        }
     }
 
     toggleDetails() {
         this.detailsVisible(!this.detailsVisible());
+    }
+    
+    attached() {
+        super.attached();
+
+        this.registerDisposable(this.messages.subscribe(() => {
+            if (this.tail()) {
+                this.scrollDown();
+            }
+        }));
+
+        this.registerDisposable(this.tail.subscribe(enabled => {
+            if (enabled) {
+                this.scrollDown();
+            }
+        }));
     }
 
     private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, hasAttachments: boolean = false): smugglerListItem {
