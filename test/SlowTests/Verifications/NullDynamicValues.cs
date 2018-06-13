@@ -9,7 +9,7 @@ namespace SlowTests.Verifications
 {
     public class NullDynamicValues : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string Name { get; set; }

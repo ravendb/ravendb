@@ -19,26 +19,26 @@ namespace SlowTests.Issues
 {
     public class RavenDB_11089 : FacetTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string NameOfFoo;
             public Bar[] Bars;
         }
 
-        public class Bar
+        private class Bar
         {
             public float NumberOfBars;
 
         }
 
-        public class FooIndex : AbstractIndexCreationTask<Foo>
+        private class FooIndex : AbstractIndexCreationTask<Foo>
         {
             public FooIndex()
             {
                 Map = foos => from foo in foos
                               select new
                               {
-                                  Name = foo.NameOfFoo                                  
+                                  Name = foo.NameOfFoo
                               };
             }
         }
@@ -56,10 +56,10 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Foo() { NameOfFoo = "a", Bars = new Bar[] { new Bar() { NumberOfBars = 1.0f }, new Bar() { NumberOfBars = 2.0f } } },"foo/1");
-                    session.Store(new Foo() { NameOfFoo = "b", Bars = new Bar[] { new Bar() { NumberOfBars = 3.0f } } },"foo/2");
+                    session.Store(new Foo() { NameOfFoo = "a", Bars = new Bar[] { new Bar() { NumberOfBars = 1.0f }, new Bar() { NumberOfBars = 2.0f } } }, "foo/1");
+                    session.Store(new Foo() { NameOfFoo = "b", Bars = new Bar[] { new Bar() { NumberOfBars = 3.0f } } }, "foo/2");
                     session.SaveChanges();
-                }                
+                }
 
                 WaitForUserToContinueTheTest(store);
 
@@ -92,11 +92,11 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var foo1 = new Foo() { NameOfFoo = "a", Bars = new[] { new Bar() { NumberOfBars = 1.0f }, new Bar() { NumberOfBars = 2.0f } } };
-                    session.Store(foo1,"foo/1");
-                    session.Store(new Foo() { NameOfFoo = "b", Bars = new[] { new Bar() { NumberOfBars = 3.0f } } },"foo/2");
+                    session.Store(foo1, "foo/1");
+                    session.Store(new Foo() { NameOfFoo = "b", Bars = new[] { new Bar() { NumberOfBars = 3.0f } } }, "foo/2");
                     session.SaveChanges();
 
-                }                
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -177,7 +177,7 @@ namespace SlowTests.Issues
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 1
                         }));
-                    
+
                     WaitForUserToContinueTheTest(store);
 
                     var list = query.ToList();
@@ -274,7 +274,7 @@ namespace SlowTests.Issues
                     }
                 }
             }
-        }       
+        }
 
         private class QueryResult
         {
@@ -601,7 +601,7 @@ from Users as user select output(user)", queryAsString);
                 }
             }
         }
-       
+
         private class ComplexDataIndex : AbstractIndexCreationTask<ComplexData>
         {
             public ComplexDataIndex()
@@ -640,7 +640,7 @@ from Users as user select output(user)", queryAsString);
                     session.Store(entity);
                     session.SaveChanges();
                     id = session.Advanced.GetDocumentId(entity);
-                    
+
                 }
 
                 var expected = Status.Good;
@@ -837,7 +837,7 @@ from Users as user select output(user)", queryAsString);
 
                     session.SaveChanges();
                 }
-               
+
                 using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<User>(_docId);
@@ -851,7 +851,7 @@ from Users as user select output(user)", queryAsString);
             }
         }
 
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
 
@@ -872,13 +872,13 @@ from Users as user select output(user)", queryAsString);
             public Index1()
             {
                 Map = persons => from person in persons
-                    let metadata = MetadataFor(person)
-                    from name in metadata.Value<string>("Names").Split(',', StringSplitOptions.None)
-                    select new
-                    {
-                        CurrentName = person.Name,
-                        PreviousName = person.Name
-                    };
+                                 let metadata = MetadataFor(person)
+                                 from name in metadata.Value<string>("Names").Split(',', StringSplitOptions.None)
+                                 select new
+                                 {
+                                     CurrentName = person.Name,
+                                     PreviousName = person.Name
+                                 };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -949,7 +949,7 @@ from Users as user select output(user)", queryAsString);
             }
         }
 
-       
+
 
         [Fact]
         public void ProjectInto_ShouldWork()
@@ -1220,6 +1220,6 @@ from Users as user select output(user)", queryAsString);
             Good,
             Bad
         }
-    
+
     }
 }
