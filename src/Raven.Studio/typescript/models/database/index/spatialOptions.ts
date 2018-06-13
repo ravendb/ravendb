@@ -1,4 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
+import jsonUtil = require("common/jsonUtil");
 
 class spatialOptions {
     maxTreeLevel = ko.observable<number>();
@@ -19,6 +20,7 @@ class spatialOptions {
     canSpecifyCoordinates: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
+    dirtyFlag: () => DirtyFlag;
 
     constructor(dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions) {
         this.type(dto.Type);
@@ -57,6 +59,17 @@ class spatialOptions {
         this.showPrecision = ko.pureComputed(() => {
             return this.strategy() !== 'BoundingBox';
         });
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.type,
+            this.strategy,
+            this.maxTreeLevel,
+            this.minX,
+            this.maxX,
+            this.minY,
+            this.maxY,
+            this.units
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     toDto(): Raven.Client.Documents.Indexes.Spatial.SpatialOptions {
