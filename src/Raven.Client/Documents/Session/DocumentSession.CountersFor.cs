@@ -11,12 +11,12 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        public SessionDocumentCounters CountersFor(string documentId)
+        public ISessionDocumentCounters CountersFor(string documentId)
         {
             return new SessionDocumentCounters(this, documentId);
         }
 
-        public SessionDocumentCounters CountersFor(object entity)
+        public ISessionDocumentCounters CountersFor(object entity)
         {
             return new SessionDocumentCounters(this, entity);
         }

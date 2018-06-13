@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="ICountersSessionOperations.cs" company="Hibernating Rhinos LTD">
+// <copyright file="ISessionDocumentCounters.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Counters advanced synchronous session operations
     /// </summary>
-    public interface ICountersSessionOperations : ICountersSessionOperationsBase
+    public interface ISessionDocumentCounters : ISessionDocumentCountersBase
     {
         /// <summary>
         /// Returns all the counters for a document.

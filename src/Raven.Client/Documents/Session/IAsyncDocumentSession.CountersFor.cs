@@ -6,12 +6,10 @@
 
 namespace Raven.Client.Documents.Session
 {
-    /// <inheritdoc />
     public partial interface IAsyncDocumentSession
     {
+        IAsyncSessionDocumentCounters CountersFor(string documentId);
 
-        AsyncSessionDocumentCounters CountersFor(string documentId);
-
-        AsyncSessionDocumentCounters CountersFor(object entity);
+        IAsyncSessionDocumentCounters CountersFor(object entity);
     }
 }

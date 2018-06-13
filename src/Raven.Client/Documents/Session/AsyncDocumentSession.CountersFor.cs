@@ -11,12 +11,12 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class AsyncDocumentSession
     {
-        public AsyncSessionDocumentCounters CountersFor(string documentId)
+        public IAsyncSessionDocumentCounters CountersFor(string documentId)
         {
             return new AsyncSessionDocumentCounters(this, documentId);
         }
 
-        public AsyncSessionDocumentCounters CountersFor(object entity)
+        public IAsyncSessionDocumentCounters CountersFor(object entity)
         {
             return new AsyncSessionDocumentCounters(this, entity);
         }

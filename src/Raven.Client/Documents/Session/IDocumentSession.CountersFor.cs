@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Session
     public partial interface IDocumentSession
     {
 
-        SessionDocumentCounters CountersFor(string documentId);
+        ISessionDocumentCounters CountersFor(string documentId);
 
-        SessionDocumentCounters CountersFor(object entity);
+        ISessionDocumentCounters CountersFor(object entity);
 
     }
 }
