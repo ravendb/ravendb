@@ -9,24 +9,24 @@ namespace SlowTests.Issues
         [Fact]
         public void Can_get_db_and_server_from_oracle_connection_string()
         {
-            var (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("System.Data.OracleClient",
+            var (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("Oracle.ManagedDataAccess.Client",
                 "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.2.82)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=xe)));  User Id=system;Password=oracle;");
 
             Assert.Equal("xe", db);
             Assert.Equal("192.168.2.82:1521", server);
 
             // values are missing, should not throw
-            SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("System.Data.OracleClient",
+            SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("Oracle.ManagedDataAccess.Client",
                 "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(PORT=1521)));  User Id=system;Password=oracle;");
 
 
-            (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("System.Data.OracleClient",
+            (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("Oracle.ManagedDataAccess.Client",
                 " Data Source=MyOracleDB;Integrated Security=yes;");
 
             Assert.Null(db);
             Assert.Equal("MyOracleDB", server);
 
-            (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("System.Data.OracleClient",
+            (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("Oracle.ManagedDataAccess.Client",
                 "Data Source=username/password@myserver/myservice:dedicated/instancename;");
 
             Assert.Null(db);
@@ -41,7 +41,7 @@ namespace SlowTests.Issues
             c.Connection = new SqlConnectionString()
             {
                 ConnectionString = "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)));",
-                FactoryName = "System.Data.OracleClient"
+                FactoryName = "Oracle.ManagedDataAccess.Client"
             };
 
             Assert.True(c.UsingEncryptedCommunicationChannel());
