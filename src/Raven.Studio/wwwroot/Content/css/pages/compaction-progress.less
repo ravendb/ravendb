@@ -8,10 +8,17 @@
         .export-legend {
             text-transform: uppercase;
             font-size: 10px;
+
+            @media (max-width: @screen-xs-max) {
+                .status, .name {
+                    display: none;
+                }
+            }
         }
 
         .export-item, .export-legend {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             padding: 0 @grid-gutter-width/2;
 
@@ -20,12 +27,49 @@
             }
 
             .name {
-                width: 200px;
+                width: 60%;
+                flex-grow: 1;
+                overflow: hidden;
+
+                h3 {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
             }
 
             .status {
+                width: 30%;
+                text-align: center;
+                flex-shrink: 0;
+            }
+
+            .read, .skipped, .entries {
+                width: 33%;
+                text-align: center;
+                flex-shrink: 0;
                 flex-grow: 1;
             }
+
+            @media (min-width: @screen-sm) {
+                flex-wrap: nowrap;
+
+                .name {
+                    width: auto;
+                }
+
+                .status {
+                    width: 120px;
+                }
+
+                .read, .skipped, .entries {
+                    width: 90px;
+                    flex-grow: 0;
+                }
+            }
+
+
+
+
 
             .read:not(.text-muted) {
                 color: @brand-success;
@@ -33,16 +77,6 @@
 
             .skipped:not(.text-muted) {
                 color: @brand-warning;
-            }
-
-            .read, .skipped {
-                width: 100px;
-                text-align: center;
-            }
-            
-            .entries {
-                width: 100px;
-                text-align: center;
             }
         }
 
