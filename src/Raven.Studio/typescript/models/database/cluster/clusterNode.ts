@@ -18,6 +18,7 @@ class clusterNode {
     errorDetails = ko.observable<string>();
     isLeader = ko.observable<boolean>();
     isPassive: KnockoutComputed<boolean>;
+    nodeServerVersion = ko.observable<string>();
     
     constructor() {
         this.isPassive = ko.pureComputed(() => this.tag() === "?");
@@ -72,6 +73,7 @@ class clusterNode {
         this.usableMemoryInGb(incoming.usableMemoryInGb());
         this.errorDetails(incoming.errorDetails());
         this.isLeader(incoming.isLeader());
+        this.nodeServerVersion(incoming.nodeServerVersion());
     }
 
     static for(tag: string, serverUrl: string, type: clusterNodeType, connected: boolean, errorDetails?: string) {

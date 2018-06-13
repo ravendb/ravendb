@@ -120,6 +120,10 @@
                                         / <strong data-toggle="tooltip" title="Total memory installed on machine"><span data-bind="text: installedMemory"></span>GB</strong>
                                     </span>
                                 </div>
+                                <div class="serverVersion" data-bind="if: nodeServerVersion">
+                                    <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
+                                    <strong class="text-lighter" data-toggle="tooltip" title="Server version installed on this node" data-bind="text: nodeServerVersion"></strong>
+                                </div>
                             </div> 
                         </div>
                         <div data-bind="visible: $root.topology().anyErrorsEncountered">
