@@ -28,7 +28,7 @@ class clusterTopology {
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
         this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));
 
-        this.updateAssignedCores(dto.NodeLicenseDetails);
+        this.updateNodeDetails(dto.NodeLicenseDetails);
         
         this.membersCount = ko.pureComputed(() => {
             const nodes = this.nodes();
@@ -93,13 +93,13 @@ class clusterTopology {
             }
         });
 
-        this.updateAssignedCores(incomingChanges.NodeLicenseDetails);
+        this.updateNodeDetails(incomingChanges.NodeLicenseDetails);
         this.nodeTag(incomingChanges.NodeTag);
         this.leader(incomingChanges.Leader);
         this.currentTerm(incomingChanges.CurrentTerm);
     }
 
-    private updateAssignedCores(nodeLicenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }) {
+    private updateNodeDetails(nodeLicenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }) {
         if (!nodeLicenseDetails)
             return;
 
@@ -113,6 +113,9 @@ class clusterTopology {
             node.numberOfCores(detailsPerNode.NumberOfCores);
             node.installedMemoryInGb(detailsPerNode.InstalledMemoryInGb);
             node.usableMemoryInGb(detailsPerNode.UsableMemoryInGb);
+            
+            const fullVersion = detailsPerNode.BuildInfo ? detailsPerNode.BuildInfo.FullVersion : null;
+            node.nodeServerVersion(fullVersion);
         });
     }
 }
