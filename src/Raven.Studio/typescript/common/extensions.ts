@@ -76,7 +76,7 @@ class extensions {
         return null;
     }
     
-    private static validateDatabaseName(databaseName: string): string {
+    public static validateDatabaseName(databaseName: string): string {
         if (!databaseName) {
             return null;
         }
