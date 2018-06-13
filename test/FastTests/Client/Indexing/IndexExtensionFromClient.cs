@@ -42,13 +42,13 @@ namespace FastTests.Client.Indexing
             File.Copy(nodaLocation.FullName, newLocation.FullName, overwrite: true);
         }
 
-        public class Person
+        private class Person
         {
             public string Name { get; set; }
             public uint Age { get; set; }
         }
 
-        public class PeopleByEmail : AbstractIndexCreationTask<Person>
+        private class PeopleByEmail : AbstractIndexCreationTask<Person>
         {
             public class PeopleByEmailResult
             {

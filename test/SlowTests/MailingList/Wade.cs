@@ -20,32 +20,32 @@ namespace SlowTests.MailingList
         {
             _outputHelper = outputHelper;
         }
-        
-        
-        public class PersonDOBIndex:AbstractIndexCreationTask<Person>
+
+
+        private class PersonDOBIndex : AbstractIndexCreationTask<Person>
         {
 
             public PersonDOBIndex()
             {
                 Map = people => from person in people
-                    select new
-                    {
-                        BirthDate = person.BirthDate,
-                        Spouse_BirthDate = person.Spouse.BirthDate,
-                        Children_BirthDate = person.Children.Select(z => z.BirthDate)
-                    };
+                                select new
+                                {
+                                    BirthDate = person.BirthDate,
+                                    Spouse_BirthDate = person.Spouse.BirthDate,
+                                    Children_BirthDate = person.Children.Select(z => z.BirthDate)
+                                };
             }
-        
-        
+
+
         }
-        
-        public class Person
+
+        private class Person
         {
             public string Id { get; set; }
             public DateTime BirthDate { get; set; }
-        
+
             public Person Spouse { get; set; }
-        
+
             public List<Person> Children { get; set; }
 
             public Person()
@@ -53,8 +53,8 @@ namespace SlowTests.MailingList
                 Children = new List<Person>();
             }
         }
-        
-         
+
+
         [Fact]
         public void DateTime_Facet_Works_As_Expected()
         {
@@ -65,15 +65,15 @@ namespace SlowTests.MailingList
 
                 PopulateDB(documentStore);
                 WaitForIndexing(documentStore);
-                
-                
+
+
                 var d1960 = new DateTime(year: 1960, month: 1, day: 1);
                 var d1969 = new DateTime(year: 1969, month: 12, day: 31);
 
                 var d1970 = new DateTime(year: 1970, month: 1, day: 1);
                 var d1979 = new DateTime(year: 1979, month: 12, day: 31);
-                
-                
+
+
                 using (var session = documentStore.OpenSession())
                 {
                     var employeeFacets = session.Query<Person, PersonDOBIndex>()
@@ -84,46 +84,46 @@ namespace SlowTests.MailingList
                                     person => person.BirthDate >= d1960 && person.BirthDate < d1969,
                                     person => person.BirthDate >= d1970 && person.BirthDate < d1979
                                 )
-                                .WithOptions(new FacetOptions{IncludeRemainingTerms = true})
+                                .WithOptions(new FacetOptions { IncludeRemainingTerms = true })
                         )
                         .Execute();
 
-                   // _outputHelper.WriteLine(ToJSONPretty(employeeFacets)); 
-//output result is expected --
-//
-//                    "BirthDate": {
-//                        "Name": "BirthDate",
-//                        "Values": [
-//                        {
-//                            "Range": "BirthDate >= 1960-01-01T00:00:00.0000000 and BirthDate < 1969-12-31T00:00:00.0000000",
-//                            "Count": 1,
-//                            "Sum": null,
-//                            "Max": null,
-//                            "Min": null,
-//                            "Average": null
-//                        },
-//                        {
-//                            "Range": "BirthDate >= 1970-01-01T00:00:00.0000000 and BirthDate < 1979-12-31T00:00:00.0000000",
-//                            "Count": 0,
-//                            "Sum": null,
-//                            "Max": null,
-//                            "Min": null,
-//                            "Average": null
-//                        }
-//                        ],
-//                        "RemainingTerms": [],
-//                        "RemainingTermsCount": 0,
-//                        "RemainingHits": 0
-//                    }
-                    
-                    
+                    // _outputHelper.WriteLine(ToJSONPretty(employeeFacets)); 
+                    //output result is expected --
+                    //
+                    //                    "BirthDate": {
+                    //                        "Name": "BirthDate",
+                    //                        "Values": [
+                    //                        {
+                    //                            "Range": "BirthDate >= 1960-01-01T00:00:00.0000000 and BirthDate < 1969-12-31T00:00:00.0000000",
+                    //                            "Count": 1,
+                    //                            "Sum": null,
+                    //                            "Max": null,
+                    //                            "Min": null,
+                    //                            "Average": null
+                    //                        },
+                    //                        {
+                    //                            "Range": "BirthDate >= 1970-01-01T00:00:00.0000000 and BirthDate < 1979-12-31T00:00:00.0000000",
+                    //                            "Count": 0,
+                    //                            "Sum": null,
+                    //                            "Max": null,
+                    //                            "Min": null,
+                    //                            "Average": null
+                    //                        }
+                    //                        ],
+                    //                        "RemainingTerms": [],
+                    //                        "RemainingTermsCount": 0,
+                    //                        "RemainingHits": 0
+                    //                    }
+
+
                     //employee facets - should have 1 in 60's and 0 in 70's
                     var employee60sCount = employeeFacets.First().Value.Values.First().Count;
                     var employee70sCount = employeeFacets.First().Value.Values.Last().Count;
-                    Assert.Equal(employee60sCount,1);
-                    Assert.Equal(employee70sCount,0);
+                    Assert.Equal(employee60sCount, 1);
+                    Assert.Equal(employee70sCount, 0);
                 }
-                
+
             }
         }
 
@@ -137,8 +137,8 @@ namespace SlowTests.MailingList
 
                 PopulateDB(documentStore);
                 WaitForIndexing(documentStore);
-                
-                
+
+
                 var d1960 = new DateTime(year: 1960, month: 1, day: 1);
                 var d1969 = new DateTime(year: 1969, month: 12, day: 31);
 
@@ -156,37 +156,37 @@ namespace SlowTests.MailingList
                                     person => person.Spouse.BirthDate >= d1960 && person.Spouse.BirthDate < d1969,
                                     person => person.Spouse.BirthDate >= d1970 && person.Spouse.BirthDate < d1979
                                 )
-                            .WithOptions(new FacetOptions{IncludeRemainingTerms = true})
+                            .WithOptions(new FacetOptions { IncludeRemainingTerms = true })
                         )
                         .Execute();
-                    
+
                     //_outputHelper.WriteLine(ToJSONPretty(spouseFacets));
-                    
-//comments on output below
-//                    "BirthDate": {                <-- Expected this to be Spouse_BirthDate
-//                        "Name": "BirthDate",      <-- Expected this to be Spouse_BirthDate
-//                        "Values": [
-//                        {
-//                            "Range": "BirthDate >= 1960-01-01T00:00:00.0000000 and BirthDate < 1969-12-31T00:00:00.0000000",
-//                            "Count": 1,           <-- Expected this to 0
-//                            "Sum": null,
-//                            "Max": null,
-//                            "Min": null,
-//                            "Average": null
-//                        },
-//                        {
-//                            "Range": "BirthDate >= 1970-01-01T00:00:00.0000000 and BirthDate < 1979-12-31T00:00:00.0000000",
-//                            "Count": 0,            <-- Expected this to be 1
-//                            "Sum": null,
-//                            "Max": null,
-//                            "Min": null,
-//                            "Average": null
-//                        }
-//                        ],
-//                        "RemainingTerms": [],
-//                        "RemainingTermsCount": 0,
-//                        "RemainingHits": 0
-//                    }
+
+                    //comments on output below
+                    //                    "BirthDate": {                <-- Expected this to be Spouse_BirthDate
+                    //                        "Name": "BirthDate",      <-- Expected this to be Spouse_BirthDate
+                    //                        "Values": [
+                    //                        {
+                    //                            "Range": "BirthDate >= 1960-01-01T00:00:00.0000000 and BirthDate < 1969-12-31T00:00:00.0000000",
+                    //                            "Count": 1,           <-- Expected this to 0
+                    //                            "Sum": null,
+                    //                            "Max": null,
+                    //                            "Min": null,
+                    //                            "Average": null
+                    //                        },
+                    //                        {
+                    //                            "Range": "BirthDate >= 1970-01-01T00:00:00.0000000 and BirthDate < 1979-12-31T00:00:00.0000000",
+                    //                            "Count": 0,            <-- Expected this to be 1
+                    //                            "Sum": null,
+                    //                            "Max": null,
+                    //                            "Min": null,
+                    //                            "Average": null
+                    //                        }
+                    //                        ],
+                    //                        "RemainingTerms": [],
+                    //                        "RemainingTermsCount": 0,
+                    //                        "RemainingHits": 0
+                    //                    }
 
                     var spouse60sCount = spouseFacets.First().Value.Values.First().Count;
                     var spouse70sCount = spouseFacets.First().Value.Values.Last().Count;
@@ -194,10 +194,10 @@ namespace SlowTests.MailingList
                     Assert.Equal(spouse70sCount, 1);
 
                 }
-                
+
             }
         }
-        
+
         [Fact]
         public void Nested_Enumberables_DateTime_Facet_Works_As_Expected()
         {
@@ -241,8 +241,8 @@ namespace SlowTests.MailingList
 
             }
         }
-        
-        
+
+
         private string ToJSONPretty(object obj)
         {
             return JsonConvert.SerializeObject(obj, Formatting.Indented);
@@ -264,7 +264,7 @@ namespace SlowTests.MailingList
                     Spouse = new Person
                     {
                         BirthDate = new DateTime(year: 1971, month: 11, day: 17)
-                    } 
+                    }
                 };
                 session.Store(employee);
 
@@ -284,7 +284,7 @@ namespace SlowTests.MailingList
                 };
                 session.Store(daughter);
                 employee.Children.Add(daughter);
-                
+
                 session.SaveChanges();
             }
         }
