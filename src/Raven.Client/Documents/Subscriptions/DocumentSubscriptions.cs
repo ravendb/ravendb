@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
@@ -62,14 +63,14 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <returns>Created subscription name.</returns>
         public Task<string> CreateAsync<T>(
-            SubscriptionCreationOptions<T> options, string database = null)
+            SubscriptionCreationOptions<T> options, string database = null, CancellationToken token = default)
         {
             return CreateAsync(EnsureCriteria(new SubscriptionCreationOptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
                 MentorNode = options.MentorNode
-            }, options.Filter, options.Projection), database);
+            }, options.Filter, options.Projection), database, token);
         }
 
         /// <summary>
@@ -79,9 +80,10 @@ namespace Raven.Client.Documents.Subscriptions
         public Task<string> CreateAsync<T>(
             Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
-            string database = null)
+            string database = null, 
+            CancellationToken token = default)
         {
-            return CreateAsync(EnsureCriteria(options, predicate, null), database);
+            return CreateAsync(EnsureCriteria(options, predicate, null), database, token);
         }
 
         private SubscriptionCreationOptions EnsureCriteria<T>(
@@ -164,7 +166,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
         /// </summary>
         /// <returns>Created subscription name.</returns>
-        public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null)
+        public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null, CancellationToken token = default)
         {            
             if (options == null)
                 throw new InvalidOperationException("Cannot create a subscription if options is null");
@@ -176,7 +178,7 @@ namespace Raven.Client.Documents.Subscriptions
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
             var command = new CreateSubscriptionCommand(_store.Conventions, options);
-            await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
+            await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
 
             return command.Result.Name;
         }
@@ -243,13 +245,13 @@ namespace Raven.Client.Documents.Subscriptions
         /// It downloads a list of all existing subscriptions in a database.
         /// </summary>
         /// <returns>Existing subscriptions' configurations.</returns>
-        public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null)
+        public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null, CancellationToken token = default)
         {
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext);
 
             var command = new GetSubscriptionsCommand(start, take);
-            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
 
             return command.Result.ToList();
         }
@@ -257,15 +259,14 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Delete a subscription.
         /// </summary>
-        public async Task DeleteAsync(string name, string database = null)
+        public async Task DeleteAsync(string name, string database = null, CancellationToken token = default)
         {
             (_store as DocumentStoreBase).AssertInitialized();
-            JsonOperationContext jsonOperationContext;
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
-            requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
+            requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext);
 
             var command = new DeleteSubscriptionCommand(name);
-            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
         }
 
 
@@ -295,7 +296,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <param name="subscriptionName">Sbscription name as received from the server</param>
         /// <param name="database">Database where the subscription resides</param>
         /// <returns></returns>
-        public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database = null)
+        public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database = null, CancellationToken token = default)
         {
 
             if (string.IsNullOrEmpty(subscriptionName))
@@ -305,7 +306,7 @@ namespace Raven.Client.Documents.Subscriptions
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
             var command = new GetSubscriptionStateCommand(subscriptionName);
-            await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
+            await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
             return command.Result;
         }
 
@@ -354,13 +355,13 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>
-        public async Task DropConnectionAsync(string name, string database = null)
+        public async Task DropConnectionAsync(string name, string database = null, CancellationToken token = default)
         {
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             using (requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext))
             {
                 var command = new DropSubscriptionConnectionCommand(name);
-                await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+                await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
             }
         }
     }

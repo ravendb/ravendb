@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Util;
@@ -33,9 +34,9 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => BatchAsync(counterBatch));
         }
 
-        public Task<CountersDetail> BatchAsync(CounterBatch counterBatch)
+        public Task<CountersDetail> BatchAsync(CounterBatch counterBatch, CancellationToken token = default)
         {
-            return _operations.SendAsync(new CounterBatchOperation(counterBatch));
+            return _operations.SendAsync(new CounterBatchOperation(counterBatch), token: token);
         }
 
         public CountersDetail Increment(string docId, string name, long delta = 1)
@@ -43,7 +44,7 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => IncrementAsync(docId, name, delta));
         }
 
-        public Task<CountersDetail> IncrementAsync(string docId, string name, long delta = 1)
+        public Task<CountersDetail> IncrementAsync(string docId, string name, long delta = 1, CancellationToken token = default)
         {
             var counterBatch = new CounterBatch
             {
@@ -65,7 +66,7 @@ namespace Raven.Client.Documents.Operations
                 }
             };
 
-            return _operations.SendAsync(new CounterBatchOperation(counterBatch));
+            return _operations.SendAsync(new CounterBatchOperation(counterBatch), token: token);
         }
 
         public long? Get(string docId, string counterName)
@@ -73,9 +74,9 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => GetAsync(docId, counterName));
         }
 
-        public async Task<long?> GetAsync(string docId, string counterName)
+        public async Task<long?> GetAsync(string docId, string counterName, CancellationToken token = default)
         {
-            var details = await _operations.SendAsync(new GetCountersOperation(docId, new[] { counterName })).ConfigureAwait(false);
+            var details = await _operations.SendAsync(new GetCountersOperation(docId, new[] { counterName }), token: token).ConfigureAwait(false);
             if (details.Counters.Count == 0)
                 return null;
             return details.Counters[0].TotalValue;
@@ -86,10 +87,10 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => GetAsync(docId, counters));
         }
 
-        public async Task<Dictionary<string, long>> GetAsync(string docId, IEnumerable<string> counters)
+        public async Task<Dictionary<string, long>> GetAsync(string docId, IEnumerable<string> counters, CancellationToken token = default)
         {
             var result = new Dictionary<string, long>();
-            var details = await _operations.SendAsync(new GetCountersOperation(docId, counters.ToArray())).ConfigureAwait(false);
+            var details = await _operations.SendAsync(new GetCountersOperation(docId, counters.ToArray()), token: token).ConfigureAwait(false);
 
             foreach (var counterDetail in details.Counters)
             {
@@ -104,7 +105,7 @@ namespace Raven.Client.Documents.Operations
             AsyncHelpers.RunSync(() => DeleteAsync(docId, counter));
         }
 
-        public Task DeleteAsync(string docId, string counter)
+        public Task DeleteAsync(string docId, string counter, CancellationToken token = default)
         {
             var counterBatch = new CounterBatch
             {
@@ -125,7 +126,7 @@ namespace Raven.Client.Documents.Operations
                 }
             };
 
-             return _operations.SendAsync(new CounterBatchOperation(counterBatch));
+             return _operations.SendAsync(new CounterBatchOperation(counterBatch), token: token);
         }
     }
 }

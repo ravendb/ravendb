@@ -23,7 +23,10 @@ class connectionStrings extends viewModelBase {
     editedSqlEtlConnectionString = ko.observable<connectionStringSqlEtlModel>(null);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = { test: ko.observable<boolean>(false) };
+    testConnectionHttpSuccess: KnockoutComputed<boolean>;
+    spinners = { 
+        test: ko.observable<boolean>(false) 
+    };
     fullErrorDetailsVisible = ko.observable<boolean>(false);
 
     shortErrorText: KnockoutObservable<string>;
@@ -57,6 +60,16 @@ class connectionStrings extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+        
+        this.testConnectionHttpSuccess = ko.pureComputed(() => {
+            const testResult = this.testConnectionResult();
+            
+            if (!testResult) {
+                return false;
+            }
+            
+            return testResult.HTTPSuccess || false;
+        })
     }
 
     activate(args: any) {

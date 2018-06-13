@@ -26,9 +26,9 @@ $scriptDir = Get-ScriptDirectory
 $projectDir = [io.path]::combine($scriptDir, "..\..")
 $dockerDir = [io.path]::combine($projectDir, "docker")
 $debugDockerDir = [io.path]::combine($projectDir, "docker", "debug")
-$debugDockerfileDir = [io.path]::combine($projectDir, "docker", "debug", "ravendb-ubuntu-debug")
+$debugDockerfileDir = [io.path]::combine($projectDir, "docker", "debug", "ravendb-linux-debug")
 
-$pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-4.1.0-custom-41-ubuntu.16.04-x64.tar.bz2")
+$pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-4.1.0-custom-41-linux-x64.tar.bz2")
 
 if ($(Test-Path $pkgFile) -eq $False) {
 
@@ -51,9 +51,9 @@ if ($(Test-Path $pkgFile) -eq $False) {
 Push-Location .
 try {
     Set-Location $dockerDir
-    .\build-ubuntu1604.ps1
+    .\build-ubuntu.ps1
     CheckLastExitCode
-    write-host "Built RavenDB Ubuntu 16.04 docker image."
+    write-host "Built RavenDB Linux docker image."
 }
 finally {
     Pop-Location 

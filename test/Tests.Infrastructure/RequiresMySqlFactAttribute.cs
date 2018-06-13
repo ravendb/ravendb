@@ -16,7 +16,7 @@ namespace Tests.Infrastructure
                     con.Open();
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Skip = "Test requires MySQL database";
             }

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Json;
@@ -20,38 +21,38 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<List<T>> GetForAsync<T>(string id, int start = 0, int pageSize = 25)
+        public async Task<List<T>> GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize);
             var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
             operation.SetResult(command.Result);
             return operation.GetRevisionsFor<T>();
         }
 
-        public async Task<List<MetadataAsDictionary>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25)
+        public async Task<List<MetadataAsDictionary>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize, true);
             var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
             operation.SetResult(command.Result);
             return operation.GetRevisionsMetadataFor();
         }
 
-        public async Task<T> GetAsync<T>(string changeVector)
+        public async Task<T> GetAsync<T>(string changeVector, CancellationToken token = default)
         {
             var operation = new GetRevisionOperation(Session, changeVector);
             var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             operation.SetResult(command.Result);
             return operation.GetRevision<T>();
         }
 
-        public async Task<Dictionary<string, T>> GetAsync<T>(IEnumerable<string> changeVectors)
+        public async Task<Dictionary<string, T>> GetAsync<T>(IEnumerable<string> changeVectors, CancellationToken token = default)
         {
             var operation = new GetRevisionOperation(Session, changeVectors);
             var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             operation.SetResult(command.Result);
             return operation.GetRevisions<T>();
         }

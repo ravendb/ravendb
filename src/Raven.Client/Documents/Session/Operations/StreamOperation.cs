@@ -78,12 +78,11 @@ namespace Raven.Client.Documents.Session.Operations
                 throw new InvalidOperationException("The index does not exists, failed to stream results");
 
             var state = new JsonParserState();
-            JsonOperationContext.ManagedPinnedBuffer buffer;
 
             using (response.Response)
             using (response.Stream)
             using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
-            using (_session.Context.GetManagedBuffer(out buffer))
+            using (_session.Context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             using (var peepingTomStream = new PeepingTomStream(response.Stream, _session.Context))
             {
                 if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)

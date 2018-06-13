@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
 
@@ -23,22 +24,22 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Check if attachment exists
         /// </summary>
-        Task<bool> ExistsAsync(string documentId, string name);
+        Task<bool> ExistsAsync(string documentId, string name, CancellationToken token = default);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        Task<AttachmentResult> GetAsync(string documentId, string name);
+        Task<AttachmentResult> GetAsync(string documentId, string name, CancellationToken token = default);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        Task<AttachmentResult> GetAsync(object entity, string name);
+        Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
-        Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector);
+        Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default);
 
         /// <summary>
         /// Stores attachment to be sent in the session.

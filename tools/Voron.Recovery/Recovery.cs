@@ -361,7 +361,7 @@ namespace Voron.Recovery
                         }
                     }
 
-                    ReportOrphanAttachmentsAndMissingAttachments(ct, documentsWriter);
+                    ReportOrphanAttachmentsAndMissingAttachments(documentsWriter, ct);
                     //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
                     //last document
                     if (_lastWriteIsDocument == false)
@@ -369,7 +369,7 @@ namespace Voron.Recovery
                         WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.hash, _lastAttachmentInfo.size, _lastAttachmentInfo.tag);
                     }
 
-                    ReportOrphanCountersAndMissingCounters(ct, documentsWriter);
+                    ReportOrphanCountersAndMissingCounters(documentsWriter, ct);
 
                     documentsWriter.WriteEndArray();
                     conflictsWriter.WriteEndArray();
@@ -494,7 +494,7 @@ namespace Voron.Recovery
             writer.WriteInteger(size);
         }
 
-        private void ReportOrphanAttachmentsAndMissingAttachments(CancellationToken ct, BlittableJsonTextWriter writer)
+        private void ReportOrphanAttachmentsAndMissingAttachments(BlittableJsonTextWriter writer, CancellationToken ct)
         {
             //No need to scare the user if there are no attachments in the dump
             if (_attachmentsHashs.Count == 0 && _documentsAttachments.Count == 0)
@@ -573,7 +573,7 @@ namespace Voron.Recovery
             WriteDummyDocumentForAttachment(writer, hash, size, tag);
         }
 
-        private void ReportOrphanCountersAndMissingCounters(CancellationToken ct, BlittableJsonTextWriter writer)
+        private void ReportOrphanCountersAndMissingCounters(BlittableJsonTextWriter writer, CancellationToken ct)
         {
             //No need to scare the user if there are no counters in the dump
             if (_uniqueCountersDicovered.Count == 0 && _documentsCounters.Count == 0)
