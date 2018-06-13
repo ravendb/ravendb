@@ -175,12 +175,20 @@
                                     <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'replace'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate'">
                                 <label class="control-label">
                                     Certificate Passphrase
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
+
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="bg-info padding padding-sm " data-bind="visible: mode() === 'replace'">
+                                    <i class="icon-info"></i> <span>Certificate file cannot be password protected.</span>
+                                </div>
+                            </div>
+                            
 
                             <!-- TODO
                             <div class="form-group">
