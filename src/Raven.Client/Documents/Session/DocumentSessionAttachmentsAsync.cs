@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
@@ -20,32 +21,32 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<bool> ExistsAsync(string documentId, string name)
+        public async Task<bool> ExistsAsync(string documentId, string name, CancellationToken token = default)
         {
             var command = new HeadAttachmentCommand(documentId, name, null);
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             return command.Result != null;
         }
 
-        public Task<AttachmentResult> GetAsync(string documentId, string name)
+        public Task<AttachmentResult> GetAsync(string documentId, string name, CancellationToken token = default)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo);
+            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
         }
 
-        public Task<AttachmentResult> GetAsync(object entity, string name)
+        public Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo);
+            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
         }
 
-        public Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector)
+        public Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo);
+            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
         }
     }
 }

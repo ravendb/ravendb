@@ -81,7 +81,7 @@
     <PackageReference Include="Npgsql" Version="4.0.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.12.0-beta2" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.10">
+    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Data.SqlClient" Version="4.5.0" />

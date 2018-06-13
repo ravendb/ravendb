@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo));
         }
 
-        public async Task SendAsync(IOperation operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
+        public async Task SendAsync(IOperation operation, SessionInfo sessionInfo = null, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
             {
@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
+        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, SessionInfo sessionInfo = null, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
             {

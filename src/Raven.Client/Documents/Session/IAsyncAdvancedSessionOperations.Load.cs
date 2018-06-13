@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
         ///     Check if document exists
         /// </summary>
         /// <param name="id">Document id</param>
-        Task<bool> ExistsAsync(string id);
+        Task<bool> ExistsAsync(string id, CancellationToken token = default);
 
         /// <summary>
         ///     Loads multiple entities that contain common prefix.
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Session
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<IEnumerable<T>> LoadStartingWithAsync<T>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken));
+        Task<IEnumerable<T>> LoadStartingWithAsync<T>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default);
 
         /// <summary>
         ///     Loads multiple entities that contain common prefix into a given stream.
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Session
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task LoadStartingWithIntoStreamAsync(string idPrefix, Stream output, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken));
+        Task LoadStartingWithIntoStreamAsync(string idPrefix, Stream output, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids directly into a given stream.
@@ -71,6 +71,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="ids">Enumerable of the Ids of the documents that should be loaded</param>
         /// <param name="output">the stream that will contain the load results</param>
         /// <param name="token">The cancellation token.</param>
-        Task LoadIntoStreamAsync(IEnumerable<string> ids, Stream output, CancellationToken token = default(CancellationToken));
+        Task LoadIntoStreamAsync(IEnumerable<string> ids, Stream output, CancellationToken token = default);
     }
 }

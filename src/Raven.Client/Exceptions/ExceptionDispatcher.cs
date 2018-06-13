@@ -172,7 +172,7 @@ namespace Raven.Client.Exceptions
                 {
                     stream.Position = 0;
                     using (var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
-                        content = reader.ReadToEnd();
+                        content = await reader.ReadToEndAsync().ConfigureAwait(false);
                 }
 
                 if (content != null)
