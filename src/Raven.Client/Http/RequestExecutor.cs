@@ -1081,7 +1081,7 @@ namespace Raven.Client.Http
 
             OnFailedRequest(url, e);
 
-            await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+            await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: default, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
             return true;
         }
