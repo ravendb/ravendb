@@ -44,6 +44,27 @@ namespace Voron.Platform.Posix
         }
 
         public VoronPathSetting FileName => _filename;
+        public void ReopenFile()
+        {
+            // RavenDB-10923 - reopen file to force complete data sync between linux container and external cifs (windows) share
+            var rc = Syscall.close(_fd);
+            if (rc == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                Syscall.ThrowLastError(err, $"when re-opening (close {FileName})");
+            }
+
+            Thread.Sleep(500); // short timeout to give a change to update the above close
+
+            _fd = Syscall.open(FileName.FullPath, OpenFlags.O_WRONLY | _options.PosixOpenFlags | PerPlatformValues.OpenFlags.O_CREAT,
+                FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+
+            if (_fd == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                Syscall.ThrowLastError(err, $"when re-opening {FileName}");
+            }
+        }
 
         public PosixJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize)
         {

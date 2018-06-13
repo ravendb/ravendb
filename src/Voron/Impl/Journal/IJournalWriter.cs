@@ -18,5 +18,6 @@ namespace Voron.Impl.Journal
         bool Release();
 
         VoronPathSetting FileName { get; }
+        void ReopenFile();
     }
 }

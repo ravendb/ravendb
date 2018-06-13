@@ -306,5 +306,10 @@ namespace Voron.Impl.Journal
             _scratchPagesPositionsPool.Free(unusedPages);
             _scratchPagesPositionsPool.Free(unusedAndFree);
         }
+
+        public void ReopenFile()
+        {
+            _journalWriter.ReopenFile();
+        }
     }
 }

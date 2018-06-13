@@ -35,7 +35,24 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "when opening " + file);
+                if ((Errno)err == Errno.ENOENT)
+                {
+                    // unique case, when file was previously deleted, but still exists. This can happen on cifs mount, see RavenDB-10923
+                    // if this is a temp file we can try recreate it in a different name
+                    if (Path.GetExtension(file.FullPath ?? "").Equals("buffers"))
+                    {
+                        file.ChangeExtention($"{Guid.NewGuid()}.buffers");
+
+                        FileName = file;
+                        _copyOnWriteMode = options.CopyOnWriteMode && file.FullPath.EndsWith(Constants.DatabaseFilename);
+                        _isSyncDirAllowed = Syscall.CheckSyncDirectoryAllowed(FileName.FullPath);
+                        _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | PerPlatformValues.OpenFlags.O_CREAT,
+                            FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+                    }
+                }
+
+                if (_fd == -1)
+                    Syscall.ThrowLastError(err, "when opening " + file);
             }
 
             SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
