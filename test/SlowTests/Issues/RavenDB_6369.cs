@@ -36,10 +36,18 @@ namespace SlowTests.Issues
                 using(var session = store.OpenAsyncSession())
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new TestQueryCommand((InMemoryDocumentSessionOperations)session, store.Conventions, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
+                    // here we are testing that the command times out at the _network_ level.
+                    // we give much shorter timeout to the client than the server and expect to get 
+                    // a good error from this
+                    var command = new TestQueryCommand((InMemoryDocumentSessionOperations)session, store.Conventions, 
+                        new IndexQuery {
+                            Query = $"FROM INDEX '{new Users_ByName().IndexName}'",
+                            WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(5),
+                            WaitForNonStaleResults = true
+                        });
 
                     var sw = Stopwatch.StartNew();
-                    Assert.Throws<RavenException>(() => requestExecuter.Execute(command, context));
+                    var a = Assert.Throws<RavenException>(() => requestExecuter.Execute(command, context));
                     sw.Stop();
 
                     // Assert.True(sw.Elapsed < TimeSpan.FromSeconds(1), sw.Elapsed.ToString()); this can take longer when running tests in parallel but is not needed to assert if the request was cancelled or not

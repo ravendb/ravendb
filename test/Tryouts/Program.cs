@@ -20,9 +20,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_3115())
+                    using (var test = new RavenDB_6369())
                     {
-                        test.ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone();
+                        test.ShouldTimeout();
                     }
                 }
                 catch (Exception e)
