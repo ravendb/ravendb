@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -20,30 +19,33 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ServerStore _server;
         private CancellationToken _token;
         private readonly CancellationTokenSource _cts;
-        private Task _collectingTask;
         private readonly Logger _logger;
 
+        private readonly string _name;
         public readonly long CurrentTerm;
 
         public readonly TimeSpan WorkerSamplePeriod;
+        private PoolOfThreads.LongRunningWork _collectingTask;
 
-        public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, long term)
+        public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, string leader, long term)
         {
             _tcp = tcp;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             _token = _cts.Token;
             _server = serverStore;
-            WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
+            _name = $"Maintenance worker connection to leader {leader} in term {term}";
+
+            WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
             CurrentTerm = term;
         }
 
         public void Start()
         {
-            _collectingTask = CollectDatabasesStatusReport();
+            _collectingTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => CollectDatabasesStatusReport(), null, _name);
         }
 
-        public async Task CollectDatabasesStatusReport()
+        public void CollectDatabasesStatusReport()
         {
             while (_token.IsCancellationRequested == false)
             {
@@ -81,7 +83,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 finally
                 {
-                    await TimeoutManager.WaitFor(WorkerSamplePeriod, _token);
+                    _token.WaitHandle.WaitOne(WorkerSamplePeriod);
                 }
             }
         }
@@ -98,7 +100,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     Name = dbName,
                     NodeName = _server.NodeTag
                 };
-                
+
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
 
@@ -122,8 +124,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
                 }
-                
-                
+
+
                 if (dbTask.IsCanceled || dbTask.IsFaulted)
                 {
                     report.Status = DatabaseStatus.Faulted;
@@ -187,11 +189,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     report.Error = e.ToString();
                 }
-               
+
                 yield return (dbName, report);
             }
         }
@@ -205,11 +207,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (_collectingTask == null)
                     return;
 
-                if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
-                {
-                    _collectingTask.IgnoreUnobservedExceptions();
+                if (_collectingTask.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+                    return;
 
-                    throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
+                if (_collectingTask.Join((int)TimeSpan.FromSeconds(30).TotalMilliseconds) == false)
+                {
+                    throw new ObjectDisposedException($"{_name} still running and can't be closed");
                 }
             }
             finally

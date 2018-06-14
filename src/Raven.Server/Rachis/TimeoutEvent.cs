@@ -3,7 +3,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
+using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
 {
@@ -17,16 +17,23 @@ namespace Raven.Server.Rachis
         private Action _timeoutHappened;
         private string _currentLeader;
 
-        public TimeoutEvent(int timeoutPeriod, string name)
+        public TimeoutEvent(int timeoutPeriod, string name, bool singleShot = true)
         {
             TimeoutPeriod = timeoutPeriod;
+            _singleShot = singleShot;
             _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
             _logger = LoggingSource.Instance.GetLogger<TimeoutEvent>(name);
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
+        public TimeoutEvent(TimeSpan timeoutPeriod, string name, bool singleShot = true) :
+            this((int)timeoutPeriod.TotalMilliseconds, name, singleShot)
+        {
+        }
+
         public int TimeoutPeriod;
+        private readonly bool _singleShot;
         private readonly Logger _logger;
 
         public void Start(Action onTimeout)
@@ -51,32 +58,42 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private readonly MultipleUseFlag _flag = new MultipleUseFlag(false);
         private void Callback(object state)
         {
             if (_timeoutEventSlim.IsSet == false)
             {
                 try
                 {
+                    if (_flag.Raise() == false)
+                        return; // prevent double entry to the callback
+
                     ExecuteTimeoutBehavior();
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger .Info($"Failed to execute timeout callback, will retry again" ,e);
+                        _logger.Info("Failed to execute timeout callback, will retry again", e);
                     }
 
                     lock (this)
                     {
                         // schedule again once, because the error may be transient
+                        _flag.Lower();
+
                         if (_timeoutHappened != null)
                             _timer.Change(TimeoutPeriod, TimeoutPeriod);
                     }
                 }
+                finally
+                {
+                    _flag.Lower();
+                }
                 return;
             }
             _timeoutEventSlim.Reset();
-       
+
         }
 
         private void DisableTimeoutInternal()
@@ -106,8 +123,9 @@ namespace Raven.Server.Rachis
             {
                 if (Disable)
                     return;
-                
-                _timer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                if (_singleShot)
+                    _timer.Change(Timeout.Infinite, Timeout.Infinite);
 
                 try
                 {
