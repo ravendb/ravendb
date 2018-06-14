@@ -10,10 +10,10 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Maintenance
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
 
-        public ClusterMaintenanceSupervisor(ServerStore server,string leaderClusterTag, long term)
+        public ClusterMaintenanceSupervisor(ServerStore server, string leaderClusterTag, long term)
         {
             _leaderClusterTag = leaderClusterTag;
             _term = term;
@@ -43,10 +43,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void AddToCluster(string clusterTag, string url)
         {
-            var clusterNode = new ClusterNode(clusterTag, url, _contextPool, this, _cts.Token);
+            var clusterNode = new ClusterNode(clusterTag, url, _term, _contextPool, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;
-            var task = clusterNode.StartListening();
-            GC.KeepAlive(task); // we are explicitly not waiting on this task
+            clusterNode.Start();
         }
 
         public Dictionary<string, ClusterNodeStatusReport> GetStats()
@@ -75,7 +74,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _isDisposed = true;
             _cts.Cancel();
 
-            foreach (var node in _clusterNodes)
+            Parallel.ForEach(_clusterNodes, (node) =>
             {
                 try
                 {
@@ -85,7 +84,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     //don't care, we are disposing
                 }
-            }
+            });
 
             try
             {
@@ -116,64 +115,69 @@ namespace Raven.Server.ServerWide.Maintenance
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
             private ClusterNodeStatusReport _lastSuccessfulReceivedReport;
+            private readonly string _name;
+            private PoolOfThreads.LongRunningWork _maintenanceTask;
 
             public ClusterNode(
                 string clusterTag,
                 string url,
+                long term,
                 JsonContextPool contextPool,
                 ClusterMaintenanceSupervisor parent,
                 CancellationToken token)
             {
                 ClusterTag = clusterTag;
                 Url = url;
+
                 _contextPool = contextPool;
                 _parent = parent;
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
                 _token = _cts.Token;
-                _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response";
-                _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
+                _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response in term {term}";
+                _name = $"Maintenance supervisor from {_parent._server.NodeTag} to {ClusterTag} in term {term}";
+                _log = LoggingSource.Instance.GetLogger<ClusterNode>(_name);
             }
 
-            public async Task StartListening()
+            public void Start()
             {
-                await ListenToMaintenanceWorker();
+                _maintenanceTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ListenToMaintenanceWorker(), null, _name);
             }
 
-            private async Task ListenToMaintenanceWorker()
+            private void ListenToMaintenanceWorker()
             {
-                bool needToWait = false;
+                var needToWait = false;
+                var firstIteration = true;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
                 var receiveFromWorkerTimeout = _parent.Config.ReceiveFromWorkerTimeout.AsTimeSpan;
-
-                TcpConnectionInfo tcpConnection = null;
-                try
-                {
-                    using (var cts = new CancellationTokenSource(_parent.Config.TcpConnectionTimeout.AsTimeSpan))
-                    {
-                        tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
-                            _parent._server.Server.Certificate?.Certificate, cts.Token);
-                    }
-                }
-                catch (Exception e)
+                var tcpTimeout = _parent.Config.TcpConnectionTimeout.AsTimeSpan;
+                
+                if (tcpTimeout < receiveFromWorkerTimeout)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {ClusterTag}", e);
+                    {
+                        _log.Info(
+                            $"Warning: TCP timeout is lower than the receive from worker timeout ({tcpTimeout} < {receiveFromWorkerTimeout}), " +
+                            "this could affect the cluster observer's decisions.");
+                    }
                 }
+
+                TcpConnectionInfo tcpConnection = null;
                 while (_token.IsCancellationRequested == false)
                 {
-                    var internalTaskCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_token);
                     try
                     {
                         if (needToWait)
                         {
                             needToWait = false; // avoid tight loop if there was timeout / error
-                            await TimeoutManager.WaitFor(onErrorDelayTime, _token);
-
-                            using (var cts = new CancellationTokenSource(_parent.Config.TcpConnectionTimeout.AsTimeSpan))
-                            using(var combined = CancellationTokenSource.CreateLinkedTokenSource(internalTaskCancellationToken.Token, cts.Token))
+                            if (firstIteration == false)
                             {
-                                tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
-                                    _parent._server.Server.Certificate.Certificate,  combined.Token);
+                                _token.WaitHandle.WaitOne(onErrorDelayTime);
+                            }
+                            firstIteration = false;
+                            using (var timeout = new CancellationTokenSource(tcpTimeout))
+                            using (var combined = CancellationTokenSource.CreateLinkedTokenSource(_token, timeout.Token))
+                            {
+                                tcpConnection = ReplicationUtils.GetTcpInfo(Url, null, "Supervisor", _parent._server.Server.Certificate.Certificate, combined.Token);
                             }
                         }
 
@@ -182,63 +186,49 @@ namespace Raven.Server.ServerWide.Maintenance
                             needToWait = true;
                             continue;
                         }
-                        var (tcpClient, connection) = await ConnectToClientNodeAsync(tcpConnection, _parent._server.Engine.TcpConnectionTimeout);
+
+                        var (tcpClient, connection) = ConnectToClientNode(tcpConnection, _parent._server.Engine.TcpConnectionTimeout);
                         using (tcpClient)
                         using (_cts.Token.Register(tcpClient.Dispose))
-                        using (connection)
+                        using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
+                        using (var timeoutEvent = new TimeoutEvent(receiveFromWorkerTimeout, $"Timeout event for: {_name}", singleShot: false))
                         {
+                            timeoutEvent.Start(OnTimeout);
                             while (_token.IsCancellationRequested == false)
                             {
-                                using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
+                                BlittableJsonReaderObject rawReport;
+                                try
                                 {
-                                    var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, internalTaskCancellationToken.Token);
-                                    var timeout = TimeoutManager.WaitFor(receiveFromWorkerTimeout, _token);
-
-                                    if (readResponseTask.IsCompleted == false && 
-                                        await Task.WhenAny(readResponseTask.AsTask(), timeout) == timeout)
-                                    {
-                                        if (_log.IsInfoEnabled)
-                                        {
-                                            _log.Info($"Timeout occurred while collecting info from {ClusterTag}");
-                                        }
-                                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
-                                            ClusterNodeStatusReport.ReportStatus.Timeout,
-                                            null,
-                                            DateTime.UtcNow,
-                                            _lastSuccessfulReceivedReport);
-                                        needToWait = true;
-                                        internalTaskCancellationToken.Cancel();
-                                        try
-                                        {
-                                            await readResponseTask;
-                                        }
-                                        catch 
-                                        {
-                                            // expecting and ignoring this error, we MUST wait 
-                                            // until the task is done before releasing the context that
-                                            // it is using
-                                        }
-                                        break;
-                                    }
-
-                                    using (var statusUpdateJson = await readResponseTask)
-                                    {
-                                        var report = new Dictionary<string, DatabaseStatusReport>();
-                                        foreach (var property in statusUpdateJson.GetPropertyNames())
-                                        {
-                                            var value = (BlittableJsonReaderObject)statusUpdateJson[property];
-                                            report.Add(property, JsonDeserializationServer.DatabaseStatusReport(value));
-                                        }
-
-                                        ReceivedReport = new ClusterNodeStatusReport(
-                                            report,
-                                            ClusterNodeStatusReport.ReportStatus.Ok,
-                                            null,
-                                            DateTime.UtcNow,
-                                            _lastSuccessfulReceivedReport);
-                                        _lastSuccessfulReceivedReport = ReceivedReport;
-                                    }
+                                    // even if there is a timeout event, we will keep waiting on the same connection until the TCP timeout occurs.
+                                    rawReport = context.ReadForMemory(connection, _readStatusUpdateDebugString);
+                                    timeoutEvent.Defer(_parent._leaderClusterTag);
                                 }
+                                catch (Exception e)
+                                {
+                                    if (_token.IsCancellationRequested)
+                                    {
+                                        return;
+                                    }
+
+                                    if (_log.IsInfoEnabled)
+                                    {
+                                        _log.Info("Exception occurred while reading the report from the connection", e);
+                                    }
+
+                                    ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
+                                        ClusterNodeStatusReport.ReportStatus.Error,
+                                        e,
+                                        DateTime.UtcNow,
+                                        _lastSuccessfulReceivedReport);
+
+                                    needToWait = true;
+                                    break;
+                                }
+
+                                var report = BuildReport(rawReport);
+                                timeoutEvent.Defer(_parent._leaderClusterTag);
+
+                                ReceivedReport = _lastSuccessfulReceivedReport = report;
                             }
                         }
                     }
@@ -248,23 +238,60 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             _log.Info($"Exception was thrown while collecting info from {ClusterTag}", e);
                         }
+
                         ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
                             ClusterNodeStatusReport.ReportStatus.Error,
                             e,
                             DateTime.UtcNow,
                             _lastSuccessfulReceivedReport);
+
                         needToWait = true;
                     }
-                    finally
-                    {
-                        try
-                        {
-                            internalTaskCancellationToken.Cancel();
-                        }
-                        catch { }
-                        internalTaskCancellationToken.Dispose();
-                    }
                 }
+            }
+
+            private void OnTimeout()
+            {
+                if (_token.IsCancellationRequested)
+                    return;
+
+                // expected timeout
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("Timeout occurred while collecting info report.");
+                }
+
+                ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
+                    ClusterNodeStatusReport.ReportStatus.Timeout,
+                    null,
+                    DateTime.UtcNow,
+                    _lastSuccessfulReceivedReport);
+            }
+
+            private ClusterNodeStatusReport BuildReport(BlittableJsonReaderObject rawReport)
+            {
+                using (rawReport)
+                {
+                    var report = new Dictionary<string, DatabaseStatusReport>();
+                    foreach (var property in rawReport.GetPropertyNames())
+                    {
+                        var value = (BlittableJsonReaderObject)rawReport[property];
+                        report.Add(property, JsonDeserializationServer.DatabaseStatusReport(value));
+                    }
+
+                    return new ClusterNodeStatusReport(
+                        report,
+                        ClusterNodeStatusReport.ReportStatus.Ok,
+                        null,
+                        DateTime.UtcNow,
+                        _lastSuccessfulReceivedReport);
+                }
+            }
+
+
+            private (TcpClient TcpClient, Stream Connection) ConnectToClientNode(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
+            {
+                return AsyncHelpers.RunSync(() => ConnectToClientNodeAsync(tcpConnectionInfo, timeout));
             }
 
             private async Task<(TcpClient TcpClient, Stream Connection)> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
@@ -287,9 +314,9 @@ namespace Raven.Server.ServerWide.Maintenance
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 //Kindly request the server to drop the connection
-                                WriteOperationHeaderToRemote(writer, headerResponse.Version, drop:true);
+                                WriteOperationHeaderToRemote(writer, headerResponse.Version, drop: true);
                                 throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with mismatching tcp version {headerResponse.Message}");
-                        }                        
+                        }
                     }
 
                     WriteClusterMaintenanceConnectionHeader(writer);
@@ -298,7 +325,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (tcpClient, connection);
             }
 
-            private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer,int remoteVersion = -1, bool drop = false)
+            private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer, int remoteVersion = -1, bool drop = false)
             {
                 var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Heartbeats;
                 writer.WriteStartObject();
@@ -316,7 +343,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Info));
                         writer.WriteString($"Couldn't agree on heartbeats tcp version ours:{TcpConnectionHeaderMessage.HeartbeatsTcpVersion} theirs:{remoteVersion}");
-                    }                    
+                    }
                 }
                 writer.WriteEndObject();
                 writer.Flush();
@@ -342,8 +369,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public override bool Equals(object other)
             {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
+                if (ReferenceEquals(null, other))
+                    return false;
+                if (ReferenceEquals(this, other))
+                    return true;
                 return other.GetType() == GetType() && Equals((ClusterNode)other);
             }
 
@@ -353,17 +382,28 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (_isDisposed)
                     return;
+
                 _isDisposed = true;
+                _cts.Cancel();
+
                 try
                 {
-                    _cts.Cancel();
+                    if (_maintenanceTask == null)
+                        return;
+
+                    if (_maintenanceTask.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+                        return;
+
+                    if (_maintenanceTask.Join((int)TimeSpan.FromSeconds(30).TotalMilliseconds) == false)
+                    {
+                        throw new ObjectDisposedException($"{_name} still running and can't be closed");
+                    }
                 }
-                catch
+                finally
                 {
-                    //don't care, we are disposing
+                    _cts.Dispose();
                 }
             }
-
         }
 
         public enum StateUpdateResult

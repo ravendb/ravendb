@@ -1334,7 +1334,7 @@ namespace Raven.Server
                     var old = _clusterMaintenanceWorker;
                     using (old)
                     {
-                        _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
+                        _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.LeaderClusterTag, maintenanceHeader.Term);
                         _clusterMaintenanceWorker.Start();
                     }
 
