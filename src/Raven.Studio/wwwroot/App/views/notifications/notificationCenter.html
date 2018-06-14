@@ -7,28 +7,30 @@
 
     <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="if: includeInDom, visible: !noNewNotifications()">
         <div class="flex-grow flex-horizontal flex-stretch-items">
-            <button data-bind="click: _.partial(filterBySeverity, null), css: { active: !severityFilter() }" 
-                    title="Show all notifications" class="notification-type-toggle active">All</button>
-            <button data-bind="click: _.partial(filterBySeverity, 'Success'), css: { active: severityFilter() === 'Success' }, text: successItemsCount" 
+            <button data-bind="click: _.partial(filterBySeverity, null), css: { active: !severityFilter() }"
+                    title="Show all notifications" class="notification-type-toggle active">
+                All
+            </button>
+            <button data-bind="click: _.partial(filterBySeverity, 'Success'), css: { active: severityFilter() === 'Success' }, text: successItemsCount"
                     title="Filter by severity: Success" class="notification-type-toggle type-success"></button>
-            <button data-bind="click: _.partial(filterBySeverity, 'Info'), css: { active: severityFilter() === 'Info' }, text: infoItemsCount" 
+            <button data-bind="click: _.partial(filterBySeverity, 'Info'), css: { active: severityFilter() === 'Info' }, text: infoItemsCount"
                     title="Filter by severity: Info" class="notification-type-toggle type-info"></button>
-            <button data-bind="click: _.partial(filterBySeverity, 'Warning'), css: { active: severityFilter() === 'Warning' }, text: warningItemsCount" 
+            <button data-bind="click: _.partial(filterBySeverity, 'Warning'), css: { active: severityFilter() === 'Warning' }, text: warningItemsCount"
                     title="Filter by severity: Warning" class="notification-type-toggle type-warning"></button>
-            <button data-bind="click: _.partial(filterBySeverity, 'Error'), css: { active: severityFilter() === 'Error' }, text: errorItemsCount" 
+            <button data-bind="click: _.partial(filterBySeverity, 'Error'), css: { active: severityFilter() === 'Error' }, text: errorItemsCount"
                     title="Filter by severity: Error" class="notification-type-toggle type-danger"></button>
         </div>
-        
+
         <button data-bind="click: dismissAll" class="dismiss">Dismiss all</button>
 
     </div>
-
-    <div data-bind="if: includeInDom">
+    <!-- ko data-bind="if: includeInDom" -->
         <div class="notification-list scroll" data-bind="foreach: visibleNotifications">
-            <div data-bind="template: { name: type + '-template' }"></div>  
+            <div data-bind="template: { name: type + '-template' }"></div>
         </div>
-    </div>
-    
+    <!-- /ko -->
+
+
 </div>
 
 <script type="text/html" id="OperationChanged-template">
@@ -99,7 +101,7 @@
                     <span>Details</span>
                 </button>
                 <div class="flex-separator"></div>
-                <div class="dropdown" data-bind="visible: canBePostponed">
+                <div class="dropdown dropdown-right" data-bind="visible: canBePostponed">
                     <button class="btn btn-sm btn-info dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
                         <i class="icon-clock"></i><span>Postpone</span>
                         <span class="caret"></span>
@@ -150,7 +152,7 @@
                     <span>Details</span>
                 </button>
                 <div class="flex-separator"></div>
-                <div class="dropdown" data-bind="visible: canBePostponed">
+                <div class="dropdown dropdown-right" data-bind="visible: canBePostponed">
                     <button class="btn btn-sm btn-info dropdown-toggle" data-toggle="dropdown"
                             data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
                         <i class="icon-clock"></i><span>Postpone</span>
