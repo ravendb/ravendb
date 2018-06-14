@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         Name = "Joe Doe"
                     }, "users/1");
 
-                    session.Advanced.Counters.Increment("users/1", "likes");
+                    session.CountersFor("users/1-A").Increment("likes");
 
                     session.SaveChanges();
                 }
@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
 
-                    var counter = session.Advanced.Counters.Get("users/1", "likes");
+                    var counter = session.CountersFor("users/1").Get("likes");
 
                     Assert.NotNull(counter);
                     Assert.Equal(1, counter.Value);
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Null(user);
 
-                    var counter = session.Advanced.Counters.Get("users/1", "likes");
+                    var counter = session.CountersFor("users/1").Get( "likes");
 
                     Assert.Null(counter);
                 }
@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         Name = "Joe Doe"
                     }, "users/1");
 
-                    session.Advanced.Counters.Increment("users/1", "likes");
+                    session.CountersFor("users/1").Increment( "likes");
 
                     session.SaveChanges();
                 }
@@ -146,8 +146,8 @@ person.addCounter('down-etl', loadCounter('down'));
                         LastName = "Doe",
                     }, "users/1");
 
-                    session.Advanced.Counters.Increment("users/1", "up", 20);
-                    session.Advanced.Counters.Increment("users/1", "down", 10);
+                    session.CountersFor("users/1").Increment("up", 20);
+                    session.CountersFor("users/1").Increment("down", 10);
 
                     session.SaveChanges();
                 }
@@ -172,7 +172,7 @@ person.addCounter('down-etl', loadCounter('down'));
 
                 using (var session = src.OpenSession())
                 {
-                    session.Advanced.Counters.Delete("users/1", "up");
+                    session.CountersFor("users/1").Delete("up");
                     session.SaveChanges();
                 }
 
@@ -186,7 +186,7 @@ person.addCounter('down-etl', loadCounter('down'));
 
                     Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Counters));
 
-                    var counter = session.Advanced.Counters.Get("users/1", "up-etl");
+                    var counter = session.CountersFor("users/1").Get("up-etl");
 
                     Assert.Null(counter); // this counter was removed
                 }
@@ -212,12 +212,12 @@ person.addCounter('down-etl', loadCounter('down'));
                 {
                     Assert.Null(session.Load<User>("users/1"));
 
-                    Assert.Null(session.Advanced.Counters.Get("users/1", "up-etl"));
-                    Assert.Null(session.Advanced.Counters.Get("users/1", "up-etl"));
+                    Assert.Null(session.CountersFor("users/1").Get("up-etl"));
+                    Assert.Null(session.CountersFor("users/1").Get("up-etl"));
 
                     Assert.Empty(session.Advanced.LoadStartingWith<Person>("users/1/people/"));
 
-                    Assert.Null(session.Advanced.Counters.Get(personId, "down-etl"));
+                    Assert.Null(session.CountersFor(personId).Get("down-etl"));
                 }
             }
         }
@@ -235,7 +235,7 @@ person.addCounter('down-etl', loadCounter('down'));
 
                     Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Counters));
                     
-                    var value = session.Advanced.Counters.Get(doc.Id, item.CounterName);
+                    var value = session.CountersFor(doc.Id).Get(item.CounterName);
 
                     Assert.NotNull(value);
                     Assert.Equal(item.CounterValue, value);
@@ -274,8 +274,8 @@ for (var i = 0; i < counters.length; i++) {
                         LastName = "",
                     }, "users/1");
 
-                    session.Advanced.Counters.Increment("users/1", "up");
-                    session.Advanced.Counters.Increment("users/1", "down", -1);
+                    session.CountersFor("users/1").Increment("up");
+                    session.CountersFor("users/1").Increment("down", -1);
 
                     session.SaveChanges();
                 }
@@ -329,8 +329,8 @@ doc.addCounter('likes', loadCounter('likes'));
                         Name = "Foo"
                     }, "users/3");
 
-                    session.Advanced.Counters.Increment("users/1", "up");
-                    session.Advanced.Counters.Increment("users/2", "likes");
+                    session.CountersFor("users/1").Increment("up");
+                    session.CountersFor("users/2").Increment("likes");
 
                     session.SaveChanges();
                 }
@@ -379,7 +379,7 @@ if (hasCounter('down')) {
                         Name = "Joe"
                     }, "users/1");
 
-                    session.Advanced.Counters.Increment("users/1", "down", -1);
+                    session.CountersFor("users/1").Increment("down", -1);
 
                     session.Store(new User()
                     {
