@@ -152,10 +152,11 @@
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
                 Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
             </button>
-            <button type="button" class="btn btn-sm" 
-                    data-bind="css: { active: currentTab() === 'includes' }, click: goToIncludesTab">
-                Includes &nbsp; <span class="label" data-bind="text: totalIncludes().toLocaleString(), css: { 'label-primary': totalIncludes(), 'label-default': !totalIncludes()}"></span>
-            </button>
+            <!-- ko foreach: includesCache -->
+                <button type="button" class="btn btn-sm" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
+                    <span data-bind="text: 'Includes (' + name + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: total().toLocaleString()"></span>
+                </button>
+            <!-- /ko -->
             <!-- ko foreach: highlightsCache -->
                 <button type="button" class="btn btn-sm" data-bind="click: $root.goToHighlightsTab, css: { active: $parent.currentTab() === $data }">
                     <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>

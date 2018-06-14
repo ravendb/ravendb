@@ -27,8 +27,6 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import endpoints = require("endpoints");
 
-type queryResultTab = "results" | "includes";
-
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
 type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Datetime";
@@ -45,6 +43,17 @@ class highlightSection {
     fieldName = ko.observable<string>();
     totalCount = ko.observable<number>(0);
 }
+
+class perCollectionIncludes {
+    name: string;
+    total = ko.observable<number>(0);
+    items = new Map<string, document>();
+    
+    constructor(name: string) {
+        this.name = name;
+    }
+}
+
 
 class query extends viewModelBase {
 
@@ -108,18 +117,16 @@ class query extends viewModelBase {
     columnsSelector = new columnsSelector<document>();
 
     queryFetcher = ko.observable<fetcherType>();
-    includesFetcher = ko.observable<fetcherType>();
     effectiveFetcher = this.queryFetcher;
     
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
-    currentTab = ko.observable<queryResultTab | highlightSection>("results");
-    includesCache = new Map<string, document>();
+    currentTab = ko.observable<"results" | highlightSection | perCollectionIncludes>("results");
     totalResults: KnockoutComputed<number>;
     hasMoreUnboundedResults = ko.observable<boolean>(false);
-    totalIncludes = ko.observable<number>(0);
-    
+
+    includesCache = ko.observableArray<perCollectionIncludes>([]);
     highlightsCache = ko.observableArray<highlightSection>([]);
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
@@ -181,7 +188,7 @@ class query extends viewModelBase {
         this.initObservables();
         this.initValidation();
 
-        this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", "goToHighlightsTab");
+        this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", "goToHighlightsTab", "goToIncludesTab");
     }
 
     private initObservables() {
@@ -417,14 +424,6 @@ class query extends viewModelBase {
                 totalResultCount: 0
             }));
         
-        this.includesFetcher(() => {
-            const allIncludes = Array.from(this.includesCache.values());
-            return $.when({
-                items: allIncludes.map(x => new document(x)),
-                totalResultCount: allIncludes.length
-            });
-        });
-
         this.columnsSelector.init(grid,
             (s, t, c) => this.effectiveFetcher()(s, t),
             (w, r) => {
@@ -525,7 +524,7 @@ class query extends viewModelBase {
         
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
-        this.includesCache.clear();
+        this.includesCache.removeAll();
         this.highlightsCache.removeAll();
         
         this.isEmptyFieldsResult(false);
@@ -756,10 +755,20 @@ class query extends viewModelBase {
     
     private onIncludesLoaded(includes: dictionary<any>) {
         _.forIn(includes, (doc, id) => {
-            this.includesCache.set(id, doc);
+            const metadata = doc['@metadata'];
+            const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
+            
+            let perCollectionCache = this.includesCache().find(x => x.name === collection);
+            if (!perCollectionCache) {
+                perCollectionCache = new perCollectionIncludes(collection);
+                this.includesCache.push(perCollectionCache);
+            }
+            perCollectionCache.items.set(id, doc);
         });
         
-        this.totalIncludes(this.includesCache.size);
+        this.includesCache().forEach(cache => {
+            cache.total(cache.items.size);
+        });
     }
     
     private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>) {
@@ -889,9 +898,15 @@ class query extends viewModelBase {
         this.refresh();
     }
     
-    goToIncludesTab() {
-        this.currentTab("includes");
-        this.effectiveFetcher = this.includesFetcher;
+    goToIncludesTab(includes: perCollectionIncludes) {
+        this.currentTab(includes);
+        
+        this.effectiveFetcher = ko.observable<fetcherType>(() => {
+            return $.when({
+                items: Array.from(includes.items.values()).map(x => new document(x)),
+                totalResultCount: includes.total()
+            });
+        });
 
         this.columnsSelector.reset();
         this.refresh();
