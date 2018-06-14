@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Operations.Counters
         public GetCountersOperation(string docId, string counter, bool returnFullResults = false)
         {
             _docId = docId;
-            _counters = new[] { counters };
+            _counters = new[] { counter };
             _returnFullResults = returnFullResults;
         }
 
