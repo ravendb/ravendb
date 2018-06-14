@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
                 if (batchResult == null)
-                    throw new ArgumentNullException();
+                    continue;
 
                 batchResult.TryGet("Type", out string type);
 
@@ -107,7 +107,7 @@ namespace Raven.Client.Documents.Session.Operations
             for (int i = _sessionCommandsCount; i < result.Results.Length; i++)
             {
                 if (!(result.Results[i] is BlittableJsonReaderObject batchResult))
-                    throw new ArgumentNullException();
+                    continue;
 
                 if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false ||
                     batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) == false ||
