@@ -162,7 +162,7 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
-            
+
             var taskInfo = new OngoingTaskReplication
             {
                 TaskId = watcher.TaskId,
@@ -172,16 +172,16 @@ namespace Raven.Server.Web.System
                     NodeTag = tag,
                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                 },
-                ConnectionStringName = watcher.ConnectionStringName,     
+                ConnectionStringName = watcher.ConnectionStringName,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
-                DestinationUrl = res.Url, 
+                DestinationUrl = res.Url,
                 TopologyDiscoveryUrls = connectionStrings[watcher.ConnectionStringName].TopologyDiscoveryUrls,
                 MentorNode = watcher.MentorNode,
                 TaskConnectionStatus = res.Status,
                 DelayReplicationFor = watcher.DelayReplicationFor
             };
-            
+
             return taskInfo;
         }
 
@@ -204,7 +204,7 @@ namespace Raven.Server.Web.System
                         case PeriodicBackupTestConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
                             using (var awsClient = new RavenAwsS3Client(
-                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName, 
+                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName,
                                 s3Settings.BucketName, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await awsClient.TestConnection();
@@ -372,7 +372,7 @@ namespace Raven.Server.Web.System
                 {
                     throw new ArgumentException($"The administrator has restricted local backups to be saved under the following root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' but the actual chosen path is '{fullPath}' which is not a subdirectory of the root path.");
                 }
-                
+
                 readerObject.Modifications = new DynamicJsonValue
                 {
                     [nameof(LocalSettings)] = new DynamicJsonValue
@@ -506,7 +506,7 @@ namespace Raven.Server.Web.System
         }
 
         private OngoingTaskBackup GetOngoingTaskBackup(
-            long taskId, 
+            long taskId,
             DatabaseRecord databaseRecord,
             PeriodicBackupConfiguration backupConfiguration,
             ClusterTopology clusterTopology)
@@ -774,8 +774,9 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{sqlEtl.ConnectionStringName}' in the database record for '{sqlEtl.Name}' ETL");
 
-                    var (database, server) =
-                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName ?? sqlEtl.FactoryName, sqlConnection.ConnectionString);
+#pragma warning disable 618
+                    var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName ?? sqlEtl.FactoryName, sqlConnection.ConnectionString);
+#pragma warning restore 618
 
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, sqlEtl, out var tag, out var error);
 
@@ -824,7 +825,7 @@ namespace Raven.Server.Web.System
                     else
                         error = $"ETL process '{config.Name}' was not found.";
                 }
-                    
+
             }
             else
             {
@@ -889,7 +890,7 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.SqlEtl:
-                            
+
                             var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == key);
                             if (sqlEtl == null)
                             {
