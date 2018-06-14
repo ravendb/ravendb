@@ -18,9 +18,9 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new SlowTests.Core.Commands.Documents())
+                    using (var test = new RavenDB_6369())
                     {
-                        test.CanCancelPutDocument();
+                        test.ShouldTimeout();
                     }
                 }
                 catch (Exception e)
