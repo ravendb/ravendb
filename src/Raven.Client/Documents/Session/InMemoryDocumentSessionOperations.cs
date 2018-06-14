@@ -511,7 +511,7 @@ more responsive application.
 
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
-            CountersByDocId.Remove(value.Id);
+            CountersByDocId?.Remove(value.Id);
             _knownMissingIds.Add(value.Id);
         }
 
@@ -551,7 +551,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
-            CountersByDocId.Remove(id);
+            CountersByDocId?.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
@@ -1101,7 +1101,7 @@ more responsive application.
             {
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
-                CountersByDocId.Remove(documentInfo.Id);
+                CountersByDocId?.Remove(documentInfo.Id);
             }
 
             DeletedEntities.Remove(entity);
@@ -1118,7 +1118,7 @@ more responsive application.
             DocumentsById.Clear();
             _knownMissingIds.Clear();
             IncludedDocumentsById.Clear();
-            CountersByDocId.Clear();
+            CountersByDocId?.Clear();
         }
 
         /// <summary>
