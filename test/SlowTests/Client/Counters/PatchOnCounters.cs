@@ -103,8 +103,8 @@ namespace SlowTests.Client.Counters
                     var u = session.Load<User>("users/1-A");
                     var counters = session.Advanced.GetCountersFor(u);
                     Assert.Equal(2, counters.Count);
-                    Assert.Contains("Downloads", counters);
-                    Assert.Contains("Likes", counters);
+                    Assert.Equal("Downloads", counters[0]);
+                    Assert.Equal("Likes", counters[1]);
                 }
             }
         }

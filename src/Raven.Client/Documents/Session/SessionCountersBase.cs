@@ -73,15 +73,11 @@ namespace Raven.Client.Documents.Session
                     ThrowIncrementCounterAfterDeleteAttempt(DocId, counter);
                 }
 
-                countersBatchCommandData.HasIncrementOperation = true;
                 countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
-                Session.Defer(new CountersBatchCommandData(DocId, counterOp)
-                {
-                    HasIncrementOperation = true
-                });
+                Session.Defer(new CountersBatchCommandData(DocId, counterOp));
             }
         }
 

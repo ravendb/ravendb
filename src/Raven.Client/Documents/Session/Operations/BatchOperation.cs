@@ -62,15 +62,6 @@ namespace Raven.Client.Documents.Session.Operations
 
                 batchResult.TryGet("Type", out string type);
 
-                if (type == nameof(CommandType.Counters) && 
-                    batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) &&
-                    batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) &&
-                    countersDetail.TryGet("Counters", out BlittableJsonReaderArray counters))
-                {
-                    UpdateCounterValuesInCache(counters, docId);
-                    continue;
-                }
-
                 if (type != "PUT")
                     continue;
 
@@ -111,6 +102,20 @@ namespace Raven.Client.Documents.Session.Operations
 
                 var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
                 _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
+            }
+
+            for (int i = _sessionCommandsCount; i < result.Results.Length; i++)
+            {
+                if (!(result.Results[i] is BlittableJsonReaderObject batchResult))
+                    throw new ArgumentNullException();
+
+                if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false ||
+                    batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) == false ||
+                    countersDetail.TryGet("Counters", out BlittableJsonReaderArray counters) == false)
+                    continue;
+
+                UpdateCounterValuesInCache(counters, docId);
+
             }
 
         }

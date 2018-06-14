@@ -463,7 +463,7 @@ namespace Raven.Client.Documents.Linq
         public static bool IsCounterCall(MethodCallExpression mce)
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Counter"
-                   || mce.Object?.Type == typeof(SessionDocumentCounters) && mce.Method.Name == "Get";
+                   || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == "Get";
         }
 
     }

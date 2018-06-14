@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Session
         ///     Gets all the counter names for the specified entity.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        HashSet<string> GetCountersFor<T>(T instance);
+        List<string> GetCountersFor<T>(T instance);
 
         /// <summary>
         ///     Gets last modified date for the specified entity.

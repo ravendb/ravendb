@@ -254,7 +254,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="T"></typeparam>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
-        public HashSet<string> GetCountersFor<T>(T instance)
+        public List<string> GetCountersFor<T>(T instance)
         {
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
@@ -264,7 +264,7 @@ namespace Raven.Client.Documents.Session
             if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
                 out BlittableJsonReaderArray counters) == false)
                 return null;
-            return new HashSet<string>(counters.Select(x=>x.ToString()), StringComparer.OrdinalIgnoreCase);
+            return counters.Select(x => x.ToString()).ToList();
         }
 
 
@@ -756,8 +756,6 @@ more responsive application.
 
             PrepareCompareExchangeEntities(result);
 
-            PrepareForCountersIncrement(result);
-
             if (DeferredCommands.Count > 0)
             {
                 // this allow OnBeforeStore to call Defer during the call to include
@@ -827,22 +825,6 @@ more responsive application.
                 }
             }
             clusterTransactionOperations.Clear();
-        }
-
-        private void PrepareForCountersIncrement(SaveChangesData result)
-        {
-            foreach (var (id, type, name) in result.DeferredCommandsDictionary.Keys)
-            {
-                if (type != CommandType.Counters)
-                    continue;
-
-                if (result.DeferredCommandsDictionary[(id, type, name)] is CountersBatchCommandData cmd &&
-                    cmd.HasIncrementOperation)
-                {
-                    result.SessionCommands.Add(cmd);
-                    result.DeferredCommands.Remove(cmd);
-                }
-            }
         }
 
         protected abstract ClusterTransactionOperationsBase GetClusterSession();

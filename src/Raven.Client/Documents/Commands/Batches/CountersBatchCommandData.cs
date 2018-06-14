@@ -38,7 +38,6 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Id { get; }
         public string Name { get; }
         public string ChangeVector { get; }
-        public bool HasIncrementOperation { get; set; }
 
         public DocumentCountersOperation Counters { get;  }
         public CommandType Type { get; } = CommandType.Counters;

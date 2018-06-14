@@ -231,14 +231,14 @@ namespace SlowTests.Client.Counters
                     var counters = session.Advanced.GetCountersFor(user);
 
                     Assert.Equal(2, counters.Count);
-                    Assert.True(counters.Contains("downloads"));
-                    Assert.True(counters.Contains("likes"));
+                    Assert.Equal("downloads", counters[0]);
+                    Assert.Equal("likes", counters[1]);
 
                     user = session.Load<User>("users/2-A");
                     counters = session.Advanced.GetCountersFor(user);
 
                     Assert.Equal(1, counters.Count);
-                    Assert.True(counters.Contains("votes"));
+                    Assert.Equal("votes", counters[0]);
 
                     user = session.Load<User>("users/3-A");
                     counters = session.Advanced.GetCountersFor(user);
@@ -510,20 +510,29 @@ namespace SlowTests.Client.Counters
                         session2.SaveChanges();
                     }
 
-                    // should remove 'dislikes' from cache and add 'score' to missingCounters
-                    session.Advanced.Refresh(user); 
-                    Assert.Equal(3, dic.Count);
+                    session.Advanced.Refresh(user);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
 
-                    // should go to server again
+                    // Refresh updated the document in session,
+                    // cache should know that it's missing 'score' by looking 
+                    // at the document's metadata and go to server again to get all.
+                    // this should override the cache entirly and therfore 
+                    // 'dislikes' won't be in cache anymore
+
                     dic = userCounters.GetAll(); 
                     Assert.Equal(4, session.Advanced.NumberOfRequests); 
 
                     Assert.Equal(3, dic.Count);
-                    // 'likes' was in cache before, so we didn't ask for 
-                    // the updated value from the server
-                    Assert.Equal(100, dic["likes"]); 
+                    Assert.Equal(101, dic["likes"]); 
                     Assert.Equal(300, dic["downloads"]);
                     Assert.Equal(1000, dic["score"]);
+
+                    // cache should know that it got all and not go to server,
+                    // and it shouldn't have 'dislikes' entry anymore
+                    var val = userCounters.Get("dislikes"); 
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+                    Assert.Null(val);
+
                 }
             }
         }
@@ -561,18 +570,17 @@ namespace SlowTests.Client.Counters
                         session2.SaveChanges();
                     }
 
-                    // should remove 'dislikes' from cache and add 'score' to missingCounters
                     session.Load<User>("users/1-A"); 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
-                    // should go to server again
+                    // now that we have the document in the session,
+                    // cache should know that it's missing 'score' by looking at the metadata
+                    // and go to server again to get all
                     dic = userCounters.GetAll();  
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
                     Assert.Equal(3, dic.Count);
 
-                    // 'likes' was in cache before, so we didn't ask for 
-                    // the updated value from the server
-                    Assert.Equal(100, dic["likes"]); 
+                    Assert.Equal(101, dic["likes"]); 
                     Assert.Equal(300, dic["downloads"]);
                     Assert.Equal(1000, dic["score"]);
                 }
@@ -783,17 +791,26 @@ namespace SlowTests.Client.Counters
                     session.CountersFor("users/1-A").Increment("dislikes", 200); // should not add the counter to cache
                     val = session.CountersFor("users/1-A").Get("dislikes");  // should go to server
                     Assert.Equal(300, val); 
-                    Assert.Equal(2, session.Advanced.NumberOfRequests); 
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
 
-                    session.SaveChanges(); // should updated counters values in cache according to increment result
+                    session.CountersFor("users/1-A").Increment("score", 1000); // should not add the counter to cache
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    // SaveChanges should updated counters values in cache
+                    // according to increment result
+                    session.SaveChanges(); 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
 
+                    // should not go to server for these
                     val = session.CountersFor("users/1-A").Get("likes"); 
                     Assert.Equal(150, val); 
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                     val = session.CountersFor("users/1-A").Get("dislikes");
                     Assert.Equal(500, val);
+
+                    val = session.CountersFor("users/1-A").Get("score");
+                    Assert.Equal(1000, val);
+
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                 }
