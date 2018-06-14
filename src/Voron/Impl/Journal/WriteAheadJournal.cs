@@ -7,6 +7,7 @@
 using Sparrow;
 using Sparrow.Binary;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -25,7 +26,6 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Global;
-using System.Buffers;
 
 namespace Voron.Impl.Journal
 {
@@ -57,7 +57,7 @@ namespace Voron.Impl.Journal
 
         private readonly object _writeLock = new object();
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
-        
+
         internal NativeMemory.ThreadStats CurrentFlushingInProgressHolder;
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
@@ -1014,7 +1014,7 @@ namespace Voron.Impl.Journal
                         }
 
                         _parent._waj._env.Options.SetLastReusedJournalCountOnSync(_journalsToDelete.Count);
-                        
+
                         foreach (var kvp in _journalsToDelete)
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);
@@ -1100,8 +1100,8 @@ namespace Voron.Impl.Journal
                     if (j.Number == lastProcessedJournal) // we are in the last log we synced
                     {
                         if (j.Available4Kbs != 0 || //　if there are more pages to be used here or
-                            // we didn't synchronize whole journal
-                            j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId) 
+                                                    // we didn't synchronize whole journal
+                            j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId)
                             continue; // do not mark it as unused
 
 
@@ -1414,7 +1414,7 @@ namespace Voron.Impl.Journal
                     _lastCompressionBufferReduceCheck = DateTime.UtcNow;
                     throw;
                 }
-                
+
                 tx.EnsurePagerStateReference(pagerState);
                 _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
 
@@ -1478,7 +1478,7 @@ namespace Voron.Impl.Journal
                 // the AEAD method, so no need to do it twice
                 txHeader->Hash = 0;
             }
-            
+
             var prepreToWriteToJournal = new CompressedPagesResult
             {
                 Base = txHeaderPtr,
@@ -1504,7 +1504,7 @@ namespace Voron.Impl.Journal
             txHeader->Flags |= TransactionPersistenceModeFlags.Encrypted;
             ulong macLen = (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
             var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-            var subKey = stackalloc byte[(int)subKeyLen ];
+            var subKey = stackalloc byte[(int)subKeyLen];
             fixed (byte* mk = _env.Options.MasterKey)
             fixed (byte* ctx = Context)
             {
@@ -1530,7 +1530,7 @@ namespace Voron.Impl.Journal
                 npub,
                 subKey
             );
-            
+
             Debug.Assert(macLen == (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
             if (rc != 0)

@@ -49,5 +49,10 @@ namespace Raven.Client.Documents.Queries
         /// The timestamp of the last time the index was queried
         /// </summary>
         public DateTime LastQueryTime { get; set; }
+
+        /// <summary>
+        /// Tag of a cluster node which responded to the query
+        /// </summary>
+        public string NodeTag { get; set; }
     }
 }

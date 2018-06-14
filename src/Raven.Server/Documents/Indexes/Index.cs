@@ -2485,6 +2485,7 @@ namespace Raven.Server.Documents.Indexes
             result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext) ^ facetSetupEtag;
+            result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
         }
 
         private void FillSuggestionQueryResult(SuggestionQueryResult result, bool isStale,
@@ -2495,6 +2496,7 @@ namespace Raven.Server.Documents.Indexes
             result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
+            result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
         }
 
         private void FillQueryResult<TResult, TInclude>(QueryResultBase<TResult, TInclude> result, bool isStale,
@@ -2505,6 +2507,7 @@ namespace Raven.Server.Documents.Indexes
             result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
+            result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
         }
 
         private QueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)

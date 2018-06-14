@@ -6,6 +6,7 @@
 
 using Sparrow;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,7 +16,6 @@ using System.Threading;
 using Sparrow.Collections;
 using Voron.Global;
 using Voron.Util;
-using System.Buffers;
 
 namespace Voron.Impl.Journal
 {
@@ -91,7 +91,7 @@ namespace Voron.Impl.Journal
         public JournalSnapshot GetSnapshot()
         {
             var lastTxId = _pageTranslationTable.GetLastSeenTransactionId();
-            
+
             return new JournalSnapshot
             {
                 FileInstance = this,
@@ -106,7 +106,7 @@ namespace Voron.Impl.Journal
         public void SetLastReadTxHeader(long maxTransactionId, ref TransactionHeader lastReadTxHeader)
         {
             int low = 0;
-            int high = _numberOfTransactionHeaders-1;
+            int high = _numberOfTransactionHeaders - 1;
 
             while (low <= high)
             {
@@ -120,15 +120,15 @@ namespace Voron.Impl.Journal
                 else // found the max tx id
                 {
                     lastReadTxHeader = _transactionHeaders[mid];
-                    return; 
+                    return;
                 }
             }
-            if(low == 0)
+            if (low == 0)
             {
                 lastReadTxHeader.TransactionId = -1; // not found
                 return;
             }
-            if(high != _numberOfTransactionHeaders - 1)
+            if (high != _numberOfTransactionHeaders - 1)
             {
                 throw new InvalidOperationException("Found a gap in the transaction headers held by this journal file in memory, shouldn't be possible");
             }
@@ -144,7 +144,7 @@ namespace Voron.Impl.Journal
             while (posBy4Kbs < numberOf4Kbs)
             {
                 var readTxHeader = (TransactionHeader*)(p + (posBy4Kbs * 4 * Constants.Size.Kilobyte));
-                var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize + 
+                var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize +
                     sizeof(TransactionHeader) : readTxHeader->UncompressedSize + sizeof(TransactionHeader);
                 var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
                                    (totalSize % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
@@ -154,8 +154,8 @@ namespace Voron.Impl.Journal
                 }
 
                 // We skip to the next transaction header.
-                posBy4Kbs += (int)roundTo4Kb ;
-                if(_transactionHeaders.Length == _numberOfTransactionHeaders)
+                posBy4Kbs += (int)roundTo4Kb;
+                if (_transactionHeaders.Length == _numberOfTransactionHeaders)
                 {
                     var temp = ArrayPool<TransactionHeader>.Shared.Rent(_transactionHeaders.Length * 2);
                     Array.Copy(_transactionHeaders, temp, _transactionHeaders.Length);
@@ -253,7 +253,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-       
+
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
         {
             // REVIEW: This number do not grow easily. There is no way we can go higher than int.MaxValue
@@ -274,7 +274,7 @@ namespace Voron.Impl.Journal
                 long pageNumber = txPage.ScratchPageNumber;
                 if (pageNumber == -1) // if we don't already have it from TX preparing then ReadPage
                 {
-                var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                    var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                     pageNumber = scratchPage.PageNumber;
                 }
 
@@ -308,20 +308,20 @@ namespace Voron.Impl.Journal
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
-        
-        
+
+
         private static readonly ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior> _scratchPagesPositionsPool = new ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior>(() => new FastList<PagePosition>(), 10);
 
         public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId)
-        {            
+        {
             var unusedPages = _scratchPagesPositionsPool.Allocate();
             var unusedAndFree = _scratchPagesPositionsPool.Allocate();
 
             using (_locker2.Lock())
-            {                
+            {
                 int count = _unusedPages.Count;
                 int originalCount = count;
-                
+
                 for (int i = 0; i < count; i++)
                 {
                     var page = _unusedPages[i];
@@ -329,11 +329,11 @@ namespace Voron.Impl.Journal
                     {
                         unusedAndFree.Add(page);
 
-                        count--;                        
-                        
-                        if ( i < count )
+                        count--;
+
+                        if (i < count)
                             _unusedPages[i] = _unusedPages[count];
-                        
+
                         _unusedPages.RemoveAt(count);
 
                         i--;
