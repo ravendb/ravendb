@@ -301,9 +301,10 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void InitFrom(JournalReader journalReader)
+        public void InitFrom(JournalReader journalReader, TransactionHeader[] transactionHeaders, int transactionsCount)
         {
             _writePosIn4Kb = journalReader.Next4Kb;
+            Array.Copy(transactionHeaders, _transactionHeaders, transactionsCount);
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
