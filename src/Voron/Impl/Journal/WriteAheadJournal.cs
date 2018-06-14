@@ -25,6 +25,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Global;
+using System.Buffers;
 
 namespace Voron.Impl.Journal
 {
@@ -193,34 +194,42 @@ namespace Voron.Impl.Journal
                         var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId,
                             transactionHeader))
                     {
-                        journalReader.RecoverAndValidate(_env.Options);
-
-                        var lastReadHeaderPtr = journalReader.LastTransactionHeader;
-
-                        if (lastReadHeaderPtr != null)
+                        var transactionHeaders = ArrayPool<TransactionHeader>.Shared.Rent((int)journalReader.NumberOfAllocated4Kb);
+                        try
                         {
-                            *txHeader = *lastReadHeaderPtr;
-                            lastSyncedTxId = txHeader->TransactionId;
-                            lastSyncedJournal = journalNumber;
+                            var transactionCount = journalReader.RecoverAndValidate(_env.Options, transactionHeaders);
+
+                            var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+
+                            if (lastReadHeaderPtr != null)
+                            {
+                                *txHeader = *lastReadHeaderPtr;
+                                lastSyncedTxId = txHeader->TransactionId;
+                                lastSyncedJournal = journalNumber;
+                            }
+
+                            pager.Dispose(); // need to close it before we open the journal writer
+
+                            if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
+                            {
+                                var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
+                                    pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                                var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                                jrnlFile.InitFrom(journalReader, transactionHeaders, transactionCount);
+                                jrnlFile.AddRef(); // creator reference - write ahead log
+
+                                journalFiles.Add(jrnlFile);
+                            }
+
+                            if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
+                            {
+                                requireHeaderUpdate = true;
+                                break;
+                            }
                         }
-
-                        pager.Dispose(); // need to close it before we open the journal writer
-
-                        if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
+                        finally
                         {
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
-                                pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                            jrnlFile.InitFrom(journalReader);
-                            jrnlFile.AddRef(); // creator reference - write ahead log
-
-                            journalFiles.Add(jrnlFile);
-                        }
-
-                        if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
-                        {
-                            requireHeaderUpdate = true;
-                            break;
+                            ArrayPool<TransactionHeader>.Shared.Return(transactionHeaders);
                         }
                     }
 

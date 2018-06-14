@@ -200,12 +200,16 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        public void RecoverAndValidate(StorageEnvironmentOptions options)
+        public int RecoverAndValidate(StorageEnvironmentOptions options, TransactionHeader[] transactionHeaders)
         {
+            int index = 0;
             while (ReadOneTransactionToDataFile(options))
             {
+                transactionHeaders[index++] = *LastTransactionHeader;
             }
             ZeroRecoveryBufferIfNeeded(this, options);
+
+            return index;
         }
 
         public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
@@ -455,6 +459,8 @@ namespace Voron.Impl.Journal
         StorageEnvironment IPagerLevelTransactionState.Environment => null;
 
         // JournalReader actually writes to the data file
-        bool IPagerLevelTransactionState.IsWriteTransaction => true; 
+        bool IPagerLevelTransactionState.IsWriteTransaction => true;
+
+        public long NumberOfAllocated4Kb => _journalPagerNumberOfAllocated4Kb;
     }
 }
