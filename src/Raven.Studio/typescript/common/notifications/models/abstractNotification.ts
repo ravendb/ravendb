@@ -11,7 +11,7 @@ abstract class abstractNotification {
     message = ko.observable<string>();
     title = ko.observable<string>();
     severity = ko.observable<Raven.Server.NotificationCenter.Notifications.NotificationSeverity>();
-    type: Raven.Server.NotificationCenter.Notifications.NotificationType;
+    type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
 
     hasDetails: KnockoutComputed<boolean>;
     canBePostponed: KnockoutComputed<boolean>;

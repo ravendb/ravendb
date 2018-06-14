@@ -427,4 +427,19 @@ interface sqlMigrationAdvancedSettingsDto {
     DetectManyToMany: boolean 
 }
 
+type virtualNotificationType = "CumulativeBulkInsert";
+
+declare module Raven.Server.NotificationCenter.Notifications {
+    interface Notification  {
+        // extend server side type to contain local virtual notifications 
+        Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
+    }
+}
+
+interface virtualBulkInsertItem {
+    id: string;
+    date: string;
+    duration: number;
+    items: number;
+} 
 

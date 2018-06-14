@@ -1,9 +1,11 @@
 import app = require("durandal/app");
 
+import database = require("models/resources/database");
 import operation = require("common/notifications/models/operation");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
+import virtualBulkInsert = require("common/notifications/models/virtualBulkInsert");
 
 class bulkInsertDetails extends abstractOperationDetails {
 
@@ -37,6 +39,42 @@ class bulkInsertDetails extends abstractOperationDetails {
 
             return `${processingSpeed.toLocaleString()} docs / sec`;
         });
+    }
+    
+    static tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
+                     database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean {
+        
+        // first check if operation is completed bulk insert - that the only case when we execute custom logic
+        if (operationDto.Type === "OperationChanged" && operationDto.TaskType === "BulkInsert" && operationDto.State.Status === "Completed") {
+            
+            // find "in progress" operation and update it + remove from notification center
+            // completed notification will be merged into grouped notification
+            // update is needed if user has details opened
+
+            const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
+            if (existingOperation) {
+                existingOperation.updateWith(operationDto);
+                existingOperation.invokeOnUpdateHandlers();
+                
+                notificationsContainer.remove(existingOperation);
+            }
+            
+            // create or update cumulative bulk insert notification
+            let cumulativeNotification = notificationsContainer().find(x => x instanceof virtualBulkInsert) as virtualBulkInsert;
+            if (!cumulativeNotification) {
+                cumulativeNotification = new virtualBulkInsert(database);
+                notificationsContainer.push(cumulativeNotification);
+            }
+            
+            cumulativeNotification.merge(operationDto);
+            
+            callbacks.spinnersCleanup();
+            callbacks.onChange();
+            
+            return true;
+        }
+        
+        return false;
     }
 
     static supportsDetailsFor(notification: abstractNotification) {

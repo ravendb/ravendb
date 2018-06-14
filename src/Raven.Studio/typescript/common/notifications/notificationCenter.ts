@@ -22,6 +22,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails");
 import sqlMigrationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/sqlMigrationDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
+import virtualBulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
 import generateClientCertificateDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails");
@@ -45,7 +46,12 @@ interface detailsProvider {
 }
 
 interface customOperationMerger {
-    merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): void;
+    merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean;
+}
+
+interface customOperationHandler {
+    tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
+              database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean;
 }
 
 class notificationCenter {
@@ -84,6 +90,7 @@ class notificationCenter {
 
     detailsProviders = [] as Array<detailsProvider>;
     customOperationMerger = [] as Array<customOperationMerger>;
+    customOperationHandler = [] as Array<customOperationHandler>;
 
     private hideHandler = (e: Event) => {
         if (this.shouldConsumeHideEvent(e)) {
@@ -115,6 +122,9 @@ class notificationCenter {
             deleteDocumentsDetails,
             bulkInsertDetails,
             compactDatabaseDetails,
+            
+            // virtual operations:
+            virtualBulkInsertDetails,
 
             // performance hints:
             indexingDetails,
@@ -133,6 +143,8 @@ class notificationCenter {
         this.customOperationMerger.push(smugglerDatabaseDetails);
         this.customOperationMerger.push(sqlMigrationDetails);
         this.customOperationMerger.push(compactDatabaseDetails);
+        
+        this.customOperationHandler.push(bulkInsertDetails);
 
         this.allNotifications = ko.pureComputed(() => {
             const globalNotifications = this.globalNotifications();
@@ -255,6 +267,26 @@ class notificationCenter {
 
     private onOperationChangeReceived(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
         database: database) {
+        const spinnersCleanup = () => {
+            if (operationDto.State.Status !== "InProgress") {
+                // since kill request doesn't wait for actual kill, let's remove completed items
+                this.spinners.kill.remove(operationDto.Id);
+            }
+        };
+        
+        const invokeOnChange = () => this.getOperationsWatch(database).onOperationChange(operationDto);
+        
+        for (let i = 0; i < this.customOperationHandler.length; i++) {
+            const handler = this.customOperationHandler[i];
+            if (handler.tryHandle(operationDto, notificationsContainer, database, {
+                onChange: invokeOnChange,
+                spinnersCleanup: spinnersCleanup
+            })) {
+                // low-level handler processed this notification  - we assume we are done
+                return;
+            }
+        }
+        
         const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
         if (existingOperation) {
             let foundCustomMerger = false;
@@ -284,12 +316,8 @@ class notificationCenter {
             notificationsContainer.push(operationChangedObject);
         }
 
-        if (operationDto.State.Status !== "InProgress") {
-            // since kill request doesn't wait for actual kill, let's remove completed items
-            this.spinners.kill.remove(operationDto.Id);
-        }
-
-        this.getOperationsWatch(database).onOperationChange(operationDto);
+        spinnersCleanup();
+        invokeOnChange();
     }
 
     private onNotificationUpdated(notificationUpdatedDto: Raven.Server.NotificationCenter.Notifications.NotificationUpdated, notificationsContainer: KnockoutObservableArray<abstractNotification>,
