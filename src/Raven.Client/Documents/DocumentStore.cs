@@ -38,8 +38,6 @@ namespace Raven.Client.Documents
 
         private OperationExecutor _operationExecutor;
 
-        private CountersOperationExecutor _counters;
-
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
@@ -394,15 +392,6 @@ namespace Raven.Client.Documents
             {
                 AssertInitialized();
                 return _operationExecutor ?? (_operationExecutor = new OperationExecutor(this));
-            }
-        }
-
-        public override CountersOperationExecutor Counters
-        {
-            get
-            {
-                AssertInitialized();
-                return _counters ?? (_counters = new CountersOperationExecutor(this));
             }
         }
 

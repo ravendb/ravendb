@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Counters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -46,7 +47,14 @@ namespace Raven.Client.Documents.Session
                 // or we do and it's metadata contains the counter name
 
                 Session.IncrementRequestCount();
-                value = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(DocId, counter, token).ConfigureAwait(false);
+
+                var details = await Session.DocumentStore.Operations.ForDatabase(Session.DatabaseName)
+                    .SendAsync(new GetCountersOperation(DocId, new[] { counter }), token: token).ConfigureAwait(false);
+
+                if (details.Counters?.Count > 0)
+                {
+                    value = details.Counters[0].TotalValue;
+                }
 
             }
 
@@ -69,9 +77,9 @@ namespace Raven.Client.Documents.Session
             document?.Metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
 
             var result = new Dictionary<string, long?>();
-            var countersList = counters.ToList();
+            var countersArray = counters.ToArray();
 
-            foreach (var counter in countersList)
+            foreach (var counter in countersArray)
             {
                 if (cache.Values.TryGetValue(counter, out var val) ||
                     (document != null &&
@@ -86,14 +94,16 @@ namespace Raven.Client.Documents.Session
                     continue;
                 }
 
+                result.Clear();
                 Session.IncrementRequestCount();
 
-                result = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName)
-                    .GetAsync(DocId, countersList, token).ConfigureAwait(false);
+                var details = await Session.DocumentStore.Operations.ForDatabase(Session.DatabaseName)
+                    .SendAsync(new GetCountersOperation(DocId, countersArray), token: token).ConfigureAwait(false);
 
-                foreach (var kvp in result)
+                foreach (var counterDetail in details.Counters)
                 {
-                    cache.Values[kvp.Key] = kvp.Value;
+                    cache.Values[counterDetail.CounterName] = counterDetail.TotalValue;
+                    result[counterDetail.CounterName] = counterDetail.TotalValue;
                 }
 
                 break;
@@ -140,8 +150,16 @@ namespace Raven.Client.Documents.Session
                 // or we do and cache doesn't contain all metadata counters
 
                 Session.IncrementRequestCount();
-                cache.Values = await Session.DocumentStore.Counters
-                    .ForDatabase(Session.DatabaseName).GetAsync(DocId, new string[0], token).ConfigureAwait(false);
+
+                var details = await Session.DocumentStore.Operations.ForDatabase(Session.DatabaseName)
+                    .SendAsync(new GetCountersOperation(DocId, new string[0]), token: token).ConfigureAwait(false);
+
+                cache.Values.Clear();
+
+                foreach (var counterDetail in details.Counters)
+                {
+                    cache.Values[counterDetail.CounterName] = counterDetail.TotalValue;
+                }
             }
 
             cache.GotAll = true;

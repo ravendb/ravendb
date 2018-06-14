@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -26,21 +28,73 @@ namespace SlowTests.Client.Counters
 
                 EnsureReplicating(storeA, storeB);
 
-                await storeB.Counters.IncrementAsync("users/1-A", "likes", 14);
-                await storeB.Counters.IncrementAsync("users/1-A", "dislikes", 13);
+                await storeB.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 14
+                                },
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "dislikes",
+                                    Delta = 13
+                                }
+                            }
+                        }
+                    }
+                }));
 
-                await storeA.Counters.IncrementAsync("users/1-A", "likes", 12);
-                await storeA.Counters.IncrementAsync("users/1-A", "cats", 11);
+                await storeA.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 12
+                                },
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "cats",
+                                    Delta = 11
+                                }
+                            }
+                        }
+                    }
+                }));
 
                 EnsureReplicating(storeA, storeB);
 
-                var val = await storeB.Counters.GetAsync("users/1-A", "likes");
+                var val = storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(26, val);
 
-                val = await storeB.Counters.GetAsync("users/1-A", "dislikes");
+                val = storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "dislikes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(13, val);
 
-                val = await storeB.Counters.GetAsync("users/1-A", "cats");
+                val = storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "cats" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(11, val);
 
                 using (var session = storeB.OpenAsyncSession())
@@ -90,14 +144,18 @@ namespace SlowTests.Client.Counters
 
                 EnsureReplicating(storeA, storeB);
 
-                var val = await storeB.Counters.GetAsync("users/1-A", "likes");
-                Assert.Null(val);
+                Assert.Equal(0, storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
 
-                val = await storeB.Counters.GetAsync("users/1-A", "dislikes");
+                var val = storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "dislikes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(20, val);
 
-                val = await storeB.Counters.GetAsync("users/2-A", "downloads");
-                Assert.Null(val);
+                Assert.Equal(0, storeB.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "downloads" }))
+                    .Counters.Count);
 
                 var db = await GetDocumentDatabaseInstanceFor(storeB);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -143,14 +201,18 @@ namespace SlowTests.Client.Counters
                 await SetupReplicationAsync(storeA, storeB);         
                 EnsureReplicating(storeA, storeB);
 
-                var val = await storeB.Counters.GetAsync("users/1-A", "likes");
-                Assert.Null(val);
+                Assert.Equal(0, storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
 
-                val = await storeB.Counters.GetAsync("users/1-A", "dislikes");
+                var val = storeB.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "dislikes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(20, val);
 
-                val = await storeB.Counters.GetAsync("users/2-A", "downloads");
-                Assert.Null(val);
+                Assert.Equal(0, storeB.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "downloads" }))
+                    .Counters.Count);
 
                 var db = await GetDocumentDatabaseInstanceFor(storeB);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
