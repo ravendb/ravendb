@@ -126,7 +126,7 @@ namespace Raven.Client.Http
         public void RestoreNodeIndex(int nodeIndex)
         {
             var state = _state;
-            if (state.CurrentNodeIndex < nodeIndex)
+            if (state.CurrentNodeIndex <= nodeIndex)
                 return; // nothing to do
 
             var stateFailure = state.Failures[nodeIndex];
