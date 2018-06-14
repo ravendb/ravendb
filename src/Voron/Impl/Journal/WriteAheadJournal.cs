@@ -986,7 +986,7 @@ namespace Voron.Impl.Journal
                         _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
                         _lastSyncedJournal = _parent._lastFlushedJournalId;
                         _lastSyncedTransactionId = _parent._lastFlushedTransactionId;
-                        _parent.SetLastReadTxHeader(_parent._lastFlushedJournal, _lastSyncedTransactionId, ref _transactionHeader);
+                        _parent._lastFlushedJournal.SetLastReadTxHeader(_lastSyncedTransactionId, ref _transactionHeader);
                         if (_lastSyncedTransactionId != _transactionHeader.TransactionId)
                         {
                             VoronUnrecoverableErrorException.Raise(_parent._waj._env,
@@ -1128,37 +1128,6 @@ namespace Voron.Impl.Journal
 
                     _waj._updateLogInfo(header);
                 });
-            }
-
-            public void SetLastReadTxHeader(JournalFile file, long maxTransactionId, ref TransactionHeader lastReadTxHeader)
-            {
-                var readTxHeader = stackalloc TransactionHeader[1];
-                lastReadTxHeader.TransactionId = -1;
-                long txPos = 0;
-                while (true)
-                {
-                    if (file.ReadTransaction(txPos, readTxHeader) == false)
-                        break;
-                    if (readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker)
-                        break;
-                    if (readTxHeader->TransactionId > maxTransactionId)
-                        break;
-                    if (lastReadTxHeader.TransactionId > readTxHeader->TransactionId)
-                        // we got to a trasaction that is smaller than the previous one, this is very 
-                        // likely a reused journal with old transaction, which we can ignore
-                        break;
-
-                    lastReadTxHeader = *readTxHeader;
-
-                    var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize + sizeof(TransactionHeader) : readTxHeader->UncompressedSize + sizeof(TransactionHeader);
-
-
-                    var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
-                                     (totalSize % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
-
-                    // We skip to the next transaction header.
-                    txPos += roundTo4Kb * 4 * Constants.Size.Kilobyte;
-                }
             }
 
             public void Dispose()

@@ -796,7 +796,8 @@ namespace Raven.Server.Commercial
                         nodeDetails.NumberOfCores == numberOfCores &&
                         nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
                         nodeDetails.InstalledMemoryInGb.Equals(installedMemoryInGb) &&
-                        nodeDetails.BuildInfo.Equals(buildInfo))
+                        // using static method here to avoid null checks 
+                        object.Equals(nodeDetails.BuildInfo,buildInfo))
                     {
                         // nodes hardware didn't change
                         continue;

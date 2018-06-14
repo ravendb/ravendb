@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
+using FastTests.Voron.Backups;
+using FastTests.Voron.Compaction;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
