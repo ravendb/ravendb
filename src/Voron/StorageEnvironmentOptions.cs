@@ -682,11 +682,7 @@ namespace Voron
             // require encryption: compression, recovery, lazyTxBuffer.
             public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
             {
-                var scratchFile = TempPath.Combine(name);
-                if (File.Exists(scratchFile.FullPath))
-                    File.Delete(scratchFile.FullPath);
-
-                var pager = GetMemoryMapPagerInternal(this, initialSize, scratchFile, deleteOnClose: true);
+                var pager = CreateScratchPager(name, initialSize);
                 if (EncryptionEnabled)
                 {
                     // even though we don't care need encryption here, we still need to ensure that this
