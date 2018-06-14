@@ -316,9 +316,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
     }
 
-    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): void {
+    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
         if (!smugglerDatabaseDetails.supportsDetailsFor(existing)) {
-            return;
+            return false;
         }
 
         const isUpdate = !_.isUndefined(incoming);
@@ -341,6 +341,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (isUpdate) {
             existing.updateWith(incoming);
         }
+        
+        return true;
     }
 }
 

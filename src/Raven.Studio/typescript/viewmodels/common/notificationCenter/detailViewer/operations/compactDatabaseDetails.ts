@@ -154,9 +154,9 @@ class compactDatabaseDetails extends abstractOperationDetails {
     }
    
 
-    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): void {
+    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
         if (!compactDatabaseDetails.supportsDetailsFor(existing)) {
-            return;
+            return false;
         }
 
         const isUpdate = !_.isUndefined(incoming);
@@ -179,6 +179,8 @@ class compactDatabaseDetails extends abstractOperationDetails {
         if (isUpdate) {
             existing.updateWith(incoming);
         }
+        
+        return true;
     }
     
 }

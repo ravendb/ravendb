@@ -179,9 +179,9 @@ class sqlMigrationDetails extends abstractOperationDetails {
         return app.showBootstrapDialog(new sqlMigrationDetails(op, center));
     }
 
-    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): void {
+    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
         if (!sqlMigrationDetails.supportsDetailsFor(existing)) {
-            return;
+            return false;
         }
 
         const isUpdate = !_.isUndefined(incoming);
@@ -204,6 +204,8 @@ class sqlMigrationDetails extends abstractOperationDetails {
         if (isUpdate) {
             existing.updateWith(incoming);
         }
+        
+        return true;
     }
 }
 
