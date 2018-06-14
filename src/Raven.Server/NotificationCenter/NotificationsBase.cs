@@ -15,22 +15,27 @@ namespace Raven.Server.NotificationCenter
     {
         private readonly object _watchersLock = new object();
 
-        private TaskCompletionSource<object> _newWebSocket = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private TaskCompletionSource<object> _allWebSocketsRemoved = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private class State
+        {
+            public TaskCompletionSource<object> NewWebSocket = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            public TaskCompletionSource<object> AllWebSocketsRemoved = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            public int NumberOfClients;
+        }
 
         protected ConcurrentSet<ConnectedWatcher> Watchers { get; }
         protected List<BackgroundWorkBase> BackgroundWorkers { get; }
 
-        private volatile int _websocketClients;
-
-        private long _haveClients;
+        private State _state = new State();
 
         public Task WaitForAnyWebSocketClient
         {
             get
             {
-                var task = _newWebSocket.Task;
-                return Interlocked.Read(ref _haveClients) == 1 ? Task.CompletedTask : task;
+                var copy = _state;
+                if (copy.NumberOfClients == 0)
+                    return copy.NewWebSocket.Task;
+                return Task.CompletedTask;
             }
         }
 
@@ -38,8 +43,10 @@ namespace Raven.Server.NotificationCenter
         {
             get
             {
-                var task = _allWebSocketsRemoved.Task;
-                return Interlocked.Read(ref _haveClients) == 0 ? Task.CompletedTask : task;
+                var copy = _state;
+                if (copy.NumberOfClients == 0)
+                    return Task.CompletedTask;
+                return copy.AllWebSocketsRemoved.Task;
             }
         }
 
@@ -68,11 +75,21 @@ namespace Raven.Server.NotificationCenter
 
                 if (watcher.Writer is NotificationCenterWebSocketWriter)
                 {
-                    if (Interlocked.CompareExchange(ref _haveClients, 1, 0) == 0)
+                    if(_state.NumberOfClients == 0)
                     {
-                        TaskExecutor.CompleteAndReplace(ref _newWebSocket);
+                        var copy = _state;
+                        // we use interlocked here to make sure that other threads
+                        // are immediately exposed to this
+                        Interlocked.Exchange(ref _state, new State
+                        {
+                            NumberOfClients = 1
+                        });
+                        copy.NewWebSocket.TrySetResult(null);
                     }
-                    _websocketClients++;
+                    else
+                    {
+                        Interlocked.Increment(ref _state.NumberOfClients);
+                    }
                 }
             }
 
@@ -89,11 +106,11 @@ namespace Raven.Server.NotificationCenter
 
                     if (watcher.Writer is NotificationCenterWebSocketWriter)
                     {
-                        _websocketClients--;
-                        if (_websocketClients == 0)
+                        var copy = _state;
+                        if(Interlocked.Decrement(ref copy.NumberOfClients) == 0)
                         {
-                            Interlocked.Exchange(ref _haveClients, 0);
-                            TaskExecutor.CompleteAndReplace(ref _allWebSocketsRemoved);
+                            Interlocked.Exchange(ref _state, new State());
+                            copy.AllWebSocketsRemoved.TrySetResult(null);
                         }
                     }
                 }
