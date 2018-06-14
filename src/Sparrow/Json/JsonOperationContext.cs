@@ -577,7 +577,7 @@ namespace Sparrow.Json
         public async Task<BlittableJsonReaderObject> ReadFromWebSocket(
             WebSocket webSocket,
             string debugTag,
-            CancellationToken cancellationToken)
+            CancellationToken token)
         {
 
             if (Disposed)
@@ -598,8 +598,9 @@ namespace Sparrow.Json
                 try
                 {
                     builder.ReadObjectDocument();
-                    var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
+                    var result = await webSocket.ReceiveAsync(bytes.Buffer, token).ConfigureAwait(false);
 
+                    token.ThrowIfCancellationRequested();
                     EnsureNotDisposed();
 
                     if (result.MessageType == WebSocketMessageType.Close)
@@ -614,7 +615,9 @@ namespace Sparrow.Json
                         bytes.Used += parser.BufferOffset;
                         if (read)
                             break;
-                        result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
+                        result = await webSocket.ReceiveAsync(bytes.Buffer, token).ConfigureAwait(false);
+                        token.ThrowIfCancellationRequested();
+                        EnsureNotDisposed();
                         bytes.Valid = result.Count;
                         bytes.Used = 0;
                         parser.SetBuffer(bytes);
