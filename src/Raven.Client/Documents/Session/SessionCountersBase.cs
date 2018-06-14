@@ -21,37 +21,33 @@ namespace Raven.Client.Documents.Session
 
         protected SessionCountersBase(InMemoryDocumentSessionOperations session, string documentId)
         {
-            Session = session;
-
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
+
             DocId = documentId;
+            Session = session;
+
+            if (Session.CountersByDocId == null)
+            {
+                Session.CountersByDocId = new Dictionary<string, (bool, Dictionary<string, long?>)>(StringComparer.OrdinalIgnoreCase);
+            }
         }
 
         protected SessionCountersBase(InMemoryDocumentSessionOperations session, object entity)
         {
-            Session = session;
-
-            if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false || document == null)
+            if (session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false || document == null)
             {
                 ThrowEntityNotInSession(entity);
                 return;
             }
 
-            DocId = document.Id; 
+            DocId = document.Id;
+            Session = session;
 
-            if (Session.CountersByDocId.TryGetValue(DocId, out var cache) == false)
+            if (Session.CountersByDocId == null)
             {
-                cache = new InMemoryDocumentSessionOperations.CountersCache();
+                Session.CountersByDocId = new Dictionary<string, (bool, Dictionary<string, long?>)>(StringComparer.OrdinalIgnoreCase);
             }
-
-            if (cache.GotAll == false && cache.MissingCounters == null)
-            {
-                var metadataCounters = Session.GetCountersFor(entity);
-                cache.RegistarMissingCounters(metadataCounters);
-            }
-
-            Session.CountersByDocId[DocId] = cache;
         }
 
         public void Increment(string counter, long delta = 1)

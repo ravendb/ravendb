@@ -123,8 +123,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
         /// </summary>
-        protected internal readonly Dictionary<string, CountersCache> CountersByDocId =
-            new Dictionary<string, CountersCache> (StringComparer.OrdinalIgnoreCase);
+        protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId;
 
         protected readonly DocumentStoreBase _documentStore;
 
@@ -1432,12 +1431,6 @@ more responsive application.
                     continue;
                 prop.SetValue(entity, prop.GetValue(documentInfo.Entity));
             }
-
-            if (CountersByDocId.TryGetValue(documentInfo.Id, out var cache))
-            {
-                var metadataCounters = GetCountersFor(entity);
-                cache.RegistarMissingCounters(metadataCounters);
-            }
         }
 
         protected static T GetOperationResult<T>(object result)
@@ -1507,113 +1500,6 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type);
 
             return (indexName, collectionName);
-        }
-
-        /// <summary>
-        /// an internal structure that is used for caching counter values in a session
-        /// </summary>
-        protected internal class CountersCache
-        {
-            public CountersCache()
-            {
-                Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-            }
-
-            public Dictionary<string, long?> Values { get; set; }
-
-            public bool GotAll
-            {
-                get => _gotAll;
-                set
-                {
-                    _gotAll = value;
-
-                    if (value)
-                        _missingCounters = null;
-                }
-            }
-
-            private bool _gotAll { get; set; }
-            private HashSet<string> _missingCounters;
-            public IEnumerable<string> MissingCounters => _missingCounters;
-
-            private void RemoveFromMissing(string counterName)
-            {
-                _missingCounters.Remove(counterName);
-
-                if (_missingCounters.Count > 0)
-                    return;
-
-                _gotAll = true;
-                _missingCounters = null;
-            }
-
-            public void AddOrUptadeCounterValue(string counterName, long? value)
-            {
-                Values[counterName] = value;
-
-                if (_gotAll || _missingCounters == null)
-                    return;
-
-                RemoveFromMissing(counterName);
-            }
-
-            public void RegistarMissingCounters(HashSet<string> metadataCounters)
-            {
-                if (metadataCounters == null || metadataCounters.Count == 0)
-                {
-                    Values.Clear();
-                    _gotAll = true;
-                    return;
-                }
-
-                _gotAll = false;
-
-                if (Values.Count == 0)
-                {
-                    _missingCounters = new HashSet<string>(metadataCounters);
-                    return;
-                }
-
-                _missingCounters = new HashSet<string>();
-
-                foreach (var counterName in metadataCounters)
-                {
-                    if (Values.TryGetValue(counterName, out var val) &&
-                        val.HasValue)
-                        continue;
-
-                    _missingCounters.Add(counterName);
-                }
-
-                HashSet<string> countersToRemove = null;
-
-                foreach (var counter in Values.Keys)
-                {
-                    if (Values[counter].HasValue == false ||
-                        metadataCounters.Contains(counter))
-                        continue;
-
-                    if (countersToRemove == null)
-                        countersToRemove = new HashSet<string>();
-
-                    countersToRemove.Add(counter);
-                }
-
-                if (countersToRemove != null)
-                {
-                    foreach (var counterToRemove in countersToRemove)
-                    {
-                        Values.Remove(counterToRemove);
-                    }
-                }
-
-                if (_missingCounters.Count > 0)
-                    return;
-
-                _gotAll = true;
-                _missingCounters = null;
-            }
         }
     }
 }

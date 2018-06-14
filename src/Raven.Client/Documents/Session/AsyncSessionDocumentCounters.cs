@@ -4,14 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class AsyncSessionDocumentCounters : SessionCountersBase, ICountersSessionOperationsAsync
+    public class AsyncSessionDocumentCounters : SessionCountersBase, IAsyncSessionDocumentCounters
     {
         public AsyncSessionDocumentCounters(InMemoryDocumentSessionOperations session, string documentId) : base(session, documentId)
         {
@@ -21,134 +23,130 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public async Task<long?> GetAsync(string counter, CancellationToken token = default(CancellationToken))
+        public async Task<long?> GetAsync(string counter, CancellationToken token = default)
         {
-            long? value;
-
+            long? value = null;
             if (Session.CountersByDocId.TryGetValue(DocId, out var cache))
             {
-                if (cache.Values.TryGetValue(counter, out value) || cache.GotAll)
-                {
+                if (cache.Values.TryGetValue(counter, out value))
                     return value;
-                }
-
             }
             else
             {
-                cache = new InMemoryDocumentSessionOperations.CountersCache();
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
             }
 
-            Session.IncrementRequestCount();
-            value = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(DocId, counter).ConfigureAwait(false);
-            cache.AddOrUptadeCounterValue(counter, value);
+            if ((Session.DocumentsById.TryGetValue(DocId, out var document) == false && cache.GotAll == false) ||
+                (document != null && document.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+                    out BlittableJsonReaderArray metadataCounters) &&
+                metadataCounters.BinarySearch(counter, StringComparison.OrdinalIgnoreCase) >= 0))
+                
+            {
+                // we either don't have the document in session and GotAll = false,
+                // or we do and it's metadata contains the counter name
 
+                Session.IncrementRequestCount();
+                value = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(DocId, counter).ConfigureAwait(false);
+
+            }
+
+            cache.Values[counter] = value;
             Session.CountersByDocId[DocId] = cache;
+
             return value;
         }
 
-        public async Task<Dictionary<string, long?>> GetAsync(IEnumerable<string> counters, CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, long?>> GetAsync(IEnumerable<string> counters, CancellationToken token = default)
         {
-            var countersToGetFromServer = new List<string>();
-            var result = new Dictionary<string, long?>();
-
-            if (Session.CountersByDocId.TryGetValue(DocId, out var cache))
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache) == false)
             {
-                foreach (var counter in counters)
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            BlittableJsonReaderArray metadataCounters = null;
+
+            Session.DocumentsById.TryGetValue(DocId, out var document);
+            document?.Metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
+
+            var result = new Dictionary<string, long?>();
+            var countersList = counters.ToList();
+
+            foreach (var counter in countersList)
+            {
+                if (cache.Values.TryGetValue(counter, out var val) ||
+                    (document != null &&
+                     metadataCounters?.BinarySearch(counter, StringComparison.OrdinalIgnoreCase) < 0) ||
+                    cache.GotAll)
                 {
-                    if (cache.Values.TryGetValue(counter, out var val) || cache.GotAll)
-                    {
-                        result[counter] = val;
-                    }
-                    else
-                    {
-                        countersToGetFromServer.Add(counter);
-                    }
+                    // we either have value in cache,
+                    // or we have the metadata and the counter is not there,
+                    // or GotAll
+
+                    result[counter] = val;
+                    continue;
                 }
 
-            }
-            else
-            {
-                cache = new InMemoryDocumentSessionOperations.CountersCache();
-                countersToGetFromServer = counters.ToList();
-            }
-
-            if (countersToGetFromServer.Count > 0)
-            {
                 Session.IncrementRequestCount();
 
-                var vals = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAsync(DocId, countersToGetFromServer).ConfigureAwait(false);
-                foreach (var kvp in vals)
+                result = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName)
+                    .GetAsync(DocId, countersList).ConfigureAwait(false);
+
+                foreach (var kvp in result)
                 {
-                    cache.AddOrUptadeCounterValue(kvp.Key, kvp.Value);
-                    result[kvp.Key] = kvp.Value;
+                    cache.Values[kvp.Key] = kvp.Value;
                 }
 
-                Session.CountersByDocId[DocId] = cache;
-
+                break;
             }
 
+            Session.CountersByDocId[DocId] = cache;
             return result;
         }
 
-        public async Task<Dictionary<string, long>> GetAllAsync(CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, long?>> GetAllAsync(CancellationToken token = default)
         {
-            if (Session.CountersByDocId.TryGetValue(DocId, out var cache))
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache) == false)
             {
-                if (cache.GotAll)
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var missingCounters = cache.GotAll == false;
+
+            if (Session.DocumentsById.TryGetValue(DocId, out var document))
+            {
+                if (document.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+                    out BlittableJsonReaderArray metadataCounters) == false)
                 {
-                    var result = new Dictionary<string, long>();
-                    foreach (var kvp in cache.Values)
+                    missingCounters = false;
+                }
+
+                else if (cache.Values.Count >= metadataCounters.Length)
+                {
+                    missingCounters = false;
+                    foreach (var c in metadataCounters)
                     {
-                        if (kvp.Value.HasValue)
-                        {
-                            result.Add(kvp.Key, kvp.Value.Value);
-                        }
+                        if (cache.Values.ContainsKey(c.ToString()))
+                            continue;
+                        missingCounters = true;
+                        break;
                     }
-
-                    return result;
                 }
 
             }
-            else
+
+            if (missingCounters)
             {
-                cache = new InMemoryDocumentSessionOperations.CountersCache();
-            }
+                // we either don't have the document in session and GotAll = false,
+                // or we do and cache doesn't contain all metadata counters
 
-            Session.IncrementRequestCount();
-
-            Dictionary<string, long> values;
-
-            if (cache.MissingCounters != null)
-            {
-                values = cache.Values
-                    .Where(kvp => kvp.Value.HasValue)
-                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Value);
-
-                var missingValues = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName)
-                    .GetAsync(DocId, cache.MissingCounters).ConfigureAwait(false);
-
-                foreach (var kvp in missingValues)
-                {
-                    if (kvp.Value.HasValue == false)
-                        continue;
-
-                    values[kvp.Key] = kvp.Value.Value;
-                    cache.Values[kvp.Key] = kvp.Value;
-                }
-
-            }
-            else
-            {
-                values = await Session.DocumentStore.Counters.ForDatabase(Session.DatabaseName).GetAllAsync(DocId).ConfigureAwait(false);
-                foreach (var kvp in values)
-                {
-                    cache.Values[kvp.Key] = kvp.Value;
-                }
+                Session.IncrementRequestCount();
+                cache.Values = await Session.DocumentStore.Counters
+                    .ForDatabase(Session.DatabaseName).GetAsync(DocId, new string[0]).ConfigureAwait(false);
             }
 
             cache.GotAll = true;
             Session.CountersByDocId[DocId] = cache;
-            return values;
+            return cache.Values;
         }
     }
 }

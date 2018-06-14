@@ -100,24 +100,6 @@ namespace Raven.Client.Documents.Operations
             return result;
         }
 
-        public Dictionary<string, long> GetAll(string docId)
-        {
-            return AsyncHelpers.RunSync(() => GetAllAsync(docId));
-        }
-
-        public async Task<Dictionary<string, long>> GetAllAsync(string docId)
-        {
-            var result = new Dictionary<string, long>();
-            var details = await _operations.SendAsync(new GetCountersOperation(docId, new string[0])).ConfigureAwait(false);
-
-            foreach (var counterDetail in details.Counters)
-            {
-                result[counterDetail.CounterName] = counterDetail.TotalValue;
-            }
-
-            return result;
-        }
-
         public void Delete(string docId, string counter)
         {
             AsyncHelpers.RunSync(() => DeleteAsync(docId, counter));

@@ -117,9 +117,10 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void UpdateCounterValuesInCache(BlittableJsonReaderArray counters, string docId)
         {
-            if (_session.CountersByDocId.TryGetValue(docId, out InMemoryDocumentSessionOperations.CountersCache cache) == false)
+            if (_session.CountersByDocId.TryGetValue(docId, out var cache) == false)
             {
-                cache = new InMemoryDocumentSessionOperations.CountersCache();
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                _session.CountersByDocId.Add(docId, cache);
             }
 
             foreach (BlittableJsonReaderObject counter in counters)
@@ -128,7 +129,7 @@ namespace Raven.Client.Documents.Session.Operations
                     counter.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
                     continue;
 
-                cache.AddOrUptadeCounterValue(name, value);
+                cache.Values[name] = value;
             }
         }
 

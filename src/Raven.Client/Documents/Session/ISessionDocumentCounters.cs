@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all the counters for a document.
         /// </summary>
-        Dictionary<string, long> GetAll();
+        Dictionary<string, long?> GetAll();
 
         /// <summary>
         /// Returns the counter by the  counter name.
