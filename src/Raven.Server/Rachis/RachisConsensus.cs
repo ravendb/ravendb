@@ -255,7 +255,7 @@ namespace Raven.Server.Rachis
 
         public event EventHandler LeaderElected;
 
-        private volatile string _tag;
+        private string _tag;
         private string _clusterId;
 
         public TransactionContextPool ContextPool { get; private set; }
@@ -1758,7 +1758,7 @@ namespace Raven.Server.Rachis
                     return safe ? Volatile.Read(ref _leaderTag) : _leaderTag;
                 case RachisState.LeaderElect:
                 case RachisState.Leader:
-                    return _tag; // this is already mark as volatile
+                    return safe ? Volatile.Read(ref _tag) : _tag; 
                 default:
                     throw new ArgumentOutOfRangeException();
             }
