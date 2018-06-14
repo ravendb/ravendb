@@ -255,7 +255,7 @@ namespace Raven.Server.Rachis
 
         public event EventHandler LeaderElected;
 
-        private string _tag;
+        private volatile string _tag;
         private string _clusterId;
 
         public TransactionContextPool ContextPool { get; private set; }
@@ -478,6 +478,21 @@ namespace Raven.Server.Rachis
                 var task = _stateChanged.Task;
 
                 if (CurrentState == rachisState)
+                    return;
+
+                await task;
+            }
+        }
+
+        public async Task WaitForLeaderChange(CancellationToken cts)
+        {
+            var currentLeader = LeaderTag;
+            while (cts.IsCancellationRequested == false)
+            {
+                // we setup the wait _before_ checking the state
+                var task = _stateChanged.Task;
+
+                if (currentLeader != GetLeaderTag(safe: true))
                     return;
 
                 await task;
@@ -1717,28 +1732,27 @@ namespace Raven.Server.Rachis
           
         }
 
-        private volatile string _leaderTag;
+        private string _leaderTag;
         public string LeaderTag
         {
-            get
+            get => GetLeaderTag();
+            internal set => _leaderTag = value;
+        }
+
+        public string GetLeaderTag(bool safe = false)
+        {
+            switch (CurrentState)
             {
-                switch (CurrentState)
-                {
-                    case RachisState.Passive:
-                    case RachisState.Candidate:
-                        return null;
-                    case RachisState.Follower:
-                        return _leaderTag;
-                    case RachisState.LeaderElect:
-                    case RachisState.Leader:
-                        return _tag;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-            internal set
-            {
-                _leaderTag = value;
+                case RachisState.Passive:
+                case RachisState.Candidate:
+                    return null;
+                case RachisState.Follower:
+                    return safe ? Volatile.Read(ref _leaderTag) : _leaderTag;
+                case RachisState.LeaderElect:
+                case RachisState.Leader:
+                    return _tag; // this is already mark as volatile
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
