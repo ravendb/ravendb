@@ -32,7 +32,7 @@ Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub
 
 You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
-Run Ubuntu-based image: [run-ubuntu1604.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-ubuntu1604.ps1)
+Run Ubuntu-based image: [run-ubuntu.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-ubuntu.ps1)
 
 Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-nanoserver.ps1)
 
@@ -127,4 +127,4 @@ These images were built using the following Dockerfiles:
 
 - [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-nanoserver/Dockerfile)
 
-- [Ubuntu 16.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-ubuntu1604/Dockerfile)
+- [Ubuntu 16.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-ubuntu/Dockerfile)
