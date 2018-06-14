@@ -579,6 +579,11 @@ namespace Raven.Server.Documents
         [Conditional("DEBUG")]
         public static void AssertMetadataWasFiltered(BlittableJsonReaderObject data)
         {
+            var originalNoCacheValue = data.NoCache;
+                        
+            data.NoCache = true;            
+            
+
             if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 return;
 
@@ -591,6 +596,8 @@ namespace Raven.Server.Documents
             {
                 throw new InvalidOperationException("Document's metadata should filter properties on before put to storage." + Environment.NewLine + data);
             }
+
+            data.NoCache = originalNoCacheValue;
         }
     }
 }
