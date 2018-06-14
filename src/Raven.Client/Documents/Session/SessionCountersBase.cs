@@ -1,10 +1,11 @@
 //-----------------------------------------------------------------------
-// <copyright file="DocumentSessionCountersBase.cs" company="Hibernating Rhinos LTD">
+// <copyright file="SessionCountersBase.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 
@@ -13,16 +14,44 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract class DocumentSessionCountersBase : AdvancedSessionExtentionBase
+    public abstract class SessionCountersBase 
     {
-        protected DocumentSessionCountersBase(InMemoryDocumentSessionOperations session) : base(session)
-        {
-        }
+        protected string DocId;
+        protected InMemoryDocumentSessionOperations Session;
 
-        public void Increment(string documentId, string counter, long delta = 1)
+        protected SessionCountersBase(InMemoryDocumentSessionOperations session, string documentId)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
+
+            DocId = documentId;
+            Session = session;
+
+            if (Session.CountersByDocId == null)
+            {
+                Session.CountersByDocId = new Dictionary<string, (bool, Dictionary<string, long?>)>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        protected SessionCountersBase(InMemoryDocumentSessionOperations session, object entity)
+        {
+            if (session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false || document == null)
+            {
+                ThrowEntityNotInSession(entity);
+                return;
+            }
+
+            DocId = document.Id;
+            Session = session;
+
+            if (Session.CountersByDocId == null)
+            {
+                Session.CountersByDocId = new Dictionary<string, (bool, Dictionary<string, long?>)>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        public void Increment(string counter, long delta = 1)
+        {
             if (string.IsNullOrWhiteSpace(counter))
                 throw new ArgumentNullException(nameof(counter));
             var counterOp = new CounterOperation
@@ -32,46 +61,36 @@ namespace Raven.Client.Documents.Session
                 Delta = delta
             };
 
-            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                DeletedEntities.Contains(documentInfo.Entity))
-                ThrowDocumentAlreadyDeletedInSession(documentId, counter);
+            if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
+                Session.DeletedEntities.Contains(documentInfo.Entity))
+                ThrowDocumentAlreadyDeletedInSession(DocId, counter);
 
-            if (DeferredCommandsDictionary.TryGetValue((documentId, CommandType.Counters, null), out var command))
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.Counters, null), out var command))
             {
                 var countersBatchCommandData = (CountersBatchCommandData)command;
                 if (countersBatchCommandData.HasDelete(counter))
                 {
-                    ThrowIncrementCounterAfterDeleteAttempt(documentId, counter);
+                    ThrowIncrementCounterAfterDeleteAttempt(DocId, counter);
                 }
 
                 countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
-                Defer(new CountersBatchCommandData(documentId, counterOp));
+                Session.Defer(new CountersBatchCommandData(DocId, counterOp));
             }
         }
 
-        public void Increment(object entity, string counter, long delta = 1)
+        public void Delete(string counter)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
-
-            Increment(document.Id, counter, delta);
-        }
-
-        public void Delete(string documentId, string counter)
-        {
-            if (string.IsNullOrWhiteSpace(documentId))
-                throw new ArgumentNullException(nameof(documentId));
             if (string.IsNullOrWhiteSpace(counter))
                 throw new ArgumentNullException(nameof(counter));
 
-            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.DELETE, null)))
+            if (Session.DeferredCommandsDictionary.ContainsKey((DocId, CommandType.DELETE, null)))
                 return; // no-op
 
-            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                DeletedEntities.Contains(documentInfo.Entity))
+            if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
+                Session.DeletedEntities.Contains(documentInfo.Entity))
                 return; // no-op
 
             var counterOp = new CounterOperation
@@ -80,28 +99,26 @@ namespace Raven.Client.Documents.Session
                 CounterName = counter
             };
 
-            if (DeferredCommandsDictionary.TryGetValue((documentId, CommandType.Counters, null), out var command))
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.Counters, null), out var command))
             {
                 var countersBatchCommandData = (CountersBatchCommandData)command;
                 if (countersBatchCommandData.HasIncrement(counter))
                 {
-                    ThrowDeleteCounterAfterIncrementAttempt(documentId, counter);
+                    ThrowDeleteCounterAfterIncrementAttempt(DocId, counter);
                 }
 
                 countersBatchCommandData.Counters.Operations.Add(counterOp);
             }
             else
             {
-                Defer(new CountersBatchCommandData(documentId, counterOp));
+                Session.Defer(new CountersBatchCommandData(DocId, counterOp));
             }
-        }
 
-        public void Delete(object entity, string counter)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache))
+            {
+                cache.Values.Remove(counter);
+            }
 
-            Delete(document.Id, counter);
         }
 
         protected void ThrowEntityNotInSession(object entity)

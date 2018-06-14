@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
@@ -19,7 +20,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -33,7 +34,9 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] {"Downloads"}))
+                    .Counters[0]?.TotalValue;
 
                 Assert.Equal(200, val);
             }
@@ -50,7 +53,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -64,7 +67,9 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
+                    .Counters[0]?.TotalValue;
 
                 Assert.Equal(200, val);
             }
@@ -81,7 +86,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -95,7 +100,9 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Likes");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Likes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(200, val);
 
                 using (var session = store.OpenSession())
@@ -103,8 +110,8 @@ namespace SlowTests.Client.Counters
                     var u = session.Load<User>("users/1-A");
                     var counters = session.Advanced.GetCountersFor(u);
                     Assert.Equal(2, counters.Count);
-                    Assert.Contains("Downloads", counters);
-                    Assert.Contains("Likes", counters);
+                    Assert.Equal("Downloads", counters[0]);
+                    Assert.Equal("Likes", counters[1]);
                 }
             }
         }
@@ -120,7 +127,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -136,7 +143,9 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
+                    .Counters[0]?.TotalValue;
 
                 Assert.Equal(200, val);
             }
@@ -160,8 +169,8 @@ namespace SlowTests.Client.Counters
                         Friend = "users/1-A"
                     }, "users/2-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Score", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Score", 300);
+                    session.CountersFor("users/1-A").Increment("Score", 100);
+                    session.CountersFor("users/2-A").Increment("Score", 300);
                     session.SaveChanges();
                 }
 
@@ -178,9 +187,14 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Score");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Score" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(150, val);
-                val = store.Counters.Get("users/2-A", "Score");
+
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "Score" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(250, val);
             }
         }
@@ -209,10 +223,10 @@ namespace SlowTests.Client.Counters
                         Name = "Ringo"
                     }, "users/4-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/4-A", "Downloads", 800);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Downloads", 400);
+                    session.CountersFor("users/4-A").Increment("Downloads", 800);
 
                     session.SaveChanges();
                 }
@@ -229,16 +243,24 @@ namespace SlowTests.Client.Counters
 
 
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(200, val);
 
-                val = store.Counters.Get("users/2-A", "Downloads");
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "Downloads" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(300, val);
 
-                val = store.Counters.Get("users/3-A", "Downloads");
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/3-A", new[] { "Downloads" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(500, val);
 
-                val = store.Counters.Get("users/4-A", "Downloads");
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/4-A", new[] { "Downloads" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(900, val);
             }
         }
@@ -254,7 +276,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -267,8 +289,9 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
-                Assert.Null(val);
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
+                    .Counters.Count);
 
                 using (var session = store.OpenSession())
                 {
@@ -291,7 +314,7 @@ namespace SlowTests.Client.Counters
                     {
                         Name = "Aviv"
                     }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.SaveChanges();
                 }
 
@@ -304,9 +327,9 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
-
-                Assert.Null(val);
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
+                    .Counters.Count);
             }
         }
 
@@ -322,10 +345,10 @@ namespace SlowTests.Client.Counters
                         Name = "Aviv"
                     }, "users/1-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Dislikes", 100);
-                    session.Advanced.Counters.Increment("users/1-A", "Score", 100);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/1-A").Increment("Likes", 100);
+                    session.CountersFor("users/1-A").Increment("Dislikes", 100);
+                    session.CountersFor("users/1-A").Increment("Score", 100);
 
                     session.SaveChanges();
                 }
@@ -387,10 +410,10 @@ namespace SlowTests.Client.Counters
                         Name = "Ringo"
                     }, "users/4-A");
 
-                    session.Advanced.Counters.Increment("users/1-A", "Downloads", 100);
-                    session.Advanced.Counters.Increment("users/2-A", "Downloads", 200);
-                    session.Advanced.Counters.Increment("users/3-A", "Downloads", 400);
-                    session.Advanced.Counters.Increment("users/4-A", "Downloads", 800);
+                    session.CountersFor("users/1-A").Increment("Downloads", 100);
+                    session.CountersFor("users/2-A").Increment("Downloads", 200);
+                    session.CountersFor("users/3-A").Increment("Downloads", 400);
+                    session.CountersFor("users/4-A").Increment("Downloads", 800);
 
                     session.SaveChanges();
                 }
@@ -406,19 +429,21 @@ namespace SlowTests.Client.Counters
                                   }"
                      })).WaitForCompletion();
 
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
+                    .Counters.Count);
 
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "Downloads" }))
+                    .Counters.Count);
 
-                var val = store.Counters.Get("users/1-A", "Downloads");
-                Assert.Null(val);
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/3-A", new[] { "Downloads" }))
+                    .Counters.Count);
 
-                val = store.Counters.Get("users/2-A", "Downloads");
-                Assert.Null(val);
-
-                val = store.Counters.Get("users/3-A", "Downloads");
-                Assert.Null(val);
-
-                val = store.Counters.Get("users/4-A", "Downloads");
-                Assert.Null(val);
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/4-A", new[] { "Downloads" }))
+                    .Counters.Count);
             }
         }
 

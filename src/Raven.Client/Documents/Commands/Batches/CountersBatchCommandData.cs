@@ -69,6 +69,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
+                [nameof(Id)] = Id,
                 [nameof(Counters)] = Counters.ToJson(),
                 [nameof(Type)] = Type.ToString()
             };

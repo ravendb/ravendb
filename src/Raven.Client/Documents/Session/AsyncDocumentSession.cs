@@ -101,9 +101,6 @@ namespace Raven.Client.Documents.Session
         public IRevisionsSessionOperationsAsync Revisions => _revisions ?? (_revisions = new DocumentSessionRevisionsAsync(this));
         private IRevisionsSessionOperationsAsync _revisions;
 
-        public ICountersSessionOperationsAsync Counters => _counters ?? (_counters = new DocumentSessionCountersAsync(this));
-        private ICountersSessionOperationsAsync _counters;
-
         public IClusterTransactionOperationsAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperationsAsync(this));
         private IClusterTransactionOperationsAsync _clusterTransaction;
 

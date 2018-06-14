@@ -236,6 +236,5 @@ namespace Raven.Client.Documents
 
         public abstract MaintenanceOperationExecutor Maintenance { get; }
         public abstract OperationExecutor Operations { get; }
-        public abstract CountersOperationExecutor Counters { get; }
     }
 }

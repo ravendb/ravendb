@@ -25,16 +25,80 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Counters.Increment("users/1-A", "likes", 0);
-                var val = store.Counters.Get("users/1-A", "likes");
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 0
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] {"likes"}))
+                    .Counters[0]?.TotalValue;
+
                 Assert.Equal(0, val);
 
-                store.Counters.Increment("users/1-A", "likes", 10);
-                val = store.Counters.Get("users/1-A", "likes");
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(10, val);
 
-                store.Counters.Increment("users/1-A", "likes", -3);
-                val = store.Counters.Get("users/1-A", "likes");
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = -3
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters[0]?.TotalValue;
                 Assert.Equal(7, val);
             }
         }
@@ -49,11 +113,53 @@ namespace SlowTests.Client.Counters
                     session.Store(new User { Name = "Aviv" }, "users/1-A");
                     session.SaveChanges();
                 }
-                var a = store.Counters.IncrementAsync("users/1-A", "likes", 5);
-                var b = store.Counters.IncrementAsync("users/1-A", "likes", 10);
+
+                var a = store.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 5
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                var b = store.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                }
+                            }
+                        }
+                    }
+                }));
+
                 Task.WaitAll(a, b); // run them in parallel and see that they are good
 
-                var val = store.Counters.Get("users/1-A", "likes");
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters[0]?.TotalValue;
+
                 Assert.Equal(15, val);
             }
         }
@@ -71,16 +177,84 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Counters.Increment("users/1-A", "likes", 10);
-                store.Counters.Increment("users/2-A", "likes", 20);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                }
+                            }
+                        },
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/2-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 20
+                                }
+                            }
+                        }
+                    }
+                }));
 
-                store.Counters.Delete("users/1-A", "likes");
-                var val = store.Counters.Get("users/1-A", "likes");
-                Assert.Null(val);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Delete,
+                                    CounterName = "likes"
+                                }
+                            }
+                        }
+                    }
+                }));
 
-                store.Counters.Delete("users/2-A", "likes");
-                val = store.Counters.Get("users/2-A", "likes");
-                Assert.Null(val);
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
+
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/2-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Delete,
+                                    CounterName = "likes"
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "likes" }))
+                    .Counters.Count);
             }
         }
 
@@ -95,10 +269,37 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Counters.Increment("users/1-A", "likes", 5);
-                store.Counters.Increment("users/1-A", "dislikes", 10);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 5
+                                },
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "dislikes",
+                                    Delta = 10
+                                }
+                            }
+                        }
+                    }
+                }));
 
-                var dic = store.Counters.Get("users/1-A", new[] { "likes", "dislikes" });
+                var dic = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] {"likes", "dislikes"}))
+                    .Counters
+                    .ToDictionary(c => c.CounterName, c => c.TotalValue);
+
                 Assert.Equal(2, dic.Count);
                 Assert.Equal(5, dic["likes"]);
                 Assert.Equal(10, dic["dislikes"]);
@@ -157,7 +358,7 @@ namespace SlowTests.Client.Counters
                     }
                 };
 
-                store.Counters.Batch(setBatch);
+                store.Operations.Send(new CounterBatchOperation(setBatch));
 
                 var getBatch = new CounterBatch
                 {
@@ -196,7 +397,7 @@ namespace SlowTests.Client.Counters
                     }
                 };
 
-                var countersDetail = store.Counters.Batch(getBatch);
+                var countersDetail = store.Operations.Send(new CounterBatchOperation(getBatch));
 
                 Assert.Equal(3, countersDetail.Counters.Count);
 
@@ -229,20 +430,78 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Counters.Increment("users/1-A", "likes", 10);
-                store.Counters.Increment("users/1-A", "dislikes", 20);
-                store.Counters.Increment("users/2-A", "rank", 30);
-                store.Counters.Increment("users/3-A", "score", 40);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                },
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "dislikes",
+                                    Delta = 20
+                                }
+                            }
+                        },
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/2-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "rank",
+                                    Delta = 30
+                                }
+                            }
+                        },
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/3-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "score",
+                                    Delta = 40
+                                }
+                            }
+                        }
 
-                var dic = store.Counters.Get("users/1-A", new[] {"likes", "dislikes"});
+                    }
+                }));
+
+                var dic = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] {"likes", "dislikes"}))
+                    .Counters
+                    .ToDictionary(c => c.CounterName, c => c.TotalValue);
+
                 Assert.Equal(2, dic.Count);
                 Assert.Equal(10, dic["likes"]);
                 Assert.Equal(20, dic["dislikes"]);
 
-                var value = store.Counters.Get("users/2-A", "rank");
+                var value = store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new [] { "rank" }))
+                    .Counters[0]?.TotalValue;
+
                 Assert.Equal(30, value);
 
-                value = store.Counters.Get("users/3-A", "score");
+                value = store.Operations
+                    .Send(new GetCountersOperation("users/3-A", new[] { "score" }))
+                    .Counters[0]?.TotalValue;
+
                 Assert.Equal(40, value);
 
                 var batch = new CounterBatch
@@ -302,7 +561,7 @@ namespace SlowTests.Client.Counters
                     }
                 };
 
-                var countersDetail = store.Counters.Batch(batch);
+                var countersDetail = store.Operations.Send(new CounterBatchOperation(batch));
 
                 Assert.Equal(3, countersDetail.Counters.Count);
 
@@ -318,8 +577,8 @@ namespace SlowTests.Client.Counters
                 Assert.Equal("downloads", countersDetail.Counters[2].CounterName);
                 Assert.Equal(300, countersDetail.Counters[2].TotalValue);
 
-                Assert.Null(store.Counters.Get("users/1-A", "dislikes"));
-                Assert.Null(store.Counters.Get("users/3-A", "score"));
+                Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/1-A", new []{ "dislikes" })).Counters.Count);
+                Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/3-A", new[] { "score" })).Counters.Count);
 
             }
         }
@@ -336,21 +595,103 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Counters.Increment("users/1-A", "likes", 10);
-                var val = store.Counters.Get("users/1-A", "likes");
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                var val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] {"likes"}))
+                    .Counters[0]?.TotalValue;
+
                 Assert.Equal(10, val);
 
-                store.Counters.Delete("users/1-A", "likes");
-                val = store.Counters.Get("users/1-A", "likes");
-                Assert.Null(val);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Delete,
+                                    CounterName = "likes"
+                                }
+                            }
+                        }
+                    }
+                }));
 
-                store.Counters.Increment("users/1-A", "likes", 20);
-                val = store.Counters.Get("users/1-A", "likes");
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
+
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 20
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                val = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters[0]?.TotalValue;
+
                 Assert.Equal(20, val);
 
-                store.Counters.Delete("users/1-A", "likes"); 
-                val = store.Counters.Get("users/1-A", "likes");
-                Assert.Null(val);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Delete,
+                                    CounterName = "likes"
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                Assert.Equal(0, store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
+                    .Counters.Count);
             }
         }
 
@@ -365,7 +706,25 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                store.Counters.Increment("users/1-A", "likes", 10);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                }
+                            }
+                        }
+                    }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -377,7 +736,26 @@ namespace SlowTests.Client.Counters
                     Assert.True(((object[])counters).Contains("likes"));
                 }
 
-                store.Counters.Increment("users/1-A", "votes", 50);
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "votes",
+                                    Delta = 50
+                                }
+                            }
+                        }
+                    }
+                }));
+
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
@@ -389,7 +767,24 @@ namespace SlowTests.Client.Counters
                     Assert.True(((object[])counters).Contains("votes"));
                 }
 
-                store.Counters.Delete("users/1-A", "likes");
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Delete,
+                                    CounterName = "likes"
+                                }
+                            }
+                        }
+                    }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -401,7 +796,25 @@ namespace SlowTests.Client.Counters
                     Assert.True(((object[])counters).Contains("votes"));
                 }
 
-                store.Counters.Delete("users/1-A", "votes");
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Delete,
+                                    CounterName = "votes"
+                                }
+                            }
+                        }
+                    }
+                }));
+
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
@@ -420,7 +833,7 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Aviv" }, "users/1-A");
-                    session.Advanced.Counters.Increment("users/1-A", "Likes", 10);
+                    session.CountersFor("users/1-A").Increment("Likes", 10);
                     session.SaveChanges();
                 }
 
@@ -428,10 +841,11 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
-                    var val = session.Advanced.Counters.Get(user, "Likes");
+                    var val = session.CountersFor(user).Get("Likes");
                     Assert.Equal(10, val);
 
                     var counters = session.Advanced.GetCountersFor(user);
+                    Assert.Equal(1, counters.Count);
                     Assert.Equal("Likes", counters[0]);
 
                 }
@@ -451,7 +865,26 @@ namespace SlowTests.Client.Counters
                     session.Store(new User(), "users/1-A");
                     session.SaveChanges();
                 }
-                var e = Assert.Throws<RavenException>(() => store.Counters.Increment("users/1-A", "Likes"));
+
+                var e = Assert.Throws<RavenException>(() => 
+                    store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                    {
+                        Documents = new List<DocumentCountersOperation>
+                        {
+                            new DocumentCountersOperation
+                            {
+                                DocumentId = "users/1-A",
+                                Operations = new List<CounterOperation>
+                                {
+                                    new CounterOperation
+                                    {
+                                        Type = CounterOperationType.Increment,
+                                        CounterName = "Likes"
+                                    }
+                                }
+                            }
+                        }
+                    })));
                 Assert.Contains(
                     "Can not use 'Counters', as this is an experimental feature and the server does not support experimental features. " +
                     "Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
@@ -515,7 +948,7 @@ namespace SlowTests.Client.Counters
                 {
                     var artificialDocs = session.Advanced.LoadStartingWith<UsersByAgeResult>("UsersByAgeResult");
                     Assert.Equal(2, artificialDocs.Length);
-                    session.Advanced.Counters.Increment(artificialDocs[0], "Likes");
+                    session.CountersFor(artificialDocs[0]).Increment("Likes");
 
                     var ex = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.Contains("Cannot put Counters on artificial documents", ex.Message);

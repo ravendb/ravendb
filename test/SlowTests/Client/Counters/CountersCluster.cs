@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -44,7 +45,26 @@ namespace SlowTests.Client.Counters
                 var tasks = new List<Task>();
                 foreach (var store in stores)
                 {
-                    var task = store.Counters.IncrementAsync("users/1", "likes", 10);
+                    var task = store.Operations.SendAsync(new CounterBatchOperation(new CounterBatch
+                    {
+                        Documents = new List<DocumentCountersOperation>
+                        {
+                            new DocumentCountersOperation
+                            {
+                                DocumentId = "users/1",
+                                Operations = new List<CounterOperation>
+                                {
+                                    new CounterOperation
+                                    {
+                                        Type = CounterOperationType.Increment,
+                                        CounterName = "likes",
+                                        Delta = 10
+                                    }
+                                }
+                            }
+                        }
+                    }));
+
                     tasks.Add(task);
                 }
 
@@ -55,7 +75,10 @@ namespace SlowTests.Client.Counters
                     long? val = null;
                     for (int i = 0; i < 100; i++)
                     {
-                        val = store.Counters.Get("users/1", "likes");
+                        val = store.Operations
+                            .Send(new GetCountersOperation("users/1", new[] {"likes"}))
+                            .Counters[0]?.TotalValue;
+
                         if (val == 30)
                             break;
                         Thread.Sleep(50);
@@ -99,25 +122,30 @@ namespace SlowTests.Client.Counters
                     s.Store(new User { Name = "Aviv" }, "users/1");
                     s.Store(new User { Name = "Rotem" }, "users/2");
 
-                    s.Advanced.Counters.Increment("users/1", "likes", 30);
-                    s.Advanced.Counters.Increment("users/2", "downloads", 100);
+                    s.CountersFor("users/1").Increment("likes", 30);
+                    s.CountersFor("users/2").Increment("downloads", 100);
                     s.SaveChanges();
                 }
 
                 long? val;
                 foreach (var store in stores)
                 {
-                    val = store.Counters.Get("users/1", "likes");
+                    val = store.Operations
+                        .Send(new GetCountersOperation("users/1", new[] { "likes" }))
+                        .Counters[0]?.TotalValue;
                     Assert.Equal(30, val);
-                    val = store.Counters.Get("users/2", "downloads");
+
+                    val = store.Operations
+                        .Send(new GetCountersOperation("users/2", new[] { "downloads" }))
+                        .Counters[0]?.TotalValue;
                     Assert.Equal(100, val);
                 }
 
                 using (var s = stores[0].OpenSession())
                 {
                     s.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
-                    s.Advanced.Counters.Delete("users/1", "likes");
-                    s.Advanced.Counters.Delete("users/2", "downloads");
+                    s.CountersFor("users/1").Delete("likes");
+                    s.CountersFor("users/2").Delete("downloads");
                     s.SaveChanges();
                 }
 
@@ -136,10 +164,8 @@ namespace SlowTests.Client.Counters
 
                 foreach (var store in stores)
                 {
-                    val = store.Counters.Get("users/1", "likes");
-                    Assert.Null(val);
-                    val = store.Counters.Get("users/2", "downloads");
-                    Assert.Null(val);
+                    Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/1", new[] { "likes" })).Counters.Count);
+                    Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/2", new[] { "downloads" })).Counters.Count);
                 }
             }
             finally

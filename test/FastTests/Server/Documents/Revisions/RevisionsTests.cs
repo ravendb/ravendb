@@ -459,11 +459,11 @@ namespace FastTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
 
                     // revision 3
-                    session.Advanced.Counters.Increment(company, "Likes", 100);
+                    session.CountersFor(company).Increment("Likes", 100);
                     await session.SaveChangesAsync();
 
                     // no revision for this one
-                    session.Advanced.Counters.Increment(company, "Likes", 50);
+                    session.CountersFor(company).Increment("Likes", 50);
                     await session.SaveChangesAsync();
                 }
 
@@ -496,7 +496,7 @@ namespace FastTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
 
                     // revision 5
-                    session.Advanced.Counters.Increment(company, "Dislikes", 20);
+                    session.CountersFor(company).Increment("Dislikes", 20);
                     await session.SaveChangesAsync();
 
                 }

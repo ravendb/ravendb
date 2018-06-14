@@ -120,6 +120,11 @@ namespace Raven.Client.Documents.Session
         protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity =
             new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
 
+        /// <summary>
+        /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
+        /// </summary>
+        protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId;
+
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -256,10 +261,10 @@ namespace Raven.Client.Documents.Session
 
             var documentInfo = GetDocumentInfo(instance);
 
-            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
-                return counters.Select(x=>x.ToString()).ToList();
-
-            return null;
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+                out BlittableJsonReaderArray counters) == false)
+                return null;
+            return counters.Select(x => x.ToString()).ToList();
         }
 
 
@@ -506,6 +511,7 @@ more responsive application.
 
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
+            CountersByDocId?.Remove(value.Id);
             _knownMissingIds.Add(value.Id);
         }
 
@@ -545,6 +551,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
+            CountersByDocId?.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
@@ -1094,6 +1101,7 @@ more responsive application.
             {
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
+                CountersByDocId?.Remove(documentInfo.Id);
             }
 
             DeletedEntities.Remove(entity);
@@ -1110,6 +1118,7 @@ more responsive application.
             DocumentsById.Clear();
             _knownMissingIds.Clear();
             IncludedDocumentsById.Clear();
+            CountersByDocId?.Clear();
         }
 
         /// <summary>
