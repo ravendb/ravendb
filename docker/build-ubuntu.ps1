@@ -2,7 +2,7 @@ param(
     $Repo = "ravendb/ravendb",
     $ArtifactsDir = "..\artifacts",
     $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.posix.json",
-    $DockerfileDir = "./ravendb-ubuntu1604")
+    $DockerfileDir = "./ravendb-ubuntu")
 
 $ErrorActionPreference = "Stop"
 
@@ -24,12 +24,13 @@ function BuildUbuntuDockerImage ($version) {
     Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
     write-host "Build docker image: $version"
-    write-host "Tags: $($repo):$version-ubuntu.16.04-x64 $($repo):latest $($repo):ubuntu-latest"
+    write-host "Tags: $($repo):$version-ubuntu.16.04-x64 $($repo):latest $($repo):ubuntu-latest $($repo):4.0-ubuntu-latest"
 
     docker build $DockerfileDir `
         -t "$($repo):$version-ubuntu.16.04-x64" `
         -t "$($repo):latest" `
-        -t "$($repo):ubuntu-latest"
+        -t "$($repo):ubuntu-latest" `
+        -t "$($repo):4.0-ubuntu-latest"
 
     Remove-Item -Path $dockerPackagePath
 }

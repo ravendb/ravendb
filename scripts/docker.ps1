@@ -7,12 +7,12 @@ function LayoutDockerPrerequisites($projectDir, $artifactsDir) {
     New-Item -ItemType Directory -Path $artifactsDockerDir -Force | Out-Null
     
     $assets = @(
-        'ravendb-ubuntu1604', 
+        'ravendb-ubuntu', 
         'ravendb-nanoserver', 
         'build-nanoserver.ps1',
-        'build-ubuntu1604.ps1',
+        'build-ubuntu.ps1',
         'publish-nanoserver.ps1',
-        'publish-ubuntu1604.ps1'
+        'publish-ubuntu.ps1'
     )
 
     foreach ($asset in $assets) {

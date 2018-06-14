@@ -28,7 +28,7 @@ $dockerDir = [io.path]::combine($projectDir, "docker")
 $debugDockerDir = [io.path]::combine($projectDir, "docker", "debug")
 $debugDockerfileDir = [io.path]::combine($projectDir, "docker", "debug", "ravendb-ubuntu-debug")
 
-$pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-4.0.0-custom-40-ubuntu.16.04-x64.tar.bz2")
+$pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-4.0.0-custom-40-linux-x64.tar.bz2")
 
 if ($(Test-Path $pkgFile) -eq $False) {
 
@@ -51,7 +51,7 @@ if ($(Test-Path $pkgFile) -eq $False) {
 Push-Location .
 try {
     Set-Location $dockerDir
-    .\build-ubuntu1604.ps1
+    .\build-ubuntu.ps1
     CheckLastExitCode
     write-host "Built RavenDB Ubuntu 16.04 docker image."
 }

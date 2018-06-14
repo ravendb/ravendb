@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
+using FastTests.Voron.Backups;
+using FastTests.Voron.Compaction;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
@@ -18,6 +20,7 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
+
                     using (var test = new RavenDB_6369())
                     {
                         test.ShouldTimeout();

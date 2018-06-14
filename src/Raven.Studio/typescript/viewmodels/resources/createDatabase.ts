@@ -17,6 +17,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import license = require("models/auth/licenseModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import extensions = require("common/extensions");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -224,15 +225,25 @@ class createDatabase extends dialogViewModelBase {
             return this.databaseLocationCalculated();
         });
         
-        this.databaseModel.name.throttle(300).subscribe((newNameValue) => 
-            new getDatabaseLocationCommand(newNameValue, this.databaseModel.path.dataPath())
-                .execute()
-                .done((fullPath: string) => this.databaseLocationCalculated(fullPath)));
+        this.databaseModel.name.throttle(300).subscribe((newNameValue) => {
+            if (!extensions.validateDatabaseName(newNameValue)) {
+                new getDatabaseLocationCommand(newNameValue, this.databaseModel.path.dataPath())
+                    .execute()
+                    .done((fullPath: string) => this.databaseLocationCalculated(fullPath))
+            } else {
+                this.databaseLocationCalculated("Invalid database name");
+            }
+        });
 
-        this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) =>
-            new getDatabaseLocationCommand(this.databaseModel.name(), newPathValue)
-                .execute()
-                .done((fullPath: string) => this.databaseLocationCalculated(fullPath)));
+        this.databaseModel.path.dataPath.throttle(300).subscribe((newPathValue) => {
+            if (this.databaseModel.path.dataPath.isValid()) {
+                new getDatabaseLocationCommand(this.databaseModel.name(), newPathValue)
+                    .execute()
+                    .done((fullPath: string) => this.databaseLocationCalculated(fullPath))
+            } else {
+                this.databaseLocationCalculated("Invalid path");
+            }
+        });
     }
 
     getAvailableSections() {

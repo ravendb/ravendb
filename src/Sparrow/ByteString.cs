@@ -1530,6 +1530,8 @@ namespace Sparrow
             }
             catch (ObjectDisposedException)
             {
+                // This is expected, we might be calling the finalizer on an object that
+                // was already disposed, we don't want to error here because of this
             }
         }
 
