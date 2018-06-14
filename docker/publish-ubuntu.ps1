@@ -74,6 +74,7 @@ function GetImageTags($repo, $version) {
         return @(
             "$($repo):latest",
             "$($repo):ubuntu-latest",
+            "$($repo):4.0-ubuntu-latest",
             "$($repo):$($version)-ubuntu.16.04-x64"
         )
 }
