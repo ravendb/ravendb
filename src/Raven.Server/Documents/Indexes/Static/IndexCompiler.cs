@@ -32,6 +32,47 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private const string IndexExtension = ".index";
 
+        private static Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string,AssemblyName,MetadataReference)[]>(DiscoverManagedDlls);
+
+        static IndexCompiler()
+        {
+            AssemblyLoadContext.Default.Resolving += (AssemblyLoadContext ctx, AssemblyName name) =>
+            {
+                if (KnownManagedDlls.IsValueCreated == false)
+                    return null; // this also handles the case of failure
+
+                foreach (var item in KnownManagedDlls.Value)
+                {
+                    if (name.FullName == item.AssemblyName.FullName)
+                        return Assembly.LoadFile(item.Path);
+                }
+                return null;
+            };
+        }
+
+
+        private static (string Path, AssemblyName AssemblyName, MetadataReference Reference)[] DiscoverManagedDlls()
+        {
+            var path = Path.GetDirectoryName(typeof(IndexCompiler).GetTypeInfo().Assembly.Location);
+            var results = new List<(string, AssemblyName, MetadataReference)>();
+
+            foreach (var dll in Directory.GetFiles(path, "*.dll"))
+            {
+                AssemblyName name;
+                try
+                {
+                    name= AssemblyLoadContext.GetAssemblyName(dll);
+                }
+                catch (Exception)
+                {
+                    continue; // we have unmanaged dlls (libsodium) here
+                }
+                var reference = MetadataReference.CreateFromFile(dll);
+                results.Add((dll, name, reference));
+            }
+            return results.ToArray();
+        }
+
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
@@ -204,56 +245,17 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MetadataReference[] GetRefrences()
         {
-            //libsodium is a none managed dll we must exclude it from the list of dlls
-            var managedDlls = GetManagedDlls();
-            var newRefrences = new MetadataReference[References.Length + managedDlls.Length];
+            var knownManageRefs = KnownManagedDlls.Value;
+            var newRefrences = new MetadataReference[References.Length + knownManageRefs.Length];
             for (var i = 0; i < References.Length; i++)
             {
                 newRefrences[i] = References[i];
             }
-            for (int i = 0; i < managedDlls.Length; i++)
+            for (int i = 0; i < knownManageRefs.Length; i++)
             {
-                newRefrences[i + References.Length] = MetadataReference.CreateFromFile(managedDlls[i]);
+                newRefrences[i + References.Length] = knownManageRefs[i].Reference;
             }
             return newRefrences;
-        }
-
-        private static string[] GetManagedDlls()
-        {
-            var path = Path.GetDirectoryName(typeof(IndexCompiler).GetTypeInfo().Assembly.Location);
-            var dlls = new List<string>();
-
-            foreach (var dll in Directory.GetFiles(path, "*.dll"))
-            {
-                if (_isDllManaged.TryGetValue(dll, out var managed) == false)
-                {
-                    managed = IsManagedAssembly(dll);
-                    // generating a new instance per 
-                    _isDllManaged = new Dictionary<string, bool>(_isDllManaged)
-                    {
-                        [dll] = managed
-                    };
-                }
-                if (managed)
-                    dlls.Add(dll);
-
-            }
-            return dlls.ToArray();
-        }
-
-        private static Dictionary<string, bool> _isDllManaged = new Dictionary<string, bool>();
-
-        private static bool IsManagedAssembly(string fileName)
-        {
-            try
-            {
-                AssemblyLoadContext.GetAssemblyName(fileName);
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
