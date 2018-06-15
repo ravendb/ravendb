@@ -46,7 +46,7 @@ namespace Raven.Server.Documents
                 return;
 
             _metadataEnsured = true;
-            DynamicJsonValue mutatedMetadata = null;
+            DynamicJsonValue mutatedMetadata;
             if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 if (metadata.Modifications == null)
@@ -54,12 +54,13 @@ namespace Raven.Server.Documents
 
                 mutatedMetadata = metadata.Modifications;
             }
-
-            Data.Modifications = new DynamicJsonValue(Data)
+            else
             {
-                [Constants.Documents.Metadata.Key] = mutatedMetadata = (mutatedMetadata ?? new DynamicJsonValue())
-            };
-          
+                Data.Modifications = new DynamicJsonValue(Data)
+                {
+                    [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                };
+            }
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;        
