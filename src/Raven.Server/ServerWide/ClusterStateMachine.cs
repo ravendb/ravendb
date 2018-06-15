@@ -467,7 +467,7 @@ namespace Raven.Server.ServerWide
                     {
                         // delete immediately if this node was removed.
                         var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
-                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow) 
+                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
                             NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
@@ -845,7 +845,7 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
-        
+
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand
@@ -862,7 +862,7 @@ namespace Raven.Server.ServerWide
                 }
             };
         }
-        
+
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
@@ -972,7 +972,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
-        
+
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
@@ -1347,7 +1347,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Prefix, long Value)> GetNumberOfIdentities<T>(TransactionOperationContext<T> context, string databaseName)
+        public long GetNumberOfIdentities<T>(TransactionOperationContext<T> context, string databaseName)
             where T : RavenTransaction
         {
             var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
@@ -1358,24 +1358,22 @@ namespace Raven.Server.ServerWide
                 using (var it = identities.Iterate(prefetch: false))
                 {
                     it.SetRequiredPrefix(prefix);
-                    it.
+
                     if (it.Seek(prefix) == false)
-                        yield break;
+                        return 0;
+
+                    var count = 0;
 
                     do
                     {
-                        var key = it.CurrentKey;
-                        var keyAsString = key.ToString();
-                        var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-
-                        yield return (keyAsString.Substring(prefixString.Length), value);
-
+                        count++;
                     } while (it.MoveNext());
+
+                    return count;
                 }
             }
         }
 
-        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice, 
         private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice,
             RootObjectType type = RootObjectType.VariableSizeTree)
             where T : RavenTransaction
@@ -1610,7 +1608,8 @@ namespace Raven.Server.ServerWide
         protected override RachisVersionValidation InitializeValidator()
         {
             return new ClusterValidator();
-        }        public static bool InterlockedExchangeMax(ref long location, long newValue)
+        }
+        public static bool InterlockedExchangeMax(ref long location, long newValue)
         {
             long initialValue;
             do
@@ -1621,7 +1620,8 @@ namespace Raven.Server.ServerWide
             }
             while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
             return true;
-        }    }
+        }
+    }
 
     public class RachisLogIndexNotifications
     {

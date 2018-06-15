@@ -41,8 +41,14 @@ namespace Raven.Server.Documents.Handlers
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
-                stats.CountOfIdentities = ServerStore.Cluster.ReadIdentities();
-                stats.CountOfCompareExchange = "";
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
+                }
+
+                stats.CountOfCompareExchange = -1;
                 stats.CountOfIndexes = indexes.Count;
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
@@ -65,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                         // if the index has just been removed, let us consider it stale
                         // until it can be safely removed from the list of indexes in the
                         // database
-                        isStale = true; 
+                        isStale = true;
                     }
                     stats.Indexes[i] = new IndexInformation
                     {
