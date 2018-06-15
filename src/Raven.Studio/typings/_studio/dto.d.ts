@@ -376,6 +376,7 @@ type legacyEncryptionAlgorithms = "DES" | "RC2" | "Rijndael" | "Triple DES";
 
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;
+    Visible: KnockoutObservable<boolean>;
 }
 
 type dashboardChartTooltipProviderArgs = {

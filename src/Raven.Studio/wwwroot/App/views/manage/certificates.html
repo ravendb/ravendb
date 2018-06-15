@@ -33,28 +33,83 @@
         </div>
     </div>
 
-    <div class="margin-bottom" data-bind="visible: usingHttps">
-        <button class="btn btn-primary" data-bind="click: enterGenerateCertificateMode">
-            <i class="icon-magic-wand"></i>
-            <span>Generate client certificate</span>
-        </button>
-        <button class="btn btn-default" data-bind="click: enterUploadCertificateMode">
-            <i class="icon-upload"></i>
-            <span>Upload client certificate</span>
-        </button>
-        <button class="btn btn-default js-export-certificates" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Export the server certificate(s) of the cluster without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
-            <i class="icon-export"></i>
-            <span>Export cluster certificates</span>
-        </button>
-        <button class="btn btn-default" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
-            <i class="icon-replace"></i>
-            <span>Replace cluster certificate</span>
-        </button>
-    </div>
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">
+            <div class="margin-bottom flex-horizontal">
+                <div>
+                    <input class="form-control" placeholder="Filter" data-bind="textInput: nameFilter">
+                </div>
+                <div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Filter visible certificates based on security clearance">
+                            <span data-bind="text: clearanceFilter() ? clearanceLabelFor(clearanceFilter()) : 'Any security clearance'"></span>
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" title="Show all certificates" data-bind="click: _.partial(clearanceFilter, null)">
+                                    <span>Any security clearance</span>
+                                </a>
+                            </li>
+                            <!-- ko foreach: securityClearanceTypes -->
+                            <li>
+                                <a href="#" data-bind="click: _.partial($parent.clearanceFilter, value)">
+                                    <span data-bind="text: label"></span>
+                                </a>
+                            </li>
+                            <!-- /ko -->
+                        </ul>
+                    </div>
+                </div>
+                <div class="flex-separator"></div>
+                <div class="dropdown">
+                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
+                            aria-expanded="true">
+                        <i class="icon-settings"></i><span>Client certificate</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="#" data-bind="click: enterGenerateCertificateMode">
+                                <i class="icon-magic-wand"></i>
+                                <span>Generate client certificate</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" data-bind="click: enterUploadCertificateMode">
+                                <i class="icon-upload"></i>
+                                <span>Upload client certificate</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
+                            aria-expanded="true">
+                        <i class="icon-settings"></i><span>Cluster certificate</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="#" class="js-export-certificates" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Export the server certificate(s) of the cluster without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
+                                <i class="icon-export"></i>
+                                <span>Export cluster certificates</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
+                                <i class="icon-replace"></i>
+                                <span>Replace cluster certificate</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
             <div class="scroll flex-grow" data-bind="foreach: certificates">
-                <div class="panel certificate-item">
+                <div class="panel certificate-item" data-bind="visible: Visible">
                     <div class="padding padding-sm flex-horizontal">
                         <div class="certificate-name">
                             <a href="#" title="Certificate name" class="flex-horizontal" data-bind="click: _.partial($root.enterEditCertificateMode, $data)">
