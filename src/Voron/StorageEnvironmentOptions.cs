@@ -632,9 +632,9 @@ namespace Voron
                     File.Delete(file);
             }
 
-            public override AbstractPager CreateScratchPager(string name, long initialSize)
+            private AbstractPager GetTemporaryPager(string name, long initialSize, Func<StorageEnvironmentOptions, long?, VoronPathSetting, bool, bool, AbstractPager> getMemoryMapPagerFunc)
             {
-                // here we can afford to rename the file if needed because this is a scratch
+                // here we can afford to rename the file if needed because this is a scratch / temp
                 // file that is used. We _know_ that no one expects anything from it and that 
                 // the name it uses isn't _that_ important in any way, shape or form. 
                 int index = 0;
@@ -647,11 +647,11 @@ namespace Voron
                 Exception err = null;
                 for (int i = 0; i < 15; i++)
                 {
-                    var scratchFile = TempPath.Combine(name);
+                    var tempFile = TempPath.Combine(name);
                     try
                     {
-                        if (File.Exists(scratchFile.FullPath))
-                            File.Delete(scratchFile.FullPath);
+                        if (File.Exists(tempFile.FullPath))
+                            File.Delete(tempFile.FullPath);
                     }
                     catch (IOException e)
                     {
@@ -663,7 +663,9 @@ namespace Voron
                     }
                     try
                     {
-                        return GetMemoryMapPager(this, initialSize, scratchFile, deleteOnClose: true);
+                        return getMemoryMapPagerFunc(this, initialSize, tempFile,
+                            true, // deleteOnClose
+                            false); //usePageProtection
                     }
                     catch (FileNotFoundException e)
                     {
@@ -675,14 +677,20 @@ namespace Voron
                     }
                 }
 
-                throw new InvalidOperationException("Unable to create scratch file " + name + ", even after trying multiple times." , err);
+                throw new InvalidOperationException("Unable to create temporary mapped file " + name + ", even after trying multiple times.", err);
+            }
+
+            public override AbstractPager CreateScratchPager(string name, long initialSize)
+            {
+                return GetTemporaryPager(name, initialSize, GetMemoryMapPager);
             }
 
             // This is used for special pagers that are used as temp buffers and don't 
             // require encryption: compression, recovery, lazyTxBuffer.
             public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
             {
-                var pager = CreateScratchPager(name, initialSize);
+                var pager = GetTemporaryPager(name, initialSize, GetMemoryMapPagerInternal);
+
                 if (EncryptionEnabled)
                 {
                     // even though we don't care need encryption here, we still need to ensure that this
