@@ -46,9 +46,9 @@ namespace Raven.Server.Documents.Handlers
                 using (serverContext.OpenReadTransaction())
                 {
                     stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
+                    stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
                 }
 
-                stats.CountOfCompareExchange = -1;
                 stats.CountOfIndexes = indexes.Count;
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
