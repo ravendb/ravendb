@@ -13,7 +13,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? SqlCommandTimeout { get; set; }
 
         [Description("Number of seconds after which extraction and transformation will end and loading will start.")]
-        [DefaultValue(60 * 5)]
+        [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("ETL.ExtractAndTransformTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting ExtractAndTransformTimeout { get; protected set; }
