@@ -18,7 +18,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -47,6 +46,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -1347,19 +1347,31 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public long GetNumberOfIdentities<T>(TransactionOperationContext<T> context, string databaseName)
-            where T : RavenTransaction
+        public long GetNumberOfIdentities(TransactionOperationContext context, string databaseName)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
+            var prefix = UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null);
 
-            var prefixString = UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null);
-            using (Slice.From(context.Allocator, prefixString, out var prefix))
+            return GetNumberOf(identities, prefix, context);
+        }
+
+        public long GetNumberOfCompareExchange(TransactionOperationContext context, string databaseName)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+            var compareExchange = items.GetTree(CompareExchangeSchema.Key);
+            var prefix = CompareExchangeCommandBase.GetActualKey(databaseName, null);
+            return GetNumberOf(compareExchange, prefix, context);
+        }
+
+        private static long GetNumberOf(Tree tree, string prefix, TransactionOperationContext context)
+        {
+            using (Slice.From(context.Allocator, prefix, out var prefixAsSlice))
             {
-                using (var it = identities.Iterate(prefetch: false))
+                using (var it = tree.Iterate(prefetch: false))
                 {
-                    it.SetRequiredPrefix(prefix);
+                    it.SetRequiredPrefix(prefixAsSlice);
 
-                    if (it.Seek(prefix) == false)
+                    if (it.Seek(prefixAsSlice) == false)
                         return 0;
 
                     var count = 0;
