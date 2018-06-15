@@ -157,6 +157,9 @@
                     <span data-bind="text: 'Includes (' + name + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: total().toLocaleString()"></span>
                 </button>
             <!-- /ko -->
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToExplanationsTab, css: { active: currentTab() === 'explanations' }, visible: totalExplanations()">
+                <span>Explanations</span> &nbsp; <span class="label label-primary" data-bind="text: totalExplanations().toLocaleString()"></span>
+            </button>
             <!-- ko foreach: highlightsCache -->
                 <button type="button" class="btn btn-sm" data-bind="click: $root.goToHighlightsTab, css: { active: $parent.currentTab() === $data }">
                     <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>

@@ -285,9 +285,10 @@ interface pagedResult<T> {
     additionalResultInfo?: any; 
 }
 
-interface pagedResultWithIncludesAndHighlights<T> extends pagedResult<T> {
+interface pagedResultExtended<T> extends pagedResult<T> {
     includes: dictionary<any>;
     highlightings?: dictionary<dictionary<Array<string>>>;
+    explanations?: dictionary<Array<string>>;
 }
 
 interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
