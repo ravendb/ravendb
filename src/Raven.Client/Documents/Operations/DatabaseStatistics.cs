@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Operations
         public long CountOfIdentities { get; set; }
 
         /// <summary>
-        /// Total number of compare-exchange in database.
+        /// Total number of compare-exchange values in database.
         /// </summary>
         public long CountOfCompareExchange { get; set; }
 
