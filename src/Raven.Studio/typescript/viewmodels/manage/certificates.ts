@@ -32,6 +32,9 @@ class certificates extends viewModelBase {
         processing: ko.observable<boolean>(false)
     };
     
+    nameFilter = ko.observable<string>("");
+    clearanceFilter = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
+    
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
     canExportClusterCertificates: KnockoutComputed<boolean>;
@@ -60,6 +63,7 @@ class certificates extends viewModelBase {
     generateCertPayload = ko.observable<string>();
 
     clearanceLabelFor = certificateModel.clearanceLabelFor;
+    securityClearanceTypes = certificateModel.securityClearanceTypes;
     
     constructor() {
         super();
@@ -69,6 +73,9 @@ class certificates extends viewModelBase {
             "useDatabase", "deleteCertificate", "renewServerCertificate", "showRenewCertificateButton");
         this.initObservables();
         this.initValidation();
+        
+        this.nameFilter.throttle(300).subscribe(() => this.filterCertificates());
+        this.clearanceFilter.subscribe(() => this.filterCertificates());
     }
     
     activate() {
@@ -95,6 +102,17 @@ class certificates extends viewModelBase {
             if (model) {
                 this.initPopover();
             }
+        });
+    }
+    
+    private filterCertificates() {
+        const filter = this.nameFilter().toLocaleLowerCase();
+        const clearance = this.clearanceFilter();
+        
+        this.certificates().forEach(certificate => {
+            const nameMatch = !certificate || certificate.Name.toLocaleLowerCase().includes(filter);
+            const clearanceMatch = !clearance || certificate.SecurityClearance === clearance;
+            certificate.Visible(nameMatch && clearanceMatch);
         });
     }
     
@@ -315,7 +333,7 @@ class certificates extends viewModelBase {
         return new getCertificatesCommand(true)
             .execute()
             .done(certificatesInfo => {
-                const mergedCertificates = [] as Array<unifiedCertificateDefinition>;
+                let mergedCertificates = [] as Array<unifiedCertificateDefinition>;
                 
                 const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
                 
@@ -324,6 +342,7 @@ class certificates extends viewModelBase {
                         secondaryCertificates.push(cert);
                     } else {
                         (cert as unifiedCertificateDefinition).Thumbprints = [cert.Thumbprint];
+                        (cert as unifiedCertificateDefinition).Visible = ko.observable<boolean>(true);
                         mergedCertificates.push(cert as unifiedCertificateDefinition);
                     }
                 });
@@ -336,8 +355,10 @@ class certificates extends viewModelBase {
                     primaryCert.Thumbprints.push(cert.Thumbprint);
                 });
                 
+                mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
                 this.updateCache(mergedCertificates);
                 this.certificates(mergedCertificates); 
+                this.filterCertificates();
             });
     }
     
