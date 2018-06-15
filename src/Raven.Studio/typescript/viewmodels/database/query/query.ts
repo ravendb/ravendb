@@ -25,13 +25,22 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 import endpoints = require("endpoints");
+import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+
+type queryResultTab = "results" | "explanations";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
 type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Datetime";
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
+
+type explanationItem = {
+    explanations: string[];
+    id: string;
+}
 
 type highlightItem = {
     Key: string;
@@ -117,17 +126,20 @@ class query extends viewModelBase {
     columnsSelector = new columnsSelector<document>();
 
     queryFetcher = ko.observable<fetcherType>();
+    explanationsFetcher = ko.observable<fetcherType>();
     effectiveFetcher = this.queryFetcher;
     
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
-    currentTab = ko.observable<"results" | highlightSection | perCollectionIncludes>("results");
+    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
     totalResults: KnockoutComputed<number>;
     hasMoreUnboundedResults = ko.observable<boolean>(false);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     highlightsCache = ko.observableArray<highlightSection>([]);
+    explanationsCache = new Map<string, explanationItem>();
+    totalExplanations = ko.observable<number>(0);
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
@@ -424,12 +436,25 @@ class query extends viewModelBase {
                 totalResultCount: 0
             }));
         
+        this.explanationsFetcher(() => {
+           const allExplanations = Array.from(this.explanationsCache.values());
+           
+           return $.when({
+               items: allExplanations.map(x => new document(x)),
+               totalResultCount: allExplanations.length
+           });
+        });
+        
         this.columnsSelector.init(grid,
             (s, t, c) => this.effectiveFetcher()(s, t),
             (w, r) => {
-                return (this.currentTab() === "includes" || this.currentTab() === "results") 
-                    ? documentsProvider.findColumns(w, r) 
-                    : highlightingProvider.findColumns(w, r);
+                if (this.currentTab() === "results") {
+                    return documentsProvider.findColumns(w, r);
+                } else if (this.currentTab() === "explanations") {
+                    return this.explanationsColumns(grid);
+                } else {
+                    return highlightingProvider.findColumns(w, r);
+                }
             }, (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
         grid.headerVisible(true);
@@ -440,6 +465,12 @@ class query extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-query-tooltip", 
             (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            if (this.currentTab() === "explanations" && column.header === "Explanation") {
+                // we don't want to show inline preview for Explanation column, as value doesn't contain full message
+                // which might be misleading - use preview button to obtain entire explanation 
+                return;
+            } 
+            
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
@@ -451,6 +482,21 @@ class query extends viewModelBase {
         });
         
         this.queryHasFocus(true);
+    }
+    
+    private explanationsColumns(grid: virtualGridController<any>) {
+        return [
+            new actionColumn<explanationItem>(grid, doc => this.showExplanationDetails(doc), "Show", `<i class="icon-preview"></i>`, "72px",
+            {
+                title: () => 'Show detailed explanation'
+            }),
+            new textColumn<explanationItem>(grid, x => x.id, "Id", "30%"),
+            new textColumn<explanationItem>(grid, x => x.explanations.map(x => x.split("\n")[0]).join(", "), "Explanation", "50%")
+        ];
+    }
+    
+    private showExplanationDetails(details: explanationItem) {
+        app.showBootstrapDialog(new showDataDialog("Explanation for: " + details.id, details.explanations.join("\r\n"), "plain"));
     }
 
     private loadSavedQueries() {
@@ -526,6 +572,7 @@ class query extends viewModelBase {
         this.currentTab("results");
         this.includesCache.removeAll();
         this.highlightsCache.removeAll();
+        this.explanationsCache.clear();
         
         this.isEmptyFieldsResult(false);
         
@@ -550,7 +597,7 @@ class query extends viewModelBase {
             const resultsFetcher = (skip: number, take: number) => {
                 const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), !this.cacheEnabled());
                 
-                const resultsTask = $.Deferred<pagedResultWithIncludesAndHighlights<document>>();
+                const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = this.criteria().showFields();
                                 
                 // Note: 
@@ -563,7 +610,7 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultWithIncludesAndHighlights<document>) => {
+                    .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
                     
                         if (queryResults.totalResultCount === -1) {
@@ -613,6 +660,7 @@ class query extends viewModelBase {
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
                             this.onHighlightingsLoaded(queryResults.highlightings);
+                            this.onExplanationsLoaded(queryResults.explanations);
                         }
                         this.saveLastQuery("");
                         this.saveRecentQuery();
@@ -751,6 +799,17 @@ class query extends viewModelBase {
                     this.loadSavedQueries();
                 }
             });
+    }
+    
+    private onExplanationsLoaded(explanations: dictionary<Array<string>>) {
+        _.forIn(explanations, (doc, id) => {
+            this.explanationsCache.set(id, {
+               id: id,
+                explanations: doc
+            });
+        });
+        
+        this.totalExplanations(this.explanationsCache.size);
     }
     
     private onIncludesLoaded(includes: dictionary<any>) {
@@ -908,6 +967,14 @@ class query extends viewModelBase {
             });
         });
 
+        this.columnsSelector.reset();
+        this.refresh();
+    }
+    
+    goToExplanationsTab() {
+        this.currentTab("explanations");
+        this.effectiveFetcher = this.explanationsFetcher;
+        
         this.columnsSelector.reset();
         this.refresh();
     }
