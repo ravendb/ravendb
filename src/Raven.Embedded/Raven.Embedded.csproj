@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
+    <Authors>Hibernating Rhinos</Authors>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <RuntimeFrameworkVersion>2.0.7</RuntimeFrameworkVersion>
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Raven.Embedded</AssemblyName>
+    <PackageId>RavenEmbedded</PackageId>
+    <PackageTags>embedded;database;nosql;doc db</PackageTags>
+    <Configurations>Debug;Release;Validate</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RavenDB.Client" Version="4.0.5" />
+  </ItemGroup>
+
+</Project>
