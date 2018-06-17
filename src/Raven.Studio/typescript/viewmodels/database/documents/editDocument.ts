@@ -6,6 +6,7 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import getDocumentPhysicalSizeCommand = require("commands/database/documents/getDocumentPhysicalSizeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getRevisionsBinDocumentMetadataCommand = require("commands/database/documents/getRevisionsBinDocumentMetadataCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
@@ -39,8 +40,11 @@ class editDocument extends viewModelBase {
     document = ko.observable<document>();
     documentText = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
+    
     changeVector: KnockoutComputed<changeVectorItem[]>;
-    lastModifiedAsAgo: KnockoutComputed<string>;
+    changeVectorHtml: KnockoutComputed<string>;
+    
+    lastModifiedAsAgo: KnockoutComputed<string>;    
     latestRevisionUrl: KnockoutComputed<string>;
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
@@ -49,6 +53,7 @@ class editDocument extends viewModelBase {
 
     isCreatingNewDocument = ko.observable(false);
     isClone = ko.observable(false);
+    isRevision = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
     userIdHasFocus = ko.observable<boolean>(false);   
@@ -78,7 +83,12 @@ class editDocument extends viewModelBase {
     connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId), this.isCreatingNewDocument, this.inReadOnlyMode);
 
     isSaveEnabled: KnockoutComputed<boolean>;
-    documentSize: KnockoutComputed<string>;
+    
+    computedDocumentSize: KnockoutComputed<string>;
+    sizeOnDiskActual = ko.observable<string>();
+    sizeOnDiskAllocated = ko.observable<String>();
+    documentSizeHtml: KnockoutComputed<string>;
+    
     editedDocId: KnockoutComputed<string>;
     displayLastModifiedDate: KnockoutComputed<boolean>;
     collectionTracker = collectionsTracker.default;
@@ -137,6 +147,8 @@ class editDocument extends viewModelBase {
         this.connectedDocuments.compositionComplete();
 
         this.focusOnEditor();
+       
+        $('.black-tooltip [data-toggle="tooltip"]').tooltip(); 
     }
 
     detached() {
@@ -300,13 +312,22 @@ class editDocument extends viewModelBase {
 
             return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
         });
+        
+        this.changeVectorHtml = ko.pureComputed(() => {
+            let vectorText = "<h4>Change Vector</h4>";
+            if (this.changeVector().length) {
+                this.changeVector().forEach(vector => vectorText += (vector.fullFormat + '<br/>'));
+            }
+            
+            return vectorText;
+        });
 
         this.isConflictDocument = ko.computed(() => {
             const metadata = this.metadata();
             return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.includes("/conflicts/");
         });
 
-        this.documentSize = ko.pureComputed(() => {
+        this.computedDocumentSize = ko.pureComputed(() => {
             try {
                 const textSize: number = genUtils.getSizeInBytesAsUTF8(this.documentText());
                 const metadataAsString = JSON.stringify(this.metadata().toDto());
@@ -318,6 +339,14 @@ class editDocument extends viewModelBase {
             }
         });
 
+        this.documentSizeHtml = ko.computed(() => {
+            if (this.isClone() || this.isCreatingNewDocument() || this.isRevision()) {
+                return `Computed Size: ${this.computedDocumentSize()} KB`;
+            }
+            
+            return `<h4>Document Size on Disk</h4> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()}`;            
+        });
+        
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta && meta.id) {
                 this.userSpecifiedId(meta.id);
@@ -435,7 +464,7 @@ class editDocument extends viewModelBase {
 
     toggleNewlineMode() {
         eventsCollector.default.reportEvent("document", "toggle-newline-mode");
-        if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 1024) {
+        if (this.isNewLineFriendlyMode() === false && parseInt(this.computedDocumentSize().replace(",", "")) > 1024) {
             app.showBootstrapMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
                 .then((dialogResult: string) => {
                     if (dialogResult === "Continue") {
@@ -501,7 +530,6 @@ class editDocument extends viewModelBase {
         if (this.isValid(this.globalValidationGroup)) {
             eventsCollector.default.reportEvent("document", "save");
             this.saveInternal(this.userSpecifiedId());
-            this.isClone(false);
         }
     }
 
@@ -568,6 +596,10 @@ class editDocument extends viewModelBase {
     }
 
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+
+        this.isClone(false);
+        this.isRevision(false);
+        
         const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
         const currentSelection = this.docEditor.getSelectionRange();
 
@@ -608,6 +640,9 @@ class editDocument extends viewModelBase {
 
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
+
+        $('#right-options-panel [data-toggle="tooltip"]').tooltip();
+        this.getDocumentPhysicalSize(metadata['@id']);
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
@@ -638,7 +673,10 @@ class editDocument extends viewModelBase {
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
-
+                
+                this.isRevision(false);
+                this.getDocumentPhysicalSize(id);
+                
                 loadTask.resolve(doc);
             })
             .fail((xhr: JQueryXHR) => {
@@ -658,6 +696,19 @@ class editDocument extends viewModelBase {
         return loadTask;
     }
 
+    private getDocumentPhysicalSize(id: string): JQueryPromise<any> {
+        return new getDocumentPhysicalSizeCommand(id, this.activeDatabase())
+            .execute()
+            .done((size) => {
+                this.sizeOnDiskActual(size.HumaneActualSize);
+                this.sizeOnDiskAllocated(size.HumaneAllocatedSize);
+            })
+            .fail(() => {
+                this.sizeOnDiskActual("Failed to get size");
+                this.sizeOnDiskAllocated("Failed to get size");
+            }); 
+    }
+    
     private loadRevisionsBinEntry(id: string): JQueryPromise<document> {
         return new getRevisionsBinDocumentMetadataCommand(id, this.activeDatabase())
             .execute()
@@ -671,6 +722,8 @@ class editDocument extends viewModelBase {
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
+                
+                this.isRevision(true);
             })
             .fail(() => {
                 this.dirtyFlag().reset();
@@ -697,6 +750,8 @@ class editDocument extends viewModelBase {
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
+                
+                this.isRevision(true);
             })
             .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
             .always(() => this.isBusy(false));
