@@ -1068,7 +1068,7 @@ namespace Raven.Server.Documents
             _txLongRunningOperation?.Join(int.MaxValue);
 
             _waitHandle.Dispose();
-            _recordingStatus.Dispose();
+            _recordingStatus?.Dispose();
 
             // make sure that the queue is empty and there are no pending 
             // transactions waiting. 
