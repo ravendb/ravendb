@@ -7,45 +7,28 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TransactionsRecordingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replay_transactions", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replay_transactions", "Get", AuthorizationStatus.ValidUser)]
         public async Task ReplayRecording()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), string.Empty);
-                if (false == input.TryGet("file_path", out string filePath))
-                {
-                    throw new Exception("Write something here");
-                }
-
-                Database.TxMerger.Replay(filePath);
-            }
+            var filePath = GetStringQueryString("file_path");
+            Database.TxMerger.Replay(filePath);
         }
 
         [RavenAction("/databases/*/start_transactions_recording", "GET", AuthorizationStatus.ValidUser)]
         public async Task StartRecording()
         {
             var filePath = GetStringQueryString("file_path");
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                //var fileName = GetStringQueryString("file_name");
-                //var input = await context.ReadForMemoryAsync(RequestBodyStream(), string.Empty);
-                //if (false == input.TryGet("file_path", out string filePath))
-                //{
-                //    throw new Exception("Write something here");
-                //}
 
-                var command = new TransactionsRecordingCommand(
+            var command = new TransactionsRecordingCommand(
                     Database.TxMerger,
                     TransactionsRecordingCommand.Instruction.Start,
                     filePath
                 );
 
-                await Database.TxMerger.Enqueue(command);
-            }
+            await Database.TxMerger.Enqueue(command);
         }
 
-        [RavenAction("/databases/*/stop_transactions_recording", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/stop_transactions_recording", "GET", AuthorizationStatus.ValidUser)]
         public async Task StopRecording()
         {
             var command = new TransactionsRecordingCommand(

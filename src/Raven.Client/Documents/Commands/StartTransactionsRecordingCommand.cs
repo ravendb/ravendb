@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Commands
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post
+                Method = HttpMethod.Get
             };
             return request;
         }
@@ -53,22 +53,11 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/replay_transactions";
+            url = $"{node.Url}/databases/{node.Database}/replay_transactions?file_path={_filePath}";
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(stream =>
-                {
-                    var jsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(
-                            new { file_path = _filePath },
-                            DocumentConventions.Default,
-                            ctx, new JsonSerializer(),
-                            null
-                        )
-                        ;
-                    ctx.Write(stream, jsonReaderObject);
-                })
+                Method = HttpMethod.Get
             };
             return request;
         }
