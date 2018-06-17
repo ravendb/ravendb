@@ -7,7 +7,7 @@ namespace Raven.Embedded
 {
     internal class RavenServerRunner
     {
-        private static readonly string RavenDbServerPath = Path.Combine(AppContext.BaseDirectory, "RavenDBServer\\Raven.Server.dll");
+        private static readonly string RavenDbServerPath = Path.Combine(AppContext.BaseDirectory, "RavenDBServer/Raven.Server.dll");
 
         public static Process Run(ServerOptions options)
         {
@@ -21,7 +21,11 @@ namespace Raven.Embedded
                 options.CommandLineArgs.Add("--Embedded.ParentProcessId=" + currentProcess.Id);
             }
 
-            var argumentsString = string.Join(" ", new[] { $"--fx-version { options.FmVersion} ", RavenDbServerPath }.Concat(options.CommandLineArgs));
+            if(string.IsNullOrEmpty(options.DataDir) == false)
+                options.CommandLineArgs.Add($"--DataDir={options.DataDir}");
+
+            var argumentsString = string.Join(" ", new[] { $"--fx-version { options.FrameworkVersion} ", RavenDbServerPath }
+                .Concat(options.CommandLineArgs));
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
@@ -29,7 +33,7 @@ namespace Raven.Embedded
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false
+                UseShellExecute = false,
             };
 
             Process process = null;

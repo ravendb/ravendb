@@ -16,8 +16,8 @@ namespace Raven.Embedded
 {
     public class RavenEmbedded
     {
-        private static Process _ravenDbSlavedProcess;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenEmbedded>("Embedded");
+        private Process _ravenDbSlavedProcess;
+        private readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenEmbedded>("Embedded");
         private Task<Uri> _serverTask;
         private long _initialized;
 
@@ -39,7 +39,7 @@ namespace Raven.Embedded
         public async Task<IDocumentStore> GetDocumentStore(string database)
         {
             if (Interlocked.Read(ref _initialized) == 0)
-                throw new InvalidOperationException("Please run Setup before trying to get document store");
+                throw new InvalidOperationException("Please run StartServer before trying to get document store");
 
             if (string.IsNullOrEmpty(database))
                 throw new ArgumentException(nameof(database));
@@ -88,7 +88,8 @@ namespace Raven.Embedded
 
         public void RemoveStore(string database)
         {
-            _documentStores.TryRemove(database, out _);
+            if(_documentStores.TryRemove(database, out var store))
+                store.Dispose();
         }
 
         public void KillSlavedServerProcess()
@@ -121,11 +122,15 @@ namespace Raven.Embedded
             }
             finally
             {
+                foreach (var store in _documentStores.Values)
+                {
+                    store.Dispose();
+                }
                 _documentStores.Clear();
             }
         }
 
-        private static async Task<Uri> RunServer(ServerOptions options)
+        private async Task<Uri> RunServer(ServerOptions options)
         {
             var process = _ravenDbSlavedProcess = RavenServerRunner.Run(options);
             if (Logger.IsInfoEnabled)
@@ -163,7 +168,7 @@ namespace Raven.Embedded
                 {
                     try
                     {
-                        process.Kill();
+                        KillSlavedServerProcess();
                     }
                     catch (Exception e)
                     {
@@ -185,7 +190,7 @@ namespace Raven.Embedded
                 var log = sb.ToString();
                 try
                 {
-                    process.Kill();
+                    KillSlavedServerProcess();
                 }
                 catch (Exception e)
                 {
