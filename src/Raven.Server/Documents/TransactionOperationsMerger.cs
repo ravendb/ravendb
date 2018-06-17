@@ -1177,17 +1177,15 @@ namespace Raven.Server.Documents
                                     break;
                                 case TxInstruction.EndAsyncCommit:
                                     //Todo I think this is not relevant all the async instruction can run as one unit in  FinishAsyncAndStartNew
-                                    //                                    previousTx.EndAsyncCommit();
+                                    //previousTx.EndAsyncCommit();
                                     break;
                             }
                             continue;
                         }
 
-                        //Todo To decide what's happen when can't get command and should
-
                         var cmd = ReadCommand(strType, item, context);
 
-                        cmd?.Execute(txCtx, _recordingStatus);
+                        cmd?.Execute(txCtx, null);
                     }
                 }
             }
@@ -1217,7 +1215,10 @@ namespace Raven.Server.Documents
                     cmd = DatabaseDestination.MergedBatchPutCommand.Deserialize(commandReader, _parent, context);
                     break;
                 case nameof(MergedPutCommand):
-                    cmd = MergedPutCommand.Deserialize(commandReader, _parent);
+                    cmd = MergedPutCommand.Deserialize(commandReader, _parent, context);
+                    break;
+                case nameof(BulkInsertHandler.MergedInsertBulkCommand):
+                    cmd = BulkInsertHandler.MergedInsertBulkCommand.Deserialize(commandReader, _parent, context, _log);
                     break;
                 default:
                     return null;

@@ -556,6 +556,8 @@ namespace Raven.Server.Documents.Handlers
                 throw new Exception($"Cant read {DocumentKey} from {nameof(MergedPutCommand)}");
             }
 
+            document = document.Clone(context);
+
             mergedCmdReader.TryGet(ChangeVectorKey, out LazyStringValue changeVector);
 
             var ret = new MergedPutCommand(document, id, changeVector, database);

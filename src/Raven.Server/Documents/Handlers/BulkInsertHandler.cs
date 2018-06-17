@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers
@@ -161,7 +162,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             public Logger Logger;
             public DocumentDatabase Database;
@@ -205,6 +206,53 @@ namespace Raven.Server.Documents.Handlers
                     Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations ({Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb)");
                 }
                 return NumberOfCommands;
+            }
+
+            public DynamicJsonValue Serialize()
+            {
+                var dJsonCommands = new DynamicJsonValue[NumberOfCommands];
+                for (var i = 0; i < NumberOfCommands; i++)
+                {
+                    dJsonCommands[i] = BatchRequestParser.CommandToDynamicJson(Commands[i], Database);
+                }
+
+                var ret = new DynamicJsonValue
+                {
+                    [nameof(Commands)] = dJsonCommands
+                };
+
+                return ret;
+            }
+
+            public static MergedInsertBulkCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context,
+                Logger logger)
+            {
+                if (mergedCmdReader.TryGet(nameof(Commands), out BlittableJsonReaderArray commandsReader) == false)
+                {
+                    throw new Exception($"Cant read {nameof(Commands)} from {nameof(MergedInsertBulkCommand)}");
+                }
+
+                var i = 0;
+                var totalSize = 0;
+                var commands = new BatchRequestParser.CommandData[commandsReader.Length];
+                while (i < commandsReader.Length)
+                {
+                    var commandReader = commandsReader.GetByIndex<BlittableJsonReaderObject>(i);
+                    commands[i] = BatchRequestParser.ReadCommand(commandReader, database, context);
+                    totalSize += commands[i].Document.Size;
+                    i++;
+                }
+
+                var ret = new MergedInsertBulkCommand
+                {
+                    NumberOfCommands = i,
+                    TotalSize = totalSize,
+                    Commands = commands,
+                    Database = database,
+                    Logger = logger
+                };
+
+                return ret;
             }
         }
     }

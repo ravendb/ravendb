@@ -524,55 +524,12 @@ namespace Raven.Server.Documents.Handlers
 
             DynamicJsonValue TransactionOperationsMerger.IRecordableCommand.Serialize()
             {
-                var parsedCommands = ParsedCommands.Select(RecordingCommandData).ToArray();
+                var parsedCommands = ParsedCommands.Select(command => BatchRequestParser.CommandToDynamicJson(command, Database)).ToArray();
 
                 var ret = new DynamicJsonValue
                 {
                     [nameof(ParsedCommands)] = parsedCommands
                 };
-
-                return ret;
-            }
-
-            //public PatchRequest PatchIfMissing;
-            //public BlittableJsonReaderObject PatchIfMissingArgs;
-            //public LazyStringValue ChangeVector;
-            //public bool IdPrefixed;
-
-            private DynamicJsonValue RecordingCommandData(BatchRequestParser.CommandData command)
-            {
-                var ret = new DynamicJsonValue
-                {
-                    [nameof(command.Type)] = command.Type.ToString(),
-                    [nameof(command.Id)] = command.Id
-                };
-
-                if (command.Document != null)
-                {
-                    ret[nameof(command.Document)] = command.Document;
-                }
-
-                if (command.Type == CommandType.PATCH)
-                {
-                    var patchCommand = command.PatchCommand;
-                    if (patchCommand == null)
-                    {
-                        patchCommand = new PatchDocumentCommand(
-                            context: null, 
-                            id: command.Id, 
-                            expectedChangeVector: command.ChangeVector,
-                            skipPatchIfChangeVectorMismatch: false,
-                            patch: (command.Patch, command.PatchArgs),
-                            patchIfMissing: (command.PatchIfMissing, command.PatchIfMissingArgs),
-                            database: Database,
-                            isTest: false,
-                            debugMode: false,
-                            collectResultsNeeded: true
-                        );
-                    }
-
-                    ret[nameof(command.PatchCommand)] = patchCommand.Serialize();
-                }
 
                 return ret;
             }
@@ -596,68 +553,13 @@ namespace Raven.Server.Documents.Handlers
                 for (var i = 0; i < parsedCommandsReader.Length; i++)
                 {
                     var reader = (BlittableJsonReaderObject)parsedCommandsReader[i];
-                    newCmd.ParsedCommands.Array[i] = newCmd.ReadCommand(reader, context);
-                    // newCmd.ParsedCommands.Array[i] = JsonDeserializationServer.BatchRequestParserCommandData(reader);
+                    newCmd.ParsedCommands.Array[i] = BatchRequestParser.ReadCommand(reader, database, context);
                 }
 
                 return newCmd;
             }
 
-            private BatchRequestParser.CommandData ReadCommand(BlittableJsonReaderObject commandReader, JsonOperationContext context)
-            {
-                var command = new BatchRequestParser.CommandData();
-
-                if (commandReader.TryGet(nameof(command.Type), out string type))
-                {
-                    //ToDo to check what happen when fail to parse
-                    Enum.TryParse(type, true, out command.Type);
-                }
-
-                if (commandReader.TryGet(nameof(command.Id), out string id))
-                {
-                    command.Id = id;
-                }
-                if (commandReader.TryGet(nameof(command.PatchArgs), out BlittableJsonReaderObject patchArgs))
-                {
-                    command.PatchArgs = patchArgs.Clone(context);
-                }
-
-                if (commandReader.TryGet(nameof(command.PatchCommand), out BlittableJsonReaderObject patch))
-                {
-                    command.PatchCommand = PatchDocumentCommand.Deserialize(patch, Database, context);
-
-                    //                    if (patch.TryGet(nameof(command.Patch.Type), out string strPatchType) &&
-                    //                        Enum.TryParse(strPatchType, out PatchRequestType patchType) &&
-                    //                        patch.TryGet(nameof(command.Patch.Script), out string script))
-                    //                    {
-                    //                        command.Patch = new PatchRequest(script, patchType);
-                    //                        command.PatchCommand = new PatchDocumentCommand(
-                    //                            context: context,
-                    //                            id: id,
-                    //                            expectedChangeVector: null,
-                    //                            skipPatchIfChangeVectorMismatch: false,
-                    //                            patch: (command.Patch, patchArgs),
-                    //                            patchIfMissing: (null, null),
-                    //                            database: Database,
-                    //                            isTest: false,
-                    //                            debugMode: false,
-                    //                            collectResultsNeeded: true
-                    //                        );
-                    //                    }
-                    //                    else
-                    //                    {
-                    //                        throw new Exception($"Can't read patch of {command.Type}, id:{command.Id}");
-                    //                    }
-                }
-
-
-                if (commandReader.TryGet(nameof(command.Document), out BlittableJsonReaderObject document))
-                {
-                    command.Document = document.Clone(context);
-                }
-
-                return command;
-            }
+            
         }
 
         private class WaitForIndexItem

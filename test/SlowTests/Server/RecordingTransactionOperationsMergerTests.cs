@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -393,14 +394,10 @@ namespace SlowTests.Server
 
         [Theory]
         [InlineData("Avi")]
-//        [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
+        [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public async Task RecordingPut(params string[] names)
         {
-            //Todo to change to temp file
-            var dateString = DateTime.Now.ToString("G").Replace(" ", "").Replace(":", "").Replace(@"/", "");
-            var recordFilePath = $@"C:\Records\record_{dateString}.json";
-
-            //            var recordFilePath = Path.GetTempFileName();
+            var recordFilePath = Path.GetTempFileName();
 
             var expectedUsers = names.Select(n => new User { Name = n }).ToArray();
 
@@ -411,12 +408,15 @@ namespace SlowTests.Server
 
                 foreach (var user in expectedUsers)
                 {
-                    await store.Commands().PutAsync("user/", null, user);
+                    await store.Commands().PutAsync("user/", null, user, new Dictionary<string, object>
+                    {
+                        {"@collection", "Users"}
+                    });
                 }
 
                 store.Commands().Execute(new StopTransactionsRecordingCommand());
 
-                WaitForUserToContinueTheTest(store);
+//                WaitForUserToContinueTheTest(store);
             }
 
             //Replay
@@ -424,6 +424,49 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             {
                 store.Commands().Execute(new ReplayTransactionsRecordingCommand(recordFilePath));
+
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    actualUsers = session.Query<User>().ToArray();
+                }
+            }
+
+            //Assert
+            Assert.Equal(expectedUsers, actualUsers, new UserComparer());
+        }
+
+        [Theory]
+        [InlineData("Avi")]
+        [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
+        public void RecordingInsertBulk(params string[] names)
+        {
+            var recordFilePath = Path.GetTempFileName();
+
+            var expectedUsers = names.Select(n => new User { Name = n }).ToArray();
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Commands().Execute(new StartTransactionsRecordingCommand(recordFilePath));
+
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    foreach (var user in expectedUsers)
+                    {
+                        bulkInsert.Store(user);
+                    }
+                }
+
+                store.Commands().Execute(new StopTransactionsRecordingCommand());
+            }
+
+            //Replay
+            User[] actualUsers;
+            using (var store = GetDocumentStore())
+            {
+                store.Commands().Execute(new ReplayTransactionsRecordingCommand(recordFilePath));
+
                 using (var session = store.OpenSession())
                 {
                     actualUsers = session.Query<User>().ToArray();
