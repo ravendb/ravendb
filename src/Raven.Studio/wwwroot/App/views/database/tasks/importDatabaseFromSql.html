@@ -189,7 +189,7 @@
                             <div class="flex-horizontal flex-wrap">
                                 <span class="with-top-label js-sql-table-name" data-label="Table" data-bind="text: tableName"></span>
                                 <i class="icon-arrow-right"></i>
-                                <div class="with-top-label raven-property-name inline-edit inline-block" data-label="Collection">
+                                <div class="with-top-label raven-property-name inline-edit inline-block" data-bind="css: { 'edit-disabled': !checked() }" data-label="Collection">
                                     <span class="static" data-bind="text: collectionName"></span>
                                     <input class="form-control input-sm" data-bind="textInput: collectionName" />
                                 </div>    

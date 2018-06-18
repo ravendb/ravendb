@@ -234,8 +234,10 @@ class importDatabaseFromSql extends viewModelBase {
                 .removeClass("edit-mode");
             
             const container = $(event.target).closest(".inline-edit");
-            container.addClass("edit-mode");
-            $("input", container).focus();
+            if (!container.hasClass("edit-disabled")) {
+                container.addClass("edit-mode");
+                $("input", container).focus();    
+            }
         });
     }
     
