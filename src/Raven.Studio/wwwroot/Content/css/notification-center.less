@@ -21,6 +21,12 @@
     -o-transition: transform @menu-transition-ease;
     transition: transform @menu-transition-ease;
 
+    .notification-group-header {
+        font-weight: 900;
+        font-size: 13px;
+        margin-bottom: @grid-gutter-width/4;
+    }
+
     .notification-actions {
         flex-shrink: 0;
         background-color: @gray-darker;
@@ -114,10 +120,27 @@
             }
         }
 
+        .notification-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: @grid-gutter-width/4;
+
+            i {
+                margin-top: 2px;
+                font-size: 24px;
+                margin-right: @grid-gutter-width/4;
+                align-self: flex-start;
+            }
+
+            h3 {
+                margin-bottom: 0;
+            }
+        }
+
         &.notification-success {
             box-shadow: 6px 0 0 0 @brand-success-dark inset;
 
-            h3 {
+            .notification-header {
                 color: @brand-success;
             }
         }
@@ -125,7 +148,7 @@
         &.notification-info {
             box-shadow: 6px 0 0 0 @brand-info-dark inset;
 
-            h3 {
+            .notification-header {
                 color: @brand-info;
             }
         }
@@ -133,7 +156,7 @@
         &.notification-warning {
             box-shadow: 6px 0 0 0 @brand-warning-dark inset;
 
-            h3 {
+            .notification-header {
                 color: @brand-warning;
             }
         }
@@ -141,7 +164,7 @@
         &.notification-danger {
             box-shadow: 6px 0 0 0 @brand-danger-dark inset;
 
-            h3 {
+            .notification-header {
                 color: @brand-danger;
             }
         }
@@ -180,8 +203,6 @@
                 color: @gray-lighter;
                 word-wrap: break-word;
             }
-
-            h3,
             h4,
             h5 {
                 margin-top: 0;

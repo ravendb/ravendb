@@ -24,13 +24,13 @@
         <button data-bind="click: dismissAll" class="dismiss">Dismiss all</button>
 
     </div>
-    <!-- ko data-bind="if: includeInDom" -->
-        <div class="notification-list scroll" data-bind="foreach: visibleNotifications">
+    <div data-bind="if: includeInDom">
+        <div class="notification-list scroll">
+            <!-- ko foreach: visibleNotifications-->
             <div data-bind="template: { name: type + '-template' }"></div>
+            <!-- /ko -->
         </div>
-    <!-- /ko -->
-
-
+    </div>
 </div>
 
 <script type="text/html" id="OperationChanged-template">
@@ -40,7 +40,10 @@
                 <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                     <i class="icon-cancel"></i>
                 </button>
-                <h3 data-bind="text: title"></h3>
+                <div class="notification-header">
+                    <i class="icon-global-cutout icon-addon-danger"></i>
+                    <h3 data-bind="text: title"></h3>
+                </div>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
@@ -55,10 +58,12 @@
             </div>
 
             <div data-bind="if: !isCompleted()">
-                <h3>
-                    <span data-bind="text: title"></span>
-                    <span class="global-spinner spinner-xs"></span>
-                </h3>
+                <div class="notification-header">
+                    <h3>
+                        <span data-bind="text: title"></span>
+                        <span class="global-spinner spinner-xs"></span>
+                    </h3>
+                </div>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
 
@@ -91,7 +96,10 @@
             <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                 <i class="icon-cancel"></i>
             </button>
-            <h3 class="text-warning" data-bind="text: title"></h3>
+            <div class="notification-header">
+                <i class="icon-global-cutout icon-addon-danger"></i>
+                <h3 data-bind="text: title"></h3>
+            </div>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
             <div class="flex-horizontal">
@@ -123,7 +131,10 @@
             <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data)">
                 <i class="icon-cancel"></i>
             </button>
-            <h3 class="text-warning" data-bind="text: title"></h3>
+            <div class="notification-header">
+                <i class="icon-global-cutout icon-addon-warning"></i>
+                <h3 data-bind="text: title"></h3>
+            </div>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: shortMessage"></p>
             <div class="flex-horizontal">
@@ -141,7 +152,10 @@
             <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data)">
                 <i class="icon-cancel"></i>
             </button>
-            <h3 class="text-warning" data-bind="text: title"></h3>
+            <div class="notification-header">
+                <i class="icon-global-cutout icon-addon-danger"></i>
+                <h3 data-bind="text: title"></h3>
+            </div>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
 
@@ -160,10 +174,13 @@
                     </button>
                     <ul class="dropdown-menu">
                         <!-- ko foreach: $parent.constructor.postponeOptions -->
-                        <li><a href="#"
-                               data-bind="text: label, click: _.partial($parents[1].postpone, $parent, value)"></a></li>
+                        <li>
+                            <a href="#"
+                               data-bind="text: label, click: _.partial($parents[1].postpone, $parent, value)"></a>
+                        </li>
                         <!-- /ko -->
-                        <li><a href="#"
+                        <li>
+                            <a href="#"
                                data-bind="text: 'Don\'t show again', click: _.partial($parent.postpone, $data, 0)"></a>
                         </li>
                     </ul>
