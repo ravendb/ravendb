@@ -50,6 +50,11 @@ $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin",
 $TESTDRIVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver")
 $TESTDRIVER_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver", "bin", "Release")
 
+$EMBEDDED_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Embedded")
+$EMBEDDED_NUSPEC = [io.path]::combine($OUT_DIR, "Raven.Embedded.nuspec")
+$EMBEDDED_SERVER_OUT_DIR = [io.path]::combine($OUT_DIR, "Raven.Embedded")
+$EMBEDDED_LIB_OUT_DIR = [io.path]::combine($OUT_DIR, "Raven.Embedded", "lib")
+
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
 $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
@@ -101,6 +106,12 @@ if ($targets.Count -eq 0) {
 
 New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
+
+$embeddedDir = Join-Path -Path $OUT_DIR -ChildPath "Raven.Embedded"
+if (Test-Path $embeddedDir) {
+    CleanDir $embeddedDir 
+}
+
 CleanSrcDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
 LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR
@@ -136,6 +147,30 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
     write-host "Studio built successfully."
 } else {
     write-host "Not building studio..."
+}
+
+if ($JustStudio -eq $False) {
+    write-host "Building Embedded.."
+    $nuspec = [io.path]::combine($EMBEDDED_SRC_DIR, "Raven.Embedded.nuspec.template")
+    $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
+    $dst = $EMBEDDED_SERVER_OUT_DIR
+    & New-Item -ItemType Directory -Path $EMBEDDED_SERVER_OUT_DIR -Force
+    & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR -Force
+    Copy-Item $nuspec -Destination $EMBEDDED_NUSPEC
+    write-host "Copying Studio $studioZipPath -> $dst"
+    Copy-Item "$studioZipPath" -Destination $dst
+    $embeddedCsproj = Join-Path -Path $EMBEDDED_SRC_DIR -ChildPath "Raven.Embedded.csproj";
+    Write-Host $embeddedCsproj $EMBEDDED_LIB_OUT_DIR
+    BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR
+    BuildServer $SERVER_SRC_DIR $EMBEDDED_SERVER_OUT_DIR $null $Debug
+
+    try {
+        Push-Location $OUT_DIR
+        & ../scripts/assets/bin/nuget.exe pack .\Raven.Embedded.nuspec
+        CheckLastExitCode
+    } finally {
+        Pop-Location
+    }
 }
 
 if ($JustStudio) {
