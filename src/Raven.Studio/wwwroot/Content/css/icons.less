@@ -55,6 +55,17 @@
     }
 }
 
+[class*=" icon-addon-"],
+[class^="icon-addon-"] {
+    &:after {
+        position: absolute;
+        bottom: -10%;
+        right: -24%;
+        font-size: 70%;
+        line-height: 70%;
+    }
+}
+
 .icon-lg {
     font-size: 38px;
 }
@@ -71,1144 +82,369 @@
     }
 }
 
-
-.icon-group:before {
-    content: "\e9f6";
-}
-
-.icon-user:before {
-    content: "\e9f7";
-}
-
-.icon-phone:before {
-    content: "\e9f8";
-}
-
-.icon-infinity:before {
-    content: "\e9f5";
-}
-
-.icon-cmp-xchg:before {
-    content: "\e9e8";
-}
-
-.icon-identities:before {
-    content: "\e9e9";
-}
-
-.icon-replace:before {
-    content: "\e9ea";
-}
-
-.icon-identities-old:before {
-    content: "\e976";
-}
-
-.icon-debug-advanced:before {
-    content: "\e9e7";
-}
-
-.icon-reassign-cores:before {
-    content: "\e9e6";
-}
-
-.icon-document-expiration:before {
-    content: "\e9e5";
-}
-
-.icon-manage-dbgroup:before {
-    content: "\e9e4";
-}
-
-.icon-traffic-watch:before {
-    content: "\e9e2";
-}
-
-.icon-reorder:before {
-    content: "\e9e3";
-}
-
-.icon-cluster-log:before {
-    content: "\e9e1";
-}
-
-.icon-connection-lost:before {
-    content: "\e9da";
-}
-
-.icon-unsecure:before {
-    content: "\e9e0";
-}
-
-.icon-lets-encrypt:before {
-    content: "\e9df";
-}
-
-.icon-chash:before {
-    content: "\e9dd";
-}
-
-.icon-minus:before {
-    content: "\e9dc";
-}
-
-.icon-processor:before {
-    content: "\e9db";
-}
-
-.icon-json:before {
-    content: "\e9d9";
-}
-
-.icon-vector:before {
-    content: "\e9d8";
-}
-
-.icon-certificate:before {
-    content: "\e9d6";
-}
-
-.icon-clearance:before {
-    content: "\e9d7";
-}
-
-.icon-node-leader:before {
-    color: @cluster-leader-bg-color;
-    content: "\e9d5";
-}
-
-.icon-demote:before {
-    content: "\e9d2";
-}
-
-.icon-promote:before {
-    content: "\e9d3";
-}
-
-.icon-client-configuration:before {
-    content: "\e9d4";
-}
-
-.icon-manage-connection-strings:before {
-    content: "\e9d1";
-}
-
-.icon-exit-fullscreen:before {
-    content: "\e9d0";
-}
-
-.icon-fullscreen:before {
-    content: "\e997";
-}
-
-.icon-other:before {
-    content: "\e9be";
-}
-
-.icon-memory:before {
-    content: "\e9bd";
-}
-
-.icon-snapshot-backup:before {
-    content: "\e971";
-}
-
-.icon-stepdown:before {
-    content: "\e973";
-}
-
-.icon-conflicts:before {
-    content: "\e990";
-}
-
-.icon-revisions-bin:before {
-    content: "\e994";
-}
-
-.icon-refresh-stats:before {
-    content: "\e968";
-}
-
-.icon-zombie:before {
-    content: "\e963";
-}
-
-.icon-percent:before {
-    content: "\e961";
-}
-
-.icon-crown:before {
-    content: "\e959";
-}
-
-.icon-dbgroup-rehab:before {
-    content: "\e9c4";
-}
-
-.icon-dbgroup-member:before {
-    content: "\e9c0";
-}
-
-.icon-dbgroup-promotable:before {
-    content: "\e9c1";
-}
-
-.icon-dbgroup-watcher:before {
-    content: "\e9c2";
-}
-
-.icon-cluster:before {
-    content: "\e9c3";
-}
-
-.icon-cluster-rehab:before {
-    content: "\e9c6";
-}
-
-.icon-cluster-member:before {
-    content: "\e9ca";
-}
-
-.icon-cluster-node:before {
-    content: "\e9cb";
-}
-
-.icon-cluster-promotable:before {
-    content: "\e9cc";
-}
-
-.icon-cluster-watcher:before {
-    content: "\e9cd";
-}
-
-.icon-database:before {
-    content: "\e9ce";
-}
-
-.icon-dbgroup:before, .icon-topology:before {
-    content: "\e9cf";
-}
-
-.icon-indexing-progess:before {
-    content: "\e9bf";
-}
-
-.icon-manage-ongoing-tasks:before {
-    content: "\e9c7";
-}
-
-.icon-icon-backup-snapshot:before {
-    content: "\e9c8";
-}
-
-.icon-home:before {
-    content: "\e9c9";
-}
-
-.icon-logo:before {
-    content: "\e99a";
-}
-
-.icon-database-home:before {
-    content: "\e9c5";
-}
-
-.icon-print:before {
-    content: "\e9bc";
-}
-
-.icon-arrow-dashed:before {
-    content: "\e9ba";
-}
-
-.icon-arrow:before {
-    content: "\e9bb";
-}
-
-.icon-subscription:before {
-    content: "\e9b5";
-}
-
-.icon-backup:before {
-    content: "\e9b6";
-}
-
-.icon-external-replication:before {
-    content: "\e9b7";
-}
-
-.icon-ravendb-etl:before {
-    content: "\e9b8";
-}
-
-.icon-sql-etl:before {
-    content: "\e9b9";
-}
-
-.icon-raven:before {
-    content: "\e9b4";
-}
-
-.icon-bug:before {
-    content: "\e97f";
-}
-
-.icon-debug:before {
-    content: "\e9b3";
-}
-
-.icon-thumb-down:before {
-    content: "\e9b1";
-}
-
-.icon-thumb-up:before {
-    content: "\e9b2";
-}
-
-.icon-feedback:before {
-    content: "\e96e";
-}
-
-.icon-icons_support:before {
-    content: "\e9ae";
-}
-
-.icon-etag:before {
-    content: "\e9af";
-}
-
-.icon-client:before {
-    content: "\e9b0";
-}
-
-.icon-folder:before {
-    content: "\e9ab";
-}
-
-.icon-attachment:before {
-    content: "\e9ac";
-}
-
-.icon-disconnected:before {
-    content: "\e9a7";
-}
-
-.icon-connected:before {
-    content: "\e9a8";
-}
-
-.icon-waiting:before {
-    content: "\e9a9";
-}
-
-.icon-ski:before {
-    content: "\e9aa";
-}
-
-.icon-subscriptions:before {
-    content: "\e9a6";
-}
-
-.icon-calendar:before {
-    content: "\e9a5";
-}
-
-.icon-patch:before {
-    content: "\e9a4";
-}
-
-.icon-preview:before {
-    content: "\e9a3";
-}
-
-.icon-disabled:before {
-    content: "\e9a2";
-}
-
-.icon-play2:before {
-    content: "\e99d";
-}
-
-.icon-table:before {
-    content: "\e99e";
-}
-
-.icon-transform-results:before {
-    content: "\e99f";
-}
-
-.icon-csv-export:before {
-    content: "\e9a0";
-}
-
-.icon-sortby:before {
-    content: "\e9a1";
-}
-
-.icon-expand:before {
-    content: "\e99b";
-}
-
-.icon-rocket:before {
-    content: "\e99c";
-}
-
-.icon-key:before {
-    content: "\e998";
-}
-
-.icon-hamer-driver:before {
-    content: "\e999";
-}
-
-.icon-about:before {
-    content: "\e949";
-}
-
-.icon-administrator-js-console:before {
-    content: "\e94a";
-}
-
-.icon-disk-io-viewer:before {
-    content: "\e94b";
-}
-
-.icon-hot-spare:before {
-    content: "\e94c";
-}
-
-.icon-io-test:before {
-    content: "\e94d";
-}
-
-.icon-support:before {
-    content: "\e94e";
-}
-
-.icon-admin-logs:before {
-    content: "\e94f";
-}
-
-.icon-periodic-backup:before {
-    content: "\e950";
-}
-
-.icon-compact:before {
-    content: "\e951";
-}
-
-.icon-gather-debug-information:before {
-    content: "\e952";
-}
-
-.icon-license-information:before, .icon-terms:before, .icon-license:before {
-    content: "\e953";
-}
-
-.icon-restore:before, .icon-revisions:before {
-    content: "\e954";
-}
-
-.icon-server-smuggling:before, .icon-traffic:before {
-    content: "\e955";
-}
-
-.icon-server-topology:before {
-    content: "\e956";
-}
-
-.icon-api-keys:before {
-    content: "\e958";
-}
-
-.icon-cluster-wide-database-settings:before {
-    content: "\e95a";
-}
-
-.icon-global-config:before {
-    content: "\e95b";
-}
-
-.icon-manage-server:before {
-    content: "\e95c";
-}
-
-.icon-new-counter:before {
-    content: "\e95d";
-}
-
-.icon-new-filesystem:before {
-    content: "\e95e";
-}
-
-.icon-clock:before {
-    content: "\e95f";
-}
-
-.icon-periodic-export:before {
-    content: "\e960";
-}
-
-.icon-dashboard:before {
-    content: "\e962";
-}
-
-.icon-map-reduce-visualizer:before {
-    content: "\e964";
-}
-
-.icon-new-database:before {
-    content: "\e965";
-}
-
-.icon-resources:before {
-    content: "\e966";
-}
-
-.icon-server:before {
-    content: "\e967";
-}
-
-.icon-user-info:before {
-    content: "\e969";
-}
-
-.icon-alerts:before {
-    content: "\e96a";
-}
-
-.icon-index-errors:before {
-    content: "\e96b";
-}
-
-.icon-logs:before {
-    content: "\e96c";
-}
-
-.icon-replication-stats:before {
-    content: "\e96d";
-}
-
-.icon-running-tasks:before, .icon-refresh:before {
-    content: "\e96f";
-}
-
-.icon-sql-replication-stats:before {
-    content: "\e970";
-}
-
-.icon-web-socket:before {
-    content: "\e972";
-}
-
-.icon-config:before {
-    content: "\e974";
-}
-
-.icon-data-subscriptions:before {
-    content: "\e975";
-}
-
-.icon-index-fields:before {
-    content: "\e977";
-}
-
-.icon-menu-icons_menu:before {
-    content: "\e978";
-}
-
-.icon-metrics:before {
-    content: "\e979";
-}
-
-.icon-queries:before, .icon-query:before {
-    content: "\e97a";
-}
-
-.icon-tasks-list:before {
-    content: "\e97b";
-}
-
-.icon-changes:before {
-    content: "\e97c";
-}
-
-.icon-collections-storage:before {
-    content: "\e97d";
-}
-
-.icon-custom-functions:before {
-    content: "\e97e";
-}
-
-.icon-index-batch-size:before {
-    content: "\e980";
-}
-
-.icon-indexing:before {
-    content: "\e981";
-}
-
-.icon-index-stats:before {
-    content: "\e982";
-}
-
-.icon-prefetches:before {
-    content: "\e983";
-}
-
-.icon-stats:before {
-    content: "\e984";
-}
-
-.icon-storage:before {
-    content: "\e985";
-}
-
-.icon-studio-config:before {
-    content: "\e986";
-}
-
-.icon-create-sample-data:before {
-    content: "\e987";
-}
-
-.icon-csv-import:before {
-    content: "\e988";
-}
-
-.icon-database-settings:before {
-    content: "\e989";
-}
-
-.icon-etl:before {
-    content: "\e98a";
-}
-
-.icon-export-database:before {
-    content: "\e98b";
-}
-
-.icon-import-database:before {
-    content: "\e98c";
-}
-
-.icon-periodic-export-13:before {
-    content: "\e98d";
-}
-
-.icon-quotas:before {
-    content: "\e98e";
-}
-
-.icon-replication:before {
-    content: "\e98f";
-}
-
-.icon-sql-replication:before {
-    content: "\e991";
-}
-
-.icon-tasks:before {
-    content: "\e992";
-}
-
-.icon-revisions:before {
-    content: "\e993";
-}
-
-.icon-magic-wand:before {
-    content: "\e995";
-}
-
-.icon-empty-set:before {
-    content: "\e996";
-}
-
-.icon-icons_backup:before {
-    content: "\e944";
-}
-
-.icon-drive:before {
-    content: "\e945";
-}
-
-.icon-exclamation:before {
-    content: "\e946";
-}
-
-.icon-hash:before {
-    content: "\e947";
-}
-
-.icon-umbrella:before {
-    content: "\e948";
-}
-
-.icon-copy-to-clipboard:before {
-    content: "\e943";
-}
-
-.icon-filesystem:before {
-    content: "\e942";
-}
-
-.icon-coffee:before {
-    content: "\e941";
-}
-
-.icon-tick:before {
-    content: "\e940";
-}
-
-.icon-revert:before {
-    content: "\e900";
-}
-
-.icon-pause:before {
-    content: "\e901";
-}
-
-.icon-swap:before {
-    content: "\e902";
-}
-
-.icon-force:before {
-    content: "\e903";
-}
-
-.icon-lock:before, .icon-encryption:before {
-    content: "\e904";
-}
-
-.icon-unlock:before {
-    content: "\e905";
-}
-
-.icon-lock-sidebyside:before {
-    content: "\e906";
-}
-
-.icon-lock-error:before {
-    content: "\e907";
-}
-
-.icon-play:before {
-    content: "\e908";
-}
-
-.icon-reset:before {
-    content: "\e909";
-}
-
-.icon-stop:before {
-    content: "\e90a";
-}
-
-.icon-clone:before {
-    content: "\e90b";
-}
-
-.icon-copy:before {
-    content: "\e90c";
-}
-
-.icon-cut:before {
-    content: "\e90d";
-}
-
-.icon-paste:before {
-    content: "\e90e";
-}
-
-.icon-merge:before {
-    content: "\e90f";
-}
-
-.icon-import:before, .icon-upload::before {
-    content: "\e910";
-}
-
-.icon-export:before {
-    content: "\e911";
-}
-
-.icon-check:before {
-    content: "\e912";
-}
-
-.icon-toggle-off:before {
-    content: "\e913";
-}
-
-.icon-toggle-on:before {
-    content: "\e914";
-}
-
-.icon-circle:before {
-    content: "\e915";
-}
-
-.icon-circle-filled:before {
-    content: "\e916";
-}
-
-.icon-edited:before {
-    content: "\e917";
-}
-
-.icon-arrow-down:before {
-    content: "\e918";
-}
-
-.icon-arrow-filled-down:before {
-    content: "\e919";
-}
-
-.icon-arrow-filled-left:before {
-    content: "\e91a";
-}
-
-.icon-arrow-filled-right:before {
-    content: "\e91b";
-}
-
-.icon-arrow-filled-up:before {
-    content: "\e91c";
-}
-
-.icon-arrow-left:before {
-    content: "\e91d";
-}
-
-.icon-arrow-right:before {
-    content: "\e91e";
-}
-
-.icon-arrow-up:before {
-    content: "\e91f";
-}
-
-.icon-cancel:before {
-    content: "\e920";
-}
-
-.icon-checkbox:before {
-    content: "\e921";
-}
-
-.icon-checkbox-on:before {
-    content: "\e922";
-}
-
-.icon-code:before {
-    content: "\e923";
-}
-
-.icon-collapse:before {
-    content: "\e924";
-}
-
-.icon-danger:before {
-    content: "\e925";
-}
-
-.icon-icons_database:before {
-    content: "\e926";
-}
-
-.icon-document:before {
-    content: @icon-document; //"\e927";
-}
-
-.icon-document2:before {
-    content: @icon-document;
-}
-
-.icon-document-group:before, .icon-documents:before {
-    content: "\e929";
-}
-
-.icon-edit:before {
-    content: "\e92a";
-}
-
-.icon-help:before {
-    content: "\e92b";
-}
-
-.icon-indent:before {
-    content: "\e92c";
-}
-
-.icon-index:before {
-    content: "\e92d";
-}
-
-.icon-info:before, .icon-details:before {
-    content: "\e92e";
-}
-
-.icon-link:before {
-    content: "\e92f";
-}
-
-.icon-list:before {
-    content: "\e930";
-}
-
-.icon-menu:before {
-    content: "\e931";
-}
-
-.icon-menu-collapse:before {
-    content: "\e932";
-}
-
-.icon-menu-expand:before {
-    content: "\e933";
-}
-
-.icon-newline:before {
-    content: "\e934";
-}
-
-.icon-newtab:before {
-    content: "\e935";
-}
-
-.icon-notifications:before {
-    content: "\e936";
-}
-
-.icon-plus:before {
-    content: "\e937";
-}
-
-.icon-recent:before, .icon-latest:before, .icon-postpone:before, .icon-clock:before {
-    content: "\e938";
-}
-
-.icon-save:before {
-    content: "\e939";
-}
-
-.icon-search:before {
-    content: "\e93a";
-}
-
-.icon-settings:before, .icon-system:before {
-    content: "\e93b";
-}
-
-.icon-star:before {
-    content: "\e93c";
-}
-
-.icon-star-filled:before {
-    content: "\e93d";
-}
-
-.icon-trash:before {
-    content: "\e93e";
-}
-
-.icon-warning:before {
-    content: "\e93f";
-}
-
-.icon-checkmark:before {
-    content: "\ea10";
-}
-
-.icon-googleplus:before {
-    content: "\ea8b";
-}
-
-.icon-facebook:before {
-    content: "\ea90";
-}
-
-.icon-twitter:before {
-    content: "\ea96";
-}
-
-.icon-linkedin:before {
-    content: "\eaca";
-}
+.text-gray-after::after {
+    .text-gray;
+}
+.text-primary-after::after {
+    .text-primary;
+}
+.text-success-after::after {
+    .text-success;
+}
+.text-info-after::after {
+    .text-info;
+}
+.text-warning-after::after {
+    .text-warning;
+}
+.text-danger-after::after {
+    .text-danger;
+}
+
+.make-icon (@name, @glyph) {
+    .icon-@{name}::before {
+        content: @glyph;
+    }
+
+    .icon-addon-@{name}::after {
+        content: @glyph;
+    }
+}
+
+.make-icon-color (@name, @color-before, @color-after) {
+    .icon-@{name}::before {
+        color: @color-before;
+    }
+
+    .icon-addon-@{name}::after {
+        color: @color-after;
+    }
+}
+
+.make-icon(warning, "\e93f");
+.make-icon(alert, "\e96a");
+.make-icon(alerts, "\e96a");
+.make-icon(danger, "\e925");
+.make-icon(database-cutout, "\e9fc");
+.make-icon(global, "\e9fd");
+.make-icon(global-cutout, "\e9fe");
+.make-icon(group, "\e9f6");
+.make-icon(user, "\e9f7");
+.make-icon(phone, "\e9f8");
+.make-icon(infinity, "\e9f5");
+.make-icon(cmp-xchg, "\e9e8");
+.make-icon(identities, "\e9e9");
+.make-icon(replace, "\e9ea");
+.make-icon(settings, "\e93b");
+.make-icon(system, "\e93b");
+.make-icon(identities-old, "\e976");
+.make-icon(debug-advanced, "\e9e7");
+.make-icon(reassign-cores, "\e9e6");
+.make-icon(document-expiration, "\e9e5");
+.make-icon(manage-dbgroup, "\e9e4");
+.make-icon(traffic-watch, "\e9e2");
+.make-icon(reorder, "\e9e3");
+.make-icon(cluster-log, "\e9e1");
+.make-icon(connection-lost, "\e9da");
+.make-icon(unsecure, "\e9e0");
+.make-icon(lets-encrypt, "\e9df");
+.make-icon(chash, "\e9dd");
+.make-icon(minus, "\e9dc");
+.make-icon(processor, "\e9db");
+.make-icon(json, "\e9d9");
+.make-icon(vector, "\e9d8");
+.make-icon(certificate, "\e9d6");
+.make-icon(clearance, "\e9d7");
+.make-icon-color(node-leader, @cluster-leader-bg-color, @cluster-leader-bg-color);
+.make-icon(node-leader, "\e9d5");
+.make-icon(demote, "\e9d2");
+.make-icon(promote, "\e9d3");
+.make-icon(client-configuration, "\e9d4");
+.make-icon(manage-connection-strings, "\e9d1");
+.make-icon(manage-exit-fullscreen, "\e9d0");
+.make-icon(manage-fullscreen, "\e997");
+.make-icon(manage-other, "\e9be");
+.make-icon(memory, "\e9bd");
+.make-icon(snapshot-backup, "\e971");
+.make-icon(stepdown, "\e973");
+.make-icon(conflicts, "\e990");
+.make-icon(revisions-bin, "\e994");
+.make-icon(refresh-stats, "\e968");
+.make-icon(zombie, "\e963");
+.make-icon(percent, "\e961");
+.make-icon(crown, "\e959");
+.make-icon(dbgroup-rehab, "\e9c4");
+.make-icon(dbgroup-member, "\e9c0");
+.make-icon(dbgroup-promotable, "\e9c1");
+.make-icon(dbgroup-watcher, "\e9c2");
+.make-icon(cluster-watcher, "\e9c3");
+.make-icon(cluster-rehab, "\e9c6");
+.make-icon(cluster-member, "\e9ca");
+.make-icon(cluster-node, "\e9cb");
+.make-icon(cluster-promotable, "\e9cc");
+.make-icon(cluster-watcher, "\e9cd");
+.make-icon(database, "\e9ce");
+.make-icon(dbgroup, "\e9cf");
+.make-icon(topology, "\e9cf");
+.make-icon(indexing-progess, "\e9bf");
+.make-icon(manage-ongoing-tasks, "\e9c7");
+.make-icon(backup-snapshot, "\e9c8");
+.make-icon(home, "\e9c9");
+.make-icon(logo, "\e99a");
+.make-icon(database-home, "\e9c5");
+.make-icon(print, "\e9bc");
+.make-icon(arrow-dashed, "\e9ba");
+.make-icon(subscription-dashed, "\e9b5");
+.make-icon(backup-dashed, "\e9b6");
+.make-icon(external-replication, "\e9b7");
+.make-icon(ravendb-etl, "\e9b8");
+.make-icon(sql-etl, "\e9b9");
+.make-icon(raven, "\e9b4");
+.make-icon(bug, "\e97f");
+.make-icon(debug, "\e9b3");
+.make-icon(thumb-down, "\e9b1");
+.make-icon(thumb-up, "\e9b2");
+.make-icon(feedback, "\e96e");
+.make-icon(icons_support, "\e9ae");
+.make-icon(etag, "\e9af");
+.make-icon(client, "\e9b0");
+.make-icon(folder, "\e9ab");
+.make-icon(attachment, "\e9ac");
+.make-icon(disconnected, "\e9a7");
+.make-icon(connected, "\e9a8");
+.make-icon(waiting, "\e9a9");
+.make-icon(ski, "\e9aa");
+.make-icon(subscriptions, "\e9a6");
+.make-icon(subscription, "\e9a6");
+.make-icon(waiting, "\e9a9");
+.make-icon(calendar, "\e9a5");
+.make-icon(patch, "\e9a4");
+.make-icon(preview, "\e9a3");
+.make-icon(disabled, "\e9a2");
+.make-icon(play2, "\e99d");
+.make-icon(table, "\e99e");
+.make-icon(transform-results, "\e99f");
+.make-icon(csv-export, "\e9a0");
+.make-icon(sortby, "\e9a1");
+.make-icon(expand, "\e99b");
+.make-icon(rocket, "\e99c");
+.make-icon(key, "\e998");
+.make-icon(hamer-driver, "\e999");
+.make-icon(about, "\e949");
+.make-icon(administrator-js-console, "\e94a");
+.make-icon(disk-io-viewer, "\e94b");
+.make-icon(io-test, "\e94d");
+.make-icon(disk-support, "\e94e");
+.make-icon(disk-admin-logs, "\e94f");
+.make-icon(periodic-backup, "\e950");
+.make-icon(compact, "\e951");
+.make-icon(gather-debug-information, "\e952");
+.make-icon(license-information, "\e953");
+.make-icon(terms, "\e953");
+.make-icon(license, "\e953");
+.make-icon(restore, "\e954");
+.make-icon(revisions, "\e954");
+.make-icon(server-smuggling, "\e955");
+.make-icon(traffic, "\e955");
+.make-icon(server-topology, "\e956");
+.make-icon(api-keys, "\e958");
+.make-icon(cluster-wide-database-settings, "\e95a");
+.make-icon(global-config, "\e95b");
+.make-icon(manage-server, "\e95c");
+.make-icon(new-counter, "\e95d");
+.make-icon(new-filesystem, "\e95e");
+.make-icon(clock, "\e95f");
+.make-icon(periodic-export, "\e960");
+.make-icon(dashboard, "\e962");
+.make-icon(map-reduce-visualizer, "\e964");
+.make-icon(new-database, "\e965");
+.make-icon(resources, "\e966");
+.make-icon(server, "\e967");
+.make-icon(user-info, "\e969");
+.make-icon(index-errors, "\e96b");
+.make-icon(logs, "\e96c");
+.make-icon(replication-stats, "\e96d");
+.make-icon(running-tasks, "\e96f");
+.make-icon(refresh, "\e96f");
+.make-icon(sql-replication-stats, "\e970");
+.make-icon(web-socket, "\e972");
+.make-icon(config, "\e974");
+.make-icon(data-subscriptions, "\e975");
+.make-icon(index-fields, "\e977");
+.make-icon(icon-menu, "\e978");
+.make-icon(metrics, "\e979");
+.make-icon(queries, "\e97a");
+.make-icon(query, "\e97a");
+.make-icon(tasks-list, "\e97b");
+.make-icon(changes, "\e97c");
+.make-icon(collections-storage, "\e97d");
+.make-icon(custom-functions, "\e97e");
+.make-icon(index-batch-size, "\e980");
+.make-icon(indexing, "\e981");
+.make-icon(index-stats, "\e982");
+.make-icon(prefetches, "\e983");
+.make-icon(stats, "\e984");
+.make-icon(storage, "\e985");
+.make-icon(studio-config, "\e986");
+.make-icon(create-sample-data, "\e987");
+.make-icon(csv-import, "\e988");
+.make-icon(database-settings, "\e989");
+.make-icon(etl, "\e98a");
+.make-icon(export-database, "\e98b");
+.make-icon(import-database, "\e98c");
+.make-icon(periodic-export-13, "\e98d");
+.make-icon(quotas, "\e98e");
+.make-icon(replication, "\e98f");
+.make-icon(sql-replication, "\e991");
+.make-icon(tasks, "\e992");
+.make-icon(revisions, "\e993");
+.make-icon(magic-wand, "\e995");
+.make-icon(empty-set, "\e996");
+.make-icon(backup, "\e944");
+.make-icon(drive, "\e945");
+.make-icon(exclamation, "\e946");
+.make-icon(hash, "\e947");
+.make-icon(umbrella, "\e948");
+.make-icon(copy-to-clipboard, "\e943");
+.make-icon(filesystem, "\e942");
+.make-icon(coffee, "\e941");
+.make-icon(tick, "\e940");
+.make-icon(revert, "\e900");
+.make-icon(pause, "\e901");
+.make-icon(swap, "\e902");
+.make-icon(force, "\e903");
+.make-icon(lock, "\e904");
+.make-icon(encryption, "e904");
+.make-icon(unlock, "\e905");
+.make-icon(lock-sidebyside, "\e906");
+.make-icon(lock-error, "\e907");
+.make-icon(play, "\e908");
+.make-icon(reset, "\e909");
+.make-icon(stop, "\e90a");
+.make-icon(clone, "\e90b");
+.make-icon(copy, "\e90c");
+.make-icon(cut, "\e90d");
+.make-icon(paste, "\e90e");
+.make-icon(merge, "\e90f");
+.make-icon(import, "\e910");
+.make-icon(upload, "\e910");
+.make-icon(export, "\e911");
+.make-icon(check, "\e912");
+.make-icon(toggle-off, "\e913");
+.make-icon(toggle-on, "\e914");
+.make-icon(circle, "\e915");
+.make-icon(circle-filled, "\e916");
+.make-icon(edited, "\e917");
+.make-icon(arrow-down, "\e918");
+.make-icon(arrow-filled-down, "\e919");
+.make-icon(arrow-filled-left, "\e91a");
+.make-icon(arrow-filled-right, "\e91b");
+.make-icon(arrow-filled-up, "\e91c");
+.make-icon(arrow-left, "\e91d");
+.make-icon(arrow-right, "\e91e");
+.make-icon(arrow-up, "\e91f");
+.make-icon(cancel, "\e920");
+.make-icon(checkbox, "\e921");
+.make-icon(checkbox-on, "\e922");
+.make-icon(code, "\e923");
+.make-icon(collapse, "\e924");
+.make-icon(icons_database, "\e926");
+.make-icon(document, @icon-document);
+.make-icon(document2, @icon-document);
+.make-icon(document-group, "\e929");
+.make-icon(documents, "\e929");
+.make-icon(edit, "\e92a");
+.make-icon(help, "\e92b");
+.make-icon(indent, "\e92c");
+.make-icon(index, "\e92d");
+.make-icon(info, "\e92e");
+.make-icon(icon-details, "\e92e");
+.make-icon(link, "\e92f");
+.make-icon(list, "\e930");
+.make-icon(menu, "\e931");
+.make-icon(menu-collapse, "\e932");
+.make-icon(menu-expand, "\e933");
+.make-icon(newline, "\e934");
+.make-icon(newtab, "\e935");
+.make-icon(notifications, "\e936");
+.make-icon(plus, "\e937");
+.make-icon(recent, "\e938");
+.make-icon(latest, "\e938");
+.make-icon(postpone, "\e938");
+.make-icon(clock, "\e938");
+.make-icon(save, "\e939");
+.make-icon(search, "\e93a");
+.make-icon(star, "\e93c");
+.make-icon(star-filled, "\e93d");
+.make-icon(trash, "\e93e");
+.make-icon(checkmark, "\ea10");
+.make-icon(googleplus, "\ea8b");
+.make-icon(facebook, "\ea90");
+.make-icon(twitter, "\ea96");
+.make-icon(linkedin, "\eaca");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
+.make-icon(paste, "\e90e");
 
 /* ONLY MENU ICON COLORS */
 #main-menu {
-    .icon-resources:before {
-        color: #f9d291;
-    }
+    .make-icon-color(resources, #f9d291, #f9d291);
 }
 
 /* MENU AND TOPBAR ICON COLORS*/
 
 #main-menu, .inputs-container, .stats {
-    .icon-system:before {
-        color: #3c6fb4;
-    }
-
-    .icon-recent:before {
-        color: #29fffa;
-    }
-
-    .icon-plus:before {
-        color: #b0d47d;
-    }
-
-    .icon-list:before {
-        color: #ef5450;
-    }
-
-    .icon-documents:before {
-        color: #34b3e4;
-    }
-
-    .icon-indexing:before {
-        color: #b968c7;
-    }
-
-    .icon-index-batch-size:before {
-        color: #ec407a;
-    }
-
-    .icon-index-stats:before {
-        color: #5c6bc0;
-    }
-
-    .icon-query:before {
-        color: #2bd8bb;
-    }
-
-    .icon-etl:before {
-        color: #ff346f;
-    }
-
-    .icon-new:before {
-        color: #d9e021;
-    }
-
-    .icon-tasks:before {
-        color: #fbb03b;
-    }
-
-    .icon-settings:before {
-        color: #8fb1cc;
-    }
-
-    .icon-stats:before {
-        color: #7cb82f;
-    }
-
-    .icon-manage-server:before {
-        color: #008cc9;
-    }
-
-    .icon-license:before {
-        color: #e9eaea;
-    }
-
-    .icon-import-database:before {
-        color: #e64a19;
-    }
-
-    .icon-export-database:before {
-        color: #ff9900;
-    }
-
-    .icon-create-sample-data:before {
-        color: #b0b42c;
-    }
-
-    .icon-manage-ongoing-tasks:before {
-        color: #2cb495;
-    }
-
-    .icon-database {
-        color: @brand-database-color;
-    }
-
-    .icon-replication:before {
-        color: #9c28b1;
-    }
-
-    .icon-sql-replication:before {
-        color: #673bb7;
-    }
+    .make-icon-color(system, #3c6fb4, #3c6fb4);
+    .make-icon-color(recent, #29fffa, #29fffa);
+    .make-icon-color(plus, #b0d47d, #b0d47d);
+    .make-icon-color(list, #ef5450, #ef5450);
+    .make-icon-color(documents, #34b3e4, #34b3e4);
+    .make-icon-color(indexing, #b968c7, #b968c7);
+    .make-icon-color(index-batch-size, #ec407a, #ec407a);
+    .make-icon-color(index-stats, #5c6bc0, #5c6bc0);
+    .make-icon-color(query, #2bd8bb, #2bd8bb);
+    .make-icon-color(etl, #ff346f, #ff346f);
+    .make-icon-color(new, #d9e021, #d9e021);
+    .make-icon-color(tasks, #fbb03b, #fbb03b);
+    .make-icon-color(settings, #8fb1cc, #8fb1cc);
+    .make-icon-color(stats, #7cb82f, #7cb82f);
+    .make-icon-color(manage-server, #008cc9, #008cc9);
+    .make-icon-color(license, #e9eaea, #e9eaea);
+    .make-icon-color(import-database, #e64a19, #e64a19);
+    .make-icon-color(export-database, #ff9900, #ff9900);
+    .make-icon-color(create-sample-data, #b0b42c, #b0b42c);
+    .make-icon-color(manage-ongoing-tasks, #2cb495, #2cb495);
+    .make-icon-color(database, @brand-database-color, @brand-database-color);
+    .make-icon-color(replication, #9c28b1, #9c28b1);
+    .make-icon-color(sql-replication, #673bb7, #673bb7);
     //SETTINGS
     //Database Record
-    .icon-database-settings:before {
-        color: #1f8fff;
-    }
+    .make-icon-color(database-settings, #1f8fff, #1f8fff);
     //Connection Strings
-    .icon-manage-connection-strings:before {
-        color: #5f57ff;
-    }
+    .make-icon-color(manage-connection-strings, #5f57ff, #5f57ff);
     //Document Revisions
-    .icon-revisions:before {
-        color: #a766cc;
-    }
+    .make-icon-color(revisions, #a766cc, #a766cc);
     //Client Configuration
-    .icon-client-configuration:before {
-        color: #ff4d8e;
-    }
+    .make-icon-color(client-configuration, #ff4d8e, #ff4d8e);
     //Manage database group
-    .icon-topology:before {
-        color: #ff756b;
-    }
-
-    .icon-custom-functions:before {
-        color: #b881ff;
-    }
-
-    .icon-storage:before {
-        color: #536d7a;
-    }
-
-    .icon-io-test:before {
-        color: #bdbdbd
-    }
-
-    .icon-index-errors:before {
-        color: #e63935;
-    }
-
-    .icon-map-reduce-visualizer:before {
-        color: #9f9d26;
-    }
-
-    .icon-periodic-export:before {
-        color: #018390;
-    }
-
-    .icon-dashboard:before {
-        color: #4fc2f8;
-    }
-
-    .icon-patch:before {
-        color: #ffd782;
-    }
-
-    .icon-conflicts:before {
-        color: #ff6e6d;
-    }
-
-    .icon-subscriptions:before {
-        color: #35f9ff;
-    }
-
-    .icon-cluster:before {
-        color: #5bbaff;
-    }
-
-    .icon-administrator-js-console:before {
-        color: #5ed86e;
-    }
-
-    .icon-gather-debug-information:before {
-        color: #e8e467;
-    }
+    .make-icon-color(topology, #ff756b, #ff756b);
+    .make-icon-color(custom-functions, #b881ff, #b881ff);
+    .make-icon-color(storage, #536d7a, #536d7a);
+    .make-icon-color(io-test, #bdbdbd, #bdbdbd);
+    .make-icon-color(index-errors, #e63935, #e63935);
+    .make-icon-color(map-reduce-visualizer, #9f9d26, #9f9d26);
+    .make-icon-color(periodic-export, #018390, #018390);
+    .make-icon-color(dashboard, #4fc2f8, #4fc2f8);
+    .make-icon-color(patch, #ffd782, #ffd782);
+    .make-icon-color(conflicts, #ff6e6d, #ff6e6d);
+    .make-icon-color(subscriptions, #35f9ff, #35f9ff);
+    .make-icon-color(cluster, #5bbaff, #5bbaff);
+    .make-icon-color(administrator-js-console, #5ed86e, #5ed86e);
+    .make-icon-color(gather-debug-information, #e8e467, #e8e467);
 }
