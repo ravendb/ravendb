@@ -19,11 +19,7 @@
       </group>
     </dependencies>
     <contentFiles>
-      <files include="**\Raven.Embedded\**\*.*" buildAction="None" copyToOutput="true"/>
+      <files include="**/RavenDBServer/**/*.*" buildAction="None" copyToOutput="true" />
     </contentFiles>
   </metadata>
-  <files>
-    <file src="Raven.Embedded\Server\**\*.*" target ="contentFiles\any\any\Raven.Embedded" />
-    <file src="Raven.Embedded\lib\Raven.Embedded.dll" target ="lib\netstandard2.0" />
-  </files>
 </package>
