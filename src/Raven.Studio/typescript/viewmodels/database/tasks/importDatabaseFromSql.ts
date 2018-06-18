@@ -50,6 +50,7 @@ class importDatabaseFromSql extends viewModelBase {
     
     inFirstStep = ko.observable<boolean>(true);
     globalSelectionState: KnockoutComputed<checkbox>;
+    selectedCount: KnockoutComputed<number>;
     togglingAll = ko.observable<boolean>(false);
     
     showAdvancedOptions = ko.observable<boolean>(false);
@@ -97,6 +98,15 @@ class importDatabaseFromSql extends viewModelBase {
             const end = Math.min(total, start + importDatabaseFromSql.pageCount - 1);
             
             return "Tables " + start.toLocaleString() + "-" + end.toLocaleString() + " out of " + total.toLocaleString() + (this.searchText() ? " - filtered" : "");
+        });
+        
+        this.selectedCount = ko.pureComputed(() =>{
+            if (this.togglingAll()) {
+                // speed up animation!
+                return 0;
+            }
+
+            return this.model.getSelectedTablesCount();
         });
         
         this.globalSelectionState = ko.pureComputed<checkbox>(() => {
