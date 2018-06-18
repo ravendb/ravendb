@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         Name = "Joe Doe"
                     }, "users/1");
 
-                    session.CountersFor("users/1-A").Increment("likes");
+                    session.CountersFor("users/1").Increment("likes");
 
                     session.SaveChanges();
                 }
