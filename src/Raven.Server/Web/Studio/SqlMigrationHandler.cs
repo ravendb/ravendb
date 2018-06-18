@@ -16,31 +16,7 @@ namespace Raven.Server.Web.Studio
 {
     public class SqlMigrationHandler : DatabaseRequestHandler
     {
-        
-        [RavenAction("/databases/*/admin/sql-migration/list-database-names", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task ListDatabaseNames()
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var sourceSqlDatabaseBlittable = context.ReadForMemory(RequestBodyStream(), "source-database-info"))
-            {
-                var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
-
-                var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
-                var dbNames = dbDriver.GetDatabaseNames();
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray("Result", dbNames);
-                    writer.WriteEndObject();
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-        
-        
-        [RavenAction("/databases/*/admin/sql-migration/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
+         [RavenAction("/databases/*/admin/sql-migration/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task SqlSchema()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

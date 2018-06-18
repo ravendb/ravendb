@@ -39,7 +39,7 @@
                                         <div>
                                             <small>
                                                 <i class="icon-info"></i>
-                                                Please provide 'Database name' in the field below, instead of using <code>Initial Catalog</code> option. 
+                                                Please include database name in your connection string.
                                             </small>
                                         </div>
                                     </div>
@@ -58,29 +58,9 @@
                                         <div>
                                             <small>
                                                 <i class="icon-info"></i>
-                                                Please provide 'Database name' in the field below, instead of using <code>database</code> parameter.
+                                                Please include database name in your connection string. 
                                             </small>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: sourceDatabaseName">
-                                <label class="control-label">SQL Database name<i class="required"></i></label>
-                                <div class="dropdown btn-block flex-grow"  data-bind="validationOptions: { insertMessages: false }">
-                                    <input class="form-control" autocomplete="off" id="sqlDatabaseName"
-                                           data-bind="textInput: sourceDatabaseName, hasFocus: $root.sourceDatabaseFocus"
-                                           placeholder="Enter the SQL Database name">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height" role="menu" style="display: none;"
-                                        data-bind="autoComplete: '#sqlDatabaseName', foreach: $root.createDbAutocompleter(sourceDatabaseName)">
-                                        <li role="presentation" data-bind="click: $parent.sourceDatabaseName.bind($parent, $data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: sourceDatabaseName">
-                                        <div class="help-block" data-bind="validationMessage: sourceDatabaseName"></div>
                                     </div>
                                 </div>
                             </div>
