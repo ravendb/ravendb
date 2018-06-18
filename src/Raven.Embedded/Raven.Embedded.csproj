@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Embedded</AssemblyName>
