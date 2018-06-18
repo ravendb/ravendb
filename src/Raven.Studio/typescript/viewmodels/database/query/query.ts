@@ -28,6 +28,8 @@ import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import endpoints = require("endpoints");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import explainQueryDialog = require("viewmodels/database/query/explainQueryDialog");
+import explainQueryCommand = require("commands/database/index/explainQueryCommand");
 
 type queryResultTab = "results" | "explanations";
 
@@ -143,7 +145,8 @@ class query extends viewModelBase {
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
-    isDynamicIndex: KnockoutComputed<boolean>;
+    isCollectionQuery: KnockoutComputed<boolean>;
+    isDynamicQuery: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
 
     private columnPreview = new columnPreviewPlugin<document>();
@@ -272,15 +275,23 @@ class query extends viewModelBase {
             return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce");
         });
 
-        this.isDynamicIndex = ko.pureComputed(() => {
+        this.isCollectionQuery = ko.pureComputed(() => {
             const indexName = this.queriedIndex();
             if (!indexName)
                 return false;
 
+            if (!indexName.startsWith("collection/")) {
+                return false;
+            }
+            
+            // static index can have name starting with 'collection/' - let's check that as well
             const indexes = this.indexes() || [];
-            const currentIndex = indexes.find(i => i.Name === indexName);
-            return !currentIndex;
+            return !indexes.find(x => x.Name === indexName);
         });
+        
+        this.isDynamicQuery = ko.pureComputed(() => {
+            return queryUtil.isDynamicQuery(this.criteria().queryText());
+        })
         
         this.isAutoIndex = ko.pureComputed(() => {
             const indexName = this.queriedIndex();
@@ -291,7 +302,7 @@ class query extends viewModelBase {
         });
 
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
-            return !this.isMapReduceIndex() && !this.isDynamicIndex();
+            return !this.isMapReduceIndex();
         });
 
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
@@ -313,7 +324,7 @@ class query extends viewModelBase {
         criteria.showFields.subscribe(() => this.runQuery());   
       
         criteria.indexEntries.subscribe((checked) => {
-            if (checked && this.isDynamicIndex()) {
+            if (checked && this.isCollectionQuery()) {
                 criteria.indexEntries(false);
             } else {
                 // run index entries option only if not dynamic index
@@ -333,7 +344,6 @@ class query extends viewModelBase {
             
             return stats.TotalResults || 0;
         });
-        
 
          /* TODO
         this.showSuggestions = ko.computed<boolean>(() => {
@@ -545,12 +555,12 @@ class query extends viewModelBase {
     runQueryOnIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
 
-        if (this.isDynamicIndex() && this.criteria().indexEntries()) {
+        if (this.isCollectionQuery() && this.criteria().indexEntries()) {
             this.criteria().indexEntries(false);
             this.indexEntrieStateWasTrue = true; // save the state..
         }
 
-        if ((!this.isDynamicIndex() && this.indexEntrieStateWasTrue)) {
+        if (!this.isCollectionQuery() && this.indexEntrieStateWasTrue) {
             this.criteria().indexEntries(true);
             this.indexEntrieStateWasTrue = false;
         }
@@ -664,6 +674,8 @@ class query extends viewModelBase {
                         }
                         this.saveLastQuery("");
                         this.saveRecentQuery();
+
+                        this.setupDisableReasons(); 
                     })
                     .fail((request: JQueryXHR) => {
                         resultsTask.reject(request);
@@ -675,6 +687,14 @@ class query extends viewModelBase {
             this.queryFetcher(resultsFetcher);
             this.recordQueryRun(this.criteria());
         }
+    }
+    
+    explainIndex() {
+        new explainQueryCommand(this.criteria().queryText(), this.activeDatabase())
+            .execute()
+            .done(explanationResult => {
+                app.showBootstrapDialog(new explainQueryDialog(explanationResult));
+            });
     }
 
     saveQuery() {

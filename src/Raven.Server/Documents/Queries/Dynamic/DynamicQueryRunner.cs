@@ -210,13 +210,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(IndexQueryServerSide query, DocumentsOperationContext docsContext)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(IndexQueryServerSide query, DocumentsOperationContext docsContext, out string indexName)
         {
             var map = DynamicQueryMapping.Create(query);
             var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
 
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);
-            dynamicQueryToIndex.Match(map, docsContext, explanations);
+            var match = dynamicQueryToIndex.Match(map, docsContext, explanations);
+            indexName = match.IndexName;
 
             return explanations;
         }

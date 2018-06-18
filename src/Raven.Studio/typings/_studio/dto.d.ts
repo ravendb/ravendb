@@ -438,6 +438,11 @@ declare module Raven.Server.NotificationCenter.Notifications {
     }
 }
 
+interface explainQueryResponse extends resultsDto<Raven.Server.Documents.Queries.Dynamic.DynamicQueryToIndexMatcher.Explanation> {
+    IndexName: string;
+}
+
+
 interface virtualBulkInsertItem {
     id: string;
     date: string;
