@@ -1,0 +1,51 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content query-stats" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Dynamic query explanation</h4>
+        </div>
+        <div class="modal-body">
+
+            <div class="modal-details">
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-3 text-right">Index used:</div>
+                        <div class="col-sm-9 details-value" data-bind="text: indexUsed"></div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div data-bind="visible: explanation().length">
+                <hr />
+                
+                <p>Other candidates:</p>
+
+                <table class="table table-striped" >
+                    <thead>
+                    <tr>
+                        <th>Index name</th>
+                        <th>Rejection reason</th>
+                    </tr>
+                    </thead>
+                    <tbody data-bind="foreach: explanation">
+                    <tr>
+                        <td data-bind="text: Index"></td>
+                        <td data-bind="text: Reason"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="text-center" data-bind="visible: !explanation().length">
+                There were no other candidates to handle this query. 
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bind="click: close">OK</button>
+        </div>
+    </div>
+</div>

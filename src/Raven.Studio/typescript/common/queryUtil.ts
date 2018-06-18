@@ -125,9 +125,17 @@ class queryUtil {
         return tokenIndexes;
     }
 
+    private static tokenizeQuery(query: string): Array<string> {
+        return query
+            .toLocaleLowerCase()
+            .replace(/(\r\n|\n|\r|')/gm, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split(" ");
+    }
+    
     static getCollectionOrIndexName(query: string): string {
-
-        const words = query.replace(/(\r\n|\n|\r|')/gm, ' ').replace(/\s+/g, ' ').trim().split(" ");
+        const words = queryUtil.tokenizeQuery(query);
 
         for (let i = 0; i < words.length; i++) {
             if (words[i] === "from") {
@@ -139,6 +147,19 @@ class queryUtil {
             }
         }
     }
+
+    static isDynamicQuery(query: string): boolean {
+        const words = queryUtil.tokenizeQuery(query);
+
+        for (let i = 0; i < words.length; i++) {
+            if (words[i] === "from" && words[i + 1] === "index") {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
 }
 
 export = queryUtil;
