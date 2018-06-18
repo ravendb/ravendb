@@ -18,6 +18,10 @@ namespace Raven.Embedded
     {
         public static EmbeddedServer Instance = new EmbeddedServer();
 
+        internal EmbeddedServer()
+        {
+        }
+
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
         private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>> _serverTask;
 
@@ -34,7 +38,6 @@ namespace Raven.Embedded
             // this forces the server to start running in an async manner.
             GC.KeepAlive(startServer.Value);
         }
-
 
         public IDocumentStore GetDocumentStore(string database)
         {

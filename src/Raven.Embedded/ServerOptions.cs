@@ -10,6 +10,8 @@ namespace Raven.Embedded
 
         public string WorkingDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
+        internal string ServerDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDBServer");
+
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 
         public List<string> CommandLineArgs { get; set; } = new List<string>();
