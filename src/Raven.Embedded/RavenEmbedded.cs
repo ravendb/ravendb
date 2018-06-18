@@ -14,13 +14,12 @@ using Raven.Client.Util;
 
 namespace Raven.Embedded
 {
-    public class EmbeddedServer :  IDisposable
+    public class EmbeddedServer : IDisposable
     {
         public static EmbeddedServer Instance = new EmbeddedServer();
 
-        private readonly Logger Logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
         private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>> _serverTask;
-        private long _initialized;
 
         private readonly ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>> _documentStores = new ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>>();
 
@@ -57,12 +56,12 @@ namespace Raven.Embedded
 
         public async Task<IDocumentStore> GetDocumentStoreAsync(DatabaseOptions options, CancellationToken token = default)
         {
-            var db = options.DatabaseName;
-            if (string.IsNullOrEmpty(db))
-                throw new ArgumentException("The database name is mandatory");
+            var databaseName = options.DatabaseName;
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentNullException(nameof(options.DatabaseName), "The database name is mandatory");
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Creating document store for ${db}.");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Creating document store for '{databaseName}'.");
 
             token.ThrowIfCancellationRequested();
 
@@ -72,10 +71,10 @@ namespace Raven.Embedded
                 var store = new DocumentStore
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
-                    Database = db
+                    Database = databaseName
 
                 };
-                store.AfterDispose += (sender, args) => _documentStores.TryRemove(db, out _);
+                store.AfterDispose += (sender, args) => _documentStores.TryRemove(databaseName, out _);
 
                 store.Initialize();
                 if (options.SkipCreatingDatabase == false)
@@ -84,7 +83,7 @@ namespace Raven.Embedded
                 return store;
             });
 
-            return await _documentStores.GetOrAdd(db, lazy).Value.WithCancellation(token);
+            return await _documentStores.GetOrAdd(databaseName, lazy).Value.WithCancellation(token).ConfigureAwait(false);
 
         }
 
@@ -98,8 +97,8 @@ namespace Raven.Embedded
             {
                 // Expected behaviour when the database is already exists
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"{options.DatabaseName} already exist.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{options.DatabaseName} already exists.");
             }
         }
 
@@ -107,18 +106,18 @@ namespace Raven.Embedded
         {
             var server = _serverTask;
             if (server == null)
-                throw new InvalidOperationException("Please run StartServer() before trying to use the server");
+                throw new InvalidOperationException($"Please run {nameof(StartServer)}() before trying to use the server");
 
             return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerUrl;
         }
 
         private void KillSlavedServerProcess(Process process)
         {
-            if (process == null || process.HasExited != false)
+            if (process == null || process.HasExited)
                 return;
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Killing global server PID { process.Id }.");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Killing global server PID { process.Id }.");
 
             try
             {
@@ -126,24 +125,24 @@ namespace Raven.Embedded
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
+                if (_logger.IsInfoEnabled)
                 {
-                    Logger.Info($"Failed to kill process {process.Id}", e);
+                    _logger.Info($"Failed to kill process {process.Id}", e);
                 }
             }
         }
 
         private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer(ServerOptions options)
         {
-            var process =  RavenServerRunner.Run(options);
-            if (Logger.IsInfoEnabled)
+            var process = RavenServerRunner.Run(options);
+            if (_logger.IsInfoEnabled)
             {
-                Logger.Info($"Starting global server: { process.Id }");
+                _logger.Info($"Starting global server: { process.Id }");
             }
 
             string url = null;
             var output = process.StandardOutput;
-            var sb = new StringBuilder();//TODO: listen to standard error as well
+            var sb = new StringBuilder(); // TODO: listen to standard error as well
 
             var startupDuration = Stopwatch.StartNew();
 
@@ -155,7 +154,7 @@ namespace Raven.Embedded
 
                 var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
-                if (startupDuration.Elapsed > options.MaxServerStartupTimeDuration) 
+                if (startupDuration.Elapsed > options.MaxServerStartupTimeDuration)
                     break;
 
                 if (hasResult == false)

@@ -19,7 +19,7 @@
       </group>
     </dependencies>
     <contentFiles>
-      <files include="**\RavenDBServer\**\*.*" buildAction="Content" copyToOutput="true"/>
+      <files include="**\RavenDBServer\**\*.*" buildAction="None" copyToOutput="true"/>
     </contentFiles>
   </metadata>
   <files>
