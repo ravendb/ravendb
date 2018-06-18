@@ -49,6 +49,7 @@
     <EmbeddedResource Include="Smuggler\Revisions_3.5.35220.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
