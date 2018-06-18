@@ -8,7 +8,7 @@ namespace Raven.Embedded
     {
         public string FrameworkVersion { get; set; } = "2.1.0";
 
-        public string DataDir { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
+        public string WorkingDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 

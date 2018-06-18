@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
 namespace Raven.Embedded
 {
     internal class RavenServerRunner
     {
-        private static readonly string RavenDbServerPath = Path.Combine(AppContext.BaseDirectory, "RavenDBServer/Raven.Server.dll");
+        private static readonly string RavenDbServerPath = Path.Combine(AppContext.BaseDirectory, "RavenDBServer", "Raven.Server.dll");
 
         public static Process Run(ServerOptions options)
         {
@@ -25,9 +23,6 @@ namespace Raven.Embedded
             options.CommandLineArgs.Add("--License.Eula.Accepted=true");
             options.CommandLineArgs.Add("--Setup.Mode=None");
 
-            if (string.IsNullOrEmpty(options.DataDir) == false)
-                options.CommandLineArgs.Add($"--DataDir={options.DataDir}");
-
             options.CommandLineArgs.Insert(0, RavenDbServerPath);
 
             if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
@@ -43,7 +38,7 @@ namespace Raven.Embedded
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                WorkingDirectory = options.DataDir ?? AppContext.BaseDirectory
+                WorkingDirectory = options.WorkingDirectory ?? ServerOptions.Default.WorkingDirectory
             };
 
             Process process = null;
