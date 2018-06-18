@@ -183,7 +183,7 @@
                     <div class="panel panel-info js-root-table-panel">
                         <div class="flex-horizontal padding padding-sm panel-header">
                             <div class="checkbox" data-placement="left">
-                                <input type="checkbox" class="js-table-checkbox" data-bind="click: $root.onCollapseTable, checked: checked, attr: { id: 'table_' + $index() }" />
+                                <input type="checkbox" class="js-table-checkbox" data-bind="click: $root.onCollapseTable, css:{ 'disabled': $root.createLinksCount($data) }, checked: checked, attr: { id: 'table_' + $index() }" />
                                 <label data-bind="attr: { for: 'table_' + $index() }">&nbsp;</label>
                             </div>
                             <div class="flex-horizontal flex-wrap">
@@ -385,7 +385,7 @@
                 <td width="180">
                     <div class="btn-group link-actions">
                         <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
-                        <button class="btn btn-sm js-btn-link" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
+                        <button class="btn btn-sm js-btn-link" data-bind="css: { active: action() === 'link', disabled: !canLinkTargetTable() }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
                         <button class="btn btn-sm js-btn-embed" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
                     </div>
                     <span data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">
