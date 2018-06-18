@@ -92,13 +92,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<CounterDetail> GetAllCounters(DocumentsOperationContext context)
+        public IEnumerable<CounterDetail> GetCountersFrom(DocumentsOperationContext context, long etag, int skip, int take)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CountersEtagSlice], 0, 0))
             {
+                if (take-- <= 0)
+                    yield break;
+
                 yield return TableValueToCounterDetail(context, result.Reader);
             }
         }
@@ -110,9 +113,11 @@ namespace Raven.Server.Documents
             return new CounterDetail
             {
                 DocumentId = doc,
+                LazyDocumentId = doc,
                 CounterName = name,
                 ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr),
-                TotalValue = TableValueToLong((int)CountersTable.Value, ref tvr)
+                TotalValue = TableValueToLong((int)CountersTable.Value, ref tvr),
+                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
             };
         }
 
@@ -148,7 +153,15 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void PutCounterFromReplication(DocumentsOperationContext context, string documentId, string name, string changeVector, long value)
+        public enum PutCounterMode
+        {
+            None,
+            Replication,
+            Smuggler,
+            Etl
+        }
+
+        public void PutCounter(DocumentsOperationContext context, string documentId, string name, string changeVector, long value, PutCounterMode mode)
         {
             if (context.Transaction == null)
             {
@@ -157,31 +170,42 @@ namespace Raven.Server.Documents
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            using (GetCounterKey(context, documentId, name, changeVector, out var counterKey))
+            using (GetCounterKey(context, documentId, name, mode == PutCounterMode.Etl ? context.Environment.Base64Id : changeVector, out var counterKey))
             {
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    if (table.ReadByKey(counterKey, out var existing))
+                    switch (mode)
                     {
-                        var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
+                        case PutCounterMode.Replication:
+                        case PutCounterMode.Smuggler:
+                            Debug.Assert(changeVector != null);
 
-                        if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                            return;
+                            if (table.ReadByKey(counterKey, out var existing))
+                            {
+                                var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
+
+                                if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                                    return;
+                            }
+                            break;
                     }
 
-                    // if tombstone exists, remove it
-                    using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
-                    {
-                        var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
-
-                        if (tombstoneTable.ReadByKey(keyPerfix, out var existingTombstone))
-                        {
-                            tombstoneTable.Delete(existingTombstone.Id);
-                        }
-                    }
+                    RemoveTombstoneIfExists(context, documentId, name);
 
                     var etag = _documentsStorage.GenerateNextEtag();
+
+                    switch (mode)
+                    {
+                        case PutCounterMode.Etl:
+                            Debug.Assert(changeVector == null);
+
+                            changeVector = ChangeVectorUtils
+                                .TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty)
+                                .ChangeVector;
+                            break;
+                    }
+
                     using (Slice.From(context.Allocator, changeVector, out var cv))
                     {
                         tvb.Add(counterKey);
@@ -205,6 +229,19 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void RemoveTombstoneIfExists(DocumentsOperationContext context, string documentId, string name)
+        {
+            using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
+            {
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+
+                if (tombstoneTable.ReadByKey(keyPerfix, out var existingTombstone))
+                {
+                    tombstoneTable.Delete(existingTombstone.Id);
+                }
+            }
+        }
+
         public string IncrementCounter(DocumentsOperationContext context, string documentId, string name, long value)
         {
             if (context.Transaction == null)
@@ -223,16 +260,7 @@ namespace Raven.Server.Documents
                     Debug.Assert(size == sizeof(long));
                 }
 
-                // if tombstone exists, remove it
-                using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
-                {
-                    var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
-
-                    if (tombstoneTable.ReadByKey(keyPerfix, out var existingTombstone))
-                    {
-                        tombstoneTable.Delete(existingTombstone.Id);
-                    }
-                }
+                RemoveTombstoneIfExists(context, documentId, name);
 
                 var etag = _documentsStorage.GenerateNextEtag();
                 var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty);

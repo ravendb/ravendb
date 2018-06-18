@@ -1,4 +1,5 @@
-﻿using Raven.Client;
+﻿using System;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
@@ -10,13 +11,14 @@ namespace Raven.Server.Documents.ETL
             
         }
 
-        protected ExtractedItem(Document document, string collection)
+        protected ExtractedItem(Document document, string collection, EtlItemType type)
         {
             DocumentId = document.Id;
             Etag = document.Etag;
             Document = document;
             Collection = collection;
             ChangeVector = document.ChangeVector;
+            Type = type;
 
             if (collection == null &&
                 document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
@@ -24,13 +26,23 @@ namespace Raven.Server.Documents.ETL
                 CollectionFromMetadata = docCollection;
         }
 
-        protected ExtractedItem(Tombstone tombstone, string collection)
+        protected ExtractedItem(Tombstone tombstone, string collection, EtlItemType type)
         {
             Etag = tombstone.Etag;
-            DocumentId = tombstone.LowerId;
+
+            switch (type)
+            {
+                case EtlItemType.Document:
+                    DocumentId = tombstone.LowerId;
+                    break;
+                case EtlItemType.Counter:
+                    throw new NotImplementedException("TODO arek");
+            }
+
             IsDelete = true;
             Collection = collection;
             ChangeVector = tombstone.ChangeVector;
+            Type = type;
 
             if (collection == null)
                 CollectionFromMetadata = tombstone.Collection;
@@ -49,5 +61,11 @@ namespace Raven.Server.Documents.ETL
         public string Collection { get; protected set; }
 
         public LazyStringValue CollectionFromMetadata { get; }
+
+        public EtlItemType Type { get; protected set; }
+
+        public string CounterName { get; protected set; }
+
+        public long CounterValue { get; protected set; }
     }
 }

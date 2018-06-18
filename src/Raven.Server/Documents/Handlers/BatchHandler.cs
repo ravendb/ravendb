@@ -773,7 +773,7 @@ namespace Raven.Server.Documents.Handlers
 
                             var counterDocId = cmd.Counters.DocumentId;
 
-                            if (counterDocId[counterDocId.Length - 1] == '/')
+                            if (cmd.FromEtl && counterDocId[counterDocId.Length - 1] == '/')
                             {
                                 // counter sent by Raven ETL, only prefix is defined
 
@@ -787,7 +787,8 @@ namespace Raven.Server.Documents.Handlers
 
                             var counterBatchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database, new CounterBatch
                             {
-                                Documents = new List<DocumentCountersOperation> { cmd.Counters }
+                                Documents = new List<DocumentCountersOperation> { cmd.Counters },
+                                FromEtl = cmd.FromEtl
                             });
                             try
                             {

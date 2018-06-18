@@ -1052,9 +1052,9 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
                             {
-                                database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context,
+                                database.DocumentsStorage.CountersStorage.PutCounter(context,
                                     item.Id, item.CounterName, item.ChangeVector,
-                                    item.CounterValue);
+                                    item.CounterValue, CountersStorage.PutCounterMode.Etl);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {

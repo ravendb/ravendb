@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
 
-        public abstract IEnumerable<TTransformed> GetTransformedResults();
+        public abstract List<TTransformed> GetTransformedResults();
 
         public abstract void Transform(TExtracted item);
 

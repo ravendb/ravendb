@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -30,6 +31,7 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
+            private readonly bool _fromEtl;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
@@ -37,6 +39,7 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
                 _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues?? false;
+                _fromEtl = counterBatch?.FromEtl ?? false;
                 CountersDetail = new CountersDetail
                 {
                     Counters = new List<CounterDetail>()
@@ -44,6 +47,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (counterBatch == null)
                     return;
+
                 foreach (var docOps in counterBatch.Documents)
                 {
                     foreach (var operation in docOps.Operations)
@@ -107,11 +111,17 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case CounterOperationType.Put:
                                 LoadDocument();
+
+                                if (_fromEtl && doc == null)
+                                    break;
+
                                 // intentionally not setting LastChangeVector, we never use it for
-                                // replication and it isn't meaningful in that scenario. Put can only ever be called
-                                // for replication.
-                                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
-                                    operation.CounterName, operation.ChangeVector, operation.Delta);
+                                // etl / import and it isn't meaningful in those scenarios
+
+                                _database.DocumentsStorage.CountersStorage.PutCounter(context, kvp.Key,
+                                    operation.CounterName, operation.ChangeVector, operation.Delta,
+                                    _fromEtl ? CountersStorage.PutCounterMode.Etl : CountersStorage.PutCounterMode.Smuggler);
+                                
                                 break;
                             case CounterOperationType.None:
                                 break;
@@ -139,6 +149,9 @@ namespace Raven.Server.Documents.Handlers
                                 throwOnConflict: true);
                             if (doc == null)
                             {
+                                if (_fromEtl)
+                                    return;
+
                                 ThrowMissingDocument(kvp.Key);
                                 return; // never hit
                             }
@@ -150,6 +163,9 @@ namespace Raven.Server.Documents.Handlers
                         }
                         catch (DocumentConflictException)
                         {
+                            if (_fromEtl)
+                                return;
+
                             // this is fine, we explicitly support
                             // setting the flag if we are in conflicted state is 
                             // done by the conflict resolver

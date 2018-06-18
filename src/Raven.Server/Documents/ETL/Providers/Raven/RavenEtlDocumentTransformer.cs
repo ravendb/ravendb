@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly List<ICommandData> _commands = new List<ICommandData>();
         private PropertyDescriptor _addAttachmentMethod;
         private PropertyDescriptor _addCounterMethod;
-        private RavenEtlScriptRun _currentDocumentRun;
+        private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
             : base(database, context, script.Transformation)
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var transformResult = Context.ReadObject(transformed, id);
 
-            _currentDocumentRun.Put(id, document.Instance, transformResult);
+            _currentRun.Put(id, document.Instance, transformResult);
 
             if (_transformation.IsHandlingAttachments)
             {
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentDocumentRun.AddAttachment(self, name, attachmentReference);
+            _currentRun.AddAttachment(self, name, attachmentReference);
 
             return self;
         }
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentDocumentRun.AddCounter(self, name, counterReference);
+            _currentRun.AddCounter(self, name, counterReference);
 
             return self;
         }
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
         }
 
-        public override IEnumerable<ICommandData> GetTransformedResults()
+        public override List<ICommandData> GetTransformedResults()
         {
             return _commands;
         }
@@ -195,48 +195,69 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item)
         {
             Current = item;
-            _currentDocumentRun = new RavenEtlScriptRun();
+            _currentRun = new RavenEtlScriptRun();
 
             if (item.IsDelete == false)
             {
-                if (_script.Transformation != null)
+                switch (item.Type)
                 {
-                    if (_script.LoadToCollections.Length > 1 || _script.IsLoadedToDefaultCollection(item, _script.LoadToCollections[0]) == false)
-                    {
-                        // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
-                        // documents loaded to non default collections
+                    case EtlItemType.Document:
+                        if (_script.Transformation != null)
+                        {
+                            if (_script.LoadToCollections.Length > 1 || _script.IsLoadedToDefaultCollection(item, _script.LoadToCollections[0]) == false)
+                            {
+                                // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
+                                // documents loaded to non default collections
 
-                        ApplyDeleteCommands(item, OperationType.Put);
-                    }
+                                ApplyDeleteCommands(item, OperationType.Put);
+                            }
 
-                    SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
-                }
-                else
-                {
-                    _currentDocumentRun.PutDocumentAttachmentsAndCounters(item.DocumentId, item.Document.Data,
-                        GetAttachmentsFor(item),
-                        GetCountersFor(item));
+                            SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
+                        }
+                        else
+                        {
+                            _currentRun.PutDocumentAndAttachments(item.DocumentId, item.Document.Data, GetAttachmentsFor(item));
+                        }
+
+                        break;
+                    case EtlItemType.Counter:
+                        if (_script.Transformation != null)
+                        {
+                            throw new NotImplementedException("TODO arek");
+                        }
+                        else
+                        {
+                            _currentRun.AddCounter(item.DocumentId, item.CounterName, item.CounterValue);
+                        }
+                        break;
                 }
             }
             else
             {
-                if (_script.Transformation != null)
-                    ApplyDeleteCommands(item, OperationType.Delete);
-                else
-                    _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                switch (item.Type)
+                {
+                    case EtlItemType.Document:
+                        if (_script.Transformation != null)
+                            ApplyDeleteCommands(item, OperationType.Delete);
+                        else
+                            _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                        break;
+                    case EtlItemType.Counter:
+                        throw  new NotImplementedException("TODO arek");
+                }
             }
 
-            _commands.AddRange(_currentDocumentRun.GetCommands());
+            _commands.AddRange(_currentRun.GetCommands());
         }
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
-            _currentDocumentRun.LoadAttachment(reference, attachment);
+            _currentRun.LoadAttachment(reference, attachment);
         }
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
         {
-            _currentDocumentRun.LoadCounter(reference, name, value);
+            _currentRun.LoadCounter(reference, name, value);
         }
 
         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
@@ -270,34 +291,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return results;
         }
 
-        private List<(string Name, long Value)> GetCountersFor(RavenEtlItem item)
-        {
-            if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
-                return null;
-
-            if (item.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
-            {
-                return null;
-            }
-
-            metadata.Modifications = new DynamicJsonValue(metadata);
-            metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-
-            var results = new List<(string Name, long Value)>();
-
-            foreach (var counter in counters)
-            {
-                string counterName = (LazyStringValue)counter;
-
-                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, item.DocumentId, counterName);
-
-                results.Add((counterName, value.Value));
-            }
-
-            return results;
-        }
-
         private void ApplyDeleteCommands(RavenEtlItem item, OperationType operation)
         {
             for (var i = 0; i < _script.LoadToCollections.Length; i++)
@@ -307,10 +300,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
                     if (operation == OperationType.Delete || _transformation.IsHandlingAttachments || _transformation.IsHandlingCounters)
-                        _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                        _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
-                    _currentDocumentRun.Delete(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
+                    _currentRun.Delete(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
             }
         }
 
