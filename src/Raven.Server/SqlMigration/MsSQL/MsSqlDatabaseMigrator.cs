@@ -26,8 +26,6 @@ namespace Raven.Server.SqlMigration.MsSQL
                                                                       " from information_schema.KEY_COLUMN_USAGE " +
                                                                       "order by ORDINAL_POSITION";
         
-        public const string ListAllDatabases = "SELECT name FROM master.dbo.sysdatabases";
-
         private readonly string _connectionString;
 
         public MsSqlDatabaseMigrator(string connectionString)
@@ -350,25 +348,6 @@ namespace Raven.Server.SqlMigration.MsSQL
                     Attachments = attachments
                 };
             });
-        }
-
-        public override List<string> GetDatabaseNames()
-        {
-            var dbNames = new List<string>();
-
-            using (var connection = OpenConnection())
-            using (var cmd = new SqlCommand(ListAllDatabases, connection))
-            using (var reader = cmd.ExecuteReader())
-            {
-                while (reader.Read())
-                {
-                    dbNames.Add(reader["name"].ToString());
-                }
-            }
-            
-            dbNames.Sort();
-
-            return dbNames;
         }
 
         protected override string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)

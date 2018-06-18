@@ -25,8 +25,6 @@ namespace Raven.Server.SqlMigration.MySQL
                                                                       "where TABLE_SCHEMA = @schema " +
                                                                       "order by ORDINAL_POSITION";
         
-        public const string ListAllDatabases = "show databases";
-
         private readonly string _connectionString;
 
         public MySqlDatabaseMigrator(string connectionString)
@@ -383,25 +381,6 @@ namespace Raven.Server.SqlMigration.MySQL
             });
         }
         
-        public override List<string> GetDatabaseNames()
-        {
-            var dbNames = new List<string>();
-
-            using (var connection = OpenConnection())
-            using (var cmd = new MySqlCommand(ListAllDatabases, connection))
-            using (var reader = cmd.ExecuteReader())
-            {
-                while (reader.Read())
-                {
-                    dbNames.Add(reader["Database"].ToString());
-                }
-            }
-            
-            dbNames.Sort();
-
-            return dbNames;
-        }
-
         protected override string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues,
             out Dictionary<string, object> queryParameters)
         {

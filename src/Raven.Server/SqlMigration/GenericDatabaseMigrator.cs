@@ -445,7 +445,5 @@ namespace Raven.Server.SqlMigration
         }
 
         protected abstract TConnection OpenConnection();
-
-        public abstract List<string> GetDatabaseNames();
     }
 }
