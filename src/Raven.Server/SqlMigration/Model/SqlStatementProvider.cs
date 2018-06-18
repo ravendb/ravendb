@@ -1,19 +1,21 @@
 ﻿using System;
+using System.Data.Common;
 using System.Data.SqlClient;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.SqlMigration.MsSQL
 {
-    public class MsSqlStatementProvider<T> : IDataProvider<T> where T : class
+    public class SqlStatementProvider<T> : IDataProvider<T> where T : class
     {
-        private readonly SqlCommand _command;
+        private readonly DbCommand _command;
         private readonly Func<DynamicJsonValue, object[]> _parametersProvider;
-        private readonly Func<SqlDataReader, T> _extractor;
+        private readonly Func<DbDataReader, T> _extractor;
         
-        public MsSqlStatementProvider(SqlConnection connection, string query, 
-            Func<DynamicJsonValue, object[]> parametersProvider, Func<SqlDataReader, T> extractor)
+        public SqlStatementProvider(DbConnection connection, string query, 
+            Func<DynamicJsonValue, object[]> parametersProvider, Func<DbDataReader, T> extractor)
         {
-            _command = new SqlCommand(query, connection);
+            _command = connection.CreateCommand();
+            _command.CommandText = query;
             _parametersProvider = parametersProvider;
             _extractor = extractor;
         }
@@ -30,7 +32,12 @@ namespace Raven.Server.SqlMigration.MsSQL
                 {
                     return null;
                 }
-                _command.Parameters.AddWithValue("p" + i, parameters[i]);
+
+                DbParameter parameter = _command.CreateParameter();
+                parameter.ParameterName = "p" + i;
+                parameter.Value = parameters[i];
+
+                _command.Parameters.Add(parameter);
             }
             
             using (var reader = _command.ExecuteReader())

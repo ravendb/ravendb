@@ -5,7 +5,7 @@ namespace Tests.Infrastructure
 {
     public class MySqlTests
     {
-        public const string LocalConnection = @"server=127.0.0.1;uid=root;pwd=";
+        public const string LocalConnection = @"server=127.0.0.1;uid=root;pwd=;sslMode=None";
 
         public static readonly Lazy<string> MySqlDatabaseConnection = new Lazy<string>(() =>
         {
