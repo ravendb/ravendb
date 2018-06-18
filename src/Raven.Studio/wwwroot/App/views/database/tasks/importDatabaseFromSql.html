@@ -145,9 +145,10 @@
                             <input type="checkbox" class="styled" data-bind="click: onToggleAllClick, checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
-                        <button class="btn btn-primary hidden-fullscreen" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
+                        <button class="btn btn-primary hidden-fullscreen" 
+                                data-bind="click: $root.migrate, disable: $root.spinners.importing() || !$root.selectedCount(), css: { 'btn-spinner': $root.spinners.importing }">
                             <i class="icon-import"></i>
-                            <span>Migrate selected tables </span><span data-bind="visible: model.testImport">(partial)</span>
+                            <span>Migrate <span data-bind="text: $root.pluralize(selectedCount(), 'table', 'tables')"></span> </span><span data-bind="visible: model.testImport">(partial)</span>
                         </button>
                         <div>
                             <input type="text" accesskey="/" class="form-control filter-input" placeholder="Filter" title="Filter tables (Alt+/)" data-bind="textInput: $root.searchText" />    
