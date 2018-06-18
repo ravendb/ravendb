@@ -1,5 +1,11 @@
-function BuildServer ( $srcDir, $outDir, $target, $debug ) {
-    write-host "Building Server for $($target.Name)..."
+function BuildServer ( $srcDir, $outDir, $target, $debug) {
+
+    if ($target) {
+        write-host "Building Server for $($target.Name)..."
+    } else {
+        write-host "Building Server no specific target..."
+    }
+
     $command = "dotnet" 
     $commandArgs = @( "publish" )
 
@@ -10,10 +16,13 @@ function BuildServer ( $srcDir, $outDir, $target, $debug ) {
     $configuration = if ($debug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
     
-    $commandArgs += $( "--runtime", "$($target.Runtime)" )
+    if ($target) {
+        $commandArgs += $( "--runtime", "$($target.Runtime)" )
+    }
+
     $commandArgs += "$srcDir"
 
-    if ([string]::IsNullOrEmpty($target.Arch) -eq $false) {
+    if ($target -and [string]::IsNullOrEmpty($target.Arch) -eq $false) {
         $commandArgs += "/p:Platform=$($target.Arch)"
     }
 
@@ -129,5 +138,13 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
+    CheckLastExitCode
+}
+
+function BuildEmbedded ( $srcDir, $outDir) {
+    write-host "Building Embedded..."
+    & dotnet build --no-incremental `
+        --output $outDir `
+        --configuration "Release" $srcDir;
     CheckLastExitCode
 }

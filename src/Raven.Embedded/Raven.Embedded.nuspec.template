@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>RavenDB.Embedded</id>
+    <version>4.1.0-custom-41</version>
+    <title>RavenDB Embedded</title>
+    <authors>Hibernating Rhinos</authors>
+    <owners>Hibernating Rhinos</owners>
+    <licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+    <projectUrl>https://ravendb.net/</projectUrl>
+    <iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>RavenDB Embedded library to run ravendb in embedded way</description>
+    <tags>ravendb embedded database nosql doc db</tags>
+    <repository type="git" url="https://github.com/ravendb/ravendb" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="RavenDB.Client" version="4.1.0-custom-41" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <contentFiles>
+      <files include="**\Raven.Embedded\**\*.*" buildAction="None" copyToOutput="true"/>
+    </contentFiles>
+  </metadata>
+  <files>
+    <file src="Raven.Embedded\Server\**\*.*" target ="contentFiles\any\any\Raven.Embedded" />
+    <file src="Raven.Embedded\lib\Raven.Embedded.dll" target ="lib\netstandard2.0" />
+  </files>
+</package>
