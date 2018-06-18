@@ -107,7 +107,7 @@ if ($targets.Count -eq 0) {
 New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
 
-$embeddedDir = Join-Path -Path $OUT_DIR -ChildPath "Raven.Embedded"
+$embeddedDir = Join-Path -Path $OUT_DIR -ChildPath "RavenDB.Embedded"
 if (Test-Path $embeddedDir) {
     CleanDir $embeddedDir 
 }
@@ -137,10 +137,6 @@ if ($JustStudio -eq $False) {
     CreateNugetPackage $TESTDRIVER_SRC_DIR $RELEASE_DIR $versionSuffix
 }
 
-if ($JustNuget) {
-    exit 0
-}
-
 if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
     BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
     BuildStudio $STUDIO_SRC_DIR $version
@@ -150,27 +146,16 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
 }
 
 if ($JustStudio -eq $False) {
-    write-host "Building Embedded.."
-    $nuspec = [io.path]::combine($EMBEDDED_SRC_DIR, "Raven.Embedded.nuspec.template")
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
-    $dst = $EMBEDDED_SERVER_OUT_DIR
-    & New-Item -ItemType Directory -Path $EMBEDDED_SERVER_OUT_DIR -Force
-    & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR -Force
-    Copy-Item $nuspec -Destination $EMBEDDED_NUSPEC
-    write-host "Copying Studio $studioZipPath -> $dst"
-    Copy-Item "$studioZipPath" -Destination $dst
-    $embeddedCsproj = Join-Path -Path $EMBEDDED_SRC_DIR -ChildPath "Raven.Embedded.csproj";
-    Write-Host $embeddedCsproj $EMBEDDED_LIB_OUT_DIR
-    BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR
-    BuildServer $SERVER_SRC_DIR $EMBEDDED_SERVER_OUT_DIR $null $Debug
+    BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath $Debug
+    $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
+    $nupkgs = Join-Path $embeddedDir -ChildPath "*.nupkg"
+    Move-Item -Path $nupkgs -Destination $OUT_DIR
+    Remove-Item -Recurse $embeddedDir
+}
 
-    try {
-        Push-Location $OUT_DIR
-        & ../scripts/assets/bin/nuget.exe pack .\Raven.Embedded.nuspec
-        CheckLastExitCode
-    } finally {
-        Pop-Location
-    }
+if ($JustNuget) {
+    exit 0
 }
 
 if ($JustStudio) {
