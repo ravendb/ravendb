@@ -5,7 +5,6 @@ import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
 import testSqlMigrationCommand = require("commands/database/tasks/testSqlMigrationCommand");
-import listSqlDatabasesCommand = require("commands/database/tasks/listSqlDatabasesCommand");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -55,8 +54,6 @@ class importDatabaseFromSql extends viewModelBase {
     
     showAdvancedOptions = ko.observable<boolean>(false);
     
-    sourceDatabaseFocus = ko.observable<boolean>(false);
-    databaseNames = ko.observableArray<string>([]);
     importedFileName = ko.observable<string>();
     
     continueFlowValidationGroup: KnockoutValidationGroup;
@@ -70,7 +67,7 @@ class importDatabaseFromSql extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences", "fileSelected",
-            "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable", "runTest");
+            "closeEditedTransformation", "goToReverseReference", "onCollapseTable", "runTest");
         
         this.initObservables();
         this.initValidation();
@@ -121,14 +118,6 @@ class importDatabaseFromSql extends viewModelBase {
             return "unchecked";
         });
         
-        const throttledFetch = _.throttle(() => this.fetchDatabaseNamesAutocomplete(), 200);
-        
-        this.sourceDatabaseFocus.subscribe(focus => {
-            if (focus) {
-                throttledFetch();
-            }
-        });
-        
         // dont' throttle for now as we need to point to exact location
         // in case of performance issues we might replace filter with go to option
         this.searchText.subscribe(() => this.filterTables());
@@ -139,15 +128,6 @@ class importDatabaseFromSql extends viewModelBase {
         
         this.registerDisposableHandler($(document), "fullscreenchange", () => {
             $("body").toggleClass("fullscreen", $(document).fullScreen());
-        });
-    }
-    
-    createDbAutocompleter(dbName: KnockoutObservable<string>) {
-        return ko.pureComputed(()=> {
-            const dbNameUnwrapped = dbName() ? dbName().toLocaleLowerCase() : "";
-            
-            return this.databaseNames()
-                .filter(name => name.toLocaleLowerCase().includes(dbNameUnwrapped));
         });
     }
     
@@ -194,7 +174,6 @@ class importDatabaseFromSql extends viewModelBase {
             this.togglingAll(true);
             
             this.inFirstStep(false);
-            this.model.sourceDatabaseName(importedData.DatabaseName);
             this.model.loadAdvancedSettings(importedData.Advanced);
             this.model.onSchemaUpdated(importedData.Schema, false);
             
@@ -206,12 +185,6 @@ class importDatabaseFromSql extends viewModelBase {
         }
     }
 
-    private fetchDatabaseNamesAutocomplete() {
-        new listSqlDatabasesCommand(this.activeDatabase(), this.model.toSourceDto())
-            .execute()
-            .done(dbNames => this.databaseNames(dbNames)); 
-    }
-    
     nextStep() {        
         if (!this.isValid(this.model.getValidationGroup())) {
             return false;
@@ -479,13 +452,12 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     exportConfiguration() {
-        const exportFileName = `Sql-import-from-${this.model.sourceDatabaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
+        const exportFileName = `Sql-import-${moment().format("YYYY-MM-DD-HH-mm")}`;
 
         const exportData = {
             Schema: this.model.dbSchema,
             Configuration: this.model.toDto(),
             Advanced: this.model.advancedSettingsDto(),
-            DatabaseName: this.model.sourceDatabaseName(),
             BinaryToAttachment: this.model.binaryToAttachment()
         } as exportDataDto;
         

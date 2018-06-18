@@ -10,7 +10,6 @@ class sqlMigration {
     static possibleProviders = ["MsSQL", "MySQL"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
-    sourceDatabaseName = ko.observable<string>();
     binaryToAttachment = ko.observable<boolean>(true);
     batchSize = ko.observable<number>(1000);
     
@@ -67,20 +66,14 @@ class sqlMigration {
             required: true
         });
         
-        this.sourceDatabaseName.extend({
-            required: true
-        });
-        
         this.sqlServerValidationGroup = ko.validatedObservable({
             connectionString: this.sqlServer.connectionString,
-            sourceDatabaseName: this.sourceDatabaseName,
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
 
         this.mySqlValidationGroup = ko.validatedObservable({
             connectionString: this.mySql.connectionString,
-            sourceDatabaseName: this.sourceDatabaseName,
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
@@ -245,11 +238,10 @@ class sqlMigration {
         
         switch (this.databaseType()) {
             case "MySQL":
-                return `${this.mySql.connectionString()}\;database='${this.escape(this.sourceDatabaseName())}'`;
+                return this.mySql.connectionString();
                 
             case "MsSQL":
-                // Append initial catalog. For now we don't take it from the connection string.
-                return `${this.sqlServer.connectionString()}\;Initial Catalog='${this.escape(this.sourceDatabaseName())}'`;
+                return this.sqlServer.connectionString();
                 
             default:
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);

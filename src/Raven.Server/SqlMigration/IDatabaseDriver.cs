@@ -13,8 +13,6 @@ namespace Raven.Server.SqlMigration
 {
     public interface IDatabaseDriver
     {
-        List<string> GetDatabaseNames();
-        
         DatabaseSchema FindSchema();
         
         (BlittableJsonReaderObject Document, string Id) Test(MigrationTestSettings settings, DatabaseSchema dbSchema, DocumentsOperationContext context);
