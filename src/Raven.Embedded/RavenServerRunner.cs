@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,12 +21,20 @@ namespace Raven.Embedded
             {
                 options.CommandLineArgs.Add("--Embedded.ParentProcessId=" + currentProcess.Id);
             }
+            options.CommandLineArgs.Add("--ServerUrl=http://127.0.0.1:0");
+            options.CommandLineArgs.Add("--License.Eula.Accepted=true");
+            options.CommandLineArgs.Add("--Setup.Mode=None");
 
-            if(string.IsNullOrEmpty(options.DataDir) == false)
+            if (string.IsNullOrEmpty(options.DataDir) == false)
                 options.CommandLineArgs.Add($"--DataDir={options.DataDir}");
 
-            var argumentsString = string.Join(" ", new[] { $"--fx-version { options.FrameworkVersion} ", RavenDbServerPath }
-                .Concat(options.CommandLineArgs));
+            options.CommandLineArgs.Insert(0, RavenDbServerPath);
+
+            if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
+                options.CommandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
+
+            var argumentsString = string.Join(" ", options.CommandLineArgs);
+
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",

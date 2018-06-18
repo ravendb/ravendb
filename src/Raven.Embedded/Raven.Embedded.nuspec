@@ -14,7 +14,7 @@
     <tags>ravendb embedded database nosql doc db</tags>
     <repository type="git" url="https://github.com/ravendb/ravendb" />
     <dependencies>
-      <group targetFramework=".NETCoreApp2.1">
+      <group targetFramework=".NETStandard2.0">
         <dependency id="RavenDB.Client" version="4.0.5" exclude="Build,Analyzers" />
       </group>
     </dependencies>

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Raven.Embedded
 {
@@ -6,16 +8,12 @@ namespace Raven.Embedded
     {
         public string FrameworkVersion { get; set; } = "2.1.0";
 
-        public string DataDir { get; set; }
+        public string DataDir { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
-        public List<string> CommandLineArgs { get; set; } = new List<string>
-        {
-            "--ServerUrl=http://127.0.0.1:0",
-            "--RunInMemory=false",
-            "--Setup.Mode=None"
-        };
+        public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 
-        public static ServerOptions Default = new ServerOptions();
+        public List<string> CommandLineArgs { get; set; } = new List<string>();
 
+        internal static ServerOptions Default = new ServerOptions();
     }
 }
