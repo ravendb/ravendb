@@ -58,7 +58,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-
         [RavenAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser)]
         public Task GetDocSize()
         {
@@ -73,36 +72,25 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return Task.CompletedTask;
                 }
+                
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                var documentsizeDetails = new DocumentSizeDetails
+                {
+                    DocId = id,
+                    ActualSize = document.Value.ActualSize,
+                    HumaneActualSize = Sizes.Humane(document.Value.ActualSize),
+                    AllocatedSize = document.Value.AllocatedSize,
+                    HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
+                };
+                
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName("Id");
-                    writer.WriteString(id);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("ActualSize");
-                    writer.WriteInteger(document.Value.ActualSize);
-                    writer.WriteComma();
-
-
-                    writer.WritePropertyName("HumaneActualSize");
-                    writer.WriteString(Sizes.Humane(document.Value.ActualSize));
-                    writer.WriteComma();
-
-
-                    writer.WritePropertyName("AllocatedSize");
-                    writer.WriteInteger(document.Value.AllocatedSize);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("HumaneAllocatedSize");
-                    writer.WriteString(Sizes.Humane(document.Value.AllocatedSize));
-
-                    writer.WriteEndObject();
+                    context.Write(writer, documentsizeDetails.ToJson());
+                    writer.Flush();
                 }
 
                 return Task.CompletedTask;
-
             }
         }
 
@@ -473,6 +461,27 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
+    public class DocumentSizeDetails : IDynamicJson
+    {
+        public string DocId { get; set; }
+        public int ActualSize { get; set; }
+        public string HumaneActualSize { get; set; }
+        public int AllocatedSize { get; set; }
+        public string HumaneAllocatedSize { get; set; }
+            
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DocId)] = DocId,
+                [nameof(ActualSize)] = ActualSize,
+                [nameof(HumaneActualSize)] = HumaneActualSize,
+                [nameof(AllocatedSize)] = AllocatedSize,
+                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize
+            };
+        }
+    }
+    
     public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private string _id;

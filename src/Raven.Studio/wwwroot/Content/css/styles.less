@@ -25,6 +25,11 @@
 @link-color: #e33572;
 @link-hover-color: #ff6565;
 
+@tooltip-inner-min-width:     100px;
+@tooltip-inner-max-width:     200px;
+@tooltip-inner-bg-color:      rgba(18, 18, 18, 0.95);
+@tooltip-inner-color:         #ececf3;
+
 .text-revisions {
     color: @color-revisions !important;
 }
@@ -1798,6 +1803,15 @@ ul.properties {
 
 .no-margin { 
     margin: 0;
+}
+
+.tooltip {
+    .tooltip-inner {
+        min-width: @tooltip-inner-min-width;
+        max-width: @tooltip-inner-max-width;
+        background-color: @tooltip-inner-bg-color;
+        color: @tooltip-inner-color;
+    }
 }
 
 @import "pages/tasks-sampleData";
