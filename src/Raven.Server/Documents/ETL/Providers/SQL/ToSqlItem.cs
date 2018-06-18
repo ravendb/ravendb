@@ -14,11 +14,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             ChangeVector = item.ChangeVector;
         }
 
-        public ToSqlItem(Document document, string collection) : base(document, collection)
+        public ToSqlItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
         {
         }
 
-        public ToSqlItem(Tombstone tombstone, string collection) : base(tombstone, collection)
+        public ToSqlItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
         {
         }
 

@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Handlers
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
             public long Index;
+            public bool FromEtl;
 
             public PatchDocumentCommand PatchCommand;
 
@@ -430,6 +431,23 @@ namespace Raven.Server.Documents.Handlers
 
                         commandData.IdPrefixed = state.CurrentTokenType == JsonParserToken.True;
                         break;
+                    case CommandPropertyName.Counters:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
+                        commandData.Counters = DocumentCountersOperation.Parse(counterOps);
+                        break;
+                    case CommandPropertyName.FromEtl:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
+                        break;
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
                         while (parser.Read() == false)
@@ -439,12 +457,6 @@ namespace Raven.Server.Documents.Handlers
                         {
                             await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         }
-                        break;
-                    case CommandPropertyName.Counters:
-                        while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
-                        commandData.Counters = DocumentCountersOperation.Parse(counterOps);
                         break;
                 }
             }
@@ -578,9 +590,11 @@ namespace Raven.Server.Documents.Handlers
 
             #region Counter
 
-            Counters
+            Counters,
 
             #endregion
+
+            FromEtl
 
             // other properties are ignore (for legacy support)
         }
@@ -642,6 +656,11 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer == 7302135340735752259 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
                         return CommandPropertyName.ChangeVector;
+                    return CommandPropertyName.NoSuchProperty;
+                case 7:
+                    if (*(int*)state.StringBuffer == 1836020294 &&
+                        state.StringBuffer[4] == (byte)'E')
+                        return CommandPropertyName.FromEtl;
                     return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;

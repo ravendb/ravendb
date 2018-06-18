@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -36,9 +37,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type)
         {
-            return new TombstonesToRavenEtlItems(tombstones, collection);
+            return new TombstonesToRavenEtlItems(tombstones, collection, type);
+        }
+
+        protected override IEnumerator<RavenEtlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters)
+        {
+            return new CountersToRavenEtlItems(counters, null /*TODO arek*/);
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)

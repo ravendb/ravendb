@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastLoadedEtag { get; set; }
 
-        public long LastTransformedEtag { get; set; }
+        public Dictionary<EtlItemType, long> LastTransformedEtag { get; set; }
 
         public int NumberOfExtractedItems { get; set; }
 

@@ -241,7 +241,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<CounterDetail> GetCounterValues()
         {
-            return _database.DocumentsStorage.CountersStorage.GetAllCounters(_context);
+            return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, 0, 0, int.MaxValue);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
@@ -32,9 +33,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new DocumentsToSqlItems(docs, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type)
         {
             return new TombstonesToSqlItems(tombstones, collection);
+        }
+
+        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters)
+        {
+            throw new NotImplementedException("TODO arek");
         }
 
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)

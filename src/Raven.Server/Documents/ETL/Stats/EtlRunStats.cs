@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Documents.ETL.Stats
+﻿using System.Collections.Generic;
+
+namespace Raven.Server.Documents.ETL.Stats
 {
     public class EtlRunStats
     {
@@ -6,7 +8,11 @@
 
         public int NumberOfTransformedItems;
 
-        public long LastTransformedEtag;
+        public Dictionary<EtlItemType, long> LastTransformedEtag = new Dictionary<EtlItemType, long>()
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
         public long LastLoadedEtag;
 

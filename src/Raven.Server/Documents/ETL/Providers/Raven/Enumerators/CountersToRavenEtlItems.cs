@@ -1,27 +1,26 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Counters;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class TombstonesToRavenEtlItems : IEnumerator<RavenEtlItem>
+    public class CountersToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
-        private readonly IEnumerator<Tombstone> _tombstones;
+        private readonly IEnumerator<CounterDetail> _counters;
         private readonly string _collection;
-        private readonly EtlItemType _tombstoneType;
 
-        public TombstonesToRavenEtlItems(IEnumerator<Tombstone> tombstones, string collection, EtlItemType tombstoneType)
+        public CountersToRavenEtlItems(IEnumerator<CounterDetail> counters, string collection)
         {
-            _tombstones = tombstones;
+            _counters = counters;
             _collection = collection;
-            _tombstoneType = tombstoneType;
         }
 
         public bool MoveNext()
         {
-            if (_tombstones.MoveNext() == false)
+            if (_counters.MoveNext() == false)
                 return false;
-            
-            Current = new RavenEtlItem(_tombstones.Current, _collection, _tombstoneType);
+
+            Current = new RavenEtlItem(_counters.Current, _collection);
 
             return true;
         }

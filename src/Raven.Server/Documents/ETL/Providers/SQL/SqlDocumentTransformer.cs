@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
@@ -119,9 +120,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return table;
         }
 
-        public override IEnumerable<SqlTableWithRecords> GetTransformedResults()
+        public override List<SqlTableWithRecords> GetTransformedResults()
         {
-            return _tables.Values;
+            return _tables.Values.ToList();
         }
 
         public override void Transform(ToSqlItem item)

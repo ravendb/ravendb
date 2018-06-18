@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int NumberOfTransformedItems => _stats.NumberOfTransformedItems;
 
-        public long LastTransformedEtag => _stats.LastTransformedEtag;
+        public Dictionary<EtlItemType, long> LastTransformedEtag => _stats.LastTransformedEtag;
 
         public long LastLoadedEtag => _stats.LastLoadedEtag;
 
@@ -42,9 +43,9 @@ namespace Raven.Server.Documents.ETL.Stats
             _stats.NumberOfTransformedItems++;
         }
 
-        public void RecordLastTransformedEtag(long etag)
+        public void RecordLastTransformedEtag(long etag, EtlItemType type)
         {
-            _stats.LastTransformedEtag = etag;
+            _stats.LastTransformedEtag[type] = etag;
         }
 
         public void RecordChangeVector(string changeVector)
@@ -54,12 +55,14 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public void RecordLastLoadedEtag(long etag)
         {
-            _stats.LastLoadedEtag = etag;
+            if (etag > _stats.LastLoadedEtag)
+                _stats.LastLoadedEtag = etag;
         }
 
         public void RecordLastFilteredOutEtag(long etag)
         {
-            _stats.LastFilteredOutEtag = etag;
+            if (etag > _stats.LastFilteredOutEtag)
+                _stats.LastFilteredOutEtag = etag;
         }
 
         public EtlPerformanceOperation ToPerformanceOperation(string name)

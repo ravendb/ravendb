@@ -49,6 +49,25 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
+                    session.CountersFor("users/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var counter = session.CountersFor("users/1").Get("likes");
+
+                    Assert.NotNull(counter);
+                    Assert.Equal(2, counter.Value);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
                     session.Delete("users/1");
 
                     session.SaveChanges();

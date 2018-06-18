@@ -39,6 +39,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Name { get; }
         public string ChangeVector { get; }
 
+        internal bool? FromEtl { get; set; }
+
         public DocumentCountersOperation Counters { get;  }
         public CommandType Type { get; } = CommandType.Counters;
 
@@ -67,12 +69,17 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DynamicJsonValue
+            var result = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
                 [nameof(Counters)] = Counters.ToJson(),
                 [nameof(Type)] = Type.ToString()
             };
+
+            if (FromEtl.HasValue)
+                result[nameof(FromEtl)] = FromEtl;
+
+            return result;
         }
     }
 }

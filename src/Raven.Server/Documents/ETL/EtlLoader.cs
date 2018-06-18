@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.ETL
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].Reset(documentChange);
+                _processes[i].NotifyAboutWork(documentChange);
             }
         }
 
