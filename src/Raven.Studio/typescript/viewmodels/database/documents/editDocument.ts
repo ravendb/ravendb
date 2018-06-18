@@ -53,7 +53,6 @@ class editDocument extends viewModelBase {
 
     isCreatingNewDocument = ko.observable(false);
     isClone = ko.observable(false);
-    isRevision = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
     userIdHasFocus = ko.observable<boolean>(false);   
@@ -148,7 +147,7 @@ class editDocument extends viewModelBase {
 
         this.focusOnEditor();
        
-        $('.black-tooltip [data-toggle="tooltip"]').tooltip(); 
+        $('#right-options-panel [data-toggle="tooltip"]').tooltip(); 
     }
 
     detached() {
@@ -316,7 +315,7 @@ class editDocument extends viewModelBase {
         this.changeVectorHtml = ko.pureComputed(() => {
             let vectorText = "<h4>Change Vector</h4>";
             if (this.changeVector().length) {
-                this.changeVector().forEach(vector => vectorText += (vector.fullFormat + '<br/>'));
+                vectorText += this.changeVector().map(vectorItem => vectorItem.fullFormat).join('<br/>');
             }
             
             return vectorText;
@@ -340,7 +339,7 @@ class editDocument extends viewModelBase {
         });
 
         this.documentSizeHtml = ko.computed(() => {
-            if (this.isClone() || this.isCreatingNewDocument() || this.isRevision()) {
+            if (this.isClone() || this.isCreatingNewDocument() || this.inReadOnlyMode()) {
                 return `Computed Size: ${this.computedDocumentSize()} KB`;
             }
             
@@ -596,9 +595,7 @@ class editDocument extends viewModelBase {
     }
 
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
-
         this.isClone(false);
-        this.isRevision(false);
         
         const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
         const currentSelection = this.docEditor.getSelectionRange();
@@ -674,7 +671,6 @@ class editDocument extends viewModelBase {
                     this.foldAll();
                 }
                 
-                this.isRevision(false);
                 this.getDocumentPhysicalSize(id);
                 
                 loadTask.resolve(doc);
@@ -696,7 +692,7 @@ class editDocument extends viewModelBase {
         return loadTask;
     }
 
-    private getDocumentPhysicalSize(id: string): JQueryPromise<any> {
+    private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Server.Documents.Handlers.DocumentSizeDetails> {
         return new getDocumentPhysicalSizeCommand(id, this.activeDatabase())
             .execute()
             .done((size) => {
@@ -722,8 +718,6 @@ class editDocument extends viewModelBase {
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
-                
-                this.isRevision(true);
             })
             .fail(() => {
                 this.dirtyFlag().reset();
@@ -750,8 +744,6 @@ class editDocument extends viewModelBase {
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
-                
-                this.isRevision(true);
             })
             .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
             .always(() => this.isBusy(false));

@@ -45,15 +45,16 @@
                                         <i class="icon-processor"></i><span>CPU</span>
                                         <span data-bind="with: $root.node">
                                         <span data-bind="if: utilizedCores">
-                                            (<strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong>/<strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>)
+                                            (<strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit" data-animation="true"></strong>
+                                            /<strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count" data-animation="true"></strong>)
                                         </span>
                                     </span>
                                     </div>
-                                    <div data-placement="bottom" data-toggle="tooltip" title="Machine CPU usage">
+                                    <div data-placement="bottom" data-toggle="tooltip" title="Machine CPU usage" data-animation="true">
                                         <i class="icon-server machine-usage"></i>
                                         <strong data-bind="text: machineCpuUsage().toFixed(0) + '%', attr: { class: machineCpuUsageClass() }" ></strong>
                                     </div>
-                                    <div data-placement="bottom" data-toggle="tooltip" title="RavenDB CPU usage">
+                                    <div data-placement="bottom" data-toggle="tooltip" title="RavenDB CPU usage" data-animation="true">
                                         <i class="icon-raven process-usage"></i>
                                         <strong data-bind="text: processCpuUsage().toFixed(0) + '%', attr: { class: processCpuUsageClass() }"></strong>
                                     </div>
@@ -69,21 +70,21 @@
                                 <div data-bind="with: resources">
                                     <div><i class="icon-memory"></i><span>MEM</span>
                                         <span data-bind="visible: isLowMemory">
-                                        <i class="icon-warning text-warning" data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': lowMemoryTooltip }"></i>
+                                        <i class="icon-warning text-warning" data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': lowMemoryTooltip }" data-animation="true"></i>
                                     </span>
                                     </div>
                                     <div>
-                                        <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': totalMemoryTooltip }">
+                                        <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': totalMemoryTooltip }" data-animation="true">
                                             <i class="icon-server icon-document-group"></i>
                                             <strong class="text-success" data-bind="text: $root.sizeFormatter(totalMemory())"></strong>
                                         </div>
 
-                                        <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': machineMemoryUsageTooltip }">
+                                        <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': machineMemoryUsageTooltip }" data-animation="true">
                                             <i class="icon-server machine-usage"></i>
                                             <strong class="text-success" data-bind="text: $root.sizeFormatter(usedMemory())"></strong>
                                         </div>
 
-                                        <div data-toggle="tooltip" title="RavenDB Working Set">
+                                        <div data-toggle="tooltip" title="RavenDB Working Set" data-animation="true">
                                             <i class="icon-raven process-usage"></i>
                                             <strong class="text-success" data-bind="text: $root.sizeFormatter(processMemoryUsage())"></strong>
                                         </div>

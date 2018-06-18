@@ -380,6 +380,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MigrationResult));
             scripter.AddType(typeof(MigrationProgress));
             scripter.AddType(typeof(MigrationTestRequest));
+            
+            // document size details
+            scripter.AddType(typeof(DocumentSizeDetails));
 
             return scripter;
         }
