@@ -43,6 +43,7 @@ namespace Raven.Embedded
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
+                WorkingDirectory = options.DataDir ?? AppContext.BaseDirectory
             };
 
             Process process = null;

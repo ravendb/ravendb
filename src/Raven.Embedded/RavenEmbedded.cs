@@ -42,20 +42,20 @@ namespace Raven.Embedded
             return AsyncHelpers.RunSync(() => GetDocumentStoreAsync(database));
         }
 
-        public IDocumentStore GetDocumentStore(GetDocumentStoreOptions options)
+        public IDocumentStore GetDocumentStore(DatabaseOptions options)
         {
             return AsyncHelpers.RunSync(() => GetDocumentStoreAsync(options));
         }
 
-        public Task<IDocumentStore> GetDocumentStoreAsync(string database)
+        public Task<IDocumentStore> GetDocumentStoreAsync(string database, CancellationToken token = default)
         {
-            return GetDocumentStoreAsync(new GetDocumentStoreOptions
+            return GetDocumentStoreAsync(new DatabaseOptions
             {
                 DatabaseName = database
-            });
+            }, token);
         }
 
-        public async Task<IDocumentStore> GetDocumentStoreAsync(GetDocumentStoreOptions options)
+        public async Task<IDocumentStore> GetDocumentStoreAsync(DatabaseOptions options, CancellationToken token = default)
         {
             var db = options.DatabaseName;
             if (string.IsNullOrEmpty(db))
@@ -64,9 +64,11 @@ namespace Raven.Embedded
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Creating document store for ${db}.");
 
+            token.ThrowIfCancellationRequested();
+
             var lazy = new Lazy<Task<IDocumentStore>>(async () =>
             {
-                var serverUrl = await GetServerUriAsync();
+                var serverUrl = await GetServerUriAsync(token).ConfigureAwait(false);
                 var store = new DocumentStore
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
@@ -77,20 +79,20 @@ namespace Raven.Embedded
 
                 store.Initialize();
                 if (options.SkipCreatingDatabase == false)
-                    await TryCreateDatabase(options, store);
+                    await TryCreateDatabase(options, store, token).ConfigureAwait(false);
 
                 return store;
             });
 
-            return await _documentStores.GetOrAdd(db, lazy).Value;
+            return await _documentStores.GetOrAdd(db, lazy).Value.WithCancellation(token);
 
         }
 
-        private async Task TryCreateDatabase(GetDocumentStoreOptions options, IDocumentStore store)
+        private async Task TryCreateDatabase(DatabaseOptions options, IDocumentStore store, CancellationToken token)
         {
             try
             {
-                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(options.DatabaseName))).ConfigureAwait(false);
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(options.DatabaseName)), token).ConfigureAwait(false);
             }
             catch (ConcurrencyException)
             {
@@ -101,13 +103,13 @@ namespace Raven.Embedded
             }
         }
 
-        public async Task<Uri> GetServerUriAsync()
+        public async Task<Uri> GetServerUriAsync(CancellationToken token = default)
         {
             var server = _serverTask;
             if (server == null)
                 throw new InvalidOperationException("Please run StartServer() before trying to use the server");
 
-            return (await server.Value.ConfigureAwait(false)).ServerUrl;
+            return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerUrl;
         }
 
         private void KillSlavedServerProcess(Process process)
