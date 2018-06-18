@@ -90,8 +90,11 @@
                                 <div class="form-group">
                                     <label class="control-label">&nbsp;</label>
                                     <div class="toggle">
-                                        <input id="removeId" type="checkbox" data-bind="checked: advanced.trimUnderscoreId">
-                                        <label for="removeId">Trim <strong>_id</strong> from property names</label>
+                                        <input id="removeId" type="checkbox" data-bind="checked: advanced.trimSuffix">
+                                        <label for="removeId">Trim suffix from property names:
+                                            <input class="form-control suffix-input input-sm" data-bind="textInput: advanced.suffixToTrim" />
+                                        </label>
+                                        
                                     </div>
                                 </div>
                                 <div class="form-group">

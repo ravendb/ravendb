@@ -425,7 +425,8 @@ type sqlMigrationAction = "skip" | "embed" | "link";
 
 interface sqlMigrationAdvancedSettingsDto {
     UsePascalCase: boolean,
-    TrimUnderscoreId: boolean
+    TrimSuffix: boolean,
+    SuffixToTrim: string,
     DetectManyToMany: boolean 
 }
 

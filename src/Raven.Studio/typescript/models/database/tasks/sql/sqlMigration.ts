@@ -18,7 +18,8 @@ class sqlMigration {
     
     advanced = {
         usePascalCase: ko.observable<boolean>(true),
-        trimUnderscoreId: ko.observable<boolean>(true),
+        trimSuffix: ko.observable<boolean>(true),
+        suffixToTrim: ko.observable<string>("_id"),
         detectManyToMany: ko.observable<boolean>(true) 
     };
     
@@ -54,7 +55,8 @@ class sqlMigration {
     
     private initObservables() {
         this.advanced.usePascalCase.subscribe(() => this.initTransformationFunctions());
-        this.advanced.trimUnderscoreId.subscribe(() => this.initTransformationFunctions());
+        this.advanced.trimSuffix.subscribe(() => this.initTransformationFunctions());
+        this.advanced.suffixToTrim.subscribe(() => this.initTransformationFunctions());
     }
 
     initValidation() {
@@ -90,15 +92,16 @@ class sqlMigration {
     }
     
     private initTransformationFunctions() {
+        const suffix = this.advanced.suffixToTrim();
         const pascal = (input: string) => _.upperFirst(_.camelCase(input));
-        const removeId = (input: string) => input.toLocaleLowerCase().endsWith("_id") ? input.slice(0, -3) : input;
+        const removeSuffix = (input: string) => input.endsWith(suffix) ? input.slice(0, -suffix.length) : input;
         const identity = (input: string) => input;
         
         this.collectionNameTransformationFunc = this.advanced.usePascalCase() ? pascal : identity;
         if (this.advanced.usePascalCase()) {
-            this.propertyNameTransformationFunc = this.advanced.trimUnderscoreId() ? _.flow(removeId, pascal) : pascal;
+            this.propertyNameTransformationFunc = this.advanced.trimSuffix() ? _.flow(removeSuffix, pascal) : pascal;
         } else {
-            this.propertyNameTransformationFunc = this.advanced.trimUnderscoreId() ? removeId : identity;
+            this.propertyNameTransformationFunc = this.advanced.trimSuffix() ? removeSuffix : identity;
         }
     }
 
@@ -286,13 +289,15 @@ class sqlMigration {
         return {
             UsePascalCase: this.advanced.usePascalCase(),
             DetectManyToMany: this.advanced.detectManyToMany(),
-            TrimUnderscoreId: this.advanced.trimUnderscoreId()
+            TrimSuffix: this.advanced.trimSuffix(),
+            SuffixToTrim: this.advanced.suffixToTrim()
         }
     }
     
     loadAdvancedSettings(dto: sqlMigrationAdvancedSettingsDto) {
         this.advanced.usePascalCase(dto.UsePascalCase);
-        this.advanced.trimUnderscoreId(dto.TrimUnderscoreId);
+        this.advanced.trimSuffix(dto.TrimSuffix);
+        this.advanced.suffixToTrim(dto.SuffixToTrim);
         this.advanced.detectManyToMany(dto.DetectManyToMany);
     }
 
