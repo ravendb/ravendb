@@ -106,15 +106,15 @@
             <div class="panel-body">
                 <h3 class="margin-none">Properties</h3>
                 <hr class="small" />
-                <dl class="dl-horizontal small black-tooltip" data-bind="with: metadata">
+                <dl class="dl-horizontal small" data-bind="with: metadata">
                     <div data-bind="visible: !$root.isCreatingNewDocument()">
                         <dt>Change Vector:</dt>
                         <dd>
                             <span class="toggle" data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
                                   data-bind="attr: { 'data-original-title': $root.changeVectorHtml() }">
-                                    <span data-bind="foreach: $root.changeVector">
+                                    <div data-bind="foreach: $root.changeVector">
                                         <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                    </span> <!-- todo: why tooltip disappears between lines ?  -->
+                                    </div>
                              </span>
                         </dd>
                         <dt>Modified:</dt>
