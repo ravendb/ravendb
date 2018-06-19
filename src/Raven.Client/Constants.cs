@@ -103,6 +103,15 @@ namespace Raven.Client
             public const string ClientId = "Configuration/Client";
         }
 
+        public class Counters
+        {
+            private Counters()
+            {
+            }
+
+            public const string All = "@allCounters";
+        }
+
         public class Documents
         {
             private Documents()

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
@@ -76,6 +77,22 @@ namespace Raven.Server.Documents.Handlers
                 else
                 {
                     existing.Add(op);
+                }
+            }
+
+            public void Gather(DocumentsOperationContext context, string id, StringValues counters)
+            {
+                var names = counters.Count != 0
+                    ? counters
+                    : _database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, id);
+
+                foreach (var counter in names)
+                {
+                    Add(id, new CounterOperation
+                    {
+                        Type = CounterOperationType.Get,
+                        CounterName = counter
+                    });
                 }
             }
 

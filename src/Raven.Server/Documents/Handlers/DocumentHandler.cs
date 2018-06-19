@@ -16,6 +16,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
@@ -197,6 +198,8 @@ namespace Raven.Server.Documents.Handlers
             var documents = new List<Document>(ids.Count);
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
+            var counters = GetCountersQueryString(out var counterBatchCmd);
+
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
@@ -208,9 +211,12 @@ namespace Raven.Server.Documents.Handlers
 
                 documents.Add(document);
                 includeDocs.Gather(document);
+                counterBatchCmd?.Gather(context, id, counters);
             }
 
             includeDocs.Fill(includes);
+
+            counterBatchCmd?.Execute(context);
 
             var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes);
 
@@ -225,12 +231,29 @@ namespace Raven.Server.Documents.Handlers
 
             int numberOfResults = 0;
 
-            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, numberOfResults);
+            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, counterBatchCmd?.CountersDetail?.Counters, numberOfResults);
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
         }
 
-        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, int numberOfResults)
+        private StringValues GetCountersQueryString(out CountersHandler.ExecuteCounterBatchCommand batchCmd)
+        {
+            batchCmd = null;
+
+            var counters = GetStringValuesQueryString("counter", required: false);
+            if (counters.Count > 0)
+            {
+                batchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database);
+
+                if (counters.Count == 1 &&
+                    counters[0] == Constants.Counters.All)
+                    return default(StringValues);
+            }
+
+            return counters;
+        }
+
+        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, List<CounterDetail> counters ,int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
@@ -248,6 +271,13 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     writer.WriteEndObject();
+                }
+
+                if (counters?.Count > 0)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetDocumentsResult.Counters));
+                    await writer.WriteCountersAsync(context, counters);
                 }
 
                 writer.WriteEndObject();
