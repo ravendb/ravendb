@@ -20,6 +20,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
@@ -1275,6 +1276,34 @@ more responsive application.
                         RegisterMissing(id);
                     });
                 }
+            }
+        }
+
+        internal void RegisterCounters(BlittableJsonReaderArray counters)
+        {
+            if (counters == null)
+                return;
+
+            foreach (BlittableJsonReaderObject counterBlittable in counters)
+            {
+                if (counterBlittable.TryGet(nameof(CounterDetail.DocumentId), out string id) == false ||
+                    counterBlittable.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
+                    counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
+                    continue;
+
+                if (CountersByDocId == null)
+                {
+                    CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
+                }
+
+                if (CountersByDocId.TryGetValue(id, out var cache) == false)
+                {
+                    cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                    CountersByDocId.Add(id, cache);
+                }
+
+                cache.Values[name] = value;
+
             }
         }
 

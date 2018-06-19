@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var command = new GetDocumentsCommand(new[] { orderId }, new[] { "Employee" },false);
+                var command = new GetDocumentsCommand(new[] { orderId }, new[] { "Employee" }, null, false);
                 using (var commands = store.Commands())
                 {
                     commands.RequestExecutor.Execute(command, commands.Context);

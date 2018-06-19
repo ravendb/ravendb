@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Commands
 
         private readonly string[] _ids;
         private readonly string[] _includes;
+        private readonly string[] _counters;
+
 
         private readonly bool _metadataOnly;
 
@@ -33,20 +35,22 @@ namespace Raven.Client.Documents.Commands
             _pageSize = pageSize;
         }
 
-        public GetDocumentsCommand(string id, string[] includes, bool metadataOnly)
+        public GetDocumentsCommand(string id, string[] includes, string[] counters, bool metadataOnly)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _includes = includes;
+            _counters = counters;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counters, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
 
             _ids = ids;
             _includes = includes;
+            _counters = counters;
             _metadataOnly = metadataOnly;
         }
 
@@ -92,6 +96,18 @@ namespace Raven.Client.Documents.Commands
                 foreach (var include in _includes)
                 {
                     pathBuilder.Append("&include=").Append(include);
+                }
+            }
+
+            if (_counters != null)
+            {
+                if (_counters.Length == 0)
+                {
+                    pathBuilder.Append("&counter=").Append(Constants.Counters.All);
+                }
+                else foreach (var counter in _counters)
+                {
+                    pathBuilder.Append("&counter=").Append(counter);
                 }
             }
 

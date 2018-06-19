@@ -67,11 +67,12 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counters = null)
         {
             var loadOperation = new LoadOperation(this);
             loadOperation.ByIds(ids);
             loadOperation.WithIncludes(includes);
+            loadOperation.WithCounters(counters);
 
             var command = loadOperation.CreateRequest();
             if (command != null)

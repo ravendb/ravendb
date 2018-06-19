@@ -8,6 +8,8 @@ namespace Raven.Client.Documents.Commands
 
         public BlittableJsonReaderArray Results { get; set; }
 
+        public BlittableJsonReaderArray Counters { get; set; }
+
         public int NextPageStart { get; set; }
     }
 }

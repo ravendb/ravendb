@@ -52,6 +52,23 @@ namespace Raven.Client.Documents.Session.Loaders
         ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
+        ///     Begin a load while including counter of specified name
+        /// </summary>
+        /// <param name="name">Name of the counter to include.</param>
+        ILoaderWithInclude<T> IncludeCounter(string name);
+
+        /// <summary>
+        ///     Begin a load while including all the counters of the document
+        /// </summary>
+        ILoaderWithInclude<T> IncludeCounters();
+
+        /// <summary>
+        ///     Begin a load while including counters of specified names
+        /// </summary>
+        /// <param name="names">Names of the counters to include.</param>
+        ILoaderWithInclude<T> IncludeCounters(string[] names);
+
+        /// <summary>
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
