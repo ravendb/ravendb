@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
@@ -21,6 +22,8 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
+            UseOnlyInvariantCultureInRavenDB();
+
             SetCurrentDirectoryToServerPath();
 
             string[] configurationArgs;
@@ -208,6 +211,14 @@ namespace Raven.Server
             } while (rerun);
 
             return 0;
+        }
+
+        private static void UseOnlyInvariantCultureInRavenDB()
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
         }
 
         private static void SetCurrentDirectoryToServerPath()
