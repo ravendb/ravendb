@@ -134,11 +134,16 @@ namespace Raven.Server.SqlMigration.MySQL
                 {
                     throw new InvalidOperationException("Can not find table: " + kvp.Value.Schema + "." + kvp.Value.Table);
                 }
-                
-                pkTable.References.Add(new TableReference(cacheValue.Schema, cacheValue.TableName)
+
+                // check if reference goes to Primary Key 
+                // note: we might have references to non-primary keys - ie. to unique index constraints 
+                if (cacheValue.ColumnNames.SequenceEqual(pkTable.PrimaryKeyColumns))
                 {
-                    Columns = cacheValue.ColumnNames
-                });
+                    pkTable.References.Add(new TableReference(cacheValue.Schema, cacheValue.TableName)
+                    {
+                        Columns = cacheValue.ColumnNames
+                    });
+                }
             }
         }
         

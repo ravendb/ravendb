@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
+using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -654,6 +655,51 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-        //TODO: skip test if db is not available 
+        
+        
+        [Theory]
+        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMySqlInlineData]
+        public async Task CanImportWithRelationToNonPrimaryKey(MigrationProvider provider)
+        {
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
+            {
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
+                
+                using (var store = GetDocumentStore())
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store);
+
+                    var settings = new MigrationSettings
+                    {
+                        Collections = new List<RootCollection>
+                        {
+                            new RootCollection(schemaName, "orders2", "Orders2")
+                        }
+                    };
+
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var schema = driver.FindSchema();
+                        var customersSchema = schema.GetTable(schemaName, "customers2");
+                        // vat id -> should not be reference! 
+                        Assert.Equal(0, customersSchema.References.Count);
+                        Assert.True(customersSchema.Columns.Any(x => x.Name == "vatid"));
+                        
+                        ApplyDefaultColumnNamesMapping(schema, settings);
+                        await driver.Migrate(settings, schema, db, context);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        JObject[] objects = session.Advanced.LoadStartingWith<JObject>("Orders2/");
+                        foreach (var jObject in objects)
+                        {
+                            Assert.True(jObject.GetValue("Customer_vatid").Value<int>() == 55555 || jObject.GetValue("Customer_vatid").Value<int>() == 44444);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
