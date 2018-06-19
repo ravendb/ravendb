@@ -25,6 +25,7 @@ using Sparrow.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using StringSegment = Sparrow.StringSegment;
+using Raven.Client.Extensions;
 
 namespace Raven.Server.Web.System
 {
@@ -559,7 +560,7 @@ namespace Raven.Server.Web.System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GenerateETagFor(string hierarchyTag, int resourceId, long fileVersion = -1)
         {
-            return $"{hierarchyTag}@{resourceId}@{fileVersion}";
+            return $"{hierarchyTag}@{CharExtensions.ToInvariantString(resourceId)}@{CharExtensions.ToInvariantString(fileVersion)}";
         }
 
         private async Task<bool> ServeFromZipFile(string reportedBasePath, string serverRelativeFileName)
