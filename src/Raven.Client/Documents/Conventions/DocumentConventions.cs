@@ -169,6 +169,7 @@ namespace Raven.Client.Documents.Conventions
         private Size _maxHttpCacheSize;
         private bool? _useCompression;
         private Func<MemberInfo, string> _propertyNameConverter;
+        private Func<Type, bool> _typeIsKnownServerSide = _ => false;
 
         public Func<MemberInfo, string> PropertyNameConverter
         {
@@ -437,6 +438,16 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _transformTypeCollectionNameToDocumentIdPrefix = value;
+            }
+        }
+
+        public Func<Type, bool> TypeIsKnownServerSide
+        {
+            get => _typeIsKnownServerSide;
+            set
+            {
+                AssertNotFrozen();
+                _typeIsKnownServerSide = value;
             }
         }
 
