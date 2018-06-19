@@ -20,7 +20,6 @@ namespace SlowTests.Issues
                 {
                     ServerDirectory = paths.ServerDirectory,
                     DataDirectory = paths.DataDirectory,
-                    FrameworkVersion = null
                 });
 
                 using (var store = embedded.GetDocumentStore("Test"))
@@ -43,7 +42,6 @@ namespace SlowTests.Issues
                 {
                     ServerDirectory = paths.ServerDirectory,
                     DataDirectory = paths.DataDirectory,
-                    FrameworkVersion = null
                 });
 
                 using (var store = embedded.GetDocumentStore("Test"))
