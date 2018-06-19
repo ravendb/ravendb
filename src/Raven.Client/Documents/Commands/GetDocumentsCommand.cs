@@ -35,23 +35,27 @@ namespace Raven.Client.Documents.Commands
             _pageSize = pageSize;
         }
 
-        public GetDocumentsCommand(string id, string[] includes, string[] counters, bool metadataOnly)
+        public GetDocumentsCommand(string id, string[] includes, bool metadataOnly)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _includes = includes;
-            _counters = counters;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counters, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
 
             _ids = ids;
             _includes = includes;
-            _counters = counters;
             _metadataOnly = metadataOnly;
+        }
+
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counters, bool metadataOnly) 
+            : this(ids, includes, metadataOnly)
+        {
+            _counters = counters ?? throw new ArgumentNullException(nameof(counters));
         }
 
         public GetDocumentsCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)

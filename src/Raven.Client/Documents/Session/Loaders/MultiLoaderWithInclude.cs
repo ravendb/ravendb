@@ -74,8 +74,12 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         public ILoaderWithInclude<T> IncludeCounter(string name)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
             if (_counters == null)
                 _counters = new List<string>();
+
             _counters.Add(name);
             return this;
         }
@@ -88,12 +92,15 @@ namespace Raven.Client.Documents.Session.Loaders
         {
             if (_counters == null)
                 _counters = new List<string>();
-            if (names != null)
+
+            if (names == null)
+                throw new ArgumentNullException(nameof(names));
+
+            foreach (var name in names)
             {
-                foreach (var name in names)
-                {
-                    _counters.Add(name);
-                }
+                if (string.IsNullOrWhiteSpace(name))
+                    throw new InvalidOperationException("IncludeCounters(string[] names) : 'names' should not contain null or whitespace elements");
+                _counters.Add(name);
             }
             return this;
         }

@@ -410,7 +410,7 @@ namespace Raven.Server.Json
 
                 writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
                 writer.WriteComma();
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
             else if (results is List<SuggestionResult> suggestions)
             {
@@ -418,7 +418,7 @@ namespace Raven.Server.Json
 
                 writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
                 writer.WriteComma();
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
             else
                 throw new NotSupportedException($"Cannot write query result of '{typeof(TResult)}' type in '{result.GetType()}'.");
@@ -1022,7 +1022,7 @@ namespace Raven.Server.Json
                 first = false;
 
                 WriteDocument(writer, context, document, metadataOnly);
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndArray();
@@ -1095,13 +1095,13 @@ namespace Raven.Server.Json
                 {
                     writer.WritePropertyName(conflict.Id);
                     WriteConflict(writer, conflict);
-                    await writer.MaybeOuterFlsuhAsync();
+                    await writer.MaybeOuterFlushAsync();
                     continue;
                 }
 
                 writer.WritePropertyName(document.Id);
                 WriteDocument(writer, context, metadataOnly: false, document: document);
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndObject();
@@ -1186,7 +1186,7 @@ namespace Raven.Server.Json
                     writer.WriteObject(o);
                 }
 
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndArray();
@@ -1219,7 +1219,6 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
 
-                await writer.MaybeOuterFlsuhAsync();
             }
 
             writer.WriteEndArray();

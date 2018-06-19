@@ -172,7 +172,7 @@ namespace FastTests
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetDocumentsCommand(id, includes: null, counters: null, metadataOnly: metadataOnly);
+                var command = new GetDocumentsCommand(id, includes: null, metadataOnly: metadataOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -200,7 +200,7 @@ namespace FastTests
                 if (ids == null)
                     throw new ArgumentNullException(nameof(ids));
 
-                var command = new GetDocumentsCommand(ids, includes: null, counters: null, metadataOnly: false);
+                var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 

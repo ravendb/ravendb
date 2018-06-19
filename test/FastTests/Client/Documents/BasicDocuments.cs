@@ -74,7 +74,7 @@ namespace FastTests.Client.Documents
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var getDocumentCommand = new GetDocumentsCommand(new[] { "users/1", "users/2" }, includes: null, counters: null, metadataOnly: false);
+                    var getDocumentCommand = new GetDocumentsCommand(new[] { "users/1", "users/2" }, includes: null, metadataOnly: false);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);
@@ -107,7 +107,7 @@ namespace FastTests.Client.Documents
                     }
 
                     getDocumentCommand = new GetDocumentsCommand(new[] {"users/1", "users/2"}, includes: null,
-                        counters: null, metadataOnly: true);
+                        metadataOnly: true);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);

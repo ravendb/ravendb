@@ -1051,8 +1051,8 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var user = session
-                        .IncludeCounter("likes")
-                        .Load<User>("users/1-A");
+                        .IncludeCounter<User>("likes")
+                        .Load("users/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -1084,9 +1084,9 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var order = session
-                        .IncludeCounter("likes")
+                        .IncludeCounter<User>("likes")
                         .IncludeCounter("dislikes")
-                        .Load<User>("orders/1-A");
+                        .Load("orders/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -1128,7 +1128,7 @@ namespace SlowTests.Client.Counters
                         .Include(o => o.Company)
                         .IncludeCounter("downloads")
                         .Include(o => o.Employee)
-                        .Load<Order>("orders/1-A");
+                        .Load("orders/1-A");
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1248,9 +1248,9 @@ namespace SlowTests.Client.Counters
                 using (var session = store.OpenSession())
                 {
                     var orders = session
-                        .Include("Company")
+                        .Include<Order>(o => o.Company)
                         .IncludeCounters()
-                        .Load<Order>("orders/1-A", "orders/2-A");
+                        .Load("orders/1-A", "orders/2-A");
 
                     var order = orders["orders/1-A"];
                     var company = session.Load<Company>(order.Company);
