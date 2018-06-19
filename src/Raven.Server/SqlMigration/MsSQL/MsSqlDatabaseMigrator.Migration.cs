@@ -37,9 +37,13 @@ namespace Raven.Server.SqlMigration.MsSQL
                 case "bigint":
                 case "decimal":
                 case "float":
+                case "real":
                 case "int":
+                case "numeric":
                 case "smallint":
+                case "smallmoney":
                 case "tinyint":
+                case "money":
                     return ColumnType.Number;
                 case "bit":
                     return ColumnType.Boolean;
@@ -51,13 +55,17 @@ namespace Raven.Server.SqlMigration.MsSQL
                 case "nchar":
                 case "ntext":
                 case "nvarchar":
+                case "smalldatetime":
                 case "datetime":
                 case "datetime2":
                 case "datetimeoffset":
+                case "date":
                 case "time":
+                case "text":
                 case "timestamp":
                 case "uniqueidentifier":
                 case "varchar":
+                case "xml":
                     return ColumnType.String;
 
                 default:
