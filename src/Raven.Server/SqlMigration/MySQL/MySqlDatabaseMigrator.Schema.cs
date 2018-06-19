@@ -12,7 +12,10 @@ namespace Raven.Server.SqlMigration.MySQL
 {
     internal partial class MySqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE from information_schema.COLUMNS where TABLE_SCHEMA = @schema";
+        public const string SelectColumns = "select c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE " +
+                                            " from information_schema.COLUMNS c join information_schema.TABLES t " +
+                                            " using (TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME) " +
+                                            " where c.TABLE_SCHEMA = @schema and t.TABLE_TYPE <> 'VIEW' ";
 
         public const string SelectPrimaryKeys = "select TABLE_NAME, COLUMN_NAME, TABLE_SCHEMA from information_schema.KEY_COLUMN_USAGE " +
                                                 "where TABLE_SCHEMA = @schema and CONSTRAINT_NAME = 'PRIMARY' " +
