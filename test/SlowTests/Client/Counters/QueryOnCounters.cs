@@ -1253,14 +1253,14 @@ namespace SlowTests.Client.Counters
                                     Name = user.Name,
                                     Downloads = c
                                 };
-
-                    Assert.Equal(
+                    
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(user) {
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
 from Users as user select output(user)" , query.ToString());
-
+                    
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
 
@@ -1305,8 +1305,8 @@ from Users as user select output(user)" , query.ToString());
                             Downloads = c
                         };
 
-                    Assert.Equal(
-                        @"declare function output(user) {
+                    RavenTestHelper.AssertEqualRespectingNewLines(
+@"declare function output(user) {
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
