@@ -13,7 +13,7 @@ class operation extends abstractNotification {
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
     taskType = ko.observable<Raven.Server.Documents.Operations.Operations.OperationType>();
-
+    
     startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();
     duration: KnockoutComputed<string>;
@@ -22,6 +22,7 @@ class operation extends abstractNotification {
     isCompleted: KnockoutComputed<boolean>;
     isCanceled: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
+    headerIconAddonClass: KnockoutComputed<string>;
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         super(db, dto);
@@ -67,6 +68,19 @@ class operation extends abstractNotification {
             }
 
             return progress.hasOwnProperty("Processed") && progress.hasOwnProperty("Total");
+        });
+        
+        this.headerIconAddonClass = ko.pureComputed(() => {
+            switch (this.status()) {
+                case "Completed":
+                    return "icon-addon-tick";
+                case "Faulted":
+                    return "icon-addon-danger";
+                case "Canceled":
+                    return "icon-addon-warning";
+                default:
+                    return null;
+            }
         });
 
         // override event date - for operations we use end date (if available), or start start
