@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
                 {
 
-                    GetDocumentsCommand getDoc = new GetDocumentsCommand("bignum/1", null, false);
+                    GetDocumentsCommand getDoc = new GetDocumentsCommand("bignum/1", null, null, false);
                     requestExecuter.Execute(getDoc, context);
                     var doc = getDoc.Result.Results[0] as BlittableJsonReaderObject;
                     Assert.True(doc.TryGet<LazyNumberValue>("BigNumber", out var rawNum));
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
                 {
 
-                    GetDocumentsCommand getDoc = new GetDocumentsCommand("bignum/1", null, false);
+                    GetDocumentsCommand getDoc = new GetDocumentsCommand("bignum/1", null, null, false);
                     requestExecuter.Execute(getDoc, context);
                     var doc = getDoc.Result.Results[0] as BlittableJsonReaderObject;
                     Assert.True(doc.TryGet<LazyNumberValue>("BigNumber", out var rawNum));

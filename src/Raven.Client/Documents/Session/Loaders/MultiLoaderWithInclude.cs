@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
         private readonly IDocumentSessionImpl _session;
         private readonly List<string> _includes = new List<string>();
+        private List<string> _counters;
 
         /// <summary>
         /// Includes the specified path.
@@ -68,13 +69,51 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
         /// <summary>
+        /// Includes a counter of the document to be loaded, by counter name
+        /// <param name="name">Name of the counter to include.</param>
+        /// </summary>
+        public ILoaderWithInclude<T> IncludeCounter(string name)
+        {
+            if (_counters == null)
+                _counters = new List<string>();
+            _counters.Add(name);
+            return this;
+        }
+
+        /// <summary>
+        /// Includes counters of the document to be loaded, by counters names
+        /// <param name="names">Names of the counters to include.</param>
+        /// </summary>
+        public ILoaderWithInclude<T> IncludeCounters(string[] names)
+        {
+            if (_counters == null)
+                _counters = new List<string>();
+            if (names != null)
+            {
+                foreach (var name in names)
+                {
+                    _counters.Add(name);
+                }
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Includes all the counters of the document to be loaded
+        /// </summary>
+        public ILoaderWithInclude<T> IncludeCounters()
+        {
+            return IncludeCounters(new string[0]);
+        }
+
+        /// <summary>
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
         public Dictionary<string, T> Load(params string[] ids)
         {
-            return _session.LoadInternal<T>(ids, _includes.ToArray());
+            return _session.LoadInternal<T>(ids, _includes.ToArray(), _counters?.ToArray());
         }
 
         /// <summary>
@@ -84,7 +123,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <returns></returns>
         public Dictionary<string, T> Load(IEnumerable<string> ids)
         {
-            return _session.LoadInternal<T>(ids.ToArray(), _includes.ToArray());
+            return _session.LoadInternal<T>(ids.ToArray(), _includes.ToArray(), _counters?.ToArray());
         }
 
         /// <summary>
@@ -93,7 +132,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="id">The id.</param>
         public T Load(string id)
         {
-            return _session.LoadInternal<T>(new[] { id }, _includes.ToArray()).Values.FirstOrDefault();
+            return _session.LoadInternal<T>(new[] { id }, _includes.ToArray(), _counters?.ToArray()).Values.FirstOrDefault();
         }
 
         /// <summary>
@@ -112,7 +151,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="ids">The ids.</param>
         public Dictionary<string, TResult> Load<TResult>(params string[] ids)
         {
-            return _session.LoadInternal<TResult>(ids, _includes.ToArray());
+            return _session.LoadInternal<TResult>(ids, _includes.ToArray(), _counters?.ToArray());
         }
 
         /// <summary>
@@ -122,7 +161,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="ids">The ids.</param>
         public Dictionary<string, TResult> Load<TResult>(IEnumerable<string> ids)
         {
-            return _session.LoadInternal<TResult>(ids.ToArray(), _includes.ToArray());
+            return _session.LoadInternal<TResult>(ids.ToArray(), _includes.ToArray(), _counters?.ToArray());
         }
 
         /// <summary>
