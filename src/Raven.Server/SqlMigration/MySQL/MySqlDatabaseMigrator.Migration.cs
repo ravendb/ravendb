@@ -36,7 +36,6 @@ namespace Raven.Server.SqlMigration.MySQL
             {
                 case "varchar":
                 case "longtext":
-
                 case "enum":
                 case "text":
                 case "timestamp":
