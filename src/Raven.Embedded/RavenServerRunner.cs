@@ -11,6 +11,9 @@ namespace Raven.Embedded
             if (string.IsNullOrWhiteSpace(options.ServerDirectory))
                 throw new ArgumentNullException(nameof(options.ServerDirectory));
 
+            if (string.IsNullOrWhiteSpace(options.DataDirectory))
+                throw new ArgumentNullException(nameof(options.DataDirectory));
+
             var serverDllPath = Path.Combine(options.ServerDirectory, "Raven.Server.dll");
 
             if (File.Exists(serverDllPath) == false)
@@ -24,6 +27,7 @@ namespace Raven.Embedded
             options.CommandLineArgs.Add("--ServerUrl=http://127.0.0.1:0");
             options.CommandLineArgs.Add("--License.Eula.Accepted=true");
             options.CommandLineArgs.Add("--Setup.Mode=None");
+            options.CommandLineArgs.Add($"--DataDir={options.DataDirectory}");
 
             options.CommandLineArgs.Insert(0, serverDllPath);
 
@@ -39,8 +43,7 @@ namespace Raven.Embedded
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = options.WorkingDirectory ?? ServerOptions.Default.WorkingDirectory
+                UseShellExecute = false
             };
 
             Process process = null;

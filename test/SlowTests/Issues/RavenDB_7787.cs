@@ -19,7 +19,7 @@ namespace SlowTests.Issues
                 embedded.StartServer(new ServerOptions
                 {
                     ServerDirectory = paths.ServerDirectory,
-                    WorkingDirectory = paths.WorkingDirectory,
+                    DataDirectory = paths.DataDirectory,
                     FrameworkVersion = null
                 });
 
@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                 embedded.StartServer(new ServerOptions
                 {
                     ServerDirectory = paths.ServerDirectory,
-                    WorkingDirectory = paths.WorkingDirectory,
+                    DataDirectory = paths.DataDirectory,
                     FrameworkVersion = null
                 });
 
@@ -59,17 +59,17 @@ namespace SlowTests.Issues
             }
         }
 
-        private (string ServerDirectory, string WorkingDirectory) CopyServer()
+        private (string ServerDirectory, string DataDirectory) CopyServer()
         {
             var baseDirectory = NewDataPath();
             var serverDirectory = Path.Combine(baseDirectory, "RavenDBServer");
-            var workingDirectory = Path.Combine(baseDirectory, "RavenDB");
+            var dataDirectory = Path.Combine(baseDirectory, "RavenDB");
 
             if (Directory.Exists(serverDirectory) == false)
                 Directory.CreateDirectory(serverDirectory);
 
-            if (Directory.Exists(workingDirectory) == false)
-                Directory.CreateDirectory(workingDirectory);
+            if (Directory.Exists(dataDirectory) == false)
+                Directory.CreateDirectory(dataDirectory);
 
             foreach (var file in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
             {
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
 
             File.Copy(runtimeConfigPath, Path.Combine(serverDirectory, runtimeConfigFileInfo.Name));
 
-            return (serverDirectory, workingDirectory);
+            return (serverDirectory, dataDirectory);
         }
     }
 }
