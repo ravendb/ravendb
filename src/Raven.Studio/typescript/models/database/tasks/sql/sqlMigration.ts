@@ -15,7 +15,7 @@ class sqlMigration {
     
     testImport = ko.observable<boolean>(false);
     maxDocumentsToImportPerTable = ko.observable<number>(1000);
-    
+
     advanced = {
         usePascalCase: ko.observable<boolean>(true),
         trimSuffix: ko.observable<boolean>(true),
@@ -231,6 +231,17 @@ class sqlMigration {
     
     findLinksToTable(table: abstractSqlTable): Array<sqlReference> {
         return _.flatMap(this.tables().filter(x => x.checked()), t => t.findLinksToTable(table));
+    }
+
+    getFactoryName() {
+        switch (this.databaseType()) {
+            case "MySQL":
+                return "MySql.Data.MySqlClient";
+            case "MsSQL":
+                return "System.Data.SqlClient";
+            default:
+                throw new Error(`Can't get factory name: Database type - ${this.databaseType} - is not supported.`);
+        }
     }
     
     getConnectionString() {
