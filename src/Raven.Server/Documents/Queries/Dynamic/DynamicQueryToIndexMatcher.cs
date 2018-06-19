@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 for (var i = 1; i < prioritizedResults.Length; i++)
                 {
-                    explanations.Add(new Explanation(prioritizedResults[i].IndexName, "Wasn't the widest / most unstable index matching this query"));
+                    explanations.Add(new Explanation(prioritizedResults[i].IndexName, "Wasn't the widest / most up to date index matching this query"));
                 }
             }
 
