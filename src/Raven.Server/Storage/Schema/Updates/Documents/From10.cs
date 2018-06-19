@@ -73,7 +73,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         // after we allocate the new write memory.
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         {
-                            var type = *(DocumentTombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out _);
+                            var type = *(Tombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out _);
                             var oldCollection = TableValueToString(context, (int)TombstoneTable.Collection, ref read.Reader);
                             using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
                             using (writeTable.Allocate(out TableValueBuilder write))
@@ -83,7 +83,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 write.Add(read.Reader.Read((int)TombstoneTable.DeletedEtag, out size), size);
                                 write.Add(read.Reader.Read((int)TombstoneTable.TransactionMarker, out size), size);
                                 write.Add(read.Reader.Read((int)TombstoneTable.Type, out size), size);
-                                if (type == DocumentTombstone.TombstoneType.Attachment)
+                                if (type == Tombstone.TombstoneType.Attachment)
                                 {
                                     write.Add(read.Reader.Read((int)TombstoneTable.Collection, out size), size);
                                 }

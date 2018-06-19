@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
-    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase, IDocumentTombstoneAware
+    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase, ITombstoneAware
     {
         [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()
@@ -56,8 +56,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 // Check that we do not replicate tombstones of aritifical documents
                 var database = await GetDocumentDatabaseInstanceFor(store1);
                 var database2 = await GetDocumentDatabaseInstanceFor(store2);
-                database.DocumentTombstoneCleaner.Subscribe(this);
-                database2.DocumentTombstoneCleaner.Subscribe(this);
+                database.TombstoneCleaner.Subscribe(this);
+                database2.TombstoneCleaner.Subscribe(this);
 
                 var operation = await store1.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Invoices"}));
                 await operation.WaitForCompletionAsync();
@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             //replicationNode.SkipIndexReplication = true;
         }
 
-        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             return new Dictionary<string, long>
             {

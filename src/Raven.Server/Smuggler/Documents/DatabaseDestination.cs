@@ -158,7 +158,7 @@ namespace Raven.Server.Smuggler.Documents
                 HandleBatchOfDocumentsIfNecessary();
             }
 
-            public void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
+            public void WriteTombstone(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 _command.Add(new DocumentItem
                 {
@@ -459,10 +459,10 @@ namespace Raven.Server.Smuggler.Documents
                             var changeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
                             switch (tombstone.Type)
                             {
-                                case DocumentTombstone.TombstoneType.Document:
+                                case Tombstone.TombstoneType.Document:
                                     _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, changeVector, new CollectionName(tombstone.Collection));
                                     break;
-                                case DocumentTombstone.TombstoneType.Attachment:
+                                case Tombstone.TombstoneType.Attachment:
                                     var idEnd = key.Content.IndexOf(SpecialChars.RecordSeparator);
                                     if (idEnd < 1)
                                         throw new InvalidOperationException("Cannot find a document ID inside the attachment key");
@@ -471,10 +471,10 @@ namespace Raven.Server.Smuggler.Documents
 
                                     _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector, tombstone.LastModified.Ticks);
                                     break;
-                                case DocumentTombstone.TombstoneType.Revision:
+                                case Tombstone.TombstoneType.Revision:
                                     _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector, tombstone.LastModified.Ticks);
                                     break;
-                                case DocumentTombstone.TombstoneType.Counter:
+                                case Tombstone.TombstoneType.Counter:
                                     _database.DocumentsStorage.CountersStorage.DeleteCounter(context, key,
                                         tombstone.LastModified.Ticks, forceTombstone: true);
                                     break;

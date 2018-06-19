@@ -5,10 +5,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
 {
     public class TombstonesToSqlItems : IEnumerator<ToSqlItem>
     {
-        private readonly IEnumerator<DocumentTombstone> _tombstones;
+        private readonly IEnumerator<Tombstone> _tombstones;
         private readonly string _collection;
 
-        public TombstonesToSqlItems(IEnumerator<DocumentTombstone> tombstones, string collection)
+        public TombstonesToSqlItems(IEnumerator<Tombstone> tombstones, string collection)
         {
             _tombstones = tombstones;
             _collection = collection;

@@ -9,20 +9,20 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentTombstoneCleaner : BackgroundWorkBase
+    public class TombstoneCleaner : BackgroundWorkBase
     {
         private readonly SemaphoreSlim _subscriptionsLocker = new SemaphoreSlim(1, 1);
 
         private readonly DocumentDatabase _documentDatabase;
 
-        private readonly HashSet<IDocumentTombstoneAware> _subscriptions = new HashSet<IDocumentTombstoneAware>();
+        private readonly HashSet<ITombstoneAware> _subscriptions = new HashSet<ITombstoneAware>();
 
-        public DocumentTombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
+        public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
         }
 
-        public void Subscribe(IDocumentTombstoneAware subscription)
+        public void Subscribe(ITombstoneAware subscription)
         {
             _subscriptionsLocker.Wait();
 
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void Unsubscribe(IDocumentTombstoneAware subscription)
+        public void Unsubscribe(ITombstoneAware subscription)
         {
             _subscriptionsLocker.Wait();
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
                 {
                     foreach (var subscription in _subscriptions)
                     {
-                        foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
+                        foreach (var tombstone in subscription.GetLastProcessedTombstonesPerCollection())
                         {
                             if (tombstone.Key == Constants.Documents.Collections.AllDocumentsCollection)
                             {
@@ -166,8 +166,8 @@ namespace Raven.Server.Documents
         }
     }
 
-    public interface IDocumentTombstoneAware
+    public interface ITombstoneAware
     {
-        Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+        Dictionary<string, long> GetLastProcessedTombstonesPerCollection();
     }
 }

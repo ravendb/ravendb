@@ -157,8 +157,8 @@ namespace SlowTests.Client.Counters
                     {
                         var tombstones = documentDatabase.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
                         Assert.Equal(2, tombstones.Count);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[0].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[0].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[1].Type);
                     }
                 }
 

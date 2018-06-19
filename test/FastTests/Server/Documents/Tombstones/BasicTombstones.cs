@@ -123,7 +123,7 @@ namespace FastTests.Server.Documents.Tombstones
                 var stats = new IndexingStatsScope(batchStats);
                 index.DoIndexingWork(stats, CancellationToken.None);
 
-                var tombstones = index.GetLastProcessedDocumentTombstonesPerCollection();
+                var tombstones = index.GetLastProcessedTombstonesPerCollection();
                 Assert.Equal(1, tombstones.Count);
                 Assert.Equal(0, tombstones["Users"]);
 
@@ -133,7 +133,7 @@ namespace FastTests.Server.Documents.Tombstones
                     Assert.Equal(0, count);
                 }
 
-                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup();
 
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -142,7 +142,7 @@ namespace FastTests.Server.Documents.Tombstones
                     tx.Commit();
                 }
 
-                tombstones = index.GetLastProcessedDocumentTombstonesPerCollection();
+                tombstones = index.GetLastProcessedTombstonesPerCollection();
                 Assert.Equal(1, tombstones.Count);
                 Assert.Equal(0, tombstones["Users"]);
 
@@ -152,7 +152,7 @@ namespace FastTests.Server.Documents.Tombstones
                     Assert.Equal(1, count);
                 }
 
-                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup();
 
                 using (context.OpenReadTransaction())
                 {
@@ -164,7 +164,7 @@ namespace FastTests.Server.Documents.Tombstones
                 stats = new IndexingStatsScope(batchStats);
                 index.DoIndexingWork(stats, CancellationToken.None);
 
-                tombstones = index.GetLastProcessedDocumentTombstonesPerCollection();
+                tombstones = index.GetLastProcessedTombstonesPerCollection();
                 Assert.Equal(1, tombstones.Count);
                 Assert.Equal(4, tombstones["Users"]);
 
@@ -181,7 +181,7 @@ namespace FastTests.Server.Documents.Tombstones
                     Assert.Equal(2, count);
                 }
 
-                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup();
 
                 using (context.OpenReadTransaction())
                 {

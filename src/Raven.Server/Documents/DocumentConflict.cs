@@ -49,12 +49,12 @@ namespace Raven.Server.Documents
             };
         }
 
-        public static DocumentConflict From(DocumentTombstone tombstone)
+        public static DocumentConflict From(Tombstone tombstone)
         {
             if (tombstone == null)
                 return null;
 
-            Debug.Assert(tombstone.Type == DocumentTombstone.TombstoneType.Document);
+            Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document);
 
             return new DocumentConflict
             {

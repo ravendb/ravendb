@@ -30,12 +30,12 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                await storage1.DocumentTombstoneCleaner.ExecuteCleanup();
+                await storage1.TombstoneCleaner.ExecuteCleanup();
 
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
                 //Assert.Equal(4, WaitForValue(() => storage1.ReplicationLoader.MinimalEtagForReplication, 4));
 
-                await storage1.DocumentTombstoneCleaner.ExecuteCleanup();
+                await storage1.TombstoneCleaner.ExecuteCleanup();
 
                 Assert.Equal(0, WaitUntilHasTombstones(store1, 0).Count);
             }

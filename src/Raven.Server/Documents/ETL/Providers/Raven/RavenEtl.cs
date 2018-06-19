@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection)
         {
             return new TombstonesToRavenEtlItems(tombstones, collection);
         }

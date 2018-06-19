@@ -134,7 +134,7 @@ namespace Raven.Server.Smuggler.Documents
             return _database.DocumentsStorage.CountersStorage.GetCounterValues(_context, docId, counter);
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var tombstones = collectionsToExport.Count > 0
                 ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
@@ -198,7 +198,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (originalSideBySideIndexNames.Contains(index.Name))
                     continue;
-                
+
                 if (index.Type == IndexType.Faulty)
                     continue;
 

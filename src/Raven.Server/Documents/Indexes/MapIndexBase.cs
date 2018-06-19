@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Indexes
             return _filter;
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             writer.Delete(tombstone.LowerId, stats);
         }
