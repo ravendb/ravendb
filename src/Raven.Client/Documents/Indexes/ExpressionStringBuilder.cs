@@ -975,7 +975,7 @@ namespace Raven.Client.Documents.Indexes
                 type.GetTypeInfo().Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
                 return true;
 
-            return false;
+            return _conventions.TypeIsKnownServerSide(type);
         }
 
         /// <summary>
