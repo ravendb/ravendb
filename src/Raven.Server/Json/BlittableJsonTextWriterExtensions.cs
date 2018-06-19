@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
@@ -1207,6 +1208,38 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
             return numberOfResults;
+        }
+
+        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, List<CounterDetail> counters)
+        {
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var counter in counters)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(CounterDetail.DocumentId));
+                writer.WriteString(counter.DocumentId);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(CounterDetail.CounterName));
+                writer.WriteString(counter.CounterName);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(CounterDetail.TotalValue));
+                writer.WriteDouble(counter.TotalValue);
+
+                writer.WriteEndObject();
+
+                await writer.MaybeOuterFlsuhAsync();
+            }
+
+            writer.WriteEndArray();
         }
 
         [ThreadStatic]
