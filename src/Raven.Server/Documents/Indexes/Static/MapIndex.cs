@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return workers.ToArray();
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_referencedCollections.Count > 0)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats);
         }
 
-        public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             using (CurrentlyInUse())
             {

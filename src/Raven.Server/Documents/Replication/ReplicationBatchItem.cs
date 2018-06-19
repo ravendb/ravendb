@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public static ReplicationBatchItem From(DocumentTombstone doc)
+        public static ReplicationBatchItem From(Tombstone doc)
         {
             var item = new ReplicationBatchItem
             {
@@ -58,16 +58,16 @@ namespace Raven.Server.Documents.Replication
 
             switch (doc.Type)
             {
-                case DocumentTombstone.TombstoneType.Document:
+                case Tombstone.TombstoneType.Document:
                     item.Type = ReplicationItemType.DocumentTombstone;
                     item.Collection = doc.Collection;
                     item.Flags = doc.Flags;
                     item.LastModifiedTicks = doc.LastModified.Ticks;
                     break;
-                case DocumentTombstone.TombstoneType.Attachment:
+                case Tombstone.TombstoneType.Attachment:
                     item.Type = ReplicationItemType.AttachmentTombstone;
                     break;
-                case DocumentTombstone.TombstoneType.Revision:
+                case Tombstone.TombstoneType.Revision:
                     item.Type = ReplicationItemType.RevisionTombstone;
                     item.Collection = doc.Collection;
                     break;

@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class Index : IDocumentTombstoneAware, IDisposable, ILowMemoryHandler
+    public abstract class Index : ITombstoneAware, IDisposable, ILowMemoryHandler
     {
         private long _writeErrors;
 
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Indexes
                 //Does happen for faulty in memory indexes
                 if (DocumentDatabase != null)
                 {
-                    DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
+                    DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
                 }
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Indexes
 
                 LoadValues();
 
-                DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
+                DocumentDatabase.TombstoneCleaner.Subscribe(this);
 
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
@@ -1485,7 +1485,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats);
 
-        public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
+        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public abstract int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer,
@@ -2603,7 +2603,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             using (CurrentlyInUse())
             {

@@ -108,7 +108,7 @@ namespace Raven.Server.Documents
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
-                DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
+                TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this, addToInitLog);
                 IndexStore = new IndexStore(this, serverStore);
                 QueryRunner = new QueryRunner(this);
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents
 
         public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
 
-        public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
+        public TombstoneCleaner TombstoneCleaner { get; private set; }
 
         public DocumentsChanges Changes { get; }
 
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
-                DocumentTombstoneCleaner.Start();
+                TombstoneCleaner.Start();
 
                 try
                 {
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    DocumentTombstoneCleaner?.Dispose();
+                    TombstoneCleaner?.Dispose();
                 });
 
                 exceptionAggregator.Execute(() =>

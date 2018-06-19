@@ -74,7 +74,7 @@ namespace RachisTests.DatabaseCluster
                 WaitForIndexing(store);
 
                 var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup();
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

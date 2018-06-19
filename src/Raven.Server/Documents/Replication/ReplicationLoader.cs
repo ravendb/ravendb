@@ -30,7 +30,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationLoader : IDisposable, IDocumentTombstoneAware
+    public class ReplicationLoader : IDisposable, ITombstoneAware
     {
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Replication
             _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-            database.DocumentTombstoneCleaner.Subscribe(this);
+            database.TombstoneCleaner.Subscribe(this);
         }
 
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
@@ -869,12 +869,12 @@ namespace Raven.Server.Documents.Replication
             foreach (var outgoing in _outgoing)
                 ea.Execute(outgoing.Dispose);
 
-            Database.DocumentTombstoneCleaner?.Unsubscribe(this);
+            Database.TombstoneCleaner?.Unsubscribe(this);
 
             ea.ThrowIfNeeded();
         }
 
-        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
@@ -908,20 +908,20 @@ namespace Raven.Server.Documents.Replication
                 tooManyTombstones = Database.DocumentsStorage.HasMoreOfTombstonesAfter(context, minEtag, maxTombstones);
             }
 
-            if (!tooManyTombstones)
-                return result;
-
-            Database.NotificationCenter.Add(
-                PerformanceHint.Create(
-                    database: Database.Name,
-                    title: "Large number of tombstones because of disabled replication destination",
-                    msg:
+            if (tooManyTombstones)
+            {
+                Database.NotificationCenter.Add(
+                    PerformanceHint.Create(
+                        database: Database.Name,
+                        title: "Large number of tombstones because of disabled replication destination",
+                        msg:
                         $"The disabled replication destination {disabledReplicationNode.FromString()} prevents from cleaning large number of tombstones.",
 
-                    type: PerformanceHintType.Replication,
-                    notificationSeverity: NotificationSeverity.Warning,
-                    source: disabledReplicationNode.FromString()
-                ));
+                        type: PerformanceHintType.Replication,
+                        notificationSeverity: NotificationSeverity.Warning,
+                        source: disabledReplicationNode.FromString()
+                    ));
+            }
 
             return result;
         }

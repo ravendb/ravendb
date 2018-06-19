@@ -27,7 +27,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface IDocumentActions : INewDocumentActions, IDisposable
     {
         void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress);
-        void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
+        void WriteTombstone(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
         void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress);
         void DeleteDocument(string id);
     }
