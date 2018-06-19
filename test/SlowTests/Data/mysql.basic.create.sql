@@ -76,3 +76,24 @@ DEFAULT CHARACTER SET = utf8;
 ALTER TABLE groups
     ADD CONSTRAINT FK_GROUPS FOREIGN KEY (parent_group_id)
         REFERENCES `groups` (g_id);
+
+
+CREATE TABLE orders2 (
+   o_id           int(11) NOT NULL AUTO_INCREMENT,
+   customer_vatid         int(11) not null,
+   primary key (`o_id`)
+) ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+CREATE TABLE customers2 (
+   c_id       int(11) NOT NULL AUTO_INCREMENT,
+   vatid      int(11) not null,
+   primary key (c_id)
+) ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+CREATE UNIQUE INDEX C2_VAT_ID ON customers2 (vatid);
+
+ALTER TABLE orders2 
+    ADD CONSTRAINT FK_ORDERS_VAT_ID FOREIGN KEY (customer_vatid)
+        REFERENCES customers2 (vatid);

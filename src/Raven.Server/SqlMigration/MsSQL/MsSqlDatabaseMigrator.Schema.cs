@@ -114,14 +114,15 @@ namespace Raven.Server.SqlMigration.MsSQL
             foreach (var kvp in referentialConstraints)
             {
                 var fkCacheValue = keyColumnUsageCache[kvp.Key];
-                var pkCacheValue = keyColumnUsageCache[kvp.Value];
-                
-                var pkTable = dbSchema.GetTable(pkCacheValue.Schema, pkCacheValue.TableName);
-
-                pkTable.References.Add(new TableReference(fkCacheValue.Schema, fkCacheValue.TableName)
+                if (keyColumnUsageCache.TryGetValue(kvp.Value, out var pkCacheValue))
                 {
-                    Columns = fkCacheValue.ColumnNames
-                });
+                    var pkTable = dbSchema.GetTable(pkCacheValue.Schema, pkCacheValue.TableName);
+
+                    pkTable.References.Add(new TableReference(fkCacheValue.Schema, fkCacheValue.TableName)
+                    {
+                        Columns = fkCacheValue.ColumnNames
+                    });
+                }
             }
         }
         
