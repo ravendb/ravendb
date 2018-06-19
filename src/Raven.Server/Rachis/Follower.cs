@@ -19,6 +19,8 @@ namespace Raven.Server.Rachis
 {
     public class Follower : IDisposable
     {
+        private static int _uniqueId;
+
         private readonly RachisConsensus _engine;
         private readonly long _term;
         private readonly RemoteConnection _connection;
@@ -32,8 +34,10 @@ namespace Raven.Server.Rachis
             _engine = engine;
             _connection = remoteConnection;
             _term = term;
-            
-            _debugName = $"Follower in term {_term}";
+
+            // this will give us a unique identifier for this follower
+            var uniqueId = Interlocked.Increment(ref _uniqueId);
+            _debugName = $"Follower in term {_term} (id: {uniqueId})";
             _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
             _debugRecorder.Start();
         }
