@@ -109,7 +109,7 @@ namespace Raven.Client
             {
             }
 
-            public const string All = "@allCounters";
+            public const string All = "@all_counters";
         }
 
         public class Documents

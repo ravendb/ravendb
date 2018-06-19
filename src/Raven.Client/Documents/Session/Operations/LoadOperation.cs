@@ -32,7 +32,9 @@ namespace Raven.Client.Documents.Session.Operations
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
-            return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _counters, metadataOnly: false);
+            return _counters != null 
+                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _counters, metadataOnly: false) 
+                : new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
