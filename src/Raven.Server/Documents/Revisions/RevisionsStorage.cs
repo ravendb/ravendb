@@ -566,7 +566,7 @@ namespace Raven.Server.Documents.Revisions
                 tvb.Add(Bits.SwapBytes(newEtag));
                 tvb.Add(Bits.SwapBytes(revisionEtag));
                 tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
+                tvb.Add((byte)Tombstone.TombstoneType.Revision);
                 tvb.Add(collectionSlice);
                 tvb.Add((int)DocumentFlags.None);
                 tvb.Add(cv.Content.Ptr, cv.Size);

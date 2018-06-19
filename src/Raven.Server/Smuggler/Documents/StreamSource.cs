@@ -308,7 +308,7 @@ namespace Raven.Server.Smuggler.Documents
             return ReadLegacyDeletions();
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadTombstones(actions);
         }
@@ -772,7 +772,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<DocumentTombstone> ReadTombstones(INewDocumentActions actions = null)
+        private IEnumerable<Tombstone> ReadTombstones(INewDocumentActions actions = null)
         {
             if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -811,13 +811,13 @@ namespace Raven.Server.Smuggler.Documents
                     var data = builder.CreateReader();
                     builder.Reset();
 
-                    var tombstone = new DocumentTombstone();
+                    var tombstone = new Tombstone();
                     if (data.TryGet("Key", out tombstone.LowerId) &&
-                        data.TryGet(nameof(DocumentTombstone.Type), out string type) &&
-                        data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection) &&
-                        data.TryGet(nameof(DocumentTombstone.LastModified), out tombstone.LastModified))
+                        data.TryGet(nameof(Tombstone.Type), out string type) &&
+                        data.TryGet(nameof(Tombstone.Collection), out tombstone.Collection) &&
+                        data.TryGet(nameof(Tombstone.LastModified), out tombstone.LastModified))
                     {
-                        if (Enum.TryParse<DocumentTombstone.TombstoneType>(type, out var tombstoneType) == false)
+                        if (Enum.TryParse<Tombstone.TombstoneType>(type, out var tombstoneType) == false)
                         {
                             var msg = $"Ignoring a tombstone of type `{type}` which is not supported in 4.0. ";
                             if (_log.IsOperationsEnabled)

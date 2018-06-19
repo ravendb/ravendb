@@ -85,13 +85,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 if (indexWriter == null)
                                     indexWriter = writeOperation.Value;
 
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processing tombstone {tombstone.LowerId} ({tombstone.Etag}).");
-
                                 count++;
                                 batchCount++;
                                 lastEtag = tombstone.Etag;
                                 inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: true);
+
+                                if (_logger.IsInfoEnabled && count % 2048 == 0)
+                                    _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag}.");
+
+                                if (tombstone.Type != Tombstone.TombstoneType.Document)
+                                    continue; // this can happen when we have '@all_docs'
 
                                 if (tombstone.DeletedEtag > lastMappedEtag)
                                     continue; // no-op, we have not yet indexed this document

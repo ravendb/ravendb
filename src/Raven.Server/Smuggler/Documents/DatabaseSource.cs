@@ -126,7 +126,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var tombstones = collectionsToExport.Count > 0
                 ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)

@@ -7,7 +7,7 @@
            
         }
 
-        public RavenEtlItem(DocumentTombstone tombstone, string collection) : base(tombstone, collection)
+        public RavenEtlItem(Tombstone tombstone, string collection) : base(tombstone, collection)
         {
            
         }

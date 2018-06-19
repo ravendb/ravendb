@@ -323,9 +323,9 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<string>();
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return Enumerable.Empty<DocumentTombstone>();
+            return Enumerable.Empty<Tombstone>();
         }
 
         public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)

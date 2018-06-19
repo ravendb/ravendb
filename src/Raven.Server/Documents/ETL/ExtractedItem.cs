@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL
                 CollectionFromMetadata = docCollection;
         }
 
-        protected ExtractedItem(DocumentTombstone tombstone, string collection)
+        protected ExtractedItem(Tombstone tombstone, string collection)
         {
             Etag = tombstone.Etag;
             DocumentId = tombstone.LowerId;

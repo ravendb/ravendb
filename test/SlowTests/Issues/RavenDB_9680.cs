@@ -45,7 +45,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                await (await GetDatabase(store.Database)).DocumentTombstoneCleaner.ExecuteCleanup(); // will delete users/1 tombstone
+                await (await GetDatabase(store.Database)).TombstoneCleaner.ExecuteCleanup(); // will delete users/1 tombstone
 
                 // the restart is necessary to expose the issue
                 // on db load we read last etag

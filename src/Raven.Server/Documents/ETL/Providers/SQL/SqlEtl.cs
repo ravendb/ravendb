@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new DocumentsToSqlItems(docs, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection)
         {
             return new TombstonesToSqlItems(tombstones, collection);
         }

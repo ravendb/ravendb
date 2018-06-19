@@ -39,7 +39,7 @@ namespace SlowTests.Issues
 
                     database.LastAccessTime = DateTime.MinValue;
 
-                    await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                    await database.TombstoneCleaner.ExecuteCleanup();
 
                     Server.ServerStore.IdleOperations(null);
 

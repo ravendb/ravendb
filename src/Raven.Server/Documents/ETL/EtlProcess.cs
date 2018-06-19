@@ -29,7 +29,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlProcess : IDisposable, IDocumentTombstoneAware
+    public abstract class EtlProcess : IDisposable, ITombstoneAware
     {
         public string Tag { get; protected set; }
 
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
-        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+        public abstract Dictionary<string, long> GetLastProcessedTombstonesPerCollection();
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
         protected readonly DocumentDatabase Database;
         private readonly ServerStore _serverStore;
 
-        public readonly TConfiguration Configuration;        
+        public readonly TConfiguration Configuration;
 
         protected EtlProcess(Transformation transformation, TConfiguration configuration, DocumentDatabase database, ServerStore serverStore, string tag)
         {
@@ -115,20 +115,20 @@ namespace Raven.Server.Documents.ETL
             Statistics = new EtlProcessStatistics(Tag, Name, Database.NotificationCenter);
 
             if (transformation.ApplyToAllDocuments == false)
-                _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);                        
+                _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection);
 
-        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection);
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlStatsScope stats)
         {
             using (var scope = new DisposableScope())
             {
-                var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
+                var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<Tombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
 
                 if (Transformation.ApplyToAllDocuments)
                 {
@@ -137,6 +137,7 @@ namespace Raven.Server.Documents.ETL
 
                     var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                     scope.EnsureDispose(tombstones);
+                    tombstones = new FilterTombstonesEnumerator(tombstones, stats);
 
                     enumerators.Add((docs, tombstones, null));
                 }
@@ -172,7 +173,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
 
-        public unsafe IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats, EtlProcessState state)
+        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats, EtlProcessState state)
         {
             using (var transformer = GetTransformer(context))
             {
@@ -283,7 +284,7 @@ namespace Raven.Server.Documents.ETL
             {
                 // double the fallback time (but don't cross Etl.MaxFallbackTime)
                 var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastLoadErrorTime.Value).TotalSeconds;
-                
+
                 FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
             }
         }
@@ -350,7 +351,7 @@ namespace Raven.Server.Documents.ETL
 
             if (_longRunningWork == null)
                 return;
-            
+
             _waitForChanges.Set();
         }
 
@@ -384,11 +385,11 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Failed to run ETL {Name}", e);
                 }
-            }, null, threadName);            
+            }, null, threadName);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Starting {Tag} process: '{Name}'.");
-            
+
         }
 
         public override void Stop()
@@ -451,7 +452,7 @@ namespace Raven.Server.Documents.ETL
                                     var extracted = Extract(context, loadLastProcessedEtag + 1, stats);
 
                                     var transformed = Transform(extracted, context, stats, state);
-                                    
+
                                     Load(transformed, context, stats);
 
                                     var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtag);
@@ -574,7 +575,7 @@ namespace Raven.Server.Documents.ETL
             _threadAllocations = NativeMemory.ThreadAllocations.Value;
         }
 
-        public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             var lastProcessedEtag = GetProcessState(Database, Configuration.Name, Transformation.Name).GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
