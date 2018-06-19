@@ -469,7 +469,7 @@ namespace Raven.Server.Documents
                 tvb.Add(Bits.SwapBytes(newEtag));
                 tvb.Add(Bits.SwapBytes(deletedEtag)); // etag that was deleted
                 tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)DocumentTombstone.TombstoneType.Counter);
+                tvb.Add((byte)Tombstone.TombstoneType.Counter);
                 tvb.Add(null, 0); // doc data
                 tvb.Add((int)DocumentFlags.None);
                 tvb.Add(cv.Content.Ptr, cv.Size); // change vector

@@ -923,7 +923,7 @@ namespace Raven.Server.Documents
                 tvb.Add(Bits.SwapBytes(newEtag));
                 tvb.Add(Bits.SwapBytes(attachmentEtag));
                 tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)DocumentTombstone.TombstoneType.Attachment);
+                tvb.Add((byte)Tombstone.TombstoneType.Attachment);
                 tvb.Add(null, 0);
                 tvb.Add((int)DocumentFlags.None);
                 tvb.Add(cv.Content.Ptr, cv.Size);

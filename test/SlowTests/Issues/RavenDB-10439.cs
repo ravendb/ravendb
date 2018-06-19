@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                 // run the tombstone cleaner
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(documentStore.Database);
-                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup();
 
                 // unload the database
                 (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(documentStore.Database, "reloading database in test")).Dispose();
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
 
                 // run the tombstone cleaner
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(documentStore.Database);
-                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                await database.TombstoneCleaner.ExecuteCleanup();
 
                 // unload the database
                 (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(documentStore.Database, "reloading database in test")).Dispose();

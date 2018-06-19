@@ -469,7 +469,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            public void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
+            public void WriteTombstone(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -478,13 +478,13 @@ namespace Raven.Server.Smuggler.Documents
                 _context.Write(Writer, new DynamicJsonValue
                 {
                     ["Key"] = tombstone.LowerId,
-                    [nameof(DocumentTombstone.Type)] = tombstone.Type.ToString(),
-                    [nameof(DocumentTombstone.Collection)] = tombstone.Collection,
-                    [nameof(DocumentTombstone.Flags)] = tombstone.Flags.ToString(),
-                    [nameof(DocumentTombstone.ChangeVector)] = tombstone.ChangeVector,
-                    [nameof(DocumentTombstone.DeletedEtag)] = tombstone.DeletedEtag,
-                    [nameof(DocumentTombstone.Etag)] = tombstone.Etag,
-                    [nameof(DocumentTombstone.LastModified)] = tombstone.LastModified,
+                    [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
+                    [nameof(Tombstone.Collection)] = tombstone.Collection,
+                    [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
+                    [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
+                    [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
+                    [nameof(Tombstone.Etag)] = tombstone.Etag,
+                    [nameof(Tombstone.LastModified)] = tombstone.LastModified,
                 });
             }
 

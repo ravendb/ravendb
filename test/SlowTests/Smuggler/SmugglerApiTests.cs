@@ -454,9 +454,9 @@ namespace SlowTests.Smuggler
                     {
                         var tombstones = db.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
                         Assert.Equal(3, tombstones.Count);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Document, tombstones[0].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[2].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Document, tombstones[0].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[2].Type);
                     }
 
                     var exportOptions = new DatabaseSmugglerExportOptions();
@@ -477,9 +477,9 @@ namespace SlowTests.Smuggler
                     {
                         var tombstones = db.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
                         Assert.Equal(3, tombstones.Count);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Document, tombstones[0].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[2].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Document, tombstones[0].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[2].Type);
                     }
                 }
             }
