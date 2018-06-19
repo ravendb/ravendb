@@ -1,6 +1,8 @@
 import app = require("durandal/app");
 import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");
+import database = require("models/resources/database");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
@@ -16,6 +18,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageDialog");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
+import generalUtils = require("common/generalUtils");
 
 interface exportDataDto {
     Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,
@@ -32,7 +35,8 @@ class importDatabaseFromSql extends viewModelBase {
     spinners = {
         schema: ko.observable<boolean>(false),
         importing: ko.observable<boolean>(false),
-        test: ko.observable<boolean>(false)
+        test: ko.observable<boolean>(false),
+        testConnection: ko.observable<boolean>(false)
     };
     
     completer = defaultAceCompleter.completer();
@@ -47,6 +51,10 @@ class importDatabaseFromSql extends viewModelBase {
     currentTables: KnockoutComputed<Array<rootSqlTable>>;
     currentLocationHumane: KnockoutComputed<string>;
     itemBeingEdited = ko.observable<rootSqlTable>();
+
+    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    fullErrorDetailsVisible = ko.observable<boolean>(false);
+    shortErrorText: KnockoutObservable<string>;
     
     inFirstStep = ko.observable<boolean>(true);
     globalSelectionState: KnockoutComputed<checkbox>;
@@ -68,7 +76,7 @@ class importDatabaseFromSql extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences", "fileSelected",
-            "closeEditedTransformation", "goToReverseReference", "onCollapseTable", "runTest");
+            "closeEditedTransformation", "goToReverseReference", "onCollapseTable", "runTest", "testConnection");
         
         this.initObservables();
         this.initValidation();
@@ -131,6 +139,14 @@ class importDatabaseFromSql extends viewModelBase {
         // dont' throttle for now as we need to point to exact location
         // in case of performance issues we might replace filter with go to option
         this.searchText.subscribe(() => this.filterTables());
+
+        this.shortErrorText = ko.pureComputed(() => {
+            const result = this.testConnectionResult();
+            if (!result || result.Success) {
+                return "";
+            }
+            return generalUtils.trimMessage(result.Error);
+        });
     }
     
     compositionComplete() {
@@ -663,6 +679,18 @@ class importDatabaseFromSql extends viewModelBase {
         return "Table <strong>" + targetTable.tableName + "</strong> doesn't have incoming links and it is embed. <br />"
             + "Probably you can deselect this table to avoid data duplication.<br/>" 
             + '<button class="btn btn-sm btn-primary popover-embed-ref" data-popover-ref-id="' + reference.id + '">Deselect ' + targetTable.tableName + '</button>';
+    }
+
+    testConnection() : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        this.model.databaseType();
+        if (this.isValid(this.model.getValidationGroup())) {
+            this.spinners.testConnection(true);
+            return new testSqlConnectionStringCommand(this.activeDatabase(), this.model.getConnectionString(), this.model.getFactoryName())
+                .execute()
+                .done(result => this.testConnectionResult(result))
+                .always(() => this.spinners.testConnection(false));
+        }
+        
     }
 }
 
