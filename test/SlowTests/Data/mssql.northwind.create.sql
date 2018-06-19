@@ -150,3 +150,8 @@ ALTER TABLE ProductCategory
     ADD CONSTRAINT FK_PROD_CAT_REF_CAT FOREIGN KEY (CategoryId)
         REFERENCES Category(Id)
 
+ GO 
+
+CREATE VIEW john_customers
+AS SELECT * FROM Customer
+WHERE FirstName = 'John';

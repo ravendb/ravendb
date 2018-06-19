@@ -545,3 +545,8 @@ CREATE TABLE IF NOT EXISTS `NoPkTable` (
     `id` INT (11) NOT NULL 
 ) ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
+
+
+CREATE VIEW  `us_customers`
+AS SELECT * FROM customers
+WHERE country_region = 'US';

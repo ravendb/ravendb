@@ -12,7 +12,10 @@ namespace Raven.Server.SqlMigration.MsSQL
 {
     internal partial class MsSqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE from information_schema.COLUMNS";
+        public const string SelectColumns = "select c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE" +
+                                            " from information_schema.COLUMNS c join information_schema.TABLES t " +
+                                            " on c.TABLE_CATALOG = t.TABLE_CATALOG and c.TABLE_SCHEMA = t.TABLE_SCHEMA and c.TABLE_NAME = t.TABLE_NAME " +
+                                            " where t.TABLE_TYPE <> 'VIEW' ";
 
         public const string SelectPrimaryKeys = "select tc.TABLE_SCHEMA, tc.TABLE_NAME, COLUMN_NAME " +
                                                 "from information_schema.TABLE_CONSTRAINTS as tc " +
