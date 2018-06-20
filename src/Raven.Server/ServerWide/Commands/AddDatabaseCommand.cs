@@ -15,6 +15,24 @@ namespace Raven.Server.ServerWide.Commands
         public bool Encrypted;
         public bool IsRestore;
 
+        public override object FromRemote(object remoteResult)
+        {
+            var rc = new List<string>();
+            var obj = remoteResult as BlittableJsonReaderArray;
+
+            if (obj == null)
+            {
+                // this is an error as we expect BlittableJsonReaderArray, but we will pass the object value to get later appropriate exception
+                return base.FromRemote(remoteResult);
+            }
+
+            foreach (var o in obj)
+            {
+                rc.Add((string)o);
+            }
+            return rc;
+        }
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             return new DynamicJsonValue

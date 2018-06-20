@@ -262,7 +262,9 @@ namespace Raven.Server.ServerWide
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
                         break;
                     case nameof(AddDatabaseCommand):
-                        AddDatabase(context, cmd, index, leader);
+                        var addedNodes = AddDatabase(context, cmd, index, leader);
+                        if (addedNodes != null)
+                            leader?.SetStateOf(index, addedNodes);
                         break;
                     default:
                         var massage = $"The command '{type}' is unknown and cannot be executed on server with version '{ServerVersion.FullVersion}'.{Environment.NewLine}" +
@@ -598,7 +600,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe List<string> AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             try
@@ -614,7 +616,7 @@ namespace Raven.Server.ServerWide
                         {
                             NotifyLeaderAboutError(index, leader,
                                 new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
-                            return;
+                            return null;
                         }
 
                         var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out int size));
@@ -625,12 +627,13 @@ namespace Raven.Server.ServerWide
                             NotifyLeaderAboutError(index, leader,
                                 new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
                                                          " but was expecting " + addDatabaseCommand.RaftCommandIndex));
-                            return;
+                            return null;
                         }
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                     SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
+                    return addDatabaseCommand.Record.Topology.Members;
                 }
             }
             finally
