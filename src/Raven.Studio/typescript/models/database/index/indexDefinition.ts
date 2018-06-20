@@ -3,6 +3,7 @@ import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import additionalSource = require("models/database/index/additionalSource");
 import configurationItem = require("models/database/index/configurationItem");
 import validateNameCommand = require("commands/resources/validateNameCommand");
+import generalUtils = require("common/generalUtils");
 
 class mapItem {
     map = ko.observable<string>();
@@ -29,7 +30,6 @@ class mapItem {
 class indexDefinition {
    
     name = ko.observable<string>();
-    indexNameError = ko.observable<string>();
     
     maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
@@ -85,34 +85,32 @@ class indexDefinition {
         
         if (!this.isAutoIndex()) {
             this.initValidation();
-        } 
-
-        this.name.throttle(300).subscribe((newNameValue) => {
-
-            if (newNameValue) {
-                new validateNameCommand('index', newNameValue)
-                    .execute()
-                    .done((result) => {
-                        if (result.IsValid === false) {
-                            this.indexNameError(result.ErrorMessage);
-                        }
-                        else {
-                            this.indexNameError("");
-                        }
-                    });
-            }
-        })    
-    }
+        }
+    } 
     
-    private initValidation() {
+    private initValidation() {        
+        
+        const checkIndexName = (val: string,
+                                params: any,
+                                callback: (currentValue: string, result: boolean) => void) => {
+                                    new validateNameCommand('index', val)
+                                        .execute()
+                                        .done((result) => {
+                                            if (result.IsValid) {
+                                                callback(this.name(), true);
+                                            } else {
+                                                callback(this.name(), false);
+                                                this.name.setError(result.ErrorMessage);
+                                            }
+                                        })
+                               };
         
         this.name.extend({
             required: true,
             validation: [
                 {
-                    validator: (val: string) => !this.indexNameError(),
-                    message: `{0}`,
-                    params: this.indexNameError
+                    async: true,
+                    validator: generalUtils.debounceAndFunnel(checkIndexName)
                 }]
         });
 

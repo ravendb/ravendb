@@ -24,6 +24,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
 import index = require("models/database/index/index");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class editIndex extends viewModelBase {
 
@@ -453,26 +454,28 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        const editedIndex = this.editedIndex();
-
-        if (!this.validate()) {
-            return;
-        }
-
-        this.saveInProgress(true);
-
-        //if index name has changed it isn't the same index
-        /* TODO
-        if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
-            messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
-                                            "Any changes to the index will be ignored.");
-            return;
-        }*/
+        const editedIndex = this.editedIndex();      
         
-        const indexDto = editedIndex.toDto();
+        viewHelpers.asyncValidationCompleted(editedIndex.validationGroup, () => {
+            if (!this.validate()) {
+                return;
+            }
 
-        this.saveIndex(indexDto)
-            .always(() => this.saveInProgress(false));
+            this.saveInProgress(true);
+
+            //if index name has changed it isn't the same index
+            /* TODO
+            if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
+                messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
+                                                "Any changes to the index will be ignored.");
+                return;
+            }*/
+
+            const indexDto = editedIndex.toDto();
+
+            this.saveIndex(indexDto)
+                .always(() => this.saveInProgress(false));
+        });
     }
 
     private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
