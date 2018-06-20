@@ -313,14 +313,9 @@ class viewModelBase {
         }
     }
 
-    protected afterAsyncValidationCompleted(context: KnockoutValidationGroup, callback: Function) {
-        return viewHelpers.asyncValidationCompleted(context, callback);
-    }
-
     protected isValid(context: KnockoutValidationGroup, showErrors = true): boolean {
         return viewHelpers.isValid(context, showErrors);
     }
-
 }
 
 export = viewModelBase;

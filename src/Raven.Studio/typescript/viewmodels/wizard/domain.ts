@@ -5,6 +5,7 @@ import nodeInfo = require("models/wizard/nodeInfo");
 import ipEntry = require("models/wizard/ipEntry");
 import loadAgreementCommand = require("commands/wizard/loadAgreementCommand");
 import getIpsInfoCommand = require("commands/wizard/getIpsInfoCommand");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class domain extends setupStep {
 
@@ -55,7 +56,7 @@ class domain extends setupStep {
         this.spinners.save(true);
         const domainModel = this.model.domain();
       
-        this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
+        viewHelpers.asyncValidationCompleted(domainModel.validationGroup, () => {
             if (this.isValid(domainModel.validationGroup)) {
 
                 // Get the ips info for the selected rootDomain
