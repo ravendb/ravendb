@@ -627,7 +627,7 @@ class importDatabaseFromSql extends viewModelBase {
     
     private provideTableCheckboxHint(incomingLinksCount: number) {
         return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em>Skip</em> or <em>embed</em> all of them before continue.<br/> "
-            + "<small><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
+            + "<small class='text-info'><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
     }
     
     private initUnselectEmbeddedTablesHints() {
