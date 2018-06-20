@@ -1229,7 +1229,84 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void SessionIncludeAllCountersAndSingleCounter()
+        public async Task AsyncSessionIncludeCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR" }, "companies/1-A");
+                    session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    session.CountersFor("orders/1-A").Increment("likes", 100);
+                    session.CountersFor("orders/1-A").Increment("dislikes", 200);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Documents("Company")
+                            .Counters(new[] { "likes", "dislikes" }));
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+                    Assert.Equal("HR", company.Name);
+
+                    var dic = await session.CountersFor(order).GetAllAsync(); // should not go to server              
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionIncludeAllCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR" }, "companies/1-A");
+                    session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
+
+                    session.CountersFor("orders/1-A").Increment("likes", 100);
+                    session.CountersFor("orders/1-A").Increment("dislikes", 200);
+                    session.CountersFor("orders/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Documents("Company")
+                            .AllCounters());
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+                    Assert.Equal("HR", company.Name);
+
+                    var dic = await session.CountersFor(order).GetAllAsync(); // should not go to server              
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionIncludeSingleCounterAfterIncludeAllCountersShouldThrow()
         {
             using (var store = GetDocumentStore())
             {
@@ -1247,24 +1324,43 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session.Load<Order>(
-                        "orders/1-A",
-                        includes => includes
-                            .Documents("Company")
-                            .AllCounters()
-                            .Counter("likes"));
+                    Assert.Throws<InvalidOperationException>(() =>
+                        session.Load<Order>(
+                            "orders/1-A",
+                            includes => includes
+                                .Documents("Company")
+                                .AllCounters()
+                                .Counter("likes")));
+                }
+            }
+        }
 
-                    var company = session.Load<Company>(order.Company);
-                    Assert.Equal("HR", company.Name);
+        [Fact]
+        public void SessionIncludeAllCountersAfterIncludeSingleCounterShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR" }, "companies/1-A");
+                    session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
 
-                    var dic = session.CountersFor(order).GetAll(); // should not go to server              
-                    Assert.Equal(3, dic.Count);
-                    Assert.Equal(100, dic["likes"]);
-                    Assert.Equal(200, dic["dislikes"]);
-                    Assert.Equal(300, dic["downloads"]);
+                    session.CountersFor("orders/1-A").Increment("likes", 100);
+                    session.CountersFor("orders/1-A").Increment("dislikes", 200);
+                    session.CountersFor("orders/1-A").Increment("downloads", 300);
 
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    session.SaveChanges();
+                }
 
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidOperationException>(() =>
+                        session.Load<Order>(
+                            "orders/1-A",
+                            includes => includes
+                                .Documents("Company")
+                                .Counter("likes")
+                                .AllCounters()));
                 }
             }
         }
