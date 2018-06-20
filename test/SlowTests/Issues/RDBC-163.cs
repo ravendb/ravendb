@@ -8,7 +8,7 @@ namespace SlowTests.Issues
 {
     public class RDBC_163 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public User(string personId, List<string> roles, string email, byte[] password, bool isActive, DateTimeOffset? lockedOutUntil = null, Guid? activationGuid = null, Guid? passwordResetGuid = null, string id = null)
             {

@@ -20,7 +20,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
         }

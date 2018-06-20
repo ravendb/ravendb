@@ -391,6 +391,11 @@ namespace Raven.Server.Documents.Indexes.Static
                         throw new InvalidOperationException("Not supported expression type.");
                 }
 
+                if (groupByFields == null || groupByFields.Length == 0)
+                {
+                    throw new InvalidOperationException("Reduce function must contain a group by expression.");
+                }
+
                 foreach (var groupByField in groupByFields)
                 {
                     if (fieldNamesValidator?.Fields.Contains(groupByField) == false)
