@@ -52,6 +52,51 @@ namespace FastTests.Client
         }
 
         [Fact]
+        public void Can_Load_With_Include_Using_IIncludeBuilder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var address = new Address { City = "London", Country = "UK" };
+                    session.Store(address);
+                    session.Store(new User { Name = "Adam", AddressId = session.Advanced.GetDocumentId(address) });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(
+                        "users/1-A",
+                        includes => includes
+                            .Documents(x => x.AddressId));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var address = session.Load<Address>(user.AddressId);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.NotNull(address);
+                    Assert.Equal("London", address.City);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Include("AddressId").Load<User>("users/1-A");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var address = session.Load<Address>(user.AddressId);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.NotNull(address);
+                    Assert.Equal("London", address.City);
+                }
+            }
+        }
+
+        [Fact]
         public void Can_Use_Includes_Within_Multi_Load()
         {
             using (var store = GetDocumentStore())
@@ -102,6 +147,35 @@ namespace FastTests.Client
                 {
                     var order = session.Include<Order>(x => x.CustomerId)
                         .Load("orders/1234");
+
+                    // this will not require querying the server!
+                    var cust = session.Load<Customer>(order.CustomerId);
+
+                    Assert.NotNull(cust);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Include_By_Primary_String_Property_Using_IIncludeBuilder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Customer { Id = "customers/1" });
+                    session.Store(new Order { CustomerId = "customers/1" }, "orders/1234");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(
+                        "orders/1234",
+                        includes => includes
+                            .Documents(x => x.CustomerId));
 
                     // this will not require querying the server!
                     var cust = session.Load<Customer>(order.CustomerId);
@@ -186,6 +260,43 @@ namespace FastTests.Client
         }
 
         [Fact]
+        public void Can_Include_By_Primary_List_Of_Strings_Using_IIncludeBuilder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Supplier { Name = "1" });
+                    session.Store(new Supplier { Name = "2" });
+                    session.Store(new Supplier { Name = "3" });
+                    session.Store(new Order { SupplierIds = new[] { "suppliers/1-A", "suppliers/2-A", "suppliers/3-A" } },
+                        "orders/1234");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(
+                        "orders/1234",
+                        includes => includes
+                            .Documents(x => x.SupplierIds));
+
+                    Assert.Equal(3, order.SupplierIds.Count());
+
+                    foreach (var supplierId in order.SupplierIds)
+                    {
+                        // this will not require querying the server!
+                        var supp = session.Load<Supplier>(supplierId);
+                        Assert.NotNull(supp);
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
         public void Can_Include_By_Secondary_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -202,6 +313,35 @@ namespace FastTests.Client
                 {
                     var order = session.Include<Order>(x => x.Refferal.CustomerId)
                         .Load("orders/1234");
+
+                    // this will not require querying the server!
+                    var referrer = session.Load<Customer>(order.Refferal.CustomerId);
+
+                    Assert.NotNull(referrer);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Include_By_Secondary_String_Property_Using_IIncludeBuilder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Customer());
+                    session.Store(new Order { Refferal = new Referral { CustomerId = "customers/1-A" } }, "orders/1234");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(
+                        "orders/1234",
+                        includes => includes
+                            .Documents(x => x.Refferal.CustomerId));
 
                     // this will not require querying the server!
                     var referrer = session.Load<Customer>(order.Refferal.CustomerId);
@@ -240,6 +380,51 @@ namespace FastTests.Client
                 {
                     var order = session.Include<Order>(x => x.LineItems.Select(li => li.ProductId))
                         .Load("orders/1234");
+
+                    foreach (var lineItem in order.LineItems)
+                    {
+                        // this will not require querying the server!
+                        var product = session.Load<Product>(lineItem.ProductId);
+                        Assert.NotNull(product);
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Include_By_List_Of_Secondary_String_Property_Using_IIncludeBuilder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Product { Name = "1" });
+                    session.Store(new Product { Name = "2" });
+                    session.Store(new Product { Name = "3" });
+                    session.Store(
+                        new Order
+                        {
+                            LineItems =
+                                new[]
+                                {
+                                    new LineItem {ProductId = "products/1-A"}, new LineItem {ProductId = "products/2-A"},
+                                    new LineItem {ProductId = "products/3-A"}
+                                }
+                        }, "orders/1234");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(
+                        "orders/1234",
+                        includes => includes
+                            .Documents(x => x
+                                .LineItems
+                                .Select(li => li.ProductId)));
 
                     foreach (var lineItem in order.LineItems)
                     {
