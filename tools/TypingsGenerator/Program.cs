@@ -128,13 +128,20 @@ namespace TypingsGenerator
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
+            
             scripter.AddType(typeof(CollectionStatistics));
-
             scripter.AddType(typeof(BatchRequestParser.CommandData));
+            
+            // name validation
+            scripter.AddType(typeof(ElementType));
+            scripter.AddType(typeof(NameValidation));
 
+            // database
             scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
+            
+            // footer
             scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
@@ -181,6 +188,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SlowWritesDetails));
 
             // indexes
+            scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(PutIndexResult));
             scripter.AddType(typeof(IndexStats));
             scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));

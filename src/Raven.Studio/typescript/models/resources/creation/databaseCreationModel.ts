@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import configuration = require("configuration");
 import restorePoint = require("models/resources/creation/restorePoint");
 import clusterNode = require("models/database/cluster/clusterNode");
@@ -48,6 +47,7 @@ class databaseCreationModel {
     };
 
     name = ko.observable<string>("");
+    databaseNameError = ko.observable<string>("");
 
     creationMode: dbCreationMode = null;
     isFromBackupOrFromOfflineMigration: boolean;
@@ -289,14 +289,16 @@ class databaseCreationModel {
 
         this.name.extend({
             required: true,
-            validDatabaseName: true,
-
             validation: [
                 {
                     validator: (name: string) => databaseDoesntExist(name),
                     message: "Database already exists"
-                }
-            ]
+                },
+                {
+                    validator: (val: string) => !this.databaseNameError(),
+                    message: `{0}`,
+                    params: this.databaseNameError
+                }]
         });
         
         this.setupReplicationValidation(maxReplicationFactor);
