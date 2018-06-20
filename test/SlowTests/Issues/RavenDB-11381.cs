@@ -11,14 +11,14 @@ namespace SlowTests.Issues
 {
     public class RavenDB_11381 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name;
         }
 
-        public static bool IsValid(User u) => true;
+        private static bool IsValid(User u) => true;
 
-        public class MyIndex : AbstractIndexCreationTask<User>
+        private class MyIndex : AbstractIndexCreationTask<User>
         {
             public MyIndex()
             {
@@ -27,6 +27,7 @@ namespace SlowTests.Issues
                                select new { u.Name };
             }
         }
+
         [Fact]
         public void CanSpecifyCustomIndexName()
         {
