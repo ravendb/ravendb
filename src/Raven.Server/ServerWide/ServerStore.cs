@@ -171,6 +171,7 @@ namespace Raven.Server.ServerWide
 
         public async Task UpdateTopologyChangeNotification()
         {
+            var delay = 500;
             while (ServerShutdown.IsCancellationRequested == false)
             {
                 await _engine.WaitForState(RachisState.Follower, ServerShutdown);
@@ -239,6 +240,7 @@ namespace Raven.Server.ServerWide
                                         if (_engine.LeaderTag != topologyNotification.Leader)
                                             break;
 
+                                        delay = 500; // on successful read, reset the delay
                                         topologyNotification.NodeTag = _engine.Tag;
                                         NotificationCenter.Add(topologyNotification);
                                     }
@@ -254,8 +256,11 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info("Error during receiving topology updates from the leader", e);
+                        Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                     }
+
+                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown);
+                    delay = Math.Min(15_000, delay * 2);
                 }
             }
         }
