@@ -59,10 +59,10 @@
 [class^="icon-addon-"] {
     &:after {
         position: absolute;
-        bottom: -10%;
-        right: -24%;
-        font-size: 70%;
-        line-height: 70%;
+        bottom: 8%;
+        right: -4%;
+        font-size: 50%;
+        line-height: 50%;
     }
 }
 
@@ -82,25 +82,6 @@
     }
 }
 
-.text-gray-after::after {
-    .text-gray;
-}
-.text-primary-after::after {
-    .text-primary;
-}
-.text-success-after::after {
-    .text-success;
-}
-.text-info-after::after {
-    .text-info;
-}
-.text-warning-after::after {
-    .text-warning;
-}
-.text-danger-after::after {
-    .text-danger;
-}
-
 .make-icon (@name, @glyph) {
     .icon-@{name}::before {
         content: @glyph;
@@ -112,7 +93,7 @@
 }
 
 .make-icon-color (@name, @color-before, @color-after) {
-    .icon-@{name}::before {
+	.icon-@{name}::before {
         color: @color-before;
     }
 
@@ -120,7 +101,12 @@
         color: @color-after;
     }
 }
-
+ 
+.make-icon(unsupported-browser, "\ea01");
+.make-icon(chrome, "\ea0a");
+.make-icon(firefox, "\ea0b");
+.make-icon(embed, "\e9ff");
+.make-icon(skip, "\ea00");
 .make-icon(warning, "\e93f");
 .make-icon(alert, "\e96a");
 .make-icon(alerts, "\e96a");
@@ -134,10 +120,10 @@
 .make-icon(infinity, "\e9f5");
 .make-icon(cmp-xchg, "\e9e8");
 .make-icon(identities, "\e9e9");
+.make-icon(identities-old, "\e976");
 .make-icon(replace, "\e9ea");
 .make-icon(settings, "\e93b");
 .make-icon(system, "\e93b");
-.make-icon(identities-old, "\e976");
 .make-icon(debug-advanced, "\e9e7");
 .make-icon(reassign-cores, "\e9e6");
 .make-icon(document-expiration, "\e9e5");
@@ -177,7 +163,7 @@
 .make-icon(dbgroup-member, "\e9c0");
 .make-icon(dbgroup-promotable, "\e9c1");
 .make-icon(dbgroup-watcher, "\e9c2");
-.make-icon(cluster-watcher, "\e9c3");
+.make-icon(cluster, "\e9c3");
 .make-icon(cluster-rehab, "\e9c6");
 .make-icon(cluster-member, "\e9ca");
 .make-icon(cluster-node, "\e9cb");
@@ -194,8 +180,8 @@
 .make-icon(database-home, "\e9c5");
 .make-icon(print, "\e9bc");
 .make-icon(arrow-dashed, "\e9ba");
-.make-icon(subscription-dashed, "\e9b5");
-.make-icon(backup-dashed, "\e9b6");
+.make-icon(subscription, "\e9b5");
+.make-icon(backup, "\e9b6");
 .make-icon(external-replication, "\e9b7");
 .make-icon(ravendb-etl, "\e9b8");
 .make-icon(sql-etl, "\e9b9");
@@ -205,7 +191,7 @@
 .make-icon(thumb-down, "\e9b1");
 .make-icon(thumb-up, "\e9b2");
 .make-icon(feedback, "\e96e");
-.make-icon(icons_support, "\e9ae");
+.make-icon(support, "\e9ae");
 .make-icon(etag, "\e9af");
 .make-icon(client, "\e9b0");
 .make-icon(folder, "\e9ab");
@@ -215,7 +201,6 @@
 .make-icon(waiting, "\e9a9");
 .make-icon(ski, "\e9aa");
 .make-icon(subscriptions, "\e9a6");
-.make-icon(subscription, "\e9a6");
 .make-icon(waiting, "\e9a9");
 .make-icon(calendar, "\e9a5");
 .make-icon(patch, "\e9a4");
@@ -233,9 +218,10 @@
 .make-icon(about, "\e949");
 .make-icon(administrator-js-console, "\e94a");
 .make-icon(disk-io-viewer, "\e94b");
+.make-icon(hot-spare, "\e94c");
 .make-icon(io-test, "\e94d");
 .make-icon(disk-support, "\e94e");
-.make-icon(disk-admin-logs, "\e94f");
+.make-icon(admin-logs, "\e94f");
 .make-icon(periodic-backup, "\e950");
 .make-icon(compact, "\e951");
 .make-icon(gather-debug-information, "\e952");
@@ -271,7 +257,6 @@
 .make-icon(config, "\e974");
 .make-icon(data-subscriptions, "\e975");
 .make-icon(index-fields, "\e977");
-.make-icon(icon-menu, "\e978");
 .make-icon(metrics, "\e979");
 .make-icon(queries, "\e97a");
 .make-icon(query, "\e97a");
@@ -292,7 +277,7 @@
 .make-icon(etl, "\e98a");
 .make-icon(export-database, "\e98b");
 .make-icon(import-database, "\e98c");
-.make-icon(periodic-export-13, "\e98d");
+.make-icon(periodic-export, "\e98d");
 .make-icon(quotas, "\e98e");
 .make-icon(replication, "\e98f");
 .make-icon(sql-replication, "\e991");
@@ -348,7 +333,6 @@
 .make-icon(checkbox-on, "\e922");
 .make-icon(code, "\e923");
 .make-icon(collapse, "\e924");
-.make-icon(icons_database, "\e926");
 .make-icon(document, @icon-document);
 .make-icon(document2, @icon-document);
 .make-icon(document-group, "\e929");
@@ -357,10 +341,8 @@
 .make-icon(help, "\e92b");
 .make-icon(indent, "\e92c");
 .make-icon(index, "\e92d");
-.make-icon(info, "\e92e");
-.make-icon(icon-details, "\e92e");
-.make-icon(link, "\e92f");
-.make-icon(list, "\e930");
+.make-icon(info, "\e92e");.make-icon(icon-details, "\e92e");
+.make-icon(link, "\e92f");.make-icon(list, "\e930");
 .make-icon(menu, "\e931");
 .make-icon(menu-collapse, "\e932");
 .make-icon(menu-expand, "\e933");
@@ -374,6 +356,8 @@
 .make-icon(clock, "\e938");
 .make-icon(save, "\e939");
 .make-icon(search, "\e93a");
+.make-icon(settings, "\e93b");
+.make-icon(system, "\e93b");
 .make-icon(star, "\e93c");
 .make-icon(star-filled, "\e93d");
 .make-icon(trash, "\e93e");
@@ -382,14 +366,6 @@
 .make-icon(facebook, "\ea90");
 .make-icon(twitter, "\ea96");
 .make-icon(linkedin, "\eaca");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
-.make-icon(paste, "\e90e");
 .make-icon(paste, "\e90e");
 
 /* ONLY MENU ICON COLORS */
