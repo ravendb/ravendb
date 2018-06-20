@@ -7,6 +7,7 @@ import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDat
 import migrateLegacyDatabaseFromDatafilesCommand = require("commands/resources/migrateLegacyDatabaseFromDatafilesCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getDatabaseLocationCommand = require("commands/resources/getDatabaseLocationCommand");
+import validateNameCommand = require("commands/resources/validateNameCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
@@ -17,7 +18,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import license = require("models/auth/licenseModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import extensions = require("common/extensions");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -226,12 +226,26 @@ class createDatabase extends dialogViewModelBase {
         });
         
         this.databaseModel.name.throttle(300).subscribe((newNameValue) => {
-            if (!extensions.validateDatabaseName(newNameValue)) {
-                new getDatabaseLocationCommand(newNameValue, this.databaseModel.path.dataPath())
+            
+            if (newNameValue) {
+                
+                // 1. Validate name logic on server side
+                new validateNameCommand('database', newNameValue, this.databaseModel.path.dataPath())
                     .execute()
-                    .done((fullPath: string) => this.databaseLocationCalculated(fullPath))
-            } else {
-                this.databaseLocationCalculated("Invalid database name");
+                    .done((result) => {
+                        if (result.IsValid === false) {
+                            this.databaseModel.databaseNameError(result.ErrorMessage);
+                            this.databaseLocationCalculated("Invalid database name");
+                        }
+                        else {
+                            this.databaseModel.databaseNameError("");
+                            
+                            // 2. Get exact data path location 
+                            new getDatabaseLocationCommand(newNameValue, this.databaseModel.path.dataPath())
+                                .execute()
+                                .done((fullPath: string) => this.databaseLocationCalculated(fullPath));
+                        }
+                    });
             }
         });
 

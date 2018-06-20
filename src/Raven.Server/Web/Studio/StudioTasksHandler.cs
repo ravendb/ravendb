@@ -1,57 +1,110 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Voron.Util.Settings;
+using IndexStoreStatic = Raven.Server.Documents.Indexes.IndexStore;
 
 namespace Raven.Server.Web.Studio
 {
+    public enum ElementType
+    {
+        index,
+        database
+    }
+
     public class StudioTasksHandler : RequestHandler
     {
-       // return the calculated full data directory for the database before it is created according to the name & path supplied
-       [RavenAction("/studio-tasks/full-data-directory", "GET", AuthorizationStatus.ValidUser)]
-       public Task FullDataDirectory()
-       {
-           var path = GetStringQueryString("path", required: false);
-           var name = GetStringQueryString("name", required: false);
-           
-           var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
-           
-           // 1. Used as default when both Name & Path are Not defined
-           var result = baseDataDirectory; 
-         
-           // 2. Path defined, Path overrides any given Name
-           if (string.IsNullOrEmpty(path) == false)
-           {
-               result = PathUtil.ToFullPath(path, baseDataDirectory);
-           }
+        // return the calculated full data directory for the database before it is created according to the name & path supplied
+        [RavenAction("/studio-tasks/full-data-directory", "GET", AuthorizationStatus.ValidUser)]
+        public Task FullDataDirectory()
+        {
+            var path = GetStringQueryString("path", required: false);
+            var name = GetStringQueryString("name", required: false);
 
-           // 3. Name defined, No path 
-           else if (string.IsNullOrEmpty(name) == false)
-           {
-               // 'Databases' prefix is added...
-               result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
-           }
-           
-           using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-           using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-           {
-               writer.WriteStartObject();
-               writer.WritePropertyName("FullPath");
-               writer.WriteString(result);
-               writer.WriteEndObject();
-           }
-    
-           return Task.CompletedTask;
-       }
-        
+            var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
+
+            // 1. Used as default when both Name & Path are Not defined
+            var result = baseDataDirectory;
+
+            // 2. Path defined, Path overrides any given Name
+            if (string.IsNullOrEmpty(path) == false)
+            {
+                result = PathUtil.ToFullPath(path, baseDataDirectory);
+            }
+
+            // 3. Name defined, No path 
+            else if (string.IsNullOrEmpty(name) == false)
+            {
+                // 'Databases' prefix is added...
+                result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("FullPath");
+                writer.WriteString(result);
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]
+        public Task IsValidName()
+        {
+            if (Enum.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("type").Trim(), out ElementType elementType) == false)
+            {
+                throw new ArgumentException($"Type {elementType} is not supported");
+            }
+
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
+            var path = GetStringQueryString("dataPath", false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                bool isValid = true;
+                string errorMessage = null;
+
+                switch (elementType)
+                {
+                    case ElementType.database:
+                        isValid = ResourceNameValidator.IsValidResourceName(name, path, out errorMessage);
+                        break;
+                    case ElementType.index:
+                        isValid = IndexStoreStatic.IsValidResourceName(name, isStatic: true, out errorMessage);
+                        break;
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(NameValidation.IsValid)] = isValid,
+                        [nameof(NameValidation.ErrorMessage)] = errorMessage
+                    });
+
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser)]
         public Task Format()
         {
