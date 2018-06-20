@@ -66,9 +66,9 @@
                                 </div>
                             </div>
 
-                            <div class="form-group flex-horizontal">
-                                <div>
-                                     <button class="btn btn-default" type="button"
+                            <div class="form-group row">
+                                <div class="col-sm-10">
+                                    <button class="btn btn-default" type="button"
                                             data-bind="click: $root.showAdvancedOptions.toggle.bind($root.showAdvancedOptions)">
                                         Advanced
                                     </button>
@@ -423,7 +423,7 @@
                         </strong>
                     </div>
                 </td>
-                <td width="230">
+                <td width="220">
                     <div class="btn-group link-actions">
                         <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')"><i class="icon-skip"></i> <span>skip</span></button>
                         <button class="btn btn-sm js-btn-link" data-bind="css: { active: action() === 'link', disabled: !canLinkTargetTable() }, click: _.partial($root.onActionClicked, $data, 'link')"><i class="icon-link"></i> <span>link</span></button>
