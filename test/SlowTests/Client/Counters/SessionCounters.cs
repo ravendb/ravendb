@@ -1050,9 +1050,10 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var user = session
-                        .IncludeCounter<User>("likes")
-                        .Load("users/1-A");
+                    var user = session.Load<User>(
+                        "users/1-A",
+                        includes => includes
+                            .Counter("likes"));
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -1083,10 +1084,11 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session
-                        .IncludeCounter<User>("likes")
-                        .IncludeCounter("dislikes")
-                        .Load("orders/1-A");
+                    var order = session.Load<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Counter("likes")
+                            .Counter("dislikes"));
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -1122,13 +1124,14 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session
-                        .IncludeCounter<Order>("likes")
-                        .IncludeCounter("dislikes")
-                        .Include(o => o.Company)
-                        .IncludeCounter("downloads")
-                        .Include(o => o.Employee)
-                        .Load("orders/1-A");
+                    var order = session.Load<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Counter("likes")
+                            .Documents(o => o.Company)
+                            .Counter("dislikes")
+                            .Counter("downloads")
+                            .Documents(o => o.Employee));
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1165,10 +1168,11 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session
-                        .Include("Company")
-                        .IncludeCounters(new []{"likes", "dislikes"})
-                        .Load<Order>("orders/1-A");
+                    var order = session.Load<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Documents("Company")
+                            .Counters(new[] { "likes", "dislikes" }));
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1203,10 +1207,11 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session
-                        .Include("Company")
-                        .IncludeCounters()
-                        .Load<Order>("orders/1-A");
+                    var order = session.Load<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Documents("Company")
+                            .AllCounters());
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1218,6 +1223,95 @@ namespace SlowTests.Client.Counters
                     Assert.Equal(300, dic["downloads"]);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionIncludeAllCountersAndSingleCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR" }, "companies/1-A");
+                    session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
+
+                    session.CountersFor("orders/1-A").Increment("likes", 100);
+                    session.CountersFor("orders/1-A").Increment("dislikes", 200);
+                    session.CountersFor("orders/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Documents("Company")
+                            .AllCounters()
+                            .Counter("likes"));
+
+                    var company = session.Load<Company>(order.Company);
+                    Assert.Equal("HR", company.Name);
+
+                    var dic = session.CountersFor(order).GetAll(); // should not go to server              
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionIncludeCountersShouldRegisterMissingCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR" }, "companies/1-A");
+                    session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
+
+                    session.CountersFor("orders/1-A").Increment("likes", 100);
+                    session.CountersFor("orders/1-A").Increment("dislikes", 200);
+                    session.CountersFor("orders/1-A").Increment("downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(
+                        "orders/1-A",
+                        includes => includes
+                            .Documents("Company")
+                            .Counters(new []{"likes", "downloads", "dances"})
+                            .Counter("dislikes")
+                            .Counter("cats"));
+
+                    var company = session.Load<Company>(order.Company);
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server  
+                    var dic = session.CountersFor(order).GetAll();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(5, dic.Count);
+                    Assert.Equal(100, dic["likes"]);
+                    Assert.Equal(200, dic["dislikes"]);
+                    Assert.Equal(300, dic["downloads"]);
+
+                    //missing counters should be in cache
+                    Assert.Null(dic["dances"]);
+                    Assert.Null(dic["cats"]);
+
 
                 }
             }
@@ -1247,10 +1341,11 @@ namespace SlowTests.Client.Counters
 
                 using (var session = store.OpenSession())
                 {
-                    var orders = session
-                        .Include<Order>(o => o.Company)
-                        .IncludeCounters()
-                        .Load("orders/1-A", "orders/2-A");
+                    var orders = session.Load<Order>(
+                        new []{"orders/1-A", "orders/2-A"},
+                        includes => includes
+                            .Documents(o => o.Company)
+                            .AllCounters());
 
                     var order = orders["orders/1-A"];
                     var company = session.Load<Company>(order.Company);

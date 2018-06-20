@@ -1279,10 +1279,30 @@ more responsive application.
             }
         }
 
-        internal void RegisterCounters(BlittableJsonReaderArray counters)
+        internal void RegisterCounters(BlittableJsonReaderArray counters, bool gotAll, string[] ids)
         {
-            if (counters == null)
+            if (CountersByDocId == null)
+            {
+                CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (counters == null || counters.Length == 0)
+            {
+                if (gotAll == false || ids.Length == 0)
+                    return;
+                
+                foreach (var id in ids)
+                {
+                    if (CountersByDocId.TryGetValue(id, out var cache) == false)
+                    {
+                        cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                        CountersByDocId.Add(id, cache);
+                    }
+                    cache.GotAll = true;
+                }
+
                 return;
+            }
 
             foreach (BlittableJsonReaderObject counterBlittable in counters)
             {
@@ -1291,11 +1311,6 @@ more responsive application.
                     counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
                     continue;
 
-                if (CountersByDocId == null)
-                {
-                    CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
-                }
-
                 if (CountersByDocId.TryGetValue(id, out var cache) == false)
                 {
                     cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
@@ -1303,7 +1318,34 @@ more responsive application.
                 }
 
                 cache.Values[name] = value;
+                if (gotAll)
+                {
+                    cache.GotAll = true;
+                }
 
+            }
+        }
+
+        internal void RegisterMissingCounters(string[] ids, string[] counters)
+        {
+            if (counters == null)
+                return;
+
+            foreach (var id in ids)
+            {
+                foreach (var counter in counters)
+                {
+                    if (CountersByDocId.TryGetValue(id, out var cache) == false)
+                    {
+                        cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                        CountersByDocId.Add(id, cache);
+                    }
+
+                    if (cache.Values.ContainsKey(counter))
+                        continue;
+
+                    cache.Values[counter] = null;
+                }
             }
         }
 
