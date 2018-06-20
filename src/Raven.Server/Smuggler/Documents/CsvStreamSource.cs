@@ -97,7 +97,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_nestedPropertyDictionary == null)
                         _nestedPropertyDictionary = new Dictionary<int, string[]>();
 
-                    (var arr, var hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.Context.HeaderRecord[i]);
+                    var (arr, hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.Context.HeaderRecord[i]);
                     //May be false if all dots are escaped
                     if (hasSegments)
                         _nestedPropertyDictionary[i] = arr;
@@ -137,7 +137,7 @@ namespace Raven.Server.Smuggler.Documents
             }
             //Adding the last segment
             segments.Add(csvReaderFieldHeader.Substring(startSegment, csvReaderFieldHeader.Length - startSegment));
-            //At this point we have atleast 2 segments
+            //At this point we have at least 2 segments
             return (segments.ToArray(), true);
         }
 
@@ -164,7 +164,7 @@ namespace Raven.Server.Smuggler.Documents
                     continue;
 
                 var context = actions.GetContextForNewDocument();
-                DocumentItem item = null;
+                DocumentItem item;
                 try
                 {
                     item = ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
@@ -338,16 +338,14 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<IndexDefinitionAndType>();
         }
 
-        public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
+        public IEnumerable<(string Prefix, long Value)> GetIdentities()
         {
-            identities = Enumerable.Empty<(string Prefix, long Value)>();
-            return new DisposableAction(() => { });
+            return Enumerable.Empty<(string Prefix, long Value)>();
         }
 
-        public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
+        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
         {
-            compareExchange = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
-            return new DisposableAction(() => { });
+            return Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)

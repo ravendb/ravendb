@@ -11,7 +11,6 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 
@@ -21,11 +20,14 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
         private DocumentsOperationContext _context;
+        private TransactionOperationContext _serverContext;
 
         private readonly long _startDocumentEtag;
 
         private IDisposable _returnContext;
+        private IDisposable _returnServerContext;
         private IDisposable _disposeTransaction;
+        private IDisposable _disposeServerTransaction;
 
         private int _currentTypeIndex;
 
@@ -54,9 +56,15 @@ namespace Raven.Server.Smuggler.Documents
             _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             _disposeTransaction = _context.OpenReadTransaction();
 
+            _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+            _disposeServerTransaction = _serverContext.OpenReadTransaction();
+
             buildVersion = ServerVersion.Build;
             return new DisposableAction(() =>
             {
+                _disposeServerTransaction.Dispose();
+                _returnServerContext.Dispose();
+
                 _disposeTransaction.Dispose();
                 _returnContext.Dispose();
             });
@@ -190,7 +198,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (originalSideBySideIndexNames.Contains(index.Name))
                     continue;
-                
+
                 if (index.Type == IndexType.Faulty)
                     continue;
 
@@ -213,30 +221,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
+        public IEnumerable<(string Prefix, long Value)> GetIdentities()
         {
-            using (var scope = new DisposableScope())
-            {
-                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-                scope.EnsureDispose(context.OpenReadTransaction());
-
-                identities = _database.ServerStore.Cluster.ReadIdentities(context, _database.Name, 0, long.MaxValue);
-
-                return scope.Delay();
-            }
+            return _database.ServerStore.Cluster.ReadIdentities(_serverContext, _database.Name, 0, long.MaxValue);
         }
 
-        public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
+        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
         {
-            using (var scope = new DisposableScope())
-            {
-                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-                scope.EnsureDispose(context.OpenReadTransaction());
-
-                compareExchange = _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _database.Name, _database.Name, 0, int.MaxValue);
-
-                return scope.Delay();
-            }
+            return _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(_serverContext, _database.Name, _database.Name, 0, int.MaxValue);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)

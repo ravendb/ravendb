@@ -28,15 +28,14 @@ namespace Raven.Server.Smuggler.Documents
         private readonly SystemTime _time;
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
-        private CancellationToken _token;
+        private readonly CancellationToken _token;
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
-        public Action<(string Prefix, long Value)> OnIdentityAction;
 
-        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, 
-            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, 
-            CancellationToken token = default(CancellationToken))
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
+            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default)
         {
             _database = database;
             _source = source;
@@ -249,14 +248,13 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
             using (var actions = _destination.Identities())
-            using (_source.GetIdentities(out var identities))
             {
-                foreach (var kvp in identities)
+                foreach (var kvp in _source.GetIdentities())
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
 
-                    if (kvp.Equals(default(ValueTuple<string, long>)))
+                    if (kvp.Equals(default))
                     {
                         result.Identities.ErroredCount++;
                         continue;
@@ -376,7 +374,7 @@ namespace Raven.Server.Smuggler.Documents
                 var exceptionMessage = e.Message;
                 if (exceptionMessage.Contains("CS1501") && exceptionMessage.Contains("'LoadDocument'"))
                 {
-                    exceptionMessage = 
+                    exceptionMessage =
                             "LoadDocument requires a second argument which is a collection name of the loaded document" + Environment.NewLine +
                             "For example: " + Environment.NewLine +
                                 "\tfrom doc in doc.Orders" + Environment.NewLine +
@@ -538,14 +536,13 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
         {
             using (var actions = _destination.CompareExchange())
-            using (_source.GetCompareExchangeValues(out var compareExchange))
             {
-                foreach (var kvp in compareExchange)
+                foreach (var kvp in _source.GetCompareExchangeValues())
                 {
                     _token.ThrowIfCancellationRequested();
                     result.CompareExchange.ReadCount++;
 
-                    if (kvp.Equals(default((string, long, BlittableJsonReaderObject))))
+                    if (kvp.Equals(default))
                     {
                         result.CompareExchange.ErroredCount++;
                         continue;
@@ -759,7 +756,7 @@ namespace Raven.Server.Smuggler.Documents
             // "Raven/Backup/Status" and 
             // "Raven/Backup/Periodic/Status"
             if (document.Id.Size != 34 && document.Id.Size != 62 &&
-                document.Id.Size != 30 && document.Id.Size != 27 && 
+                document.Id.Size != 30 && document.Id.Size != 27 &&
                 document.Id.Size != 19 && document.Id.Size != 28)
                 return false;
 
