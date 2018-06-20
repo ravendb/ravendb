@@ -47,7 +47,6 @@ using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow;
 using Sparrow.Utils;
-using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -196,7 +195,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public bool NotUsingHttps(string url)
+        public static bool NotUsingHttps(string url)
         {
             return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
         }
@@ -223,7 +222,7 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
 
                 var index = GetLongFromHeaders("ETag");
-                var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 0;
+                var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
                 if (string.IsNullOrWhiteSpace(databaseRecord.DatabaseName))
@@ -339,7 +338,9 @@ namespace Raven.Server.Web.System
             if (existingDatabaseRecord != null && index.HasValue == false)
                 throw new ConcurrencyException($"Database '{name}' already exists!");
 
-            var nodeUrlsAddedTo = new List<string>();
+            if (replicationFactor <= 0)
+                throw new ArgumentException("Replication factor must be greater than 0.");
+
             try
             {
                 DatabaseHelper.Validate(name, databaseRecord);
@@ -351,28 +352,47 @@ namespace Raven.Server.Web.System
             var clusterTopology = ServerStore.GetClusterTopology(context);
             ValidateClusterMembers(clusterTopology, databaseRecord);
 
-            DatabaseTopology topology;
             if (databaseRecord.Topology?.Members?.Count > 0)
             {
-                topology = databaseRecord.Topology;
+                var topology = databaseRecord.Topology;
                 foreach (var member in topology.Members)
                 {
-                    var nodeUrl = clusterTopology.GetUrlFromTag(member);
-                    if (nodeUrl == null)
-                        throw new ArgumentException($"Failed to add node {member}, becasue we don't have it in the cluster.");
-                    nodeUrlsAddedTo.Add(nodeUrl);
+                    if (clusterTopology.Contains(member) == false)
+                        throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
                 }
+                topology.ReplicationFactor = topology.Members.Count;
             }
             else
             {
-                var factor = Math.Max(1, replicationFactor);
-                databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
-            }
-            topology.ReplicationFactor = topology.Members.Count;
-            var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
+                if (databaseRecord.Topology == null)
+                    databaseRecord.Topology = new DatabaseTopology();
 
-            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, databaseRecord.Topology?.Members, newIndex);
-            return (newIndex, topology, nodeUrlsAddedTo);
+                databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+
+                if (ServerStore.IsLeader())
+                {
+                    ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord);
+                }
+            }
+
+            var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+            var members = (List<string>)result;
+            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, members, newIndex);
+
+            var nodeUrlsAddedTo = new List<string>();
+            foreach (var member in members)
+            {
+                nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var record = ServerStore.Cluster.ReadDatabase(ctx, name);
+                return (newIndex, record.Topology, nodeUrlsAddedTo);
+            }
         }
 
         [RavenAction("/admin/databases/reorder", "POST", AuthorizationStatus.Operator)]
@@ -411,6 +431,8 @@ namespace Raven.Server.Web.System
         private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+            Debug.Assert(members.Count > 0);
+
             var executors = new List<ClusterRequestExecutor>();
             var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
             var waitingTasks = new List<Task>
@@ -463,42 +485,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private DatabaseTopology AssignNodesToDatabase(
-            TransactionOperationContext context,
-            int factor,
-            string name,
-            bool isEncrypted,
-            out List<string> nodeUrlsAddedTo)
-        {
-            var topology = new DatabaseTopology();
-
-            var clusterTopology = ServerStore.GetClusterTopology(context);
-
-            var allNodes = clusterTopology.Members.Keys
-                .Concat(clusterTopology.Promotables.Keys)
-                .Concat(clusterTopology.Watchers.Keys)
-                .ToList();
-
-            if (isEncrypted)
-            {
-                allNodes.RemoveAll(n => NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
-                if (allNodes.Count == 0)
-                    throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
-            }
-
-            var offset = new Random().Next();
-            nodeUrlsAddedTo = new List<string>();
-
-            for (int i = 0; i < Math.Min(allNodes.Count, factor); i++)
-            {
-                var selectedNode = allNodes[(i + offset) % allNodes.Count];
-                var url = clusterTopology.GetUrlFromTag(selectedNode);
-                topology.Members.Add(selectedNode);
-                nodeUrlsAddedTo.Add(url);
-            }
-
-            return topology;
-        }
+        
 
         private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {

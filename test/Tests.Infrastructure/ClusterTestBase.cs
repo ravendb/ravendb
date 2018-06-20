@@ -569,7 +569,7 @@ namespace Tests.Infrastructure
             {
                 databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
             }
-            var currentServers = Servers.Where(s => s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leadersUrl).HasUrl).ToArray();
+            var currentServers = Servers.Where(s => s.Disposed == false && s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leadersUrl).HasUrl).ToArray();
             int numberOfInstances = 0;
             foreach (var server in currentServers)
             {
