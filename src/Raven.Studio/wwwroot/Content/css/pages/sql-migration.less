@@ -1,26 +1,26 @@
 @raven-field-color: #a4f012;
 
 .fullscreen {
-    
+
     #editTransform {
         margin-top: 60px;
     }
-    
+
     .hidden-fullscreen {
         display: none;
     }
-    
+
     .sql-migration {
         width: 100%;
-        
+
         .exit-button {
             display: inline-block;
         }
-        
+
         & > h3 {
             display: block;
         }
-        
+
         .modal-root {
             width: 100%;
             background-color: @gray-base;
@@ -29,7 +29,7 @@
 }
 
 .sql-migration {
-    
+
     .suffix-input {
         width: 100px;
         display: inline-block;
@@ -38,39 +38,36 @@
     .exit-button {
         display: none;
     }
-    
+
     .customizations {
         font-size: 10px;
-        
-        
+
+
         i + i {
             padding-left: 5px;
         }
     }
-    
-    
+
+
     .filter-input {
         margin-left: @grid-gutter-width/4;
     }
+
     .left-indent {
         padding-left: 30px;
     }
-    
-    .object-container [class^="icon-"] + span {
-        margin-left: 0;
-    }
-    
+
     .raven-property-name {
         color: @raven-field-color;
     }
-    
+
     .panel-header {
-        
+
         .icon-arrow-right {
             padding-left: 10px;
             padding-right: 10px;
         }
-        
+
         .inline-edit {
             &:hover {
                 &:after {
@@ -79,45 +76,49 @@
             }
         }
     }
-    
+
     .panel-addon {
         font-size: 13px;
         line-height: 1.5;
         position: relative;
-        
+
         .table-warning {
             position: absolute;
             top: 0;
             right: 0;
         }
     }
-    
+
     .btn-sm {
         padding: 2px 8px;
     }
-    
-    .panel-info {
-        .link-actions {
-            padding-left: 5px;
-            padding-right: 5px;
-            margin: 2px;
-            
-            .btn.btn-sm.active {
-                background-color: fade(@brand-info, 50%) !important;
-            }
+
+    .relation {
+        padding: 4px 0;
+        span {
+            margin-right: 3px;
+            margin-left: 0;
         }
     }
-    
-    
+
+    .link-actions {
+
+        .btn.btn-sm.active {
+            background-color: @brand-primary !important;
+            border-color: @brand-primary !important;
+        }
+    }
+
+
     .document-id {
         padding: 4px;
         padding-bottom: 0;
     }
-    
+
     .object-container {
         padding: 20px 7.5px 20px 20px;
         position: relative;
-        
+
         &:before {
             position: absolute;
             content: '{';
@@ -125,6 +126,7 @@
             left: 7px;
             opacity: 0.5;
         }
+
         &:after {
             position: absolute;
             content: '}';
@@ -133,11 +135,11 @@
             opacity: 0.5;
         }
     }
-    
+
     .array-container {
         padding: 20px 7.5px 20px 20px;
         position: relative;
-        
+
         &:before {
             position: absolute;
             content: '[';
@@ -145,6 +147,7 @@
             left: 7px;
             opacity: 0.5;
         }
+
         &:after {
             position: absolute;
             content: ']';
@@ -152,59 +155,65 @@
             left: 7px;
             opacity: 0.5;
         }
-        
     }
-    
-    .with-top-label {
-        position: relative;
-        vertical-align: middle;
-        
-        transform: translate(0, 8px);
-        
-        &:before {
-            color: #63728a;
-            position: absolute;
-            left: 0;
-            top: -11px;
-            line-height: 10px;
-            font-size: 10px;
-            text-transform: uppercase;
-            content: attr(data-label);
-        }
+
+    .panel-heading {
+        color: @gray-lighter;
+        font-weight: 900;
     }
-    
+
+    .panel-body {
+        font-size: 13px;
+    }
+
     .properties_table {
         border-collapse: separate;
-        
+
         td {
-            padding-right: 5px;
-            padding-top: 1px;
-            padding-bottom: 1px;
         }
     }
-    
+
+    .sqlName {
+        margin-right: @grid-gutter-width/4;
+    }
+
     .inline-edit {
-        border: solid 1px transparent; 
+        border: solid 1px transparent;
+        padding-left: @grid-gutter-width/4;
+        padding-right: @grid-gutter-width/4;
+        position: relative;
+        height: 30px;
+        padding-right: 22px;
+
         input {
             display: none;
+            position: absolute;
+            top: -1px;
+            bottom: -1px;
+            left: -1px;
+            right: -1px;
         }
-        
+
         &.edit-mode {
             input {
                 display: block;
+                z-index: 2;
+                padding-left: @grid-gutter-width/4;
+                padding-right: @grid-gutter-width/4;
             }
-            
+
             .static {
-                display: none;
+                visibility: hidden;
+                z-index: 1;
             }
         }
-        
+
         &:hover:not(.edit-mode):not(.edit-disabled) {
-            padding-right: 4px;
+            padding-right: @grid-gutter-width/4;
             border: solid 1px @gray;
             border-right: solid 22px @gray;
             position: relative;
-            
+
             &:after {
                 position: absolute;
                 right: -17px;
@@ -213,19 +222,42 @@
                 content: "\e92a";
                 font-family: 'icomoon' !important;
             }
-            
+
             cursor: pointer;
         }
     }
-    
+
+    .with-top-label {
+        position: relative;
+        padding: 0 @grid-gutter-width/4;
+        padding-top: @grid-gutter-width/4;
+        height: 34px;
+
+        input {
+            padding-top: 21px;
+            padding-bottom: 12px;
+        }
+
+        &:before {
+            color: #63728a;
+            position: absolute;
+            left: @grid-gutter-width/4;
+            top: 2px;
+            line-height: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            content: attr(data-label);
+        }
+    }
+
     .settings-menu {
         .flex-form {
             .control-label {
                 width: 255px;
-            }    
+            }
         }
     }
-    
+
     .dropdown .dropdown-menu.settings-menu {
         width: 470px;
     }
