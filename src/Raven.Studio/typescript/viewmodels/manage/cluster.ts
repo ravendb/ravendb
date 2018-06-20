@@ -3,6 +3,7 @@ import removeNodeFromClusterCommand = require("commands/database/cluster/removeN
 import leaderStepDownCommand = require("commands/database/cluster/leaderStepDownCommand");
 import promoteClusterNodeCommand = require("commands/database/cluster/promoteClusterNodeCommand");
 import demoteClusterNodeCommand = require("commands/database/cluster/demoteClusterNodeCommand");
+import bootstrapClusterCommand = require("commands/database/cluster/bootstrapClusterCommand");
 import forceLeaderTimeoutCommand = require("commands/database/cluster/forceLeaderTimeoutCommand");
 import changesContext = require("common/changesContext");
 import clusterNode = require("models/database/cluster/clusterNode");
@@ -26,6 +27,7 @@ class cluster extends viewModelBase {
 
     canDeleteNodes: KnockoutComputed<boolean>;
     canAddNodes: KnockoutComputed<boolean>;
+    canBootstrapCluster: KnockoutComputed<boolean>;
     
     leaderUrl: KnockoutComputed<string>;
     utilizedCores: KnockoutComputed<number>;
@@ -46,7 +48,8 @@ class cluster extends viewModelBase {
         promote: ko.observableArray<string>([]),
         demote: ko.observableArray<string>([]),
         forceTimeout: ko.observable<boolean>(false),
-        assignCores: ko.observable<boolean>(false)
+        assignCores: ko.observable<boolean>(false),
+        bootstrap: ko.observable<boolean>(false)
     };
 
     constructor() {
@@ -74,6 +77,7 @@ class cluster extends viewModelBase {
     private initObservables() {
         this.canDeleteNodes = ko.pureComputed(() => this.topology().leader() && this.topology().nodes().length > 1);
         this.canAddNodes = ko.pureComputed(() => !!this.topology().leader() || this.topology().nodeTag() === "?");
+        this.canBootstrapCluster = ko.pureComputed(() => this.topology().nodeTag() === "?");
 
         this.leaderUrl = ko.pureComputed(() => {
             const topology = this.topology();
@@ -176,6 +180,13 @@ class cluster extends viewModelBase {
 
     addNode() {
         router.navigate(appUrl.forAddClusterNode());
+    }
+
+    bootstrapCluster() {
+        this.spinners.bootstrap(true);    
+        new bootstrapClusterCommand()
+            .execute()
+            .always(() => this.spinners.bootstrap(false));
     }
 
     forceTimeout(node: clusterNode) {
