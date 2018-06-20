@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         public Task Bootstrap()
         {
             ServerStore.EnsureNotPassive();
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin)]
