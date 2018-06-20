@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 
 namespace Raven.Client.Documents.Session
@@ -35,12 +37,58 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocuments<T>();
         }
 
+        public async Task<T> LoadAsync<T>(string id, Action<IIncludeBuilder<T>> includes, CancellationToken token = default(CancellationToken))
+        {
+            var result = await LoadAsync(new[] {id}, includes, token).ConfigureAwait(false);
+            return result.Values.FirstOrDefault();
+        }
+
+        public Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids, Action<IIncludeBuilder<T>> includes, CancellationToken token = default(CancellationToken))
+        {
+            if (includes == null)
+                return LoadAsync<T>(ids, token);
+            var includeBuilder = new IncludeBuilder<T>(Conventions);
+            includes.Invoke(includeBuilder);
+
+            return LoadAsyncInternal<T>(
+                ids.ToArray(),
+                includeBuilder.DocumentsToInclude?.ToArray(),
+                includeBuilder.CountersToInclude?.ToArray(),
+                includeBuilder.IncludeAllCounters,
+                token);
+        }
+
         public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes,
             CancellationToken token = new CancellationToken())
         {
             var loadOperation = new LoadOperation(this);
             loadOperation.ByIds(ids);
             loadOperation.WithIncludes(includes?.ToArray());
+
+            var command = loadOperation.CreateRequest();
+            if (command != null)
+            {
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                loadOperation.SetResult(command.Result);
+            }
+
+            return loadOperation.GetDocuments<T>();
+        }
+
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes,
+            string[] counters, bool includeAllCounters, CancellationToken token = new CancellationToken())
+        {
+            var loadOperation = new LoadOperation(this);
+            loadOperation.ByIds(ids);
+            loadOperation.WithIncludes(includes?.ToArray());
+            if (includeAllCounters)
+            {
+                loadOperation.WithAllCounters();
+            }
+            else
+            {
+                loadOperation.WithCounters(counters);
+            }
 
             var command = loadOperation.CreateRequest();
             if (command != null)

@@ -61,8 +61,12 @@ namespace Raven.Client.Documents.Session
 
         public Dictionary<string, T> Load<T>(IEnumerable<string> ids, Action<IIncludeBuilder<T>> includes)
         {
-            var includeBuilder = new IncludeBuilder<T>();
-            includes?.Invoke(includeBuilder);
+            if (includes == null)
+                return Load<T>(ids);
+
+            var includeBuilder = new IncludeBuilder<T>(Conventions);
+            includes.Invoke(includeBuilder);
+
             return LoadInternal<T>(
                 ids.ToArray(), 
                 includeBuilder.DocumentsToInclude?.ToArray(), 
@@ -90,7 +94,15 @@ namespace Raven.Client.Documents.Session
             var loadOperation = new LoadOperation(this);
             loadOperation.ByIds(ids);
             loadOperation.WithIncludes(includes);
-            loadOperation.WithCounters(counters, includeAllCounters);
+
+            if (includeAllCounters)
+            {
+                loadOperation.WithAllCounters();
+            }
+            else
+            {
+                loadOperation.WithCounters(counters);
+            }
 
             var command = loadOperation.CreateRequest();
             if (command != null)

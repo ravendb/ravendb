@@ -63,11 +63,16 @@ namespace Raven.Client.Documents.Session.Operations
             return this;
         }
 
-        public LoadOperation WithCounters(string[] counters, bool includeAll = false)
+        public LoadOperation WithCounters(string[] counters)
         {
             if (counters != null)   
                 _counters = counters;
-            _includeAllCounters = includeAll;
+            return this;
+        }
+
+        public LoadOperation WithAllCounters()
+        {
+            _includeAllCounters = true;
             return this;
         }
 
