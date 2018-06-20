@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters)
+        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection)
         {
             throw new NotImplementedException("TODO arek");
         }

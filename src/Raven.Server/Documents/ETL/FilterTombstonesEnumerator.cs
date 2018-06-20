@@ -9,11 +9,13 @@ namespace Raven.Server.Documents.ETL
     {
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly EtlStatsScope _stats;
+        private readonly Tombstone.TombstoneType _tombstoneType;
 
-        public FilterTombstonesEnumerator(IEnumerator<Tombstone> tombstones, EtlStatsScope stats)
+        public FilterTombstonesEnumerator(IEnumerator<Tombstone> tombstones, EtlStatsScope stats, Tombstone.TombstoneType tombstoneType)
         {
             _tombstones = tombstones;
             _stats = stats;
+            _tombstoneType = tombstoneType;
         }
 
         public bool MoveNext()
@@ -23,7 +25,10 @@ namespace Raven.Server.Documents.ETL
             while (_tombstones.MoveNext())
             {
                 var current = _tombstones.Current;
-                if (current.Type == Tombstone.TombstoneType.Document)
+
+                // TODO arek - for counter we need to probably iterate up to last transformed / filtered doc etag
+
+                if (current.Type == _tombstoneType)
                 {
                     Current = current;
                     return true;

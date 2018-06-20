@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type);
 
-        protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters);
+        protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.ETL
                 switch (type)
                 {
                     case EtlItemType.Document:
-                        var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
+                        var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<Tombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
 
                         if (Transformation.ApplyToAllDocuments)
                         {
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.ETL
                             var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(tombstones);
 
-                            tombstones = new FilterTombstonesEnumerator(tombstones, stats);
+                            tombstones = new FilterTombstonesEnumerator(tombstones, stats, Tombstone.TombstoneType.Document);
 
                             enumerators.Add((docs, tombstones, null));
                         }
@@ -168,16 +168,46 @@ namespace Raven.Server.Documents.ETL
                             merged.AddEnumerator(ConvertDocsEnumerator(en.Docs, en.Collection));
                             merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones, en.Collection, EtlItemType.Document));
                         }
+
                         break;
                     case EtlItemType.Counter:
-                        var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
-                        scope.EnsureDispose(counters);
+                        var counterEnumerators = new List<(IEnumerator<CounterDetail> Counters, IEnumerator<Tombstone> CounterTombstones, string Collection)>(Transformation.Collections.Count);
 
-                        var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
-                        scope.EnsureDispose(counterTombstones);
+                        if (Transformation.ApplyToAllDocuments)
+                        {
+                            var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(counters);
 
-                        merged.AddEnumerator(ConvertCountersEnumerator(counters));
-                        merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter)); // TODO arek - CountersStorage.CountersTombstones ??
+                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(counterTombstones);
+
+                            // TODO arek - verify that we won't filter out doc tombstones
+                            // proably for counters we need to iterate up to last transformed doc etag 
+
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter); 
+
+                            counterEnumerators.Add((counters, counterTombstones, null));
+                        }
+                        else
+                        {
+                            foreach (var collection in Transformation.Collections)
+                            {
+                                var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                scope.EnsureDispose(counters);
+
+                                // TODO arek - add ability to grab tombstones from specified collection
+                                var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                scope.EnsureDispose(counterTombstones);
+
+                                counterEnumerators.Add((counters, counterTombstones, collection));
+                            }
+                        }
+
+                        foreach (var en in counterEnumerators)
+                        {
+                            merged.AddEnumerator(ConvertCountersEnumerator(en.Counters, en.Collection));
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(en.CounterTombstones, en.Collection, EtlItemType.Counter));
+                        }
 
                         break;
                     default:
@@ -315,9 +345,12 @@ namespace Raven.Server.Documents.ETL
         {
             if (currentItem.Type == EtlItemType.Counter)
             {
+                // TODO arek - let's wrap counters by enumeration insteaf of putting the logic here
+                // then let's return true here
+
                 // we need to ensure we'll iterate all counters up to last transformed doc etag in the same batch
 
-                var lastTransformedDocumentEtag = stats.LastTransformedEtag[EtlItemType.Document];
+                var lastTransformedDocumentEtag = stats.LastTransformedEtag[EtlItemType.Document]; // TODO arek - also last filtered out etag ?
                 if (lastTransformedDocumentEtag == 0)
                 {
                     // there was no document transformed in current batch

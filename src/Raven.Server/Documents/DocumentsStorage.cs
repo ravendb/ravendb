@@ -1062,6 +1062,7 @@ namespace Raven.Server.Documents
             else if (result.Type == Tombstone.TombstoneType.Counter)
             {
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
+                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
 
             return result;
@@ -1199,7 +1200,7 @@ namespace Raven.Server.Documents
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
 
-                CountersStorage.DeleteCountersForDocument(context, id);
+                CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

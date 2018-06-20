@@ -715,7 +715,7 @@ namespace Raven.Server.Documents.Patch
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, name, (long)value);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name, (long)value);
 
                 _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
                 {
@@ -766,7 +766,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 var name = args[1].AsString();
 
-                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, name);
+                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name);
 
                 _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
                 {
