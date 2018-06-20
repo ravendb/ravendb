@@ -39,22 +39,24 @@ class domainInfo {
     
     private initValidation() {
 
-        const checkDomain = (val: string, params: any, callback: (currentValue: string, result: boolean) => void) => {
-            new checkDomainAvailabilityCommand(val, this.licenseProvider())
-                .execute()
-                .done((result: domainAvailabilityResult) => {
-                    callback(this.domain(), result.Available || result.IsOwnedByMe); 
-                })
-                .fail((result: JQueryXHR) => {
-                    if (result.status === 400) {
-                        const error = domainInfo.tryExtractValidationError(result);
-                        if (error) {
-                            callback(this.domain(), false);
-                            this.domain.setError(error);
-                        }
-                    }
-                });
-        };
+        const checkDomain = (val: string, 
+                             params: any, 
+                             callback: (currentValue: string, result: boolean) => void) => {
+                                                new checkDomainAvailabilityCommand(val, this.licenseProvider())
+                                                    .execute()
+                                                    .done((result: domainAvailabilityResult) => {
+                                                        callback(this.domain(), result.Available || result.IsOwnedByMe); 
+                                                    })
+                                                    .fail((result: JQueryXHR) => {
+                                                        if (result.status === 400) {
+                                                            const error = domainInfo.tryExtractValidationError(result);
+                                                            if (error) {
+                                                                callback(this.domain(), false);
+                                                                this.domain.setError(error);
+                                                            }
+                                                        }
+                                                    });
+                             };
         
         this.domain.extend({
             required: true,
