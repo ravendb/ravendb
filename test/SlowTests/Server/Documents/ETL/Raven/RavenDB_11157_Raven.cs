@@ -422,5 +422,45 @@ if (hasCounter('down')) {
                 }
             }
         }
+
+        [Fact]
+        public void Must_not_send_counters_of_docs_from_non_relevant_collections()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = dest.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+
+                    session.CountersFor("people/1").Increment("likes");
+
+                    session.Store(new User(), "users/1");
+
+                    session.CountersFor("users/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.CountersFor("users/1").Get("likes"));
+                    Assert.Null(session.CountersFor("people/1").Get("likes"));
+                }
+            }
+        }
     }
 }

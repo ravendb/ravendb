@@ -79,6 +79,7 @@ namespace Raven.Server.Documents.Replication
                     break;
                 case Tombstone.TombstoneType.Counter:
                     item.Type = ReplicationItemType.CounterTombstone;
+                    item.Collection = doc.Collection;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(doc.Type));

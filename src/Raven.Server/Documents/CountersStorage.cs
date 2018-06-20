@@ -27,10 +27,11 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
-
-        private static readonly Slice CountersSlice;
+        
         private static readonly Slice CountersTombstonesSlice;
-        private static readonly Slice CountersEtagSlice;
+        private static readonly Slice AllCountersEtagSlice;
+        private static readonly Slice CollectionCountersEtagsSlice;
+        private static readonly Slice CounterKeysSlice;
 
         public static readonly string CountersTombstones = "Counters.Tombstones";
 
@@ -48,27 +49,38 @@ namespace Raven.Server.Documents
             Etag = 2,
             Value = 3,
             ChangeVector = 4,
-            TransactionMarker = 5
+            Collection = 5,
+            TransactionMarker = 6
         }
 
         static CountersStorage()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "Counters", ByteStringType.Immutable, out CountersSlice);
-                Slice.From(ctx, "CountersEtag", ByteStringType.Immutable, out CountersEtagSlice);
-                Slice.From(ctx, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
+            	Slice.From(ctx, "AllCountersEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
+            	Slice.From(ctx, "CollectionCountersEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
+            	Slice.From(ctx, "CounterKeys", ByteStringType.Immutable, out CounterKeysSlice);
+            	Slice.From(ctx, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
             }
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)CountersTable.CounterKey,
                 Count = 1,
+                Name = CounterKeysSlice,
+                IsGlobal = true,
             });
+
             CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)CountersTable.Etag,
-                Name = CountersEtagSlice,
+                Name = AllCountersEtagSlice,
                 IsGlobal = true
+            });
+
+            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = (int)CountersTable.Etag,
+                Name = CollectionCountersEtagsSlice
             });
         }
 
@@ -77,7 +89,8 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
 
-            CountersSchema.Create(tx, CountersSlice, 32);
+            tx.CreateTree(CounterKeysSlice);
+            
             TombstonesSchema.Create(tx, CountersTombstonesSlice, 16);
         }
 
@@ -86,7 +99,7 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CountersEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, 0))
             {
                 yield return CreateReplicationBatchItem(context, result);
             }
@@ -97,7 +110,27 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CountersEtagSlice], 0, 0))
+            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToCounterDetail(context, result.Reader);
+            }
+        }
+
+        public IEnumerable<CounterDetail> GetCountersFrom(DocumentsOperationContext context, string collection, long etag, int skip, int take)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+
+            var table = EnsureCountersTableCreated(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+                yield break;
+            
+            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
             {
                 if (take-- <= 0)
                     yield break;
@@ -150,6 +183,7 @@ namespace Raven.Server.Documents
                 ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref result.Reader),
                 Value = TableValueToLong((int)CountersTable.Value, ref result.Reader),
                 TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(ReplicationBatchItem.TransactionMarker), ref result.Reader),
+                Collection = TableValueToString(context, (int)CountersTable.Collection, ref result.Reader),
             };
         }
 
@@ -161,7 +195,7 @@ namespace Raven.Server.Documents
             Etl
         }
 
-        public void PutCounter(DocumentsOperationContext context, string documentId, string name, string changeVector, long value, PutCounterMode mode)
+        public void PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, string changeVector, long value, PutCounterMode mode)
         {
             if (context.Transaction == null)
             {
@@ -169,7 +203,9 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var table = EnsureCountersTableCreated(context.Transaction.InnerTransaction, collectionName);
+
             using (GetCounterKey(context, documentId, name, mode == PutCounterMode.Etl ? context.Environment.Base64Id : changeVector, out var counterKey))
             {
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
@@ -207,12 +243,14 @@ namespace Raven.Server.Documents
                     }
 
                     using (Slice.From(context.Allocator, changeVector, out var cv))
+                    using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                     {
                         tvb.Add(counterKey);
                         tvb.Add(nameSlice);
                         tvb.Add(Bits.SwapBytes(etag));
                         tvb.Add(value);
                         tvb.Add(cv);
+                        tvb.Add(collectionSlice);
                         tvb.Add(context.TransactionMarkerOffset);
 
                         table.Set(tvb);
@@ -242,15 +280,29 @@ namespace Raven.Server.Documents
             }
         }
 
-        public string IncrementCounter(DocumentsOperationContext context, string documentId, string name, long value)
+        private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        public Table EnsureCountersTableCreated(Transaction tx, CollectionName collection)
+        {
+            var tableName = collection.GetTableName(CollectionTableType.Counters);
+
+            if (_tableCreated.Add(collection.Name))
+                CountersSchema.Create(tx, tableName, 32);
+
+            return tx.OpenTable(CountersSchema, tableName);
+        }
+
+        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long value)
         {
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
                 Debug.Assert(false);// never hit
             }
+
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var table = EnsureCountersTableCreated(context.Transaction.InnerTransaction, collectionName);
             
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
             using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
                 long prev = 0;
@@ -268,6 +320,7 @@ namespace Raven.Server.Documents
                 using (Slice.From(context.Allocator, result.ChangeVector, out var cv))
 
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
+                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(counterKey);
@@ -275,6 +328,7 @@ namespace Raven.Server.Documents
                     tvb.Add(Bits.SwapBytes(etag));
                     tvb.Add(prev + value); //inc
                     tvb.Add(cv);
+                    tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
 
                     table.Set(tvb);
@@ -294,7 +348,8 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
             using (GetCounterPartialKey(context, docId, out var key))
             {
                 var prev = string.Empty;
@@ -312,14 +367,14 @@ namespace Raven.Server.Documents
 
                     prev = current;
                 }
-
             }
         }
 
-        public long? GetCounterValue(DocumentsOperationContext context, string docId, string name)
+        public long? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            using (GetCounterPartialKey(context, docId, name, out var key))
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            using (GetCounterPartialKey(context, docId, counterName, out var key))
             {
                 long? value = null;
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
@@ -334,10 +389,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<(string ChangeVector, long Value)> GetCounterValues(DocumentsOperationContext context, string docId, string name)
+        public IEnumerable<(string ChangeVector, long Value)> GetCounterValues(DocumentsOperationContext context, string docId, string counterName)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            using (GetCounterPartialKey(context, docId, name, out var keyPerfix))
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            using (GetCounterPartialKey(context, docId, counterName, out var keyPerfix))
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
                 {
@@ -433,12 +489,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void DeleteCountersForDocument(DocumentsOperationContext context, string documentId)
+        public void DeleteCountersForDocument(DocumentsOperationContext context, string documentId, CollectionName collection)
         {
             // this will called as part of document's delete, so we don't bother creating
             // tombstones (existing tombstones will remain and be cleaned up by the usual
             // tombstone cleaner task
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            
+            var table = EnsureCountersTableCreated(context.Transaction.InnerTransaction, collection);
 
             if (table.NumberOfEntries == 0)
                 return; 
@@ -449,7 +506,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public string DeleteCounter(DocumentsOperationContext context, string documentId, string name)
+        public string DeleteCounter(DocumentsOperationContext context, string documentId, string collection, string counterName)
         {
             if (context.Transaction == null)
             {
@@ -457,18 +514,20 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
+            using (GetCounterPartialKey(context, documentId, counterName, out var keyPerfix))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                return DeleteCounter(context, keyPerfix, lastModifiedTicks,
+                return DeleteCounter(context, keyPerfix, collection, lastModifiedTicks,
                     // let's avoid creating a tombstone for missing counter if writing locally
                     forceTombstone: false);
             }
         }
 
-        public string DeleteCounter(DocumentsOperationContext context, Slice key, long lastModifiedTicks, bool forceTombstone)
+        public string DeleteCounter(DocumentsOperationContext context, Slice key, string collection, long lastModifiedTicks, bool forceTombstone)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var table = EnsureCountersTableCreated(context.Transaction.InnerTransaction, collectionName);
+
             long deletedEtag = -1;
             if (table.DeleteByPrimaryKeyPrefix(key, tvh =>
                 {
@@ -484,15 +543,16 @@ namespace Raven.Server.Documents
             var newEtag = _documentsStorage.GenerateNextEtag();
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
 
-            CreateTombstone(context, key, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
+            CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
 
             return newChangeVector;
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long deletedEtag, long lastModifiedTicks, long newEtag, string newChangeVector)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, string collectionName, long deletedEtag, long lastModifiedTicks, long newEtag, string newChangeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
             using (Slice.From(context.Allocator, newChangeVector, out var cv))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName, out Slice collectionSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
@@ -500,7 +560,7 @@ namespace Raven.Server.Documents
                 tvb.Add(Bits.SwapBytes(deletedEtag)); // etag that was deleted
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)Tombstone.TombstoneType.Counter);
-                tvb.Add(null, 0); // doc data
+                tvb.Add(collectionSlice);
                 tvb.Add((int)DocumentFlags.None);
                 tvb.Add(cv.Content.Ptr, cv.Size); // change vector
                 tvb.Add(lastModifiedTicks);
@@ -530,8 +590,9 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfCounterEntries(DocumentsOperationContext context)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(CountersSchema, CountersSlice);
-            return table.NumberOfEntries;
+            var fstIndex = CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            return fst.NumberOfEntries;
         }
 
         public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId, BlittableJsonReaderObject metadata, List<CounterOperation> countersOperations)

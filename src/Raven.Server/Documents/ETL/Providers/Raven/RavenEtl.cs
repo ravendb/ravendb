@@ -42,9 +42,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new TombstonesToRavenEtlItems(tombstones, collection, type);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters)
+        protected override IEnumerator<RavenEtlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection)
         {
-            return new CountersToRavenEtlItems(counters, null /*TODO arek*/);
+            return new CountersToRavenEtlItems(counters, collection);
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)

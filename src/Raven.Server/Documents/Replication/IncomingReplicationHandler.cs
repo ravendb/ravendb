@@ -1053,12 +1053,12 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
                             {
                                 database.DocumentsStorage.CountersStorage.PutCounter(context,
-                                    item.Id, item.CounterName, item.ChangeVector,
+                                    item.Id, item.Collection, item.CounterName, item.ChangeVector,
                                     item.CounterValue, CountersStorage.PutCounterMode.Etl);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {
-                                database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, 
+                                database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, item.Collection, 
                                     item.LastModifiedTicks,
                                     // we force the tombstone because we have to replicate it further
                                     forceTombstone: true);
