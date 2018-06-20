@@ -25,6 +25,62 @@ html {
     flex-direction: column;
 }
 
+.browser-alert {
+    position: absolute;
+    z-index: 9998;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+
+    .browser-message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+        background-color: fadeout(@gray-lighter,10%);
+        color: @gray-dark;
+        z-index: 9999;
+        text-align: center;
+        padding: @grid-gutter-width;
+        width: 380px;
+        max-width: 90%;
+
+        .browser-links {
+            margin: @grid-gutter-width -@grid-gutter-width;
+            display: flex;
+
+            a {
+                width: 50%;
+                display: block;
+                padding: @grid-gutter-width/2;
+                color: @gray-lighter;
+                font-weight: bold;
+
+                i {
+                    display: block;
+                }
+
+                &.chrome {
+                    background-color: #4885ed;
+
+                    &:hover {
+                        background-color: lighten(#4885ed,5%);
+                    }
+                }
+
+                &.firefox {
+                    background-color: #FF6611;
+
+                    &:hover {
+                        background-color: lighten(#FF6611,5%);
+                    }
+                }
+            }
+        }
+    }
+}
+
 body {
     &.loading-active {
         #applicationHost {
