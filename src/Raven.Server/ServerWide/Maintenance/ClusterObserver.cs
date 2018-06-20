@@ -828,8 +828,10 @@ namespace Raven.Server.ServerWide.Maintenance
             if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
                 || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
             {
+                var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
                 topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
-                return (false, $"Node {promotable} not ready to be a member, because the indexes are not up-to-date");
+                topology.DemotionReasons[promotable] = msg;
+                return (false, msg);
             }
             return (false, null);
         }
