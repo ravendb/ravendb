@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session
 {
@@ -22,7 +24,28 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
-        /// <param name="ids">Enumerable of Ids that should be loaded</param>
+        /// <param name="ids">Enumerable of Ids that should be loaded.</param>
         Dictionary<string, T> Load<T>(IEnumerable<string> ids);
+
+        /// <summary>
+        ///     Loads the specified entity with the specified id, 
+        ///     and includes other Documents and/or Counters.
+        /// </summary>
+        /// <param name="includes">
+        ///     An action that specifies which documents and\or counters 
+        ///     to include, by using the IIncludeBuilder interface.
+        /// </param>
+        T Load<T>(string id, Action<IIncludeBuilder<T>> includes);
+
+        /// <summary>
+        ///     Loads the specified entities with the specified ids, 
+        ///     and includes other Documents and/or Counters.
+        /// </summary>
+        /// <param name="includes">
+        ///     An action that specifies which documents and\or counters 
+        ///     to include, by using the IIncludeBuilder interface.
+        /// </param>
+        Dictionary<string, T> Load<T>(IEnumerable<string> ids, Action<IIncludeBuilder<T>> includes);
+
     }
 }
