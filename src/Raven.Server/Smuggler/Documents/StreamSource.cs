@@ -213,16 +213,14 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
+        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
         {
-            compareExchange = InternalGetCompareExchangeValues();
-            return null;
+            return InternalGetCompareExchangeValues();
         }
 
-        public IDisposable GetCounterValues(out IEnumerable<CounterDetail> counters)
+        public IEnumerable<CounterDetail> GetCounterValues()
         {
-            counters = InternalGetCounterValues();
-            return null;
+            return InternalGetCounterValues();
         }
 
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
@@ -265,7 +263,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         private IEnumerable<CounterDetail> InternalGetCounterValues()
-        {           
+        {
             foreach (var reader in ReadArray())
             {
                 using (reader)
@@ -290,7 +288,7 @@ namespace Raven.Server.Smuggler.Documents
                     };
 
                 }
-            }        
+            }
         }
 
 
@@ -384,10 +382,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
+        public IEnumerable<(string Prefix, long Value)> GetIdentities()
         {
-            identities = InternalGetIdentities();
-            return null;
+            return InternalGetIdentities();
         }
 
         private IEnumerable<(string Prefix, long Value)> InternalGetIdentities()
