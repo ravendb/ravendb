@@ -5,6 +5,7 @@ import clusterNode = require("models/database/cluster/clusterNode");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
+import validateNameCommand = require("commands/resources/validateNameCommand");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -47,7 +48,6 @@ class databaseCreationModel {
     };
 
     name = ko.observable<string>("");
-    databaseNameError = ko.observable<string>("");
 
     creationMode: dbCreationMode = null;
     isFromBackupOrFromOfflineMigration: boolean;
@@ -287,6 +287,21 @@ class databaseCreationModel {
     setupValidation(databaseDoesntExist: (name: string) => boolean, maxReplicationFactor: number) {
         this.setupPathValidation(this.path.dataPath, "Data");
 
+        const checkDatabaseName = (val: string,
+                                   params: any,
+                                   callback: (currentValue: string, result: boolean) => void) => {
+            new validateNameCommand('database', val)
+                .execute()
+                .done((result) => {
+                    if (result.IsValid) {
+                        callback(this.name(), true);
+                    } else {
+                        callback(this.name(), false);
+                        this.name.setError(result.ErrorMessage);
+                    }
+                })
+        };
+        
         this.name.extend({
             required: true,
             validation: [
@@ -295,9 +310,8 @@ class databaseCreationModel {
                     message: "Database already exists"
                 },
                 {
-                    validator: (val: string) => !this.databaseNameError(),
-                    message: `{0}`,
-                    params: this.databaseNameError
+                    async: true,
+                    validator: generalUtils.debounceAndFunnel(checkDatabaseName)
                 }]
         });
         
@@ -453,7 +467,6 @@ class databaseCreationModel {
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
         } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
     }
-    
     
     toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {
         const migration = this.legacyMigration;
