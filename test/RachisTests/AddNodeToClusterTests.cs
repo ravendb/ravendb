@@ -30,6 +30,21 @@ namespace RachisTests
             Assert.True(await WaitForValueAsync(() => raft1.ServerStore.GetClusterErrors().Count > 0, true));
         }
 
+        [Fact]
+        public async Task PutDatabaseOnHealthyNodes()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(5, leaderIndex: 0);
+            var serverToDispose = Servers[1];
+            await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
+            Assert.Equal(WaitForValue(() => leader.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected), 3), 3);
+
+            for (int i = 0; i < 5; i++)
+            {
+                var dbName = GetDatabaseName();
+                var db = await CreateDatabaseInCluster(dbName, 4, leader.WebUrl);
+                Assert.False(db.Servers.Contains(serverToDispose));
+            }
+        }
 
         [Fact]
         public async Task RemoveNodeWithDb()
