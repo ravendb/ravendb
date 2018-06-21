@@ -232,7 +232,7 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
 
 declare module studio.settings {
     type numberFormatting = "raw" | "formatted";
-    type dontShowAgain = "EditSystemDocument";
+    type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
     type usageEnvironment = "Default" | "Dev" | "Test" | "Prod";
 }
