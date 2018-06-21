@@ -4,6 +4,7 @@ import router = require("plugins/router");
 import savePeriodicBackupConfigurationCommand = require("commands/database/tasks/savePeriodicBackupConfigurationCommand");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
+import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
@@ -14,6 +15,7 @@ class editPeriodicBackupTask extends viewModelBase {
     configuration = ko.observable<periodicBackupConfiguration>();
     isAddingNewBackupTask = ko.observable<boolean>(true);
     possibleMentors = ko.observableArray<string>([]);
+    serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
     constructor() {
         super();
@@ -24,45 +26,66 @@ class editPeriodicBackupTask extends viewModelBase {
     activate(args: any) { 
         super.activate(args);
 
-        const deferred = $.Deferred<void>();
-        
-        if (args.taskId) {
-            // 1. Editing an existing task
-            this.isAddingNewBackupTask(false);
+        const backupLoader = () => {
+            const deferred = $.Deferred<void>();
 
-            new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
-                .execute()
-                .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
-                    this.configuration(new periodicBackupConfiguration(configuration));
-                    deferred.resolve();
-                })
-                .fail(() => {
-                    deferred.reject();
-                    
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+            if (args.taskId) {
+                // 1. Editing an existing task
+                this.isAddingNewBackupTask(false);
+
+                new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
+                    .execute()
+                    .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
+                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration()));
+                        deferred.resolve();
+                    })
+                    .fail(() => {
+                        deferred.reject();
+
+                        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    });
+            } else {
+                // 2. Creating a new task
+                this.isAddingNewBackupTask(true);
+
+                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration()));
+                deferred.resolve();
+            }
+
+            deferred
+                .done(() => {
+                    this.dirtyFlag = this.configuration().dirtyFlag;
                 });
-        } else {
-            // 2. Creating a new task
-            this.isAddingNewBackupTask(true);
+            
+            return deferred;
+        };
 
-            this.configuration(periodicBackupConfiguration.empty());
-            deferred.resolve();
-        }
-        
-        deferred
-            .done(() => {
-                this.dirtyFlag = this.configuration().dirtyFlag;
-            });
-
-        return $.when<any>(deferred, this.loadPossibleMentors());
+        return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
+            .then(backupLoader);
     }
 
+    private loadServerSideConfiguration() {
+        return new getPeriodicBackupConfigCommand(this.activeDatabase())
+            .execute()
+            .done(config => { 
+                this.serverConfiguration(config);
+            });
+    }
+    
     private loadPossibleMentors() {
         return new getPossibleMentorsCommand(this.activeDatabase().name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
 
+    isBackupOptionAvailable(option: backupOptions) {
+        const destinations = this.serverConfiguration().AllowedDestinations;
+        if (destinations) {
+            return _.includes(destinations, option);
+        }
+        return true;
+    }
+    
     compositionComplete() {
         super.compositionComplete();
         
