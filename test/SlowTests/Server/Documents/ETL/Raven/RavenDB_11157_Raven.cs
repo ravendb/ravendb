@@ -487,5 +487,82 @@ if (hasCounter('down')) {
                 }
             }
         }
+
+        [Fact]
+        public void Should_send_counter_even_if_doc_was_updater_later()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    session.CountersFor("users/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1"); // will get higher etag than the counter
+
+                    session.SaveChanges();
+                }
+
+                AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+
+                    Assert.NotNull(session.CountersFor("users/1").Get("likes"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_send_updated_counter_values()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    session.CountersFor("users/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+
+                AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 1);
+                
+                for (int i = 0; i < 3; i++)
+                {
+                    using (var session = src.OpenSession())
+                    {
+                        session.CountersFor("users/1").Increment("likes");
+
+                        session.SaveChanges();
+                    }
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var session = dest.OpenSession())
+                    {
+                        Assert.Equal(i + 2, session.CountersFor("users/1").Get("likes"));
+                    }
+
+                    etlDone.Reset();
+                }
+            }
+        }
     }
 }
