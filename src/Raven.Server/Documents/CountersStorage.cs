@@ -182,8 +182,8 @@ namespace Raven.Server.Documents
                 Name = name,
                 ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref result.Reader),
                 Value = TableValueToLong((int)CountersTable.Value, ref result.Reader),
+                Collection = TableValueToId(context, (int)CountersTable.Collection, ref result.Reader),
                 TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(ReplicationBatchItem.TransactionMarker), ref result.Reader),
-                Collection = TableValueToString(context, (int)CountersTable.Collection, ref result.Reader),
             };
         }
 
