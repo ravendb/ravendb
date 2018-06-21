@@ -399,5 +399,12 @@ interface resourceStyleMap {
     styleMap: any;
 }
 
-
 type checkbox = "unchecked" | "some_checked" | "checked";
+
+type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP";
+
+interface periodicBackupServerLimitsResponse {
+    LocalRootPath: string;
+    AllowedAwsRegions: Array<string>;
+    AllowedDestinations: Array<backupOptions>;
+}

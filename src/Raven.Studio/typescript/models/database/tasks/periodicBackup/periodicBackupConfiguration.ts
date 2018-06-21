@@ -55,7 +55,7 @@ class periodicBackupConfiguration {
         { label: "At 15 minutes past the hour, every 3 hours", value: "15 */3 * * *", full: false, incremental: true }
     ];
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration, serverLimits: periodicBackupServerLimitsResponse) {
         this.taskId(dto.TaskId);
         this.disabled(dto.Disabled);
         this.name(dto.Name);
@@ -63,8 +63,8 @@ class periodicBackupConfiguration {
         this.fullBackupFrequency(dto.FullBackupFrequency);
         this.incrementalBackupFrequency(dto.IncrementalBackupFrequency);
         this.localSettings(!dto.LocalSettings ? localSettings.empty() : new localSettings(dto.LocalSettings));
-        this.s3Settings(!dto.S3Settings ? s3Settings.empty() : new s3Settings(dto.S3Settings));
-        this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty() : new glacierSettings(dto.GlacierSettings));
+        this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions) : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions));
+        this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
 
@@ -333,7 +333,7 @@ class periodicBackupConfiguration {
         };
     }
 
-    static empty(): periodicBackupConfiguration {
+    static empty(serverLimits: periodicBackupServerLimitsResponse): periodicBackupConfiguration {
         return new periodicBackupConfiguration({
             TaskId: 0,
             Disabled: false,
@@ -347,7 +347,7 @@ class periodicBackupConfiguration {
             AzureSettings: null,
             FtpSettings: null,
             MentorNode: null
-        });
+        }, serverLimits);
     }
 }
 
