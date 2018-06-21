@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-#if NETSTANDARD1_5
+#if NETSTANDARD2_0
 using System.Runtime.Loader;
 #endif
 using System.Text;
@@ -129,19 +129,37 @@ namespace Raven.TestDriver
 
             ReportInfo($"Starting global server: { _globalServerProcess.Id }");
 
+            var domainBind = false;
+
 #if NETSTANDARD1_3
             AppDomain.CurrentDomain.ProcessExit += (s, args) =>
             {
                 KillGlobalServerProcess();
             };
+
+            domainBind = true;
 #endif
 
-#if NETSTANDARD1_5
+#if NETSTANDARD2_0
             AssemblyLoadContext.Default.Unloading += c =>
             {
                 KillGlobalServerProcess();
             };
+
+            domainBind = true;
 #endif
+
+#if NET461
+            AppDomain.CurrentDomain.DomainUnload += (s, args) =>
+            {
+                KillGlobalServerProcess();
+            };
+
+            domainBind = true;
+#endif
+
+            if (domainBind == false)
+                throw new InvalidOperationException("Should not happen!");
 
             string url = null;
             var output = process.StandardOutput;
