@@ -4,8 +4,8 @@ import jsonUtil = require("common/jsonUtil");
 class glacierSettings extends amazonSettings {
     vaultName = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings) {
-        super(dto, "Glacier");
+    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings, allowedRegions: Array<string>) {
+        super(dto, "Glacier", allowedRegions);
 
         this.vaultName(dto.VaultName);
 
@@ -54,14 +54,14 @@ class glacierSettings extends amazonSettings {
         return dto;
     }
 
-    static empty(): glacierSettings {
+    static empty(allowedRegions: Array<string>): glacierSettings {
         return new glacierSettings({
             Disabled: true,
             AwsAccessKey: null,
             AwsRegionName: null,
             AwsSecretKey: null,
             VaultName: null
-        });
+        }, allowedRegions);
     }
 }
 
