@@ -36,6 +36,10 @@ class editPeriodicBackupTask extends viewModelBase {
                 new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
                     .execute()
                     .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
+                        if (configuration.LocalSettings.FolderPath && configuration.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
+                            configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
+                        }
+                        
                         this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration()));
                         deferred.resolve();
                     })
@@ -90,6 +94,11 @@ class editPeriodicBackupTask extends viewModelBase {
         super.compositionComplete();
         
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
+        
+        $(".edit-backup .js-option-disabled").tooltip({
+            title: "Destination was disabled by administrator",
+            placement: "right"
+        });
         
         document.getElementById("taskName").focus();
     }
@@ -188,6 +197,7 @@ class editPeriodicBackupTask extends viewModelBase {
         }
 
         const dto = this.configuration().toDto();
+        dto.LocalSettings.FolderPath = (this.serverConfiguration().LocalRootPath || "") + dto.LocalSettings.FolderPath;
 
         new savePeriodicBackupConfigurationCommand(this.activeDatabase(), dto)
             .execute()

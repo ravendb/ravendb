@@ -130,19 +130,26 @@
     </div>
     <h3>Destination</h3>
 
-    <div class="panel" data-bind="with: localSettings, visible: $root.isBackupOptionAvailable('Local')">
+    <div class="panel" data-bind="with: localSettings">
         <div class="padding">
-            <div class="toggle">
-                <input id="toggle-local" type="checkbox" data-bind="checked: enabled">
-                <label for="toggle-local">Local</label>
+            <div class="flex-horizontal">
+                <div class="toggle">
+                    <input id="toggle-local" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('Local')">
+                    <label for="toggle-local">Local</label>
+                </div>
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('Local')">
+                    <i class="icon-info"></i>
+                </div>
             </div>
             
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: folderPath">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory <i class="required"></i></label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
-                            <input data-bind="textInput: folderPath" type="text" class="form-control" placeholder="Full directory backup path" />
+                        <div class="col-xs-12 col-sm-6 col-lg-8 flex-horizontal" data-bind="validationElement: folderPath">
+                            <div data-bind="text: $root.serverConfiguration().LocalRootPath"></div>
+                            <input type="text" class="form-control" 
+                                   data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }"  />
                         </div>
                     </div>
                 </div>
@@ -150,11 +157,16 @@
         </div>
     </div>
 
-    <div class="panel" data-bind="with: s3Settings, visible: $root.isBackupOptionAvailable('AmazonS3')">
+    <div class="panel" data-bind="with: s3Settings">
         <div class="padding">
-            <div class="toggle">
-                <input id="toggle-amazons3" type="checkbox" data-bind="checked: enabled">
-                <label for="toggle-amazons3">Amazon S3</label>
+            <div class="flex-horizontal">
+                <div class="toggle">
+                    <input id="toggle-amazons3" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('AmazonS3')">
+                    <label for="toggle-amazons3">Amazon S3</label>
+                </div>
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('AmazonS3')">
+                    <i class="icon-info"></i>
+                </div>
             </div>
 
             <div class="row" data-bind="collapse: enabled">
@@ -216,11 +228,16 @@
         </div>
     </div>
 
-    <div class="panel" data-bind="with: azureSettings, visible: $root.isBackupOptionAvailable('Azure')">
+    <div class="panel" data-bind="with: azureSettings">
         <div class="padding">
-            <div class="toggle">
-                <input id="toggle-azure" type="checkbox" data-bind="checked: enabled">
-                <label for="toggle-azure">Azure</label>
+            <div class="flex-horizontal">
+                <div class="toggle">
+                    <input id="toggle-azure" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('Azure')">
+                    <label for="toggle-azure">Azure</label>
+                </div>
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('Azure')">
+                    <i class="icon-info"></i>
+                </div>
             </div>
 
             <div class="row" data-bind="collapse: enabled">
@@ -264,13 +281,18 @@
         </div>
     </div>
     
-    <div class="panel" data-bind="with: glacierSettings, visible: $root.isBackupOptionAvailable('AmazonGlacier')">
+    <div class="panel" data-bind="with: glacierSettings">
         <div class="padding">
-            <div class="toggle">
-                <input id="toggle-amazonglacier" type="checkbox" data-bind="checked: enabled">
-                <label for="toggle-amazonglacier">Amazon Glacier</label>
+            <div class="flex-horizontal">
+                <div class="toggle">
+                    <input id="toggle-amazonglacier" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('AmazonGlacier')">
+                    <label for="toggle-amazonglacier">Amazon Glacier</label>
+                </div>
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('AmazonGlacier')">
+                    <i class="icon-info"></i>
+                </div>
             </div>
-
+            
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: vaultName">
@@ -324,11 +346,16 @@
         </div>
     </div>
     
-    <div class="panel" data-bind="with: ftpSettings, visible: $root.isBackupOptionAvailable('FTP')">
+    <div class="panel" data-bind="with: ftpSettings">
         <div class="padding">
-            <div class="toggle">
-                <input id="toggle-ftp" type="checkbox" data-bind="checked: enabled">
-                <label for="toggle-ftp">FTP</label>
+            <div class="flex-horizontal">
+                <div class="toggle">
+                    <input id="toggle-ftp" type="checkbox" data-bind="checked: enabled, enable: $root.isBackupOptionAvailable('FTP')">
+                    <label for="toggle-ftp">FTP</label>
+                </div>
+                <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('FTP')">
+                    <i class="icon-info"></i>
+                </div>
             </div>
 
             <div class="row" data-bind="collapse: enabled">
