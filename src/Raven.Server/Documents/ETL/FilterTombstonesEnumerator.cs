@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using Raven.Server.Documents.ETL.Stats;
@@ -10,12 +11,15 @@ namespace Raven.Server.Documents.ETL
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly EtlStatsScope _stats;
         private readonly Tombstone.TombstoneType _tombstoneType;
+        private readonly List<string> _fromCollections;
 
-        public FilterTombstonesEnumerator(IEnumerator<Tombstone> tombstones, EtlStatsScope stats, Tombstone.TombstoneType tombstoneType)
+        public FilterTombstonesEnumerator(IEnumerator<Tombstone> tombstones, EtlStatsScope stats, Tombstone.TombstoneType tombstoneType,
+            List<string> fromCollections = null)
         {
             _tombstones = tombstones;
             _stats = stats;
             _tombstoneType = tombstoneType;
+            _fromCollections = fromCollections;
         }
 
         public bool MoveNext()
@@ -30,8 +34,11 @@ namespace Raven.Server.Documents.ETL
 
                 if (current.Type == _tombstoneType)
                 {
-                    Current = current;
-                    return true;
+                    if (_fromCollections == null || _fromCollections.Contains(current.Collection, StringComparer.OrdinalIgnoreCase))
+                    {
+                        Current = current;
+                        return true;
+                    }
                 }
 
                 _stats.RecordChangeVector(current.ChangeVector);

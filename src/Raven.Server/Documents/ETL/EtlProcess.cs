@@ -171,22 +171,24 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     case EtlItemType.Counter:
-                        var counterEnumerators = new List<(IEnumerator<CounterDetail> Counters, IEnumerator<Tombstone> CounterTombstones, string Collection)>(Transformation.Collections.Count);
-
                         if (Transformation.ApplyToAllDocuments)
                         {
+                            // TODO arek - counters should be sent only if it was specified in the script
+
                             var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(counters);
 
-                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
+                                .GetEnumerator();
                             scope.EnsureDispose(counterTombstones);
 
-                            // TODO arek - verify that we won't filter out doc tombstones
+                            // TODO arek - verify that we won't skip out doc tombstones
                             // proably for counters we need to iterate up to last transformed doc etag 
 
-                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter); 
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter);
 
-                            counterEnumerators.Add((counters, counterTombstones, null));
+                            merged.AddEnumerator(ConvertCountersEnumerator(counters, null));
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
                         }
                         else
                         {
@@ -195,18 +197,17 @@ namespace Raven.Server.Documents.ETL
                                 var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(counters);
 
-                                // TODO arek - add ability to grab tombstones from specified collection
-                                var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
-                                scope.EnsureDispose(counterTombstones);
-
-                                counterEnumerators.Add((counters, counterTombstones, collection));
+                                merged.AddEnumerator(ConvertCountersEnumerator(counters, collection));
                             }
-                        }
 
-                        foreach (var en in counterEnumerators)
-                        {
-                            merged.AddEnumerator(ConvertCountersEnumerator(en.Counters, en.Collection));
-                            merged.AddEnumerator(ConvertTombstonesEnumerator(en.CounterTombstones, en.Collection, EtlItemType.Counter));
+                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
+                                .GetEnumerator();
+                            scope.EnsureDispose(counterTombstones);
+
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter,
+                                fromCollections: Transformation.Collections);
+
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
                         }
 
                         break;
@@ -370,7 +371,7 @@ namespace Raven.Server.Documents.ETL
 
                 return false;
             }
-            
+
             if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
             {
                 var reason = $"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items";
@@ -529,16 +530,16 @@ namespace Raven.Server.Documents.ETL
                                 {
                                     List<TTransformed> transformations = null;
 
-                                    foreach (var type in new [] {EtlItemType.Document, EtlItemType.Counter})
+                                    foreach (var type in new[] { EtlItemType.Document, EtlItemType.Counter })
                                     {
                                         var extracted = Extract(context, loadLastProcessedEtag + 1, type, stats);
-                                        
+
                                         var transformed = Transform(extracted, context, stats, state);
 
                                         if (transformations == null)
                                             transformations = transformed;
                                         else
-                                           transformations.AddRange(transformed);
+                                            transformations.AddRange(transformed);
                                     }
 
                                     Load(transformations, context, stats);
@@ -665,7 +666,7 @@ namespace Raven.Server.Documents.ETL
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             // TODO arek add counters tombstones here
-            
+
             var lastProcessedEtag = GetProcessState(Database, Configuration.Name, Transformation.Name).GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
             if (Transformation.ApplyToAllDocuments)

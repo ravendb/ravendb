@@ -161,12 +161,30 @@ namespace Raven.Server.Documents
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
             {
-                if (p[sizeOfDocId] == 30)
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
                     break;
             }
 
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
             var name = ExtractCounterName(context, tvr);
+            return (doc, name);
+        }
+
+        public static (string DocId, string CounterName) ExtractDocIdAndCounterName(LazyStringValue counterTombstoneId)
+        {
+            var p = counterTombstoneId.Buffer;
+            var size = counterTombstoneId.Size;
+                
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            var doc = Encoding.UTF8.GetString(p, sizeOfDocId);
+            var name = Encoding.UTF8.GetString(p + sizeOfDocId + 1, size - (sizeOfDocId + 2));
+
             return (doc, name);
         }
 
