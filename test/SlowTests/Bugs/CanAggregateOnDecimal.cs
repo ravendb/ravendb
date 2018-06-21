@@ -29,7 +29,7 @@ namespace SlowTests.Bugs
                 Reduce = results => from bankTotal in results
                                     group bankTotal by 1
                                     into g
-                                    select new {Total = g.Sum(x => x.Total)};
+                                    select new { Total = g.Sum(x => x.Total) };
             }
         }
 
@@ -50,10 +50,10 @@ namespace SlowTests.Bugs
         [Fact]
         public void MapOnly()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new DecimalAggregationMap().Execute(store);
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Bank
                     {
@@ -71,7 +71,7 @@ namespace SlowTests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var bankTotal = session.Query<BankTotal, DecimalAggregationMap>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ProjectInto<BankTotal>()
                         .Single();
 
