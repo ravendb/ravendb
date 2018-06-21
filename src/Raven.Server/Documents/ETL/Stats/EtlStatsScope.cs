@@ -45,7 +45,10 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public void RecordLastTransformedEtag(long etag, EtlItemType type)
         {
-            _stats.LastTransformedEtag[type] = etag;
+            var current = _stats.LastTransformedEtag[type];
+
+            if (etag > current)
+                _stats.LastTransformedEtag[type] = etag;
         }
 
         public void RecordChangeVector(string changeVector)
