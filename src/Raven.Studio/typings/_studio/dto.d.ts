@@ -423,7 +423,6 @@ interface resourceStyleMap {
     styleMap: any;
 }
 
-
 type checkbox = "unchecked" | "some_checked" | "checked";
 
 type sqlMigrationAction = "skip" | "embed" | "link";
@@ -471,4 +470,12 @@ declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
         DebugOutput: Array<string>;
         TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
     }
+}
+
+type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP";
+
+interface periodicBackupServerLimitsResponse {
+    LocalRootPath: string;
+    AllowedAwsRegions: Array<string>;
+    AllowedDestinations: Array<backupOptions>;
 }
