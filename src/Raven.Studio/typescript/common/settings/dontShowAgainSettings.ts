@@ -9,11 +9,11 @@ class dontShowAgainSettings extends studioSetting<Array<studio.settings.dontShow
     }
 
     shouldShow(type: studio.settings.dontShowAgain): boolean {
-        return _.includes(this.value, type);
+        return !_.includes(this.value, type);
     }
 
     ignore(type: studio.settings.dontShowAgain) {
-        if (!this.shouldShow(type)) {
+        if (this.shouldShow(type)) {
             this.value.push(type);
         }
 

@@ -65,6 +65,8 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
+    browserAlert = ko.observable<boolean>(false);
+    dontShowBrowserAlertAgain = ko.observable<boolean>(false);
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
@@ -117,6 +119,8 @@ class shell extends viewModelBase {
         });
 
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
+        
+        this.detectBrowser();
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -393,6 +397,35 @@ class shell extends viewModelBase {
     
     ignoreWebSocketError() {
         changesContext.default.serverNotifications().ignoreWebSocketConnectionError(true);
+    }
+    
+    detectBrowser() {
+        const isChrome = !!(window as any).chrome && !!(window as any).chrome.webstore;
+        const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+
+        if (!isChrome && !isFirefox) {
+            // it isn't supported browser, check if user already said: Don't show this again
+
+            studioSettings.default.globalSettings()
+                .done(settings => {
+                    if (settings.dontShowAgain.shouldShow("UnsupportedBrowser")) {
+                        this.browserAlert(true);
+                    }
+                });
+        }
+    }
+
+    browserAlertContinue() {
+        const dontShowAgain = this.dontShowBrowserAlertAgain();
+        
+        if (dontShowAgain) {
+            studioSettings.default.globalSettings()
+                .done(settings => {
+                    settings.dontShowAgain.ignore("UnsupportedBrowser");
+                });
+        }
+        
+        this.browserAlert(false);
     }
 }
 
