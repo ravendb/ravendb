@@ -7,6 +7,12 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryValidator
     {
+        public static void ValidateTimings(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
+        {
+            if (arguments.Count != 0)
+                throw new InvalidQueryException("Method 'timings()' expects zero arguments to be provided", queryText, parameters);
+        }
+
         public static void ValidateExplanations(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
         {
             if (arguments.Count > 1)

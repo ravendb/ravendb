@@ -41,11 +41,6 @@ namespace Raven.Client.Documents.Queries
         public long DurationInMs { get; set; }
 
         /// <summary>
-        /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
-        /// </summary>
-        public Dictionary<string, double> TimingsInMs { get; set; }
-
-        /// <summary>
         /// The size of the request which were sent from the server.
         /// This value is the _uncompressed_ size. 
         /// </summary>
@@ -74,7 +69,7 @@ namespace Raven.Client.Documents.Queries
                 TotalResults = TotalResults,
                 Highlightings = Highlightings?.ToDictionary(pair => pair.Key, x => new Dictionary<string, string[]>(x.Value)),
                 Explanations = Explanations?.ToDictionary(x => x.Key, x => x.Value),
-                TimingsInMs = TimingsInMs?.ToDictionary(x => x.Key, x => x.Value),
+                Timings = Timings?.Clone(),
                 LastQueryTime = LastQueryTime,
                 DurationInMs = DurationInMs,
                 ResultEtag = ResultEtag,

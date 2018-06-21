@@ -121,6 +121,7 @@ namespace Raven.Server.Documents.Handlers
             int numberOfResults;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
+                result.Timings = indexQuery.Timings?.ToTimings();
                 numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
                 await writer.OuterFlushAsync();
             }

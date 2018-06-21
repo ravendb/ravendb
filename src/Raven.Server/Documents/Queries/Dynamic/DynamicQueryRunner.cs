@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -36,7 +37,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, null, documentsContext, token.Token);
+            Index index;
+            using (query.Timings?.For(nameof(QueryTimingsScope.Names.Optimizer)))
+                index = await MatchIndex(query, true, null, documentsContext, token.Token);
 
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {

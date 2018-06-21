@@ -37,6 +37,8 @@
 
         Explanation,
 
+        Timings,
+
         Unknown,
     }
 }

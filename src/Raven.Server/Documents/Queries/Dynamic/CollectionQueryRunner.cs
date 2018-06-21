@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -84,40 +85,56 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)
         {
-            var isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
-
-            // we optimize for empty queries without sorting options, appending CollectionIndexPrefix to be able to distinguish index for collection vs. physical index
-            resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : CollectionIndexPrefix + collection;
-            resultToFill.IsStale = false;
-            resultToFill.LastQueryTime = DateTime.MinValue;
-            resultToFill.IndexTimestamp = DateTime.MinValue;
-            resultToFill.IncludedPaths = query.Metadata.Includes;
-
-            var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context, query.Metadata.Includes);
-            var fieldsToFetch = new FieldsToFetch(query, null);
-            var totalResults = new Reference<int>();
-            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, context, includeDocumentsCommand, totalResults);
-            try
+            using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
-                foreach (var document in documents)
+                QueryTimingsScope gatherScope = null;
+                QueryTimingsScope fillScope = null;
+
+                if (queryScope != null && query.Metadata.Includes?.Length > 0)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    resultToFill.AddResult(document);
-                    includeDocumentsCommand.Gather(document);
+                    var includesScope = queryScope.For(nameof(QueryTimingsScope.Names.Includes), start: false);
+                    gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
+                    fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                 }
+
+                var isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
+
+                // we optimize for empty queries without sorting options, appending CollectionIndexPrefix to be able to distinguish index for collection vs. physical index
+                resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : CollectionIndexPrefix + collection;
+                resultToFill.IsStale = false;
+                resultToFill.LastQueryTime = DateTime.MinValue;
+                resultToFill.IndexTimestamp = DateTime.MinValue;
+                resultToFill.IncludedPaths = query.Metadata.Includes;
+
+                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context, query.Metadata.Includes);
+                var fieldsToFetch = new FieldsToFetch(query, null);
+                var totalResults = new Reference<int>();
+                var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context, includeDocumentsCommand, totalResults);
+                try
+                {
+                    foreach (var document in documents)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        resultToFill.AddResult(document);
+
+                        using (gatherScope?.Start())
+                            includeDocumentsCommand.Gather(document);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (resultToFill.SupportsExceptionHandling == false)
+                        throw;
+
+                    resultToFill.HandleException(e);
+                }
+
+                using (fillScope?.Start())
+                    includeDocumentsCommand.Fill(resultToFill.Includes);
+
+                resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
             }
-            catch (Exception e)
-            {
-                if (resultToFill.SupportsExceptionHandling == false)
-                    throw;
-
-                resultToFill.HandleException(e);
-            }
-
-            includeDocumentsCommand.Fill(resultToFill.Includes);
-
-            resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
         }
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, QueryMetadata query, DocumentsOperationContext context)

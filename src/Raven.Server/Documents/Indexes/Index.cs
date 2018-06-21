@@ -35,6 +35,7 @@ using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -910,7 +911,7 @@ namespace Raven.Server.Documents.Indexes
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
-                        
+
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
                         LastIndexingTime = stats.StartTime;
 
@@ -1563,7 +1564,7 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Info($"Changing priority for '{Name}' from '{Definition.Priority}' to '{priority}'.");
 
                 var oldPriority = Definition.Priority;
-                
+
                 Definition.Priority = priority;
 
                 try
@@ -1658,20 +1659,20 @@ namespace Raven.Server.Documents.Indexes
             {
                 throw new NotSupportedException($"'Lock Mode' can't be set for the Auto-Index '{Name}'.");
             }
-            
+
             using (DrainRunningQueries())
             {
                 AssertIndexState(assertState: false);
 
                 if (Definition.LockMode == mode)
                     return;
-                
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info(
                         $"Changing lock mode for '{Name}' from '{Definition.LockMode}' to '{mode}'.");
 
                 var oldLockMode = Definition.LockMode;
-                
+
                 Definition.LockMode = mode;
 
                 try
@@ -2039,6 +2040,8 @@ namespace Raven.Server.Documents.Indexes
                 AsyncWaitForIndexing wait = null;
                 long? cutoffEtag = null;
 
+                var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
+
                 while (true)
                 {
                     AssertIndexState();
@@ -2055,103 +2058,124 @@ namespace Raven.Server.Documents.Indexes
                         documentsContext.OpenReadTransaction();
                         // we have to open read tx for mapResults _after_ we open index tx
 
-                        if (query.WaitForNonStaleResults && cutoffEtag == null)
-                            cutoffEtag = GetCutoffEtag(documentsContext);
-
-                        var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
-                        if (WillResultBeAcceptable(isStale, query, wait) == false)
+                        bool isStale;
+                        using (stalenessScope?.Start())
                         {
-                            documentsContext.CloseTransaction();
+                            if (query.WaitForNonStaleResults && cutoffEtag == null)
+                                cutoffEtag = GetCutoffEtag(documentsContext);
 
-                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+                            isStale = IsStale(documentsContext, indexContext, cutoffEtag);
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            {
+                                documentsContext.CloseTransaction();
 
-                            if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
 
-                            marker.ReleaseLock();
+                                marker.ReleaseLock();
 
-                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
-                            continue;
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
+                            }
                         }
 
                         FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
-                            var totalResults = new Reference<int>();
-                            var skippedResults = new Reference<int>();
-
-                            var fieldsToFetch = new FieldsToFetch(query, Definition);
-                            IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
-
-                            var includeDocumentsCommand = new IncludeDocumentsCommand(
-                                DocumentDatabase.DocumentsStorage, documentsContext,
-                                query.Metadata.Includes);
-
-                            var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
-
-                            if (query.Metadata.HasMoreLikeThis)
+                            using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
                             {
-                                documents = reader.MoreLikeThis(
-                                    query,
-                                    retriever,
-                                    documentsContext,
-                                    token.Token);
-                            }
-                            else if (query.Metadata.HasIntersect)
-                            {
-                                documents = reader.IntersectQuery(
-                                    query,
-                                    fieldsToFetch,
-                                    totalResults,
-                                    skippedResults,
-                                    retriever,
-                                    documentsContext,
-                                    GetOrAddSpatialField,
-                                    token.Token);
-                            }
-                            else
-                            {
-                                documents = reader.Query(
-                                    query,
-                                    fieldsToFetch,
-                                    totalResults,
-                                    skippedResults,
-                                    retriever,
-                                    documentsContext,
-                                    GetOrAddSpatialField,
-                                    token.Token);
-                            }
+                                QueryTimingsScope gatherScope = null;
+                                QueryTimingsScope fillScope = null;
 
-                            try
-                            {
-                                foreach (var document in documents)
+                                if (queryScope != null && query.Metadata.Includes?.Length > 0)
                                 {
-                                    resultToFill.TotalResults = totalResults.Value;
-                                    resultToFill.AddResult(document.Result);
-
-                                    if (document.Highlightings != null)
-                                        resultToFill.AddHighlightings(document.Highlightings);
-
-                                    if (document.Explanation != null)
-                                        resultToFill.AddExplanation(document.Explanation);
-
-                                    includeDocumentsCommand.Gather(document.Result);
+                                    var includesScope = queryScope.For(nameof(QueryTimingsScope.Names.Includes), start: false);
+                                    gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
+                                    fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                                 }
-                            }
-                            catch (Exception e)
-                            {
-                                if (resultToFill.SupportsExceptionHandling == false)
-                                    throw;
 
-                                resultToFill.HandleException(e);
-                            }
+                                var totalResults = new Reference<int>();
+                                var skippedResults = new Reference<int>();
 
-                            includeDocumentsCommand.Fill(resultToFill.Includes);
-                            resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
-                            resultToFill.SkippedResults = skippedResults.Value;
-                            resultToFill.IncludedPaths = query.Metadata.Includes;
+                                var fieldsToFetch = new FieldsToFetch(query, Definition);
+
+                                var includeDocumentsCommand = new IncludeDocumentsCommand(
+                                    DocumentDatabase.DocumentsStorage, documentsContext,
+                                    query.Metadata.Includes);
+
+                                var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
+
+                                IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
+
+                                if (query.Metadata.HasMoreLikeThis)
+                                {
+                                    documents = reader.MoreLikeThis(
+                                        query,
+                                        retriever,
+                                        documentsContext,
+                                        token.Token);
+                                }
+                                else if (query.Metadata.HasIntersect)
+                                {
+                                    documents = reader.IntersectQuery(
+                                        query,
+                                        fieldsToFetch,
+                                        totalResults,
+                                        skippedResults,
+                                        retriever,
+                                        documentsContext,
+                                        GetOrAddSpatialField,
+                                        token.Token);
+                                }
+                                else
+                                {
+                                    documents = reader.Query(
+                                        query,
+                                        queryScope,
+                                        fieldsToFetch,
+                                        totalResults,
+                                        skippedResults,
+                                        retriever,
+                                        documentsContext,
+                                        GetOrAddSpatialField,
+                                        token.Token);
+                                }
+
+                                try
+                                {
+                                    foreach (var document in documents)
+                                    {
+                                        resultToFill.TotalResults = totalResults.Value;
+                                        resultToFill.AddResult(document.Result);
+
+                                        if (document.Highlightings != null)
+                                            resultToFill.AddHighlightings(document.Highlightings);
+
+                                        if (document.Explanation != null)
+                                            resultToFill.AddExplanation(document.Explanation);
+
+                                        using (gatherScope?.Start())
+                                            includeDocumentsCommand.Gather(document.Result);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    if (resultToFill.SupportsExceptionHandling == false)
+                                        throw;
+
+                                    resultToFill.HandleException(e);
+                                }
+
+                                using (fillScope?.Start())
+                                    includeDocumentsCommand.Fill(resultToFill.Includes);
+
+                                resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
+                                resultToFill.SkippedResults = skippedResults.Value;
+                                resultToFill.IncludedPaths = query.Metadata.Includes;
+                            }
                         }
 
                         return;
@@ -2681,8 +2705,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever
-            GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand);
 
         protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
         {
