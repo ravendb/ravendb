@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -12,7 +13,10 @@ namespace Raven.Server.Documents.Queries
     {
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
-        
+
+        [JsonDeserializationIgnore]
+        public QueryTimingsScope Timings { get; private set; }
+
         private IndexQueryServerSide()
         {
             // for deserialization
@@ -50,6 +54,9 @@ namespace Raven.Server.Documents.Queries
             }
 
             result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
+            if (result.Metadata.HasTimings)
+                result.Timings = new QueryTimingsScope(start: false);
+
             return result;
         }
 
@@ -59,7 +66,7 @@ namespace Raven.Server.Documents.Queries
             if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) && isQueryOverwritten == false)
                 throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
-            var actualQuery = isQueryOverwritten ? overrideQuery: query[0] ;
+            var actualQuery = isQueryOverwritten ? overrideQuery : query[0];
             var result = new IndexQueryServerSide
             {
                 Query = Uri.UnescapeDataString(actualQuery),

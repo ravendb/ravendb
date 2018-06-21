@@ -8,6 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -27,10 +28,11 @@ namespace Raven.Server.Documents.Queries
         private readonly Reference<int> _totalResults;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
+        private readonly QueryTimingsScope _queryTimings;
         private readonly bool _isAllDocsCollection;
 
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
-            IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
+            IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
         {
             _database = database;
             _documents = documents;
@@ -38,6 +40,7 @@ namespace Raven.Server.Documents.Queries
             _collection = collection;
             _isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
             _query = query;
+            _queryTimings = queryTimings;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
             _totalResults = totalResults;
@@ -45,7 +48,7 @@ namespace Raven.Server.Documents.Queries
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context, _includeDocumentsCommand, _totalResults);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _totalResults);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -76,7 +79,7 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startsWith;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
-                IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
+                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -90,7 +93,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, fieldsToFetch, includeDocumentsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
             }

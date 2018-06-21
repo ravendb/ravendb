@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations;
 using Sparrow.Json;
 
@@ -53,14 +54,12 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-#if FEATURE_SHOW_TIMINGS
         /// <inheritdoc />
-        public IDocumentQueryCustomization ShowTimings()
+        public IDocumentQueryCustomization Timings(out QueryTimings timings)
         {
-            ShowQueryTimings = true;
+            IncludeTimings(out timings);
             return this;
         }
-#endif
 
         /// <inheritdoc />
         IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()

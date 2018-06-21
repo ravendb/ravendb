@@ -6,6 +6,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -72,9 +73,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
-            return new MapReduceQueryResultRetriever(DocumentDatabase, query, DocumentDatabase.DocumentsStorage,documentsContext, fieldsToFetch, includeDocumentsCommand);
+            return new MapReduceQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage,documentsContext, fieldsToFetch, includeDocumentsCommand);
         }
 
         private static Tree GetMapPhaseTree(Transaction tx)

@@ -89,6 +89,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "explanations", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Explanation;
 
+            if (string.Equals(methodName, "timings", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Timings;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

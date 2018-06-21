@@ -125,13 +125,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected bool DisableCaching;
 
-#if FEATURE_SHOW_TIMINGS
-        /// <summary>
-        /// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
-        /// </summary>
-        protected bool ShowQueryTimings;
-#endif
-
         public bool IsDistinct => SelectTokens.First?.Value is DistinctToken;
 
         /// <summary>
@@ -1071,10 +1064,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
-                DisableCaching = DisableCaching,
-#if FEATURE_SHOW_TIMINGS
-                ShowTimings = ShowQueryTimings,
-#endif
+                DisableCaching = DisableCaching
             };
 
             if (PageSize != null)
@@ -1123,7 +1113,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildInclude(StringBuilder queryText)
         {
-            if (Includes.Count == 0 && HighlightingTokens.Count == 0 && ExplanationToken == null)
+            if (Includes.Count == 0 && HighlightingTokens.Count == 0 && ExplanationToken == null && QueryTimings == null)
                 return;
 
             queryText.Append(" include ");
@@ -1169,6 +1159,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 first = false;
 
                 ExplanationToken.WriteTo(queryText);
+            }
+
+            if (QueryTimings != null)
+            {
+                if (first == false)
+                    queryText.Append(",");
+                first = false;
+
+                TimingsToken.Instance.WriteTo(queryText);
             }
         }
 
@@ -1273,6 +1272,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             QueryStats.UpdateQueryStats(queryResult);
             QueryHighlightings.Update(queryResult);
             Explanations?.Update(queryResult);
+            QueryTimings?.Update(queryResult);
         }
 
         private void BuildSelect(StringBuilder writer)
@@ -1673,8 +1673,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
 
             var typeInfo = typeof(T).GetTypeInfo();
-            if (typeof(T) != typeof(string) && 
-                typeInfo.IsValueType == false && 
+            if (typeof(T) != typeof(string) &&
+                typeInfo.IsValueType == false &&
                 typeInfo.IsEnum == false)
                 return;
 

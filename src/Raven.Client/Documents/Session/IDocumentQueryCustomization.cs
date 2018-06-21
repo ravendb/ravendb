@@ -6,6 +6,7 @@
 
 using System;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations;
 using Sparrow.Json;
 
@@ -69,13 +70,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 #endif
-#if FEATURE_SHOW_TIMINGS
+
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
         ///     results). Default: false
         /// </summary>
-        IDocumentQueryCustomization ShowTimings();
-#endif
+        IDocumentQueryCustomization Timings(out QueryTimings timings);
         
         /// <summary>
         ///   Instruct the query to wait for non stale results.

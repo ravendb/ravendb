@@ -50,8 +50,10 @@ namespace Raven.Server.Documents.Queries
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
             var sw = Stopwatch.StartNew();
-
-            var result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
+            
+            DocumentQueryResult result;
+            using (query.Timings?.Start())
+                result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
 
             result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
 

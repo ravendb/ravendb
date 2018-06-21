@@ -97,6 +97,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasExplanations { get; private set; }
 
+        public bool HasTimings { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
@@ -374,6 +376,10 @@ namespace Raven.Server.Documents.Queries
 
                                 Explanation = CreateExplanationField(me);
                                 HasExplanations = true;
+                                break;
+                            case MethodType.Timings:
+                                QueryValidator.ValidateTimings(me.Arguments, QueryText, parameters);
+                                HasTimings = true;
                                 break;
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
@@ -852,7 +858,7 @@ namespace Raven.Server.Documents.Queries
                         return CreateSuggest(me, alias, parameters);
                     }
 
-                    if (string.Equals("counter", methodName, StringComparison.OrdinalIgnoreCase) 
+                    if (string.Equals("counter", methodName, StringComparison.OrdinalIgnoreCase)
                         || string.Equals("counterRaw", methodName, StringComparison.OrdinalIgnoreCase))
                     {
                         if (HasFacet)
