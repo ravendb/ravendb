@@ -839,6 +839,8 @@ namespace Raven.Server.Documents.Replication
                                        sizeof(short) + // transaction marker
                                        sizeof(int) + // size of doc id
                                        item.Id.Size +
+                                       sizeof(int) + // size of doc collection
+                                       item.Collection.Size + // doc collection
                                        sizeof(int) + // size of name
                                        item.Name.Size +
                                        sizeof(long); // value
@@ -863,6 +865,11 @@ namespace Raven.Server.Documents.Replication
                 Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
                 tempBufferPos += item.Id.Size;
 
+                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                tempBufferPos += item.Collection.Size;
+
                 *(int*)(pTemp + tempBufferPos) = item.Name.Size;
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, item.Name.Buffer, item.Name.Size);
@@ -886,6 +893,8 @@ namespace Raven.Server.Documents.Replication
                                    sizeof(short) + // transaction marker
                                    sizeof(int) + // size of tombstone key
                                    item.Id.Size +
+                                   sizeof(int) + // size of tombstone collection
+                                   item.Collection.Size + // tombstone collection
                                    sizeof(long); // last modified ticks
 
                 if (requiredSize > _tempBuffer.Length)
@@ -907,6 +916,11 @@ namespace Raven.Server.Documents.Replication
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
                 tempBufferPos += item.Id.Size;
+
+                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                tempBufferPos += item.Collection.Size;
 
                 *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
                 tempBufferPos += sizeof(long);

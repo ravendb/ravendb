@@ -760,6 +760,10 @@ namespace Raven.Server.Documents.Replication
                     var keySize = *(int*)ReadExactly(sizeof(int));
                     item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
 
+                    var collectionSize = *(int*)ReadExactly(sizeof(int));
+                    Debug.Assert(collectionSize > 0);
+                    item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
+
                     var nameSize = *(int*)ReadExactly(sizeof(int));
                     item.CounterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
                         
@@ -769,6 +773,10 @@ namespace Raven.Server.Documents.Replication
                 {
                     var keySize = *(int*)ReadExactly(sizeof(int));
                     item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
+
+                    var collectionSize = *(int*)ReadExactly(sizeof(int));
+                    Debug.Assert(collectionSize > 0);
+                    item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
 
                     item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
                 }
@@ -1054,7 +1062,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 database.DocumentsStorage.CountersStorage.PutCounter(context,
                                     item.Id, item.Collection, item.CounterName, item.ChangeVector,
-                                    item.CounterValue, CountersStorage.PutCounterMode.Etl);
+                                    item.CounterValue, CountersStorage.PutCounterMode.Replication);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {
