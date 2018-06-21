@@ -126,6 +126,24 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             });
         }
 
+        public void DeleteCounter(string documentId, string counterName)
+        {
+            if (_counters == null)
+                _counters = new Dictionary<string, List<CounterOperation>>();
+
+            if (_counters.TryGetValue(documentId, out var counters) == false)
+            {
+                counters = new List<CounterOperation>();
+                _counters.Add(documentId, counters);
+            }
+
+            counters.Add(new CounterOperation
+            {
+                CounterName = counterName,
+                Type = CounterOperationType.Delete
+            });
+        }
+
         public List<ICommandData> GetCommands()
         {
             // let's send deletions first

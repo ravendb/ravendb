@@ -243,7 +243,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                         break;
                     case EtlItemType.Counter:
-                        throw  new NotImplementedException("TODO arek");
+                        if (_script.Transformation != null)
+                            throw  new NotImplementedException("TODO arek");
+                        else
+                        {
+                            var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterName(item.CounterTombstoneId);
+                            _currentRun.DeleteCounter(docId, counterName);
+                        }
+
+                        break;
                 }
             }
 

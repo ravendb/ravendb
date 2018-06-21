@@ -424,7 +424,7 @@ if (hasCounter('down')) {
         }
 
         [Fact]
-        public void Must_not_send_counters_of_docs_from_non_relevant_collections()
+        public void Must_not_send_counters_and_counter_tombstones_from_non_relevant_collections()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -459,6 +459,31 @@ if (hasCounter('down')) {
                 {
                     Assert.NotNull(session.CountersFor("users/1").Get("likes"));
                     Assert.Null(session.CountersFor("people/1").Get("likes"));
+                }
+
+                using (var session = dest.OpenSession())
+                {
+                    session.CountersFor("people/1").Increment("likes", 15);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("people/1").Delete("likes");
+                    session.CountersFor("users/1").Delete("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Null(session.CountersFor("users/1").Get("likes"));
+                    Assert.NotNull(session.CountersFor("people/1").Get("likes"));
                 }
             }
         }

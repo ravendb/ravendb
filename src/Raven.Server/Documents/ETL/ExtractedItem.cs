@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Raven.Client;
 using Sparrow.Json;
 
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.ETL
             ChangeVector = document.ChangeVector;
             Type = type;
 
-            if (collection == null &&
+            if (collection == null && type == EtlItemType.Document &&
                 document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                 metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue docCollection))
                 CollectionFromMetadata = docCollection;
@@ -33,18 +34,22 @@ namespace Raven.Server.Documents.ETL
             switch (type)
             {
                 case EtlItemType.Document:
+                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document);
                     DocumentId = tombstone.LowerId;
+                    Collection = collection;
                     break;
                 case EtlItemType.Counter:
-                    throw new NotImplementedException("TODO arek");
+                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Counter);
+                    Collection = tombstone.Collection;
+                    CounterTombstoneId = tombstone.LowerId;
+                    break;
             }
 
             IsDelete = true;
-            Collection = collection;
             ChangeVector = tombstone.ChangeVector;
             Type = type;
 
-            if (collection == null)
+            if (Collection == null)
                 CollectionFromMetadata = tombstone.Collection;
         }
 
@@ -67,5 +72,7 @@ namespace Raven.Server.Documents.ETL
         public string CounterName { get; protected set; }
 
         public long CounterValue { get; protected set; }
+
+        public LazyStringValue CounterTombstoneId { get; protected set; }
     }
 }

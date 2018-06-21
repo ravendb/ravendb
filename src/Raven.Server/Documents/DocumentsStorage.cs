@@ -874,7 +874,8 @@ namespace Raven.Server.Documents
             string tableName;
 
             if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
+                collection == RevisionsStorage.RevisionsTombstones ||
+                collection == CountersStorage.CountersTombstones)
             {
                 tableName = collection;
             }
