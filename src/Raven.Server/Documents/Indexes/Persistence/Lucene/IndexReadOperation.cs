@@ -320,7 +320,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var orderByFields = query.Metadata.OrderBy;
 
             if (orderByFields == null)
-                return null;
+            {
+                if (query.Metadata.HasBoost == false)
+                    return null;
+
+                return new Sort(SortField.FIELD_SCORE);
+            }
 
             var sort = new List<SortField>();
 
