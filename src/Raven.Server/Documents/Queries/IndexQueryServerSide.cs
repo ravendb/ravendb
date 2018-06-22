@@ -104,6 +104,8 @@ namespace Raven.Server.Documents.Queries
             }
 
             result.Metadata = new QueryMetadata(result.Query, null, 0);
+            if (result.Metadata.HasTimings)
+                result.Timings = new QueryTimingsScope(start: false);
             return result;
         }
     }

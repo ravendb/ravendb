@@ -149,8 +149,10 @@
                 </div>
             </div>
             <div class="scroll-stretch">
-                <div class="panel-body">
+                <div class="panel-body" data-bind="visible: currentTab() !== 'timings'">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
+                </div>
+                <div class="panel-body js-timings-container absolute-fill" data-bind="visible: currentTab() === 'timings'">
                 </div>
             </div>
         </div>
@@ -172,6 +174,9 @@
                     <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>
                 </button>
             <!-- /ko -->
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings', visible: timings() }">
+                Show timings
+            </button> 
         </div>
     </div>
     <div class="hidden">
