@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Sparrow.Utils;
 
 namespace Raven.Embedded
 {
@@ -27,9 +28,9 @@ namespace Raven.Embedded
             options.CommandLineArgs.Add("--ServerUrl=http://127.0.0.1:0");
             options.CommandLineArgs.Add("--License.Eula.Accepted=true");
             options.CommandLineArgs.Add("--Setup.Mode=None");
-            options.CommandLineArgs.Add($"--DataDir={options.DataDirectory}");
+            options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
 
-            options.CommandLineArgs.Insert(0, serverDllPath);
+            options.CommandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));
 
             if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
                 options.CommandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
