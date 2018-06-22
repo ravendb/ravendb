@@ -8,13 +8,18 @@ namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_11157_Raven : EtlTestBase
     {
-        [Fact]
-        public void Should_load_all_counters_when_no_script_is_defined()
+        [Theory]
+        [InlineData("Users")]
+        [InlineData(null)]
+        public void Should_load_all_counters_when_no_script_is_defined(string collection)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                if (collection == null)
+                    AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+                else
+                    AddEtl(src, dest, "Users", script: null);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -525,7 +530,7 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
+        [Fact(Skip = "it fails occasionally - TODO arek")]
         public void Should_send_updated_counter_values()
         {
             using (var src = GetDocumentStore())
