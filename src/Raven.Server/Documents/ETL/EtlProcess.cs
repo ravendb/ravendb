@@ -355,6 +355,9 @@ namespace Raven.Server.Documents.ETL
                 // we have special counters enumerator which ensures that we iterate counters up to last processed doc etag
                 // although as long as it returns counters we need to ETL all of them
 
+                // TODO arek - if there were no docs modified in current batch we shouldn't iterate all counters probably as there can be a lot of them
+                // e.g. only counters are modified, we need to use below logic then
+
                 return true;
             }
 
