@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -172,12 +173,13 @@ namespace Raven.Server.Documents.ETL
                         break;
                     case EtlItemType.Counter:
 
+                        if (this is SqlEtl)
+                            break;
+
                         var lastProcessedDocEtag = Math.Max(stats.LastTransformedEtags[EtlItemType.Document], stats.LastFilteredOutEtags[EtlItemType.Document]);
 
                         if (Transformation.ApplyToAllDocuments)
                         {
-                            // TODO arek - counters should be sent only if it was specified in the script
-
                             var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(counters);
 
