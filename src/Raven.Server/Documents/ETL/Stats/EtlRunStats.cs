@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int NumberOfTransformedItems;
 
-        public Dictionary<EtlItemType, long> LastTransformedEtag = new Dictionary<EtlItemType, long>()
+        public Dictionary<EtlItemType, long> LastTransformedEtags = new Dictionary<EtlItemType, long>
         {
             {EtlItemType.Document, 0},
             {EtlItemType.Counter, 0}
@@ -16,7 +16,11 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastLoadedEtag;
 
-        public long LastFilteredOutEtag;
+        public Dictionary<EtlItemType, long> LastFilteredOutEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
         public string BatchCompleteReason;
 

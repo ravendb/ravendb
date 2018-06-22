@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
@@ -23,11 +24,11 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int NumberOfTransformedItems => _stats.NumberOfTransformedItems;
 
-        public Dictionary<EtlItemType, long> LastTransformedEtag => _stats.LastTransformedEtag;
+        public Dictionary<EtlItemType, long> LastTransformedEtags => _stats.LastTransformedEtags;
 
         public long LastLoadedEtag => _stats.LastLoadedEtag;
 
-        public long LastFilteredOutEtag => _stats.LastFilteredOutEtag;
+        public Dictionary<EtlItemType, long> LastFilteredOutEtags => _stats.LastFilteredOutEtags;
 
         public string ChangeVector => _stats.ChangeVector;
 
@@ -45,10 +46,12 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public void RecordLastTransformedEtag(long etag, EtlItemType type)
         {
-            var current = _stats.LastTransformedEtag[type];
+            Debug.Assert(type != EtlItemType.None);
+
+            var current = _stats.LastTransformedEtags[type];
 
             if (etag > current)
-                _stats.LastTransformedEtag[type] = etag;
+                _stats.LastTransformedEtags[type] = etag;
         }
 
         public void RecordChangeVector(string changeVector)
@@ -62,10 +65,14 @@ namespace Raven.Server.Documents.ETL.Stats
                 _stats.LastLoadedEtag = etag;
         }
 
-        public void RecordLastFilteredOutEtag(long etag)
+        public void RecordLastFilteredOutEtag(long etag, EtlItemType type)
         {
-            if (etag > _stats.LastFilteredOutEtag)
-                _stats.LastFilteredOutEtag = etag;
+            Debug.Assert(type != EtlItemType.None);
+
+            var current = _stats.LastFilteredOutEtags[type];
+
+            if (etag > current)
+                _stats.LastFilteredOutEtags[type] = etag;
         }
 
         public EtlPerformanceOperation ToPerformanceOperation(string name)
