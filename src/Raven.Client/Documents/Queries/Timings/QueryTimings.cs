@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Queries.Timings
     {
         public long DurationInMs { get; set; }
 
-        public Dictionary<string, QueryTimings> Timings { get; set; }
+        public IDictionary<string, QueryTimings> Timings { get; set; }
 
         public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
@@ -21,10 +21,20 @@ namespace Raven.Client.Documents.Queries.Timings
 
         internal QueryTimings Clone()
         {
+            SortedDictionary<string, QueryTimings> timings = null;
+            if (Timings != null)
+            {
+                timings = new SortedDictionary<string, QueryTimings>();
+                foreach (var kvp in Timings)
+                {
+                    timings[kvp.Key] = kvp.Value.Clone();
+                }
+            }
+            
             return new QueryTimings
             {
                 DurationInMs = DurationInMs,
-                Timings = Timings?.ToDictionary(x => x.Key, x => x.Value.Clone())
+                Timings = timings
             };
         }
 

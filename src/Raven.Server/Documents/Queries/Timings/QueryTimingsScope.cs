@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries.Timings
                 foreach (var scope in Scopes)
                 {
                     if (timings.Timings == null)
-                        timings.Timings = new Dictionary<string, QueryTimings>();
+                        timings.Timings = new SortedDictionary<string, QueryTimings>();
 
                     timings.Timings[scope.Key] = scope.Value.ToTimings();
                 }

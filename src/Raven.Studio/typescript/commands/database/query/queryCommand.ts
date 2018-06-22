@@ -19,6 +19,7 @@ class queryCommand extends commandBase {
                 resultEtag: results.ResultEtag.toString(), 
                 highlightings: results.Highlightings,
                 explanations: results.Explanations,
+                timings: results.Timings,
                 includes: results.Includes }) as pagedResultExtended<document>;
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => {
