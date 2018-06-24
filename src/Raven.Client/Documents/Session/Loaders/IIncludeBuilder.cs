@@ -8,21 +8,21 @@ namespace Raven.Client.Documents.Session.Loaders
 {
     public interface IIncludeBuilder<T>
     {
-        IIncludeBuilder<T> Counter(string name);
+        IIncludeBuilder<T> IncludeCounter(string name);
 
-        IIncludeBuilder<T> Counters(string[] names);
+        IIncludeBuilder<T> IncludeCounters(string[] names);
 
-        IIncludeBuilder<T> AllCounters();
+        IIncludeBuilder<T> IncludeAllCounters();
 
-        IIncludeBuilder<T> Documents(string path);
+        IIncludeBuilder<T> IncludeDocuments(string path);
 
-        IIncludeBuilder<T> Documents(Expression<Func<T, string>> path);
+        IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, string>> path);
 
-        IIncludeBuilder<T> Documents(Expression<Func<T, IEnumerable<string>>> path);
+        IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
 
-        IIncludeBuilder<T> Documents<TInclude>(Expression<Func<T, string>> path);
+        IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
 
-        IIncludeBuilder<T> Documents<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
+        IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
     }
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
         public HashSet<string> DocumentsToInclude;
         public HashSet<string> CountersToInclude;
-        public bool IncludeAllCounters;
+        public bool AllCounters;
 
         private readonly DocumentConventions _conventions;
 
@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Session.Loaders
             _conventions = conventions;
         }
 
-        public IIncludeBuilder<T> Documents(string path)
+        public IIncludeBuilder<T> IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
                 DocumentsToInclude = new HashSet<string>();
@@ -47,30 +47,30 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IIncludeBuilder<T> Documents(Expression<Func<T, string>> path)
+        public IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, string>> path)
         {
-            return Documents(path.ToPropertyPath());
+            return IncludeDocuments(path.ToPropertyPath());
         }
 
-        public IIncludeBuilder<T> Documents(Expression<Func<T, IEnumerable<string>>> path)
+        public IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
-            return Documents(path.ToPropertyPath());
+            return IncludeDocuments(path.ToPropertyPath());
         }
 
 
-        public IIncludeBuilder<T> Documents<TInclude>(Expression<Func<T, string>> path)
+        public IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
-            return Documents(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
         }
 
-        public IIncludeBuilder<T> Documents<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        public IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
-            return Documents(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
         }
 
-        public IIncludeBuilder<T> Counter(string name)
+        public IIncludeBuilder<T> IncludeCounter(string name)
         {
-            if (IncludeAllCounters)
+            if (AllCounters)
                 throw new InvalidOperationException("IIncludeBuilder : You cannot use Counter(string name) after using AllCounters() ");
 
             if (string.IsNullOrWhiteSpace(name))
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IIncludeBuilder<T> Counters(string[] names)
+        public IIncludeBuilder<T> IncludeCounters(string[] names)
         {
             if (CountersToInclude == null)
                 CountersToInclude = new HashSet<string>();
@@ -100,13 +100,13 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IIncludeBuilder<T> AllCounters()
+        public IIncludeBuilder<T> IncludeAllCounters()
         {
             if (CountersToInclude != null)
                 throw new InvalidOperationException("IIncludeBuilder : You cannot use AllCounters() after using " +
                                                     "Counter(string name) or Counters(string[] names)");
 
-            IncludeAllCounters = true;
+            AllCounters = true;
             return this;
         }
     }

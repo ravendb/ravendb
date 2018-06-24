@@ -69,8 +69,7 @@ namespace FastTests.Client
                 {
                     var user = session.Load<User>(
                         "users/1-A",
-                        includes => includes
-                            .Documents(x => x.AddressId));
+                        i => i.IncludeDocuments(x => x.AddressId));
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -174,8 +173,7 @@ namespace FastTests.Client
                 {
                     var order = session.Load<Order>(
                         "orders/1234",
-                        includes => includes
-                            .Documents(x => x.CustomerId));
+                        i => i.IncludeDocuments(x => x.CustomerId));
 
                     // this will not require querying the server!
                     var cust = session.Load<Customer>(order.CustomerId);
@@ -279,8 +277,7 @@ namespace FastTests.Client
                 {
                     var order = session.Load<Order>(
                         "orders/1234",
-                        includes => includes
-                            .Documents(x => x.SupplierIds));
+                        i => i.IncludeDocuments(x => x.SupplierIds));
 
                     Assert.Equal(3, order.SupplierIds.Count());
 
@@ -340,8 +337,7 @@ namespace FastTests.Client
                 {
                     var order = session.Load<Order>(
                         "orders/1234",
-                        includes => includes
-                            .Documents(x => x.Refferal.CustomerId));
+                        i => i.IncludeDocuments(x => x.Refferal.CustomerId));
 
                     // this will not require querying the server!
                     var referrer = session.Load<Customer>(order.Refferal.CustomerId);
@@ -421,8 +417,7 @@ namespace FastTests.Client
                 {
                     var order = session.Load<Order>(
                         "orders/1234",
-                        includes => includes
-                            .Documents(x => x
+                        i => i.IncludeDocuments(x => x
                                 .LineItems
                                 .Select(li => li.ProductId)));
 

@@ -111,14 +111,14 @@ namespace Raven.Client.Documents.Commands
 
             if (_includeAllCounters)
             {
-                pathBuilder.Append($"&counter={Constants.Counters.All}");
+                pathBuilder.Append("&counter=").Append(Constants.Counters.All);
             }
 
             else if (_counters != null && _counters.Length > 0)
             {
                 foreach (var counter in _counters)
                 {
-                    pathBuilder.Append($"&counter={counter}");
+                    pathBuilder.Append("&counter=").Append(counter);
                 }
             }
 

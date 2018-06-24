@@ -1052,8 +1052,7 @@ namespace SlowTests.Client.Counters
                 {
                     var user = session.Load<User>(
                         "users/1-A",
-                        includes => includes
-                            .Counter("likes"));
+                        i => i.IncludeCounter("likes"));
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -1086,9 +1085,8 @@ namespace SlowTests.Client.Counters
                 {
                     var order = session.Load<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Counter("likes")
-                            .Counter("dislikes"));
+                        i => i.IncludeCounter("likes")
+                            .IncludeCounter("dislikes"));
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -1126,12 +1124,11 @@ namespace SlowTests.Client.Counters
                 {
                     var order = session.Load<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Counter("likes")
-                            .Documents(o => o.Company)
-                            .Counter("dislikes")
-                            .Counter("downloads")
-                            .Documents(o => o.Employee));
+                        i => i.IncludeCounter("likes")
+                            .IncludeDocuments(o => o.Company)
+                            .IncludeCounter("dislikes")
+                            .IncludeCounter("downloads")
+                            .IncludeDocuments(o => o.Employee));
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1170,9 +1167,8 @@ namespace SlowTests.Client.Counters
                 {
                     var order = session.Load<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Documents("Company")
-                            .Counters(new[] { "likes", "dislikes" }));
+                        i => i.IncludeDocuments("Company")
+                            .IncludeCounters(new[] { "likes", "dislikes" }));
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1209,9 +1205,8 @@ namespace SlowTests.Client.Counters
                 {
                     var order = session.Load<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Documents("Company")
-                            .AllCounters());
+                        i => i.IncludeDocuments("Company")
+                            .IncludeAllCounters());
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1247,9 +1242,8 @@ namespace SlowTests.Client.Counters
                 {
                     var order = await session.LoadAsync<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Documents("Company")
-                            .Counters(new[] { "likes", "dislikes" }));
+                        i => i.IncludeDocuments("Company")
+                            .IncludeCounters(new[] { "likes", "dislikes" }));
 
                     var company = await session.LoadAsync<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1286,9 +1280,8 @@ namespace SlowTests.Client.Counters
                 {
                     var order = await session.LoadAsync<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Documents("Company")
-                            .AllCounters());
+                        i => i.IncludeDocuments("Company")
+                            .IncludeAllCounters());
 
                     var company = await session.LoadAsync<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1327,10 +1320,9 @@ namespace SlowTests.Client.Counters
                     Assert.Throws<InvalidOperationException>(() =>
                         session.Load<Order>(
                             "orders/1-A",
-                            includes => includes
-                                .Documents("Company")
-                                .AllCounters()
-                                .Counter("likes")));
+                            i => i.IncludeDocuments("Company")
+                                .IncludeAllCounters()
+                                .IncludeCounter("likes")));
                 }
             }
         }
@@ -1357,10 +1349,9 @@ namespace SlowTests.Client.Counters
                     Assert.Throws<InvalidOperationException>(() =>
                         session.Load<Order>(
                             "orders/1-A",
-                            includes => includes
-                                .Documents("Company")
-                                .Counter("likes")
-                                .AllCounters()));
+                            i => i.IncludeDocuments("Company")
+                                .IncludeCounter("likes")
+                                .IncludeAllCounters()));
                 }
             }
         }
@@ -1386,11 +1377,10 @@ namespace SlowTests.Client.Counters
                 {
                     var order = session.Load<Order>(
                         "orders/1-A",
-                        includes => includes
-                            .Documents("Company")
-                            .Counters(new []{"likes", "downloads", "dances"})
-                            .Counter("dislikes")
-                            .Counter("cats"));
+                        i => i.IncludeDocuments("Company")
+                            .IncludeCounters(new []{"likes", "downloads", "dances"})
+                            .IncludeCounter("dislikes")
+                            .IncludeCounter("cats"));
 
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
@@ -1439,9 +1429,8 @@ namespace SlowTests.Client.Counters
                 {
                     var orders = session.Load<Order>(
                         new []{"orders/1-A", "orders/2-A"},
-                        includes => includes
-                            .Documents(o => o.Company)
-                            .AllCounters());
+                        i => i.IncludeDocuments(o => o.Company)
+                            .IncludeAllCounters());
 
                     var order = orders["orders/1-A"];
                     var company = session.Load<Company>(order.Company);
