@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -13,34 +12,14 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser)]
-        public Task Stats()
+        [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser)]
+        public Task DetailedStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
             {
-                var indexes = Database.IndexStore.GetIndexes().ToList();
+                var stats = new DetailedDatabaseStatistics();
 
-                var size = Database.GetSizeOnDisk();
-
-                var stats = new DatabaseStatistics
-                {
-                    LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction),
-                    CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                    CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
-                    CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                    CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context),
-                    CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
-                    SizeOnDisk = size.Data,
-                    NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations,
-                    CountOfCounters = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context),
-                    TempBuffersSizeOnDisk = size.TempBuffers,
-                };
-
-                var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
-                stats.CountOfAttachments = attachments.AttachmentCount;
-                stats.CountOfUniqueAttachments = attachments.StreamsCount;
+                FillDatabaseStatistics(stats, context);
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
@@ -48,6 +27,52 @@ namespace Raven.Server.Documents.Handlers
                     stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
                     stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
                 }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    writer.WriteDetailedDatabaseStatistics(context, stats);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser)]
+        public Task Stats()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var stats = new DatabaseStatistics();
+
+                FillDatabaseStatistics(stats, context);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    writer.WriteDatabaseStatistics(context, stats);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void FillDatabaseStatistics(DatabaseStatistics stats, DocumentsOperationContext context)
+        {
+            using (context.OpenReadTransaction())
+            {
+                var indexes = Database.IndexStore.GetIndexes().ToList();
+
+                var size = Database.GetSizeOnDisk();
+
+                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
+                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
+                stats.CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context);
+                stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount;
+                stats.SizeOnDisk = size.Data;
+                stats.NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations;
+                stats.CountOfCounters = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context);
+                stats.TempBuffersSizeOnDisk = size.TempBuffers;
+
+                var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
+                stats.CountOfAttachments = attachments.AttachmentCount;
+                stats.CountOfUniqueAttachments = attachments.StreamsCount;
 
                 stats.CountOfIndexes = indexes.Count;
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
@@ -89,11 +114,7 @@ namespace Raven.Server.Documents.Handlers
                     else
                         stats.LastIndexingTime = index.LastIndexingTime;
                 }
-
-                writer.WriteDatabaseStatistics(context, stats);
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser)]
