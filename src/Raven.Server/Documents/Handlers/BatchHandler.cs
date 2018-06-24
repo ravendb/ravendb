@@ -770,6 +770,21 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
                         case CommandType.Counters:
+
+                            var counterDocId = cmd.Counters.DocumentId;
+
+                            if (counterDocId[counterDocId.Length - 1] == '/')
+                            {
+                                // counter sent by Raven ETL, only prefix is defined
+
+                                if (lastPutResult == null)
+                                    ThrowUnexpectedOrderOfRavenEtlCommands();
+
+                                Debug.Assert(lastPutResult.Value.Id.StartsWith(counterDocId));
+
+                                cmd.Counters.DocumentId = lastPutResult.Value.Id;
+                            }
+
                             var counterBatchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database, new CounterBatch
                             {
                                 Documents = new List<DocumentCountersOperation> { cmd.Counters }
@@ -778,7 +793,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 counterBatchCmd.Execute(context);
                             }
-                            catch (CounterDocumentMissingException e) when (CanAvoidThrowingToMerger(e, i))
+                            catch (DocumentDoesNotExistException e) when (CanAvoidThrowingToMerger(e, i))
                             {
                                 return 0;
                             }

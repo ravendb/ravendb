@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
@@ -36,8 +37,6 @@ namespace Raven.Client.Documents
         private MaintenanceOperationExecutor _maintenanceOperationExecutor;
 
         private OperationExecutor _operationExecutor;
-
-        private CountersOperationExecutor _counters;
 
         private DatabaseSmuggler _smuggler;
 
@@ -396,19 +395,10 @@ namespace Raven.Client.Documents
             }
         }
 
-        public override CountersOperationExecutor Counters
-        {
-            get
-            {
-                AssertInitialized();
-                return _counters ?? (_counters = new CountersOperationExecutor(this));
-            }
-        }
-
-        public override BulkInsertOperation BulkInsert(string database = null)
+        public override BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default)
         {
             AssertInitialized();
-            return new BulkInsertOperation(database ?? Database, this);
+            return new BulkInsertOperation(database ?? Database, this, token);
         }
     }
 }

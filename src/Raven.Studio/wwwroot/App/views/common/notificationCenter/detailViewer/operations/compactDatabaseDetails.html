@@ -37,7 +37,7 @@
                 <div data-bind="foreach: items">
                     <div class="export-item">
                         <div class="name">
-                            <h3 data-bind="text: name"></h3>
+                            <h3 data-bind="text: name, attr: {title: name}"></h3>
                         </div>
                         <div class="status status-processed" data-bind="visible: stage === 'processed'">
                             <i class="icon-check"></i> <span>Processed</span>

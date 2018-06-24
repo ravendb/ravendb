@@ -2,16 +2,20 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
-                <button data-bind="click: addNode, enable: canAddNodes, visible: accessManager.canAddNode" class="btn btn-primary"><i class="icon-plus"></i><span>Add Node to cluster</span></button>
+                <div>
+                    <button data-bind="click: addNode, enable: canAddNodes, visible: accessManager.canAddNode" class="btn btn-primary"><i class="icon-plus"></i><span>Add Node to cluster</span></button>
+                    <button data-bind="click: bootstrapCluster, visible: canBootstrapCluster, css: { 'btn-spinner': $root.spinners.bootstrap }, disable: $root.spinners.bootstrap"
+                            class="btn btn-primary" title="Perform cluster initialization"><i class="icon-cluster"></i><span>Bootstrap cluster</span></button>    
+                </div>
                 <div class="flex-separator"></div>
                 <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0, visible: accessManager.showCoresInfo">
                     <div class="text-center"><small>Available cores:</small></div>
                     <div class="text-center">
                         <small>
-                            Assigned: <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Total assigned CPU cores"></strong>
-                            / Licensed: <strong data-bind="text: maxCores" data-toggle="tooltip" title="Total licensed cores"></strong>
+                            Assigned: <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Total assigned CPU cores" data-animation="true"></strong>
+                            / Licensed: <strong data-bind="text: maxCores" data-toggle="tooltip" title="Total licensed cores" data-animation="true"></strong>
                             <span data-bind="if: totalServersCores() > maxCores()">
-                                / Cluster <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total cores in the cluster"></strong>
+                                / Cluster <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total cores in the cluster" data-animation="true"></strong>
                             </span> 
                         </small>
                     </div>
@@ -109,16 +113,23 @@
                                 </div>
                                 <div class="cores" data-bind="if: utilizedCores">
                                     <h5><i class="icon-processor"></i> &nbsp; CORES</h5>
-                                     <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
-                                        <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong></span>
+                                    <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit" data-animation="true"></strong>
+                                    <span data-bind="if: numberOfCores() && utilizedCores() != -1">
+                                         <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count" data-animation="true"></strong></span>
                                     </span>
                                 </div>
                                 <div class="memory" data-bind="if: installedMemoryInGb">
                                     <h5><i class="icon-memory"></i> &nbsp; MEMORY</h5>
-                                    <strong class="text-lighter" data-toggle="tooltip" title="Assigned memory limit"><span data-bind="text: utilizedMemoryInGb"></span>GB</strong>
+                                    <strong class="text-lighter" data-toggle="tooltip" title="Assigned memory limit" data-animation="true">
+                                        <span data-bind="text: utilizedMemoryInGb"></span>GB
+                                    </strong>
                                     <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
-                                        / <strong data-toggle="tooltip" title="Total memory installed on machine"><span data-bind="text: installedMemory"></span>GB</strong>
+                                        / <strong data-toggle="tooltip" title="Total memory installed on machine" data-animation="true"><span data-bind="text: installedMemory"></span>GB</strong>
                                     </span>
+                                </div>
+                                <div class="serverVersion" data-bind="if: nodeServerVersion">
+                                    <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
+                                    <strong class="text-lighter" data-toggle="tooltip" title="Server version installed on this node" data-bind="text: nodeServerVersion" data-animation="true"></strong>
                                 </div>
                             </div> 
                         </div>

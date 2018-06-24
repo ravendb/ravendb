@@ -26,7 +26,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting AuditLogRetention { get; set; }
 
-
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
@@ -36,7 +35,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Security.DoNotConsiderMemoryLockFailureAsCatastrophicError", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DoNotConsiderMemoryLockFailureAsCatastrophicError { get; set; }
-        
+
         [Description("The (optional) password of the .pfx certificate file.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
@@ -88,6 +87,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(UnsecuredAccessAddressRange.Local)]
         [ConfigurationEntry("Security.UnsecuredAccessAllowed", ConfigurationEntryScope.ServerWideOnly)]
         public UnsecuredAccessAddressRange UnsecuredAccessAllowed { get; set; }
+
+        [Description("Allow to specify well known certificate thumbprints that will be trusted by the server as cluster admins.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
+        public string[] WellKnownAdminCertificates { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 

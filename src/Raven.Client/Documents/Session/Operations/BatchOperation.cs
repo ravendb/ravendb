@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Json;
@@ -57,7 +58,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
                 if (batchResult == null)
-                    throw new ArgumentNullException();
+                    continue;
 
                 batchResult.TryGet("Type", out string type);
 
@@ -101,6 +102,44 @@ namespace Raven.Client.Documents.Session.Operations
 
                 var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
                 _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
+            }
+
+            for (int i = _sessionCommandsCount; i < result.Results.Length; i++)
+            {
+                if (!(result.Results[i] is BlittableJsonReaderObject batchResult))
+                    continue;
+
+                if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false ||
+                    batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) == false ||
+                    countersDetail.TryGet("Counters", out BlittableJsonReaderArray counters) == false)
+                    continue;
+
+                UpdateCounterValuesInCache(counters, docId);
+
+            }
+
+        }
+
+        private void UpdateCounterValuesInCache(BlittableJsonReaderArray counters, string docId)
+        {
+            if (_session.CountersByDocId == null)
+            {
+                _session.CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (_session.CountersByDocId.TryGetValue(docId, out var cache) == false)
+            {
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                _session.CountersByDocId.Add(docId, cache);
+            }
+
+            foreach (BlittableJsonReaderObject counter in counters)
+            {
+                if (counter.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
+                    counter.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
+                    continue;
+
+                cache.Values[name] = value;
             }
         }
 

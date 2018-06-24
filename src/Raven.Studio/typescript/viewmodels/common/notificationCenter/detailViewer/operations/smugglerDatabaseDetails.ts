@@ -194,18 +194,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         this.messagesJoined = ko.pureComputed(() => this.messages() ? this.messages().join("\n") : "");
         
-        this.registerDisposable(this.messages.subscribe(() => {
-            if (this.tail()) {
-                this.scrollDown();
-            }
-        }));
-
-        this.registerDisposable(this.tail.subscribe(enabled => {
-            if (enabled) {
-                this.scrollDown();
-            }
-        }));
-
         this.registerDisposable(this.operationFailed.subscribe(failed => {
             if (failed) {
                 this.detailsVisible(true);
@@ -239,11 +227,29 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     private scrollDown() {
         const messages = $(".export-messages")[0];
-        messages.scrollTop = messages.scrollHeight;
+        if (messages) {
+            messages.scrollTop = messages.scrollHeight;    
+        }
     }
 
     toggleDetails() {
         this.detailsVisible(!this.detailsVisible());
+    }
+    
+    attached() {
+        super.attached();
+
+        this.registerDisposable(this.messages.subscribe(() => {
+            if (this.tail()) {
+                this.scrollDown();
+            }
+        }));
+
+        this.registerDisposable(this.tail.subscribe(enabled => {
+            if (enabled) {
+                this.scrollDown();
+            }
+        }));
     }
 
     private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, hasAttachments: boolean = false): smugglerListItem {
@@ -310,9 +316,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
     }
 
-    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): void {
+    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
         if (!smugglerDatabaseDetails.supportsDetailsFor(existing)) {
-            return;
+            return false;
         }
 
         const isUpdate = !_.isUndefined(incoming);
@@ -335,6 +341,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (isUpdate) {
             existing.updateWith(incoming);
         }
+        
+        return true;
     }
 }
 

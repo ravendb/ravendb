@@ -198,59 +198,59 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         const indexDef: indexDefinition = this.editedIndex();
-        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.outputReduceToCollection];
-
-        const configuration = indexDef.configuration();
-        if (configuration) {
-            checkedFieldsArray.push(indexDef.numberOfConfigurationFields);
-
-            configuration.forEach(configItem => {
-                checkedFieldsArray.push(configItem.key);
-                checkedFieldsArray.push(configItem.value);
+        
+        const hasAnyDirtyConfiguration = ko.pureComputed(() => {
+           let anyDirty = false;
+           indexDef.configuration().forEach(config =>  {
+               if (config.dirtyFlag().isDirty()) {
+                   anyDirty = true;
+               } 
+           });
+           return anyDirty;
+        });
+        
+        const hasAnyDirtyField = ko.pureComputed(() => {
+            let anyDirty = false;
+            indexDef.fields().forEach(field =>  {
+                if (field.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                }
             });
-        }
-
-        const addDirtyFlagInput = (field: indexFieldOptions) => {
-            checkedFieldsArray.push(field.name);
-            checkedFieldsArray.push(field.analyzer);
-            checkedFieldsArray.push(field.indexing);
-            checkedFieldsArray.push(field.storage);
-            checkedFieldsArray.push(field.suggestions);
-            checkedFieldsArray.push(field.termVector);
-            checkedFieldsArray.push(field.hasSpatialOptions);
-
-            const spatial = field.spatial();
-            if (spatial) {
-                checkedFieldsArray.push(spatial.type);
-                checkedFieldsArray.push(spatial.strategy);
-                checkedFieldsArray.push(spatial.maxTreeLevel);
-                checkedFieldsArray.push(spatial.minX);
-                checkedFieldsArray.push(spatial.maxX);
-                checkedFieldsArray.push(spatial.minY);
-                checkedFieldsArray.push(spatial.maxY);
-                checkedFieldsArray.push(spatial.units);
-            }
-        };
-
-        indexDef.fields().forEach(field => addDirtyFlagInput(field));
+            return anyDirty;
+        });
 
         const hasDefaultFieldOptions = ko.pureComputed(() => !!indexDef.defaultFieldOptions());
-        checkedFieldsArray.push(hasDefaultFieldOptions);
-        
-        checkedFieldsArray.push(indexDef.numberOfAdditionalSources);
-        
-        if (indexDef.additionalSources) {
-            indexDef.additionalSources().forEach(source => {
-                checkedFieldsArray.push(source.code);
-                checkedFieldsArray.push(source.name);
+        const hasAnyDirtyDefaultFieldOptions = ko.pureComputed(() => {
+           if (hasDefaultFieldOptions() && indexDef.defaultFieldOptions().dirtyFlag().isDirty()) {
+               return true;
+           }
+           return false;
+        });
+
+        const hasAnyDirtyAdditionalSource = ko.pureComputed(() => {
+            let anyDirty = false;
+            indexDef.additionalSources().forEach(source =>  {
+                if (source.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                }
             });
-        }
-
-        const defaultFieldOptions = indexDef.defaultFieldOptions();
-        if (defaultFieldOptions)
-            addDirtyFlagInput(defaultFieldOptions);
-
-        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
+            return anyDirty;
+        });
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            indexDef.name, 
+            indexDef.maps, 
+            indexDef.reduce, 
+            indexDef.numberOfFields,
+            indexDef.numberOfConfigurationFields,
+            indexDef.outputReduceToCollection,
+            indexDef.numberOfAdditionalSources,           
+            hasAnyDirtyField,
+            hasAnyDirtyConfiguration,
+            hasDefaultFieldOptions,
+            hasAnyDirtyDefaultFieldOptions,
+            hasAnyDirtyAdditionalSource
+        ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
             const editIndex = this.isEditingExistingIndex();
@@ -488,7 +488,8 @@ class editIndex extends viewModelBase {
         return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
             .execute()
             .done(() => {
-                this.dirtyFlag().reset();
+                this.resetDirtyFlag();
+                
                 this.editedIndex().name.valueHasMutated();
                 //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
 
@@ -506,7 +507,30 @@ class editIndex extends viewModelBase {
                 this.updateUrl(originalIndexName, false /* TODO isSavingMergedIndex */);
             });
     }
+    
+    private resetDirtyFlag() {
+        const indexDef: indexDefinition = this.editedIndex();
+        
+        if (indexDef.defaultFieldOptions()) {
+            indexDef.defaultFieldOptions().dirtyFlag().reset();
+        }
 
+        indexDef.fields().forEach((field) => {
+            field.spatial().dirtyFlag().reset();
+            field.dirtyFlag().reset();
+        });
+
+        indexDef.configuration().forEach((config) => {
+            config.dirtyFlag().reset();
+        });
+
+        indexDef.additionalSources().forEach((source) => {
+            source.dirtyFlag().reset();
+        });
+        
+        this.dirtyFlag().reset();
+    }
+    
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
         const url = appUrl.forEditIndex(indexName, this.activeDatabase());
         this.navigate(url);

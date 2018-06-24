@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return MapReduceWorkContext;
         }
 
-        public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
+        public override unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             using (Slice.External(indexContext.Allocator, tombstone.LowerId.Buffer, tombstone.LowerId.Length, out Slice docKeyAsSlice))

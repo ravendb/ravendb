@@ -146,6 +146,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);
+            resultToFill.NodeTag = Database.ServerStore.NodeTag;
         }
     }
 }

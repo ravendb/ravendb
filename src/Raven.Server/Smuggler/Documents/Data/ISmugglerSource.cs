@@ -19,12 +19,12 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions);
         IEnumerable<string> GetLegacyAttachmentDeletions();
         IEnumerable<string> GetLegacyDocumentDeletions();
-        IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions);
+        IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
-        IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities);
-        IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange);
-        IDisposable GetCounterValues(out IEnumerable<CounterDetail> counters);
+        IEnumerable<(string Prefix, long Value)> GetIdentities();
+        IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues();
+        IEnumerable<CounterDetail> GetCounterValues();
         long SkipType(DatabaseItemType type, Action<long> onSkipped);
     }
 

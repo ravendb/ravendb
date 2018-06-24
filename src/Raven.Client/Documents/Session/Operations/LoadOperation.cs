@@ -115,6 +115,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
                 _session.DocumentsById.Add(newDocumentInfo);
+
             }
 
             _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);

@@ -6,11 +6,8 @@ function Help () {
     Write-Host -NoNewline -ForegroundColor Cyan "-WinX86 "
     Write-Host " - build only Windows x86 artifacts"
 
-    Write-Host -NoNewline -ForegroundColor Cyan "-Ubuntu14"
-    Write-Host " - build only Ubuntu 14.04 artifacts"
-    
-    Write-Host -NoNewline -ForegroundColor Cyan "-Ubuntu16"
-    Write-Host " - build only Ubuntu 16.04 artifacts"
+    Write-Host -NoNewline -ForegroundColor Cyan "-LinuxX64"
+    Write-Host " - build only Linux x64 artifacts"
     
     Write-Host -NoNewline -ForegroundColor Cyan "-Rpi"
     Write-Host " - build only Raspberry Pi artifacts"

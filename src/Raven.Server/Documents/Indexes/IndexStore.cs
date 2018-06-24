@@ -565,7 +565,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
 
             if (isStatic && NameUtils.IsValidIndexName(name) == false)
-                throw new ArgumentException($"Index name '{name}' not permitted. Index name must math '{NameUtils.ValidIndexNameCharacters}' regular expression", nameof(name));
+                throw new ArgumentException($"Index name '{name}' not permitted. Index name must match '{NameUtils.ValidIndexNameCharacters}' regular expression", nameof(name));
         }
 
         public Index ResetIndex(string name)

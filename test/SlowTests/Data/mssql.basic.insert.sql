@@ -57,3 +57,15 @@ INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (55, 'G2', null)
 
 INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (56, 'G2.1', 55);
 SET IDENTITY_INSERT [groups] OFF
+
+
+SET IDENTITY_INSERT [customers2] ON
+INSERT INTO [customers2] ([c_id], [vatid]) VALUES (61, 55555);
+INSERT INTO [customers2] ([c_id], [vatid]) VALUES (62, 44444);
+SET IDENTITY_INSERT [customers2] OFF
+
+SET IDENTITY_INSERT [orders2] ON
+INSERT INTO [orders2] ([o_id], [customer_vatid]) VALUES (71, 55555);
+INSERT INTO [orders2] ([o_id], [customer_vatid]) VALUES (72, 55555);
+INSERT INTO [orders2] ([o_id], [customer_vatid]) VALUES (73, 44444);
+SET IDENTITY_INSERT [orders2] OFF

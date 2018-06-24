@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Identity
             JsonOperationContext context;
             using (re.ContextPool.AllocateOperationContext(out context))
             {
-                await re.ExecuteAsync(hiloCommand, context).ConfigureAwait(false);
+                await re.ExecuteAsync(hiloCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
 
             Prefix = hiloCommand.Result.Prefix;
@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Identity
             JsonOperationContext context;
             using (re.ContextPool.AllocateOperationContext(out context))
             {
-                await re.ExecuteAsync(returnCommand, context).ConfigureAwait(false);
+                await re.ExecuteAsync(returnCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
         }
     }

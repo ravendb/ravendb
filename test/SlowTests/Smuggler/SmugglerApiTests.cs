@@ -374,9 +374,9 @@ namespace SlowTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        session.Advanced.Counters.Increment("users/1", "likes", 100);
-                        session.Advanced.Counters.Increment("users/1", "dislikes", 200);
-                        session.Advanced.Counters.Increment("users/2", "downloads", 500);
+                        session.CountersFor("users/1").Increment("likes", 100);
+                        session.CountersFor("users/1").Increment("dislikes", 200);
+                        session.CountersFor("users/2").Increment("downloads", 500);
 
                         await session.SaveChangesAsync();
                     }
@@ -396,12 +396,12 @@ namespace SlowTests.Smuggler
                         Assert.Equal("Name1", user1.Name);
                         Assert.Equal("Name2", user2.Name);
 
-                        var dic = await session.Advanced.Counters.GetAsync(user1);
+                        var dic = await session.CountersFor(user1).GetAllAsync();
                         Assert.Equal(2, dic.Count);
                         Assert.Equal(100, dic["likes"]);
                         Assert.Equal(200, dic["dislikes"]);
 
-                        var val = await session.Advanced.Counters.GetAsync(user2, "downloads");
+                        var val = await session.CountersFor(user2).GetAsync("downloads");
                         Assert.Equal(500, val);
                     }
                 }
@@ -432,10 +432,10 @@ namespace SlowTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        session.Advanced.Counters.Increment("users/1", "likes", 100);
-                        session.Advanced.Counters.Increment("users/1", "dislikes", 200);
-                        session.Advanced.Counters.Increment("users/2", "downloads", 500);
-                        session.Advanced.Counters.Increment("users/2", "votes", 1000);
+                        session.CountersFor("users/1").Increment("likes", 100);
+                        session.CountersFor("users/1").Increment("dislikes", 200);
+                        session.CountersFor("users/2").Increment("downloads", 500);
+                        session.CountersFor("users/2").Increment("votes", 1000);
 
                         await session.SaveChangesAsync();
                     }
@@ -443,8 +443,8 @@ namespace SlowTests.Smuggler
                     using (var session = store1.OpenAsyncSession())
                     {
                         session.Delete("users/3");
-                        session.Advanced.Counters.Delete("users/1", "dislikes");
-                        session.Advanced.Counters.Delete("users/2", "votes");
+                        session.CountersFor("users/1").Delete("dislikes");
+                        session.CountersFor("users/2").Delete("votes");
                         await session.SaveChangesAsync();
                     }
 
@@ -454,9 +454,9 @@ namespace SlowTests.Smuggler
                     {
                         var tombstones = db.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
                         Assert.Equal(3, tombstones.Count);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Document, tombstones[0].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[2].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Document, tombstones[0].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[2].Type);
                     }
 
                     var exportOptions = new DatabaseSmugglerExportOptions();
@@ -477,9 +477,9 @@ namespace SlowTests.Smuggler
                     {
                         var tombstones = db.DocumentsStorage.GetTombstonesFrom(ctx, 0, 0, int.MaxValue).ToList();
                         Assert.Equal(3, tombstones.Count);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Document, tombstones[0].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[1].Type);
-                        Assert.Equal(DocumentTombstone.TombstoneType.Counter, tombstones[2].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Document, tombstones[0].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[1].Type);
+                        Assert.Equal(Tombstone.TombstoneType.Counter, tombstones[2].Type);
                     }
                 }
             }

@@ -631,9 +631,15 @@ namespace Raven.Server.Documents.TcpHandlers
                         writer.WriteComma();
                         writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(DataSegment));
                         result.Doc.EnsureMetadata();
+                                               
 
                         if (result.Exception != null)
                         {
+                            if (result.Doc.Data.Modifications != null)
+                            {
+                                result.Doc.Data = docsContext.ReadObject(result.Doc.Data, "subsDocAferModifications");
+                            }
+
                             var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
                             writer.WriteValue(BlittableJsonToken.StartObject,
                                 docsContext.ReadObject(new DynamicJsonValue

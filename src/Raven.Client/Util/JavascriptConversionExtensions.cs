@@ -744,13 +744,29 @@ namespace Raven.Client.Util
                 if (LinqPathProvider.IsCounterCall(mce) == false)
                     return;
 
+                Expression alias;
+                int nameIndex;
+
+                if (mce.Method.DeclaringType != typeof(RavenQuery))
+                {
+                    alias = (mce.Object as MethodCallExpression)?.Arguments[0];
+                    nameIndex = 0;
+                }
+                else
+                {
+                    alias = mce.Arguments[0];
+                    nameIndex = 1;
+                }
+
                 context.PreventDefault();
 
                 var writer = context.GetWriter();
                 using (writer.Operation(mce))
                 {
                     writer.Write("counter(");
-                    WriteArguments(context, mce.Arguments, writer);
+                    context.Visitor.Visit(alias);
+                    writer.Write(", ");
+                    context.Visitor.Visit(mce.Arguments[nameIndex]);
                     writer.Write(")");
                 }
             }

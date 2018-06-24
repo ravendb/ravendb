@@ -130,19 +130,25 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 var assembly = Assembly.GetExecutingAssembly();
 
-                using (var dbCommand = dbConnection.CreateCommand())
+                var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".create.sql"));
+                var commands = textStreamReader.ReadToEnd().Split(" GO ");
+                
+                foreach (var command in commands)
                 {
-                    var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".create.sql"));
-                    dbCommand.CommandText = textStreamReader.ReadToEnd();
-                    dbCommand.ExecuteNonQuery();
+                    using (var dbCommand = dbConnection.CreateCommand())
+                    {
+                        dbCommand.CommandText = command;
+                        dbCommand.ExecuteNonQuery();
+                    }
                 }
+                
 
                 if (includeData)
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
-                        var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".insert.sql"));
-                        dbCommand.CommandText = textStreamReader.ReadToEnd();
+                        var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".insert.sql"));
+                        dbCommand.CommandText = dataStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
                     }
                 }

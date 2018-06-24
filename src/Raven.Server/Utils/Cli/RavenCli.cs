@@ -1001,7 +1001,7 @@ namespace Raven.Server.Utils.Cli
                         ["DataDir"] = args[1]
                     }
                 };
-                var res = store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc)).Result;
+                var res = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
                 WriteText("Database creation results = " + res.Name, TextColor, cli);
             }
             return true;

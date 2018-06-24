@@ -75,6 +75,11 @@ namespace Raven.Client.Documents.Session
         public long ResultSize { get; set; }
 
         /// <summary>
+        /// Tag of a cluster node which responded to the query
+        /// </summary>
+        public string NodeTag { get; set; }
+
+        /// <summary>
         /// Update the query stats from the query results
         /// </summary>
         internal void UpdateQueryStats(QueryResult qr)
@@ -90,6 +95,7 @@ namespace Raven.Client.Documents.Session
             LastQueryTime = qr.LastQueryTime;
             ResultSize = qr.ResultSize;
             ResultEtag = qr.ResultEtag;
+            NodeTag = qr.NodeTag;
         }
     }
 }

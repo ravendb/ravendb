@@ -74,7 +74,7 @@ namespace Raven.Client.Http
 
         protected override Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
-            return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
+            return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
         public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
@@ -92,7 +92,7 @@ namespace Raven.Client.Http
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetClusterTopologyCommand();
-                    await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
+                    await ExecuteAsync(node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
                     ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, context);
 
@@ -130,6 +130,11 @@ namespace Raven.Client.Http
                     OnTopologyUpdated(newTopology);
                 }
             }
+            catch(Exception)
+            {
+                if (Disposed == false)
+                    throw;
+            }
             finally
             {
                 _clusterTopologySemaphore.Release();
@@ -148,12 +153,6 @@ namespace Raven.Client.Http
             throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine +
                                          string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message))
                 , list.Select(x => x.Item2));
-        }
-
-        public override void Dispose()
-        {
-            _clusterTopologySemaphore.Wait();
-            base.Dispose();
         }
 
         protected override bool TryLoadFromCache(JsonOperationContext context)

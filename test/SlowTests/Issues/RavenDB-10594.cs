@@ -1,8 +1,5 @@
 ﻿using Raven.Client;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -11,12 +8,12 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10594 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name;
         }
 
-        public class MyIndex : AbstractIndexCreationTask<User>
+        private class MyIndex : AbstractIndexCreationTask<User>
         {
             public MyIndex()
             {

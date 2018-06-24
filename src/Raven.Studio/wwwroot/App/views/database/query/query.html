@@ -77,9 +77,16 @@
                                     <strong><i data-bind="attr: { class: isAutoIndex() ? 'icon-preview' : 'icon-edit' }"></i> <span data-bind="text: isAutoIndex() ? 'View index' : 'Edit index'"></span></strong>
                                 </a>
                             </li>
-                            <li class="has-disable-reason" 
-                                data-original-title="Available only for static and auto indexes">
-                                <a href="#" data-bind="css: { 'disabled' : isDynamicIndex }, attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes', href: termsUrl }" title="Navigate to index terms">
+                            <li>
+                                <a href="#" data-bind="click: explainIndex, visible: isDynamicQuery" title="Shows why given index was used to serve the query">
+                                    <i class="icon-info"></i> <span>Explain why this index was used</span>
+                                </a>
+                                <a data-bind="visible: !isDynamicQuery()" class="disabled has-disable-reason" title="Available only for dynamic indexes" data-placement="right">
+                                    <i class="icon-info"></i> <span>Explain why this index was used</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" data-bind="attr: { href: termsUrl }" title="Navigate to index terms">
                                     <i class="icon-terms"></i> <span>View index terms</span>
                                 </a>
                             </li>
@@ -88,11 +95,11 @@
                                     <i class="icon-traffic-watch"></i> <span>Index performance</span>
                                 </a>
                             </li>
-                            <li class="has-disable-reason"  data-original-title="Available only for map-reduce indexes">                                
+                            <li>                                
                                 <a href="#" data-bind="visible: isMapReduceIndex, attr: { href: visualizerUrl }" title="MapReduce Visualizer">
                                     <i class="icon-map-reduce-visualizer"></i> <span>MapReduce Visualizer</span>
                                 </a>
-                                <a data-bind="visible: !isMapReduceIndex()" class="disabled has-disable-reason" title="Available only for map-reduce indexes">
+                                <a data-bind="visible: !isMapReduceIndex()" class="disabled has-disable-reason" title="Available only for map-reduce indexes" data-placement="right">
                                     <i class="icon-map-reduce-visualizer"></i> <span>MapReduce Visualizer</span>
                                 </a>
                             </li>
@@ -152,9 +159,13 @@
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
                 Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
             </button>
-            <button type="button" class="btn btn-sm" 
-                    data-bind="css: { active: currentTab() === 'includes' }, click: goToIncludesTab">
-                Includes &nbsp; <span class="label" data-bind="text: totalIncludes().toLocaleString(), css: { 'label-primary': totalIncludes(), 'label-default': !totalIncludes()}"></span>
+            <!-- ko foreach: includesCache -->
+                <button type="button" class="btn btn-sm" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
+                    <span data-bind="text: 'Includes (' + name + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: total().toLocaleString()"></span>
+                </button>
+            <!-- /ko -->
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToExplanationsTab, css: { active: currentTab() === 'explanations' }, visible: totalExplanations()">
+                <span>Explanations</span> &nbsp; <span class="label label-primary" data-bind="text: totalExplanations().toLocaleString()"></span>
             </button>
             <!-- ko foreach: highlightsCache -->
                 <button type="button" class="btn btn-sm" data-bind="click: $root.goToHighlightsTab, css: { active: $parent.currentTab() === $data }">
@@ -201,7 +212,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isDynamicIndex">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery">
                 <label></label>
             </div>
         </div>
@@ -212,7 +223,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isDynamicIndex">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery">
                 <label></label>
             </div>
         </div>

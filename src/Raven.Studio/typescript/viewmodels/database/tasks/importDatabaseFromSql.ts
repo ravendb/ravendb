@@ -1,11 +1,12 @@
 import app = require("durandal/app");
 import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");
+import database = require("models/resources/database");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
 import migrateSqlDatabaseCommand = require("commands/database/tasks/migrateSqlDatabaseCommand");
 import testSqlMigrationCommand = require("commands/database/tasks/testSqlMigrationCommand");
-import listSqlDatabasesCommand = require("commands/database/tasks/listSqlDatabasesCommand");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -17,6 +18,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageDialog");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
+import generalUtils = require("common/generalUtils");
 
 interface exportDataDto {
     Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,
@@ -28,12 +30,13 @@ interface exportDataDto {
 
 class importDatabaseFromSql extends viewModelBase {
     
-    static pageCount = 100;
+    static pageCount = 20;
     
     spinners = {
         schema: ko.observable<boolean>(false),
         importing: ko.observable<boolean>(false),
-        test: ko.observable<boolean>(false)
+        test: ko.observable<boolean>(false),
+        testConnection: ko.observable<boolean>(false)
     };
     
     completer = defaultAceCompleter.completer();
@@ -48,15 +51,18 @@ class importDatabaseFromSql extends viewModelBase {
     currentTables: KnockoutComputed<Array<rootSqlTable>>;
     currentLocationHumane: KnockoutComputed<string>;
     itemBeingEdited = ko.observable<rootSqlTable>();
+
+    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    fullErrorDetailsVisible = ko.observable<boolean>(false);
+    shortErrorText: KnockoutObservable<string>;
     
     inFirstStep = ko.observable<boolean>(true);
     globalSelectionState: KnockoutComputed<checkbox>;
+    selectedCount: KnockoutComputed<number>;
     togglingAll = ko.observable<boolean>(false);
     
     showAdvancedOptions = ko.observable<boolean>(false);
     
-    sourceDatabaseFocus = ko.observable<boolean>(false);
-    databaseNames = ko.observableArray<string>([]);
     importedFileName = ko.observable<string>();
     
     continueFlowValidationGroup: KnockoutValidationGroup;
@@ -70,7 +76,7 @@ class importDatabaseFromSql extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.bindToCurrentInstance("onActionClicked", "setCurrentPage", "enterEditMode", "showIncomingReferences", "fileSelected",
-            "closeEditedTransformation", "createDbAutocompleter", "goToReverseReference", "onCollapseTable", "runTest");
+            "closeEditedTransformation", "goToReverseReference", "onCollapseTable", "runTest", "testConnection");
         
         this.initObservables();
         this.initValidation();
@@ -102,6 +108,15 @@ class importDatabaseFromSql extends viewModelBase {
             return "Tables " + start.toLocaleString() + "-" + end.toLocaleString() + " out of " + total.toLocaleString() + (this.searchText() ? " - filtered" : "");
         });
         
+        this.selectedCount = ko.pureComputed(() =>{
+            if (this.togglingAll()) {
+                // speed up animation!
+                return 0;
+            }
+
+            return this.model.getSelectedTablesCount();
+        });
+        
         this.globalSelectionState = ko.pureComputed<checkbox>(() => {
             if (this.togglingAll()) {
                 // speed up animation!
@@ -121,17 +136,17 @@ class importDatabaseFromSql extends viewModelBase {
             return "unchecked";
         });
         
-        const throttledFetch = _.throttle(() => this.fetchDatabaseNamesAutocomplete(), 200);
-        
-        this.sourceDatabaseFocus.subscribe(focus => {
-            if (focus) {
-                throttledFetch();
-            }
-        });
-        
         // dont' throttle for now as we need to point to exact location
         // in case of performance issues we might replace filter with go to option
         this.searchText.subscribe(() => this.filterTables());
+
+        this.shortErrorText = ko.pureComputed(() => {
+            const result = this.testConnectionResult();
+            if (!result || result.Success) {
+                return "";
+            }
+            return generalUtils.trimMessage(result.Error);
+        });
     }
     
     compositionComplete() {
@@ -139,15 +154,6 @@ class importDatabaseFromSql extends viewModelBase {
         
         this.registerDisposableHandler($(document), "fullscreenchange", () => {
             $("body").toggleClass("fullscreen", $(document).fullScreen());
-        });
-    }
-    
-    createDbAutocompleter(dbName: KnockoutObservable<string>) {
-        return ko.pureComputed(()=> {
-            const dbNameUnwrapped = dbName() ? dbName().toLocaleLowerCase() : "";
-            
-            return this.databaseNames()
-                .filter(name => name.toLocaleLowerCase().includes(dbNameUnwrapped));
         });
     }
     
@@ -194,7 +200,6 @@ class importDatabaseFromSql extends viewModelBase {
             this.togglingAll(true);
             
             this.inFirstStep(false);
-            this.model.sourceDatabaseName(importedData.DatabaseName);
             this.model.loadAdvancedSettings(importedData.Advanced);
             this.model.onSchemaUpdated(importedData.Schema, false);
             
@@ -206,12 +211,6 @@ class importDatabaseFromSql extends viewModelBase {
         }
     }
 
-    private fetchDatabaseNamesAutocomplete() {
-        new listSqlDatabasesCommand(this.activeDatabase(), this.model.toSourceDto())
-            .execute()
-            .done(dbNames => this.databaseNames(dbNames)); 
-    }
-    
     nextStep() {        
         if (!this.isValid(this.model.getValidationGroup())) {
             return false;
@@ -261,8 +260,10 @@ class importDatabaseFromSql extends viewModelBase {
                 .removeClass("edit-mode");
             
             const container = $(event.target).closest(".inline-edit");
-            container.addClass("edit-mode");
-            $("input", container).focus();
+            if (!container.hasClass("edit-disabled")) {
+                container.addClass("edit-mode");
+                $("input", container).focus();    
+            }
         });
     }
     
@@ -479,13 +480,12 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     exportConfiguration() {
-        const exportFileName = `Sql-import-from-${this.model.sourceDatabaseName()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
+        const exportFileName = `Sql-import-${moment().format("YYYY-MM-DD-HH-mm")}`;
 
         const exportData = {
             Schema: this.model.dbSchema,
             Configuration: this.model.toDto(),
             Advanced: this.model.advancedSettingsDto(),
-            DatabaseName: this.model.sourceDatabaseName(),
             BinaryToAttachment: this.model.binaryToAttachment()
         } as exportDataDto;
         
@@ -627,7 +627,7 @@ class importDatabaseFromSql extends viewModelBase {
     
     private provideTableCheckboxHint(incomingLinksCount: number) {
         return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em>Skip</em> or <em>embed</em> all of them before continue.<br/> "
-            + "<small><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
+            + "<small class='text-info'><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
     }
     
     private initUnselectEmbeddedTablesHints() {
@@ -679,6 +679,18 @@ class importDatabaseFromSql extends viewModelBase {
         return "Table <strong>" + targetTable.tableName + "</strong> doesn't have incoming links and it is embed. <br />"
             + "Probably you can deselect this table to avoid data duplication.<br/>" 
             + '<button class="btn btn-sm btn-primary popover-embed-ref" data-popover-ref-id="' + reference.id + '">Deselect ' + targetTable.tableName + '</button>';
+    }
+
+    testConnection() : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        this.model.databaseType();
+        if (this.isValid(this.model.getValidationGroup())) {
+            this.spinners.testConnection(true);
+            return new testSqlConnectionStringCommand(this.activeDatabase(), this.model.getConnectionString(), this.model.getFactoryName())
+                .execute()
+                .done(result => this.testConnectionResult(result))
+                .always(() => this.spinners.testConnection(false));
+        }
+        
     }
 }
 

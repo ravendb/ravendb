@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 {
                     var tombstones = db.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
 
-                    var tombstoneEtags = etlProcess.GetLastProcessedDocumentTombstonesPerCollection();
+                    var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection();
 
                     Assert.Equal(tombstones.First(x => x.Collection.CompareTo("Users") == 0).Etag, tombstoneEtags["Users"]);
                 }
@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 {
                     var tombstones = db.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
 
-                    var tombstoneEtags = etlProcess.GetLastProcessedDocumentTombstonesPerCollection();
+                    var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection();
 
                     Assert.Equal(tombstones.Max(x => x.Etag), tombstoneEtags[Constants.Documents.Collections.AllDocumentsCollection]);
                 }

@@ -806,6 +806,7 @@ namespace Raven.Server
             {
                 Certificate = certificate
             };
+            var wellKnown = Configuration.Security.WellKnownAdminCertificates;
             if (certificate == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
@@ -819,6 +820,10 @@ namespace Raven.Server
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
             else if (certificate.Equals(Certificate.Certificate))
+            {
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
+            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
@@ -1334,7 +1339,7 @@ namespace Raven.Server
                     var old = _clusterMaintenanceWorker;
                     using (old)
                     {
-                        _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
+                        _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.LeaderClusterTag, maintenanceHeader.Term);
                         _clusterMaintenanceWorker.Start();
                     }
 

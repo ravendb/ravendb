@@ -10,7 +10,7 @@ class queryCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultWithIncludesAndHighlights<document>> {
+    execute(): JQueryPromise<pagedResultExtended<document>> {
         const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
             ({
                 items: results.Results.map(d => new document(d)), 
@@ -18,7 +18,8 @@ class queryCommand extends commandBase {
                 additionalResultInfo: results, 
                 resultEtag: results.ResultEtag.toString(), 
                 highlightings: results.Highlightings,
-                includes: results.Includes }) as pagedResultWithIncludesAndHighlights<document>;
+                explanations: results.Explanations,
+                includes: results.Includes }) as pagedResultExtended<document>;
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {

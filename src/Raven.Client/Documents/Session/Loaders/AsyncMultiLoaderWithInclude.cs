@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 
@@ -85,9 +86,9 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids)
+        public Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids, CancellationToken token = default)
         {
-            return _session.LoadAsyncInternal<T>(ids.ToArray(), _includes.ToArray());
+            return _session.LoadAsyncInternal<T>(ids.ToArray(), _includes.ToArray(), token);
         }
 
         /// <summary>
@@ -95,9 +96,9 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         /// <param name="id">The id.</param>
         /// <returns></returns>
-        public Task<T> LoadAsync(string id)
+        public Task<T> LoadAsync(string id, CancellationToken token = default)
         {
-            return _session.LoadAsyncInternal<T>(new[] { id }, _includes.ToArray()).ContinueWith(x => x.Result.Values.FirstOrDefault());
+            return _session.LoadAsyncInternal<T>(new[] { id }, _includes.ToArray(), token).ContinueWith(x => x.Result.Values.FirstOrDefault(), token);
         }
 
         /// <summary>
@@ -124,9 +125,9 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids)
+        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token = default)
         {
-            return _session.LoadAsyncInternal<TResult>(ids.ToArray(), _includes.ToArray());
+            return _session.LoadAsyncInternal<TResult>(ids.ToArray(), _includes.ToArray(), token);
         }
 
         /// <summary>
@@ -134,9 +135,9 @@ namespace Raven.Client.Documents.Session.Loaders
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="id">The id.</param>
-        public Task<TResult> LoadAsync<TResult>(string id)
+        public Task<TResult> LoadAsync<TResult>(string id, CancellationToken token = default)
         {
-            return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.Values.FirstOrDefault());
+            return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.Values.FirstOrDefault(), token);
         }
     }
 }

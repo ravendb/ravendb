@@ -64,9 +64,6 @@ namespace Raven.Client.Documents.Session
             return (ClusterTransactionOperationsBase)_clusterTransaction;
         }
 
-        public ICountersSessionOperations Counters => _counters ?? (_counters = new DocumentSessionCounters(this));
-        private ICountersSessionOperations _counters;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>

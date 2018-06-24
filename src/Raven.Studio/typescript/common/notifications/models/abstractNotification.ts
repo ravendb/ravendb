@@ -11,7 +11,7 @@ abstract class abstractNotification {
     message = ko.observable<string>();
     title = ko.observable<string>();
     severity = ko.observable<Raven.Server.NotificationCenter.Notifications.NotificationSeverity>();
-    type: Raven.Server.NotificationCenter.Notifications.NotificationType;
+    type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
 
     hasDetails: KnockoutComputed<boolean>;
     canBePostponed: KnockoutComputed<boolean>;
@@ -22,6 +22,7 @@ abstract class abstractNotification {
     displayDate: KnockoutComputed<moment.Moment>;
 
     headerClass: KnockoutComputed<string>;
+    headerIconClass: KnockoutComputed<string>;
     cssClass: KnockoutComputed<string>;
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
@@ -45,6 +46,8 @@ abstract class abstractNotification {
                     return "";
             }
         });
+        
+        this.headerIconClass = ko.pureComputed(() => this.database ? "icon-database-cutout" : "icon-global-cutout");
 
         this.cssClass = ko.pureComputed(() => {
             const severity = this.severity();

@@ -171,6 +171,7 @@ namespace Raven.Server.ServerWide
 
         public async Task UpdateTopologyChangeNotification()
         {
+            var delay = 500;
             while (ServerShutdown.IsCancellationRequested == false)
             {
                 await _engine.WaitForState(RachisState.Follower, ServerShutdown);
@@ -181,17 +182,18 @@ namespace Raven.Server.ServerWide
                 {
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
                     {
-                        var leaveTask = _engine.WaitForLeaveState(RachisState.Follower, cts.Token);
-                        if (await Task.WhenAny(NotificationCenter.WaitForNew(), leaveTask).WithCancellation(ServerShutdown) == leaveTask)
+                        var leaderChangedTask = _engine.WaitForLeaderChange(cts.Token);
+                        if (await Task.WhenAny(NotificationCenter.WaitForAnyWebSocketClient, leaderChangedTask).WithCancellation(ServerShutdown) == leaderChangedTask)
                         {
                             continue;
                         }
 
-                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForAllRemoved, leaveTask)
+                        var cancelTask = Task.WhenAny(NotificationCenter.WaitForRemoveAllWebSocketClients, leaderChangedTask)
                             .ContinueWith(state =>
                             {
                                 try
                                 {
+                                    // ReSharper disable once AccessToDisposedClosure
                                     cts.Cancel();
                                 }
                                 catch
@@ -206,6 +208,10 @@ namespace Raven.Server.ServerWide
                             var leaderUrl = topology.GetUrlFromTag(_engine.LeaderTag);
                             if (leaderUrl == null)
                                 break; // will continue from the top of the loop
+
+                            if (IsLeader())
+                                break;
+
                             using (var ws = new ClientWebSocket())
                             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
@@ -231,6 +237,10 @@ namespace Raven.Server.ServerWide
                                         if (topologyNotification == null)
                                             continue;
 
+                                        if (_engine.LeaderTag != topologyNotification.Leader)
+                                            break;
+
+                                        delay = 500; // on successful read, reset the delay
                                         topologyNotification.NodeTag = _engine.Tag;
                                         NotificationCenter.Add(topologyNotification);
                                     }
@@ -246,8 +256,11 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info("Error during receiving topology updates from the leader", e);
+                        Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                     }
+
+                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown);
+                    delay = Math.Min(15_000, delay * 2);
                 }
             }
         }
@@ -679,6 +692,9 @@ namespace Raven.Server.ServerWide
 
         public void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
+            if (_engine.CurrentState == RachisState.Follower)
+                return;
+
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
                 NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
         }

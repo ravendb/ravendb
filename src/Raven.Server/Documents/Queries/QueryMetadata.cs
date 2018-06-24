@@ -87,6 +87,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasMoreLikeThis { get; private set; }
 
+        public bool HasBoost { get; private set; }
+
         public bool HasIntersect { get; private set; }
 
         public bool HasCmpXchg { get; private set; }
@@ -1571,7 +1573,7 @@ namespace Raven.Server.Documents.Queries
                         _metadata.AddExistField(fieldName, parameters);
                         break;
                     case MethodType.Boost:
-
+                        _metadata.HasBoost = true;
                         var firstArg = arguments.Count == 0 ? null : arguments[0];
 
                         if (firstArg == null)

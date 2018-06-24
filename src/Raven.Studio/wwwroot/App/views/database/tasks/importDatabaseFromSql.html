@@ -3,7 +3,7 @@
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: nextStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>
-                
+
                 <div class="row">
                     <div class="col-lg-6">
                         <h4>Create new import configuration</h4>
@@ -19,7 +19,8 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu" data-bind="foreach: $data.constructor.possibleProviders">
-                                        <li><a href="#"
+                                        <li>
+                                            <a href="#"
                                                data-bind="text: $parent.labelForProvider($data), click: $parent.databaseType.bind($parent.databaseType, $data)"></a>
                                         </li>
                                     </ul>
@@ -39,7 +40,7 @@
                                         <div>
                                             <small>
                                                 <i class="icon-info"></i>
-                                                Please provide 'Database name' in the field below, instead of using <code>Initial Catalog</code> option. 
+                                                Please include database name in your connection string.
                                             </small>
                                         </div>
                                     </div>
@@ -58,46 +59,34 @@
                                         <div>
                                             <small>
                                                 <i class="icon-info"></i>
-                                                Please provide 'Database name' in the field below, instead of using <code>database</code> parameter.
+                                                Please include database name in your connection string.
                                             </small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="validationElement: sourceDatabaseName">
-                                <label class="control-label">SQL Database name<i class="required"></i></label>
-                                <div class="dropdown btn-block flex-grow"  data-bind="validationOptions: { insertMessages: false }">
-                                    <input class="form-control" autocomplete="off" id="sqlDatabaseName"
-                                           data-bind="textInput: sourceDatabaseName, hasFocus: $root.sourceDatabaseFocus"
-                                           placeholder="Enter the SQL Database name">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height" role="menu" style="display: none;"
-                                        data-bind="autoComplete: '#sqlDatabaseName', foreach: $root.createDbAutocompleter(sourceDatabaseName)">
-                                        <li role="presentation" data-bind="click: $parent.sourceDatabaseName.bind($parent, $data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: sourceDatabaseName">
-                                        <div class="help-block" data-bind="validationMessage: sourceDatabaseName"></div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div class="form-group row">
-                                <div class="col-sm-10">
+                            <div class="form-group flex-horizontal">
+                                <div>
                                      <button class="btn btn-default" type="button"
                                             data-bind="click: $root.showAdvancedOptions.toggle.bind($root.showAdvancedOptions)">
                                         Advanced
-                                    </button> 
+                                    </button>
                                     <button class="btn btn-primary" type="submit"
                                             data-bind="disable: $root.spinners.schema, css: { 'btn-spinner': $root.spinners.schema }">
                                         <span class="icon-import"></span> <span>Create new import</span>
                                     </button>
                                 </div>
+                                <div class="flex-separator"></div>
+                                <div>
+                                    <button class="btn btn-default btn-info" title="Test the connection string connection"
+                                            data-bind="click: $root.testConnection, disable: $root.spinners.testConnection(), css: { 'btn-spinner': $root.spinners.testConnection }">
+                                        <i class="icon-rocket"></i>
+                                        <span>Test Connection</span>
+                                    </button>
+                                </div>
                             </div>
-                            
+
                             <div data-bind="collapse: $root.showAdvancedOptions">
                                 <h3>Advanced options</h3>
                                 <div class="form-group">
@@ -110,8 +99,12 @@
                                 <div class="form-group">
                                     <label class="control-label">&nbsp;</label>
                                     <div class="toggle">
-                                        <input id="removeId" type="checkbox" data-bind="checked: advanced.trimUnderscoreId">
-                                        <label for="removeId">Trim <strong>_id</strong> from property names</label>
+                                        <input id="removeId" type="checkbox" data-bind="checked: advanced.trimSuffix">
+                                        <label for="removeId">
+                                            Trim suffix from property names:
+                                            <input class="form-control suffix-input input-sm" data-bind="textInput: advanced.suffixToTrim" />
+                                        </label>
+
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -123,11 +116,27 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div data-bind="with: testConnectionResult">
+                            <div class="padding bg-success small" data-bind="visible: Success">
+                                <div>Successfully connected to the server</div>
+                            </div>
+                            <div class="padding bg-danger small"
+                                 data-bind="visible: !Success">
+                                Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                <div>
+                                    <a href="#"
+                                       data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'">
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
                     </div>
                     <div class="col-lg-6">
                         <h4>Continue existing migration</h4>
                         <hr />
-                        
+
                         <div class="bg-info padding padding-xs margin-bottom"><small><i class="icon-info"></i> Note: Use this option if you have exported migration file</small></div>
                         <div class="row form-group">
                             <div class="col-lg-12">
@@ -152,7 +161,7 @@
             </form>
         </div>
     </div>
-    
+
     <div class="row flex-row flex-grow flex-stretch-items modal-root" id="js-second-step" data-bind="if: !inFirstStep()">
         <div class="col-sm-12 col-lg-8 flex-vertical">
             <div class="flex-header flex-horizontal">
@@ -162,12 +171,13 @@
                             <input type="checkbox" class="styled" data-bind="click: onToggleAllClick, checkboxTriple: globalSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
-                        <button class="btn btn-primary hidden-fullscreen" data-bind="click: $root.migrate, disable: $root.spinners.importing, css: { 'btn-spinner': $root.spinners.importing }">
+                        <button class="btn btn-primary hidden-fullscreen"
+                                data-bind="click: $root.migrate, disable: $root.spinners.importing() || !$root.selectedCount(), css: { 'btn-spinner': $root.spinners.importing }">
                             <i class="icon-import"></i>
-                            <span>Migrate selected tables </span><span data-bind="visible: model.testImport">(partial)</span>
+                            <span>Migrate <span data-bind="text: $root.pluralize(selectedCount(), 'table', 'tables')"></span> </span><span data-bind="visible: model.testImport">(partial)</span>
                         </button>
                         <div>
-                            <input type="text" accesskey="/" class="form-control filter-input" placeholder="Filter" title="Filter tables (Alt+/)" data-bind="textInput: $root.searchText" />    
+                            <input type="text" accesskey="/" class="form-control filter-input" placeholder="Filter" title="Filter tables (Alt+/)" data-bind="textInput: $root.searchText" />
                         </div>
                         <div class="flex-separator"></div>
                         <div>
@@ -197,19 +207,19 @@
             </div>
             <div class="scroll flex-grow js-scroll-tables">
                 <div data-bind="foreach: $root.currentTables">
-                    <div class="panel panel-info js-root-table-panel">
-                        <div class="flex-horizontal padding padding-sm panel-header">
+                    <div class="panel panel-default js-root-table-panel">
+                        <div class="flex-horizontal padding padding-sm panel-heading">
                             <div class="checkbox" data-placement="left">
-                                <input type="checkbox" class="js-table-checkbox" data-bind="click: $root.onCollapseTable, checked: checked, attr: { id: 'table_' + $index() }" />
+                                <input type="checkbox" class="js-table-checkbox" data-bind="click: $root.onCollapseTable, css:{ 'disabled': $root.createLinksCount($data) }, checked: checked, attr: { id: 'table_' + $index() }" />
                                 <label data-bind="attr: { for: 'table_' + $index() }">&nbsp;</label>
                             </div>
-                            <div class="flex-horizontal flex-wrap">
+                            <div class="flex-horizontal flex-wrap table-header">
                                 <span class="with-top-label js-sql-table-name" data-label="Table" data-bind="text: tableName"></span>
                                 <i class="icon-arrow-right"></i>
-                                <div class="with-top-label raven-property-name inline-edit inline-block" data-label="Collection">
+                                <div class="with-top-label raven-property-name inline-edit inline-block" data-bind="css: { 'edit-disabled': !checked() }" data-label="Collection">
                                     <span class="static" data-bind="text: collectionName"></span>
                                     <input class="form-control input-sm" data-bind="textInput: collectionName" />
-                                </div>    
+                                </div>
                             </div>
                             <div class="flex-separator"></div>
                             <div class="customizations" data-bind="visible: checked">
@@ -227,22 +237,24 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="panel-addon" data-bind="collapse: checked">
-                             <div class="table-warning has-error" data-bind="visible: hasDuplicateProperties">
-                                 <div class="help-block">
-                                    <i class="icon-warning"></i> This document contains duplicate property names
-                                 </div>
-                            </div>
-                            <div class="document-id">
-                                <span class="text-muted"><i class="icon-sql-document-id"></i> Document ID:</span> 
-                                <span data-bind="text: documentIdTemplate"></span>
-                            </div>
-                            <div class="object-container" data-bind="template: { name: 'object-template' }">
+                        <div data-bind="collapse: checked">
+                            <div class="panel-body">
+                                <div class="table-warning has-error" data-bind="visible: hasDuplicateProperties">
+                                    <div class="help-block">
+                                        <i class="icon-warning"></i> This document contains duplicate property names
+                                    </div>
+                                </div>
+                                <div class="document-id">
+                                    <span class="text-muted"><i class="icon-sql-document-id"></i> Document ID:</span>
+                                    <span data-bind="text: documentIdTemplate"></span>
+                                </div>
+                                <div class="object-container" data-bind="template: { name: 'object-template' }">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
             </div>
             <div class="panel panel-default no-margin" data-bind="visible: $root.pageCount() > 1">
                 <div class="panel-body flex-horizontal">
@@ -252,7 +264,7 @@
                     </div>
                 </div>
             </div>
-            
+
         </div>
 
         <div class="col-sm-12 col-lg-4 flex-vertical">
@@ -263,29 +275,29 @@
                             <strong>SQL Table:</strong> <span data-bind="text: tableName"></span>
                         </label>
                     </div>
-                    
+
                     <div class="toggle">
                         <input id="customizeQuery" type="checkbox" data-bind="checked: customizeQuery">
                         <label for="customizeQuery">Filter source table records</label>
                     </div>
-                    
+
                     <div data-bind="collapse: customizeQuery">
                         <label><strong>SQL Query:</strong></label>
                         <div data-bind="validationElement: query">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: query, fontSize: '14px', lang: $root.aceEditorLangMode(), completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 200px;"></pre>
-    
+
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
                                 <div class="help-block" data-bind="validationMessage: query"></div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="toggle">
                         <input id="transformResults" type="checkbox" data-bind="checked: transformResults">
                         <label for="transformResults">Transform documents <small class="js-script-popover"><i class="icon-info text-info"></i></small></label>
                     </div>
-                    
+
                     <div data-bind="collapse: transformResults">
                         <label>
                             <strong>Script:</strong>
@@ -293,17 +305,17 @@
                         <div data-bind="validationElement: patchScript">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: patchScript, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: patchScript" style="height: 300px;"></pre>
-    
+
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchScript">
                                 <div class="help-block" data-bind="validationMessage: patchScript"></div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <hr />
-                    
+
                     <div class="flex-form">
-                         <div class="form-group">
+                        <div class="form-group">
                             <label class="control-label">Test mode:</label>
                             <div class="flex-grow">
                                 <div class="btn-group">
@@ -331,19 +343,19 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div data-bind="foreach: testPrimaryKeys, visible: testMode() === 'ByPrimaryKey'">
                             <div class="form-group" data-bind="validationElement: value">
                                 <label class="control-label" data-bind="text: $parent.primaryKeyColumns()[$index()].sqlName"></label>
                                 <div class="flex-grow">
-                                    <input data-bind="textInput: value" class="form-control"  />
+                                    <input data-bind="textInput: value" class="form-control" />
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                   
-                    
+
+
+
                     <div class="margin-top text-right">
                         <button title="Test" class="btn btn-primary" data-bind="click: $root.runTest, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
                             <i class="icon-rocket"></i><span>Test</span>
@@ -360,7 +372,7 @@
     <table class="properties_table">
         <tbody data-bind="foreach:documentColumns">
             <tr>
-                <td><span data-bind="text: sqlName"></span></td>
+                <td><span class="sqlName" data-bind="text: sqlName"></span></td>
                 <td><i class="icon-arrow-right"></i></td>
                 <td class="inline-edit">
                     <div class="static">
@@ -371,39 +383,51 @@
             </tr>
         </tbody>
     </table>
-    
+
     <table style="width:100%">
         <tbody data-bind="foreach: references">
             <tr data-bind="attr: { 'data-ref-id': id }">
                 <td width="400">
-                    <span data-bind="visible: type === 'OneToMany'">
+                    <div class="relation" data-bind="visible: type === 'OneToMany'">
                         <span class="text-muted">PK</span>
-                        <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"></span>
-                        
-                        <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
-                        
+                        <strong>
+                            <span data-bind="text: $parent.getPrimaryKeyColumnNames().join(',')"> </span>
+                            <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+                        </strong>
                         <span class="text-muted">from FK</span>
                         <span data-bind="text: joinColumns.join(', ')"></span>
-                        <span class="text-muted">in <i class="icon-table"></i></span>
-                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to reverse reference in ' + targetTable.tableName + ' table'}, click: $root.goToReverseReference"></a>
-                    </span>
-                    
-                    <span data-bind="visible: type === 'ManyToOne'">
-                        <span class="text-muted">FK</span> 
-                        <span data-bind="text: joinColumns.join(', ')"></span> 
-                        <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
-                        
+                        <span class="text-muted">in</span>
+                        <strong>
+                            <a href="#" class="nobr" data-bind="attr: { title: 'Navigate to reverse reference in ' + targetTable.tableName + ' table'}, click: $root.goToReverseReference">
+                                <i class="icon-table"></i> <span data-bind="text: targetTable.tableName"></span>
+                            </a>
+                        </strong>
+                    </div>
+
+                    <div class="relation" data-bind="visible: type === 'ManyToOne'">
+                        <span class="text-muted">FK</span>
+                        <strong>
+                            <span data-bind="text: joinColumns.join(', ')"></span>
+                            <i data-bind="attr: { class: getTypeClass(), title: 'Relation type: ' + type }"></i>
+                        </strong>
+
                         <span class="text-muted">from PK</span>
                         <span data-bind="text: targetTable.getPrimaryKeyColumnNames().join(',')"></span>
-                        <span class="text-muted">in <i class="icon-table"></i></span>
-                        <a href="#" data-bind="text: targetTable.tableName, attr: { title: 'Navigate to reverse reference in ' + targetTable.tableName + ' table'}, click: $root.goToReverseReference"></a>
-                    </span>
+
+                        <span class="text-muted">in</span>
+                        <strong>
+                            <a href="#" class="nobr" data-bind="attr: { title: 'Navigate to reverse reference in ' + targetTable.tableName + ' table'}, click: $root.goToReverseReference">
+                                <i class="icon-table"></i>
+                                <span data-bind="text: targetTable.tableName"></span>
+                            </a>
+                        </strong>
+                    </div>
                 </td>
-                <td width="180">
+                <td width="230">
                     <div class="btn-group link-actions">
-                        <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">skip</button>
-                        <button class="btn btn-sm js-btn-link" data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">link</button>
-                        <button class="btn btn-sm js-btn-embed" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">embed</button>
+                        <button class="btn btn-sm" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')"><i class="icon-skip"></i> <span>skip</span></button>
+                        <button class="btn btn-sm js-btn-link" data-bind="css: { active: action() === 'link', disabled: !canLinkTargetTable() }, click: _.partial($root.onActionClicked, $data, 'link')"><i class="icon-link"></i> <span>link</span></button>
+                        <button class="btn btn-sm js-btn-embed" data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')"><i class="icon-embed"></i> <span>embed</span></button>
                     </div>
                     <span data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">
                         <i class="icon-arrow-right"></i>
@@ -432,7 +456,7 @@
                     <div data-bind="with: effectiveInnerTable">
                         <div data-bind="css: { 'array-container': $parent.type === 'OneToMany'}">
                             <div class="object-container" data-bind="template: { name: 'object-template' }">
-                            </div>    
+                            </div>
                         </div>
                     </div>
                 </td>
@@ -459,7 +483,7 @@
             </div>
         </div>
         <div class="form-group no-margin">
-            <label class="control-label">Partial migration <br/><small class="text-muted">limits maximum number of documents<br /> per each table</small></label>
+            <label class="control-label">Partial migration <br /><small class="text-muted">limits maximum number of documents<br /> per each table</small></label>
             <div class="flex-grow">
                 <div class="toggle">
                     <input type="checkbox" class="styled" data-bind="checked: testImport">
@@ -467,14 +491,14 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="form-group" data-bind="validationElement: maxDocumentsToImportPerTable, visible: testImport">
             <label class="control-label left-indent">Maximum rows number<br /><small class="text-muted">per SQL table</small></label>
             <div class="flex-grow">
                 <input class="form-control" placeholder="Migration batch size" data-bind="numericInput: maxDocumentsToImportPerTable">
             </div>
         </div>
-        
+
         <div class="flex-horizontal">
             <div class="flex-separator"></div>
             <button class="btn btn-default btn-sm close-panel">

@@ -77,7 +77,8 @@ namespace Raven.Client.Documents.Queries
                 TimingsInMs = TimingsInMs?.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = LastQueryTime,
                 DurationInMs = DurationInMs,
-                ResultEtag = ResultEtag
+                ResultEtag = ResultEtag,
+                NodeTag = NodeTag
             };
         }
     }

@@ -737,7 +737,7 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException("Expected " + jsonParserToken + " , but got " + state.CurrentTokenType);
         }
 
-        private static async Task RefillParserBuffer(Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, UnmanagedJsonParser parser, CancellationToken token = default(CancellationToken))
+        private static async Task RefillParserBuffer(Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, UnmanagedJsonParser parser, CancellationToken token = default)
         {
             // Although we using here WithCancellation and passing the token,
             // the stream will stay open even after the cancellation until the entire server will be disposed.

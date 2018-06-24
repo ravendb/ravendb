@@ -133,7 +133,7 @@ namespace Raven.Client.Documents
         private string _database;
 
 
-        public abstract BulkInsertOperation BulkInsert(string database = null);
+        public abstract BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default);
 
         public DocumentSubscriptions Subscriptions { get; }
 
@@ -236,6 +236,5 @@ namespace Raven.Client.Documents
 
         public abstract MaintenanceOperationExecutor Maintenance { get; }
         public abstract OperationExecutor Operations { get; }
-        public abstract CountersOperationExecutor Counters { get; }
     }
 }

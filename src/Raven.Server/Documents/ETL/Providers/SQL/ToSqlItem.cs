@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
         }
 
-        public ToSqlItem(DocumentTombstone tombstone, string collection) : base(tombstone, collection)
+        public ToSqlItem(Tombstone tombstone, string collection) : base(tombstone, collection)
         {
         }
 

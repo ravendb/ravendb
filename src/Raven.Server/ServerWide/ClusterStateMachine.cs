@@ -18,7 +18,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -47,6 +46,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -467,7 +467,7 @@ namespace Raven.Server.ServerWide
                     {
                         // delete immediately if this node was removed.
                         var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
-                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow) 
+                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
                             NotifyDatabaseAboutChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
@@ -845,7 +845,7 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
-        
+
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand
@@ -862,7 +862,7 @@ namespace Raven.Server.ServerWide
                 }
             };
         }
-        
+
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
@@ -972,7 +972,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
-        
+
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
@@ -1347,6 +1347,45 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public long GetNumberOfIdentities(TransactionOperationContext context, string databaseName)
+        {
+            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
+            var prefix = UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null);
+
+            return GetNumberOf(identities, prefix, context);
+        }
+
+        public long GetNumberOfCompareExchange(TransactionOperationContext context, string databaseName)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+            var compareExchange = items.GetTree(CompareExchangeSchema.Key);
+            var prefix = CompareExchangeCommandBase.GetActualKey(databaseName, null);
+            return GetNumberOf(compareExchange, prefix, context);
+        }
+
+        private static long GetNumberOf(Tree tree, string prefix, TransactionOperationContext context)
+        {
+            using (Slice.From(context.Allocator, prefix, out var prefixAsSlice))
+            {
+                using (var it = tree.Iterate(prefetch: false))
+                {
+                    it.SetRequiredPrefix(prefixAsSlice);
+
+                    if (it.Seek(prefixAsSlice) == false)
+                        return 0;
+
+                    var count = 0;
+
+                    do
+                    {
+                        count++;
+                    } while (it.MoveNext());
+
+                    return count;
+                }
+            }
+        }
+
         private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice,
             RootObjectType type = RootObjectType.VariableSizeTree)
             where T : RavenTransaction
@@ -1581,7 +1620,8 @@ namespace Raven.Server.ServerWide
         protected override RachisVersionValidation InitializeValidator()
         {
             return new ClusterValidator();
-        }        public static bool InterlockedExchangeMax(ref long location, long newValue)
+        }
+        public static bool InterlockedExchangeMax(ref long location, long newValue)
         {
             long initialValue;
             do
@@ -1592,7 +1632,8 @@ namespace Raven.Server.ServerWide
             }
             while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
             return true;
-        }    }
+        }
+    }
 
     public class RachisLogIndexNotifications
     {

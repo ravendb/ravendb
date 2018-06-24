@@ -47,9 +47,15 @@ namespace Raven.Server.Documents.ETL
 
             SingleRun.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadAttachment));
 
+            SingleRun.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadCounter));
+
             SingleRun.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(SingleRun.ScriptEngine, GetAttachments));
 
             SingleRun.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(SingleRun.ScriptEngine, HasAttachment));
+
+            SingleRun.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(SingleRun.ScriptEngine, GetCounters));
+
+            SingleRun.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(SingleRun.ScriptEngine, HasCounter));
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
@@ -87,6 +93,8 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void AddLoadedAttachment(JsValue reference, string name, Attachment attachment);
 
+        protected abstract void AddLoadedCounter(JsValue reference, string name, long value);
+
         private JsValue LoadAttachment(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
@@ -110,6 +118,31 @@ namespace Raven.Server.Documents.ETL
             }
 
             return loadAttachmentReference;
+        }
+
+        private JsValue LoadCounter(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || args[0].IsString() == false)
+                ThrowInvalidSriptMethodCall($"{Transformation.LoadCounter}(name) must have a single string argument");
+
+            var counterName = args[0].AsString();
+            JsValue loadCounterReference = (JsValue)Transformation.CounterMarker + counterName;
+
+            if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+            {
+                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
+
+                if (value == null)
+                    ThrowNoSuchCounter(Current.DocumentId, counterName);
+
+                AddLoadedCounter(loadCounterReference, counterName, value.Value);
+            }
+            else
+            {
+                ThrowNoCounters(Current.DocumentId, counterName);
+            }
+
+            return loadCounterReference;
         }
 
         protected static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
@@ -157,8 +190,8 @@ namespace Raven.Server.Documents.ETL
 
         private JsValue HasAttachment(JsValue self, JsValue[] args)
         {
-            if (args.Length != 1)
-                ThrowInvalidSriptMethodCall("hasAttachment(name) must be called with one argument");
+            if (args.Length != 1 || args[0].IsString() == false)
+                ThrowInvalidSriptMethodCall("hasAttachment(name) must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
                 return false;
@@ -175,10 +208,58 @@ namespace Raven.Server.Documents.ETL
             {
                 var attachmentInfo = (BlittableJsonReaderObject)attachment;
                 
-                if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && name == checkedName)
+                if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && checkedName.Equals(name, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
+            }
+
+            return false;
+        }
+
+        private JsValue GetCounters(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 0)
+                ThrowInvalidSriptMethodCall("getCounters() must be called without any argument");
+
+            if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
+            {
+                return SingleRun.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+            }
+
+            var counters = new JsValue[countersArray.Length];
+
+            for (int i = 0; i < countersArray.Length; i++)
+            {
+                counters[i] = (JsValue)SingleRun.Translate(Context, countersArray[i]);
+            }
+
+            return SingleRun.ScriptEngine.Array.Construct(counters);
+        }
+
+        private JsValue HasCounter(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || args[0].IsString() == false)
+                ThrowInvalidSriptMethodCall("hasCounter(name) must be called with one argument (string)");
+
+            if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
+                return false;
+
+            if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
+            {
+                return false;
+            }
+
+            var checkedName = args[0].AsString();
+
+            foreach (var counter in counters)
+            {
+                var counterName = (LazyStringValue)counter;
+
+                if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
 
             return false;
@@ -202,10 +283,21 @@ namespace Raven.Server.Documents.ETL
             throw new InvalidOperationException($"Document '{documentId}' doesn't have attachment named '{attachmentName}'");
         }
 
+        protected void ThrowNoSuchCounter(string documentId, string counterName)
+        {
+            throw new InvalidOperationException($"Document '{documentId}' doesn't have counter named '{counterName}'");
+        }
+
         protected void ThrowNoAttachments(string documentId, string attachmentName)
         {
             throw new InvalidOperationException(
                 $"Document '{documentId}' doesn't have any attachment while the transformation tried to add '{attachmentName}'");
+        }
+
+        protected void ThrowNoCounters(string documentId, string counterName)
+        {
+            throw new InvalidOperationException(
+                $"Document '{documentId}' doesn't have any counter while the transformation tried to add '{counterName}'");
         }
 
         protected static void ThrowInvalidSriptMethodCall(string message)

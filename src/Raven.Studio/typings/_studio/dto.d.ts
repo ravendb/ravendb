@@ -247,7 +247,7 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
 
 declare module studio.settings {
     type numberFormatting = "raw" | "formatted";
-    type dontShowAgain = "EditSystemDocument";
+    type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
     type usageEnvironment = "Default" | "Dev" | "Test" | "Prod";
 }
@@ -285,9 +285,10 @@ interface pagedResult<T> {
     additionalResultInfo?: any; 
 }
 
-interface pagedResultWithIncludesAndHighlights<T> extends pagedResult<T> {
+interface pagedResultExtended<T> extends pagedResult<T> {
     includes: dictionary<any>;
     highlightings?: dictionary<dictionary<Array<string>>>;
+    explanations?: dictionary<Array<string>>;
 }
 
 interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
@@ -375,6 +376,7 @@ type legacyEncryptionAlgorithms = "DES" | "RC2" | "Rijndael" | "Triple DES";
 
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;
+    Visible: KnockoutObservable<boolean>;
 }
 
 type dashboardChartTooltipProviderArgs = {
@@ -423,8 +425,29 @@ type sqlMigrationAction = "skip" | "embed" | "link";
 
 interface sqlMigrationAdvancedSettingsDto {
     UsePascalCase: boolean,
-    TrimUnderscoreId: boolean
+    TrimSuffix: boolean,
+    SuffixToTrim: string,
     DetectManyToMany: boolean 
 }
 
+type virtualNotificationType = "CumulativeBulkInsert";
+
+declare module Raven.Server.NotificationCenter.Notifications {
+    interface Notification  {
+        // extend server side type to contain local virtual notifications 
+        Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
+    }
+}
+
+interface explainQueryResponse extends resultsDto<Raven.Server.Documents.Queries.Dynamic.DynamicQueryToIndexMatcher.Explanation> {
+    IndexName: string;
+}
+
+
+interface virtualBulkInsertItem {
+    id: string;
+    date: string;
+    duration: number;
+    items: number;
+} 
 

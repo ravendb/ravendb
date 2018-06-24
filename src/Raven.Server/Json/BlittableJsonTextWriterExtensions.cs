@@ -372,6 +372,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(result.ResultEtag));
             writer.WriteInteger(result.ResultEtag);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.NodeTag));
+            writer.WriteString(result.NodeTag);
 
             if (partial == false)
                 writer.WriteEndObject();
@@ -452,6 +456,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(result.ResultEtag));
             writer.WriteInteger(result.ResultEtag);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.NodeTag));
+            writer.WriteString(result.NodeTag);
 
             if (partial == false)
                 writer.WriteEndObject();
@@ -577,6 +585,14 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfIdentities));
+            writer.WriteInteger(statistics.CountOfIdentities);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfCompareExchange));
+            writer.WriteInteger(statistics.CountOfCompareExchange);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));

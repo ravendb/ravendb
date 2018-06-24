@@ -10,15 +10,24 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.Model;
+using Raven.Server.SqlMigration.MsSQL;
 using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using DbProviderFactories = Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.DbProviderFactories;
 
 namespace Raven.Server.SqlMigration
 {
-    public abstract class GenericDatabaseMigrator<TConnection> : IDatabaseDriver where TConnection : IDisposable
+    public abstract class GenericDatabaseMigrator : IDatabaseDriver
     {
+        protected readonly string ConnectionString;
+        
         public abstract DatabaseSchema FindSchema();
+
+        protected GenericDatabaseMigrator(string connectionString)
+        {
+            ConnectionString = connectionString;
+        }
 
         public (BlittableJsonReaderObject Document, string Id) Test(MigrationTestSettings settings, DatabaseSchema dbSchema, DocumentsOperationContext context)
         {
@@ -246,7 +255,7 @@ namespace Raven.Server.SqlMigration
             }
         }
 
-        private void InitializeDataProviders(List<ReferenceInformation> references, TConnection connection)
+        private void InitializeDataProviders(List<ReferenceInformation> references, DbConnection connection)
         {
             references.ForEach(reference =>
             {
@@ -422,21 +431,13 @@ namespace Raven.Server.SqlMigration
             return value;
         }
 
-        protected abstract string GetQueryForCollection(RootCollection collection);
-        
-        protected abstract string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues, out Dictionary<string, object> queryParameters);
+        protected abstract string LimitRowsNumber(string inputQuery, int? rowsLimit);
         
         protected abstract string GetSelectAllQueryForTable(string tableSchema, string tableName);
 
-        protected abstract IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping,
-            HashSet<string> specialColumns, Dictionary<string, string> attachmentNameMapping, TConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null);
-
-        protected abstract IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
-        protected abstract IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, TConnection connection);
-        protected abstract IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, TConnection connection);
-
         protected abstract string QuoteTable(string schema, string tableName);
         protected abstract string QuoteColumn(string columnName);
+        protected abstract string FactoryName { get; }
 
         protected IDataProvider<string> CreateObjectLinkDataProvider(ReferenceInformation refInfo)
         {
@@ -444,8 +445,175 @@ namespace Raven.Server.SqlMigration
                 GenerateDocumentId(refInfo.CollectionNameToUseInLinks, GetColumns(specialColumns, refInfo.ForeignKeyColumns)));
         }
 
-        protected abstract TConnection OpenConnection();
+        protected DbConnection OpenConnection()
+        {
+            var factory = DbProviderFactories.GetFactory(FactoryName);
+            DbConnection connection;
+            try
+            {
+                connection = factory.CreateConnection();
+                connection.ConnectionString = ConnectionString;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Cannot create new sql connection using the given connection string", e);
+            }
 
-        public abstract List<string> GetDatabaseNames();
+            try
+            {
+                connection.Open();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Cannot open connection using the given connection string", e);
+            }
+
+
+            return connection;
+        }
+
+        protected string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
+        {
+            if (primaryKeyColumns.Count != primaryKeyValues.Length)
+            {
+                queryParameters = null;
+                throw new InvalidOperationException("Invalid paramaters count. Primary key has " + primaryKeyColumns.Count + " columns, but " + primaryKeyValues.Length + " values were provided.");
+            }
+            
+            var parameters = new Dictionary<string, object>();
+            
+            var wherePart = string.Join(" and ", primaryKeyColumns.Select((column, idx) =>
+            {
+                parameters["p" + idx] = primaryKeyValues[idx];
+                return QuoteColumn(column) + " = @p" + idx;
+            }));
+            
+            queryParameters = parameters;
+            
+            // here we ignore custom query - as we want to get row based on primary key
+            return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName) + " where " + wherePart;
+        }
+        
+        protected IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
+            HashSet<string> specialColumns, Dictionary<string, string> attachmentNameMapping, DbConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null)
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = LimitRowsNumber(tableQuery, rowsLimit);
+                
+                if (queryParameters != null)
+                {
+                    foreach (var kvp in queryParameters)
+                    {
+                        DbParameter dbParameter = cmd.CreateParameter();
+                        dbParameter.ParameterName = kvp.Key;
+                        dbParameter.Value = kvp.Value;
+
+                        cmd.Parameters.Add(dbParameter);
+                    }
+                }
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var migrationDocument = new SqlMigrationDocument
+                        {
+                            Object = ExtractFromReader(reader, documentPropertiesMapping),
+                            SpecialColumnsValues = ExtractFromReader(reader, specialColumns),
+                            Attachments = ExtractAttachments(reader, attachmentNameMapping)
+                        };
+                        yield return migrationDocument;
+                    }
+                }
+            }
+        }
+        
+        protected IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, DbConnection connection)
+        {
+            var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
+                        + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
+
+
+            return new SqlStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
+            {
+                var result = new DynamicJsonArray();
+                while (reader.Read())
+                {
+                    var linkParameters = new object[reader.FieldCount];
+                    for (var i = 0; i < linkParameters.Length; i++)
+                    {
+                        linkParameters[i] = reader[i];
+                    }
+
+                    result.Add(GenerateDocumentId(refInfo.CollectionNameToUseInLinks, linkParameters));
+                }
+
+                return result;
+            });
+        }
+
+        protected IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
+        {
+            var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
+                                         + " where " + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
+
+            return new SqlStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
+            {
+                if (reader.Read() == false)
+                {
+                    // parent object is null
+                    return new EmbeddedObjectValue();
+                }
+
+                return new EmbeddedObjectValue
+                {
+                    Object = ExtractFromReader(reader, refInfo.TargetDocumentColumns),
+                    SpecialColumnsValues = ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames),
+                    Attachments = ExtractAttachments(reader, refInfo.TargetAttachmentColumns)
+                };
+            });
+        }
+
+        protected IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
+        {
+            var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
+                                         + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
+
+            return new SqlStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
+            {
+                var objectProperties = new DynamicJsonArray();
+                var specialProperties = new List<DynamicJsonValue>();
+                var attachments = new List<Dictionary<string, byte[]>>();
+                while (reader.Read())
+                {
+                    objectProperties.Add(ExtractFromReader(reader, refInfo.TargetDocumentColumns));
+                    attachments.Add(ExtractAttachments(reader, refInfo.TargetAttachmentColumns));
+                    
+                    if (refInfo.ChildReferences != null)
+                    {
+                        // fill only when used
+                        specialProperties.Add(ExtractFromReader(reader, refInfo.TargetSpecialColumnsNames));    
+                        
+                    }
+                }
+
+                return new EmbeddedArrayValue
+                {
+                    ArrayOfNestedObjects = objectProperties,
+                    SpecialColumnsValues = specialProperties,
+                    Attachments = attachments
+                };
+            });
+        }
+        
+        protected string GetQueryForCollection(RootCollection collection)
+        {
+            if (string.IsNullOrWhiteSpace(collection.SourceTableQuery) == false)
+            {
+                return collection.SourceTableQuery;
+            }
+
+            return GetSelectAllQueryForTable(collection.SourceTableSchema, collection.SourceTableName);
+        }
     }
 }

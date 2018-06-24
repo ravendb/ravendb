@@ -302,6 +302,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/cluster/bootstrap", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task Bootstrap()
+        {
+            ServerStore.EnsureNotPassive();
+            return NoContent();
+        }
+
         [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin)]
         public async Task AddNode()
         {

@@ -6,6 +6,7 @@
 
 using Sparrow;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -24,6 +25,9 @@ namespace Voron.Impl.Journal
         private IJournalWriter _journalWriter;
         private long _writePosIn4Kb;
 
+        private TransactionHeader[] _transactionHeaders;
+        private int _numberOfTransactionHeaders;
+
         private readonly PageTable _pageTranslationTable = new PageTable();
 
         private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>();
@@ -35,6 +39,7 @@ namespace Voron.Impl.Journal
         {
             Number = journalNumber;
             _env = env;
+            _transactionHeaders = ArrayPool<TransactionHeader>.Shared.Rent(journalWriter.NumberOfAllocated4Kb);
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
             _unusedPages = new FastList<PagePosition>();
@@ -74,6 +79,9 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
+            if (_transactionHeaders != null)
+                ArrayPool<TransactionHeader>.Shared.Return(_transactionHeaders);
+            _transactionHeaders = null;
             _unusedPagesHashSetPool.Clear();
             _unusedPages.Clear();
             _pageTranslationTable.Clear();
@@ -83,7 +91,7 @@ namespace Voron.Impl.Journal
         public JournalSnapshot GetSnapshot()
         {
             var lastTxId = _pageTranslationTable.GetLastSeenTransactionId();
-            
+
             return new JournalSnapshot
             {
                 FileInstance = this,
@@ -95,9 +103,75 @@ namespace Voron.Impl.Journal
             };
         }
 
-        public bool ReadTransaction(long pos, TransactionHeader* txHeader)
+        public void SetLastReadTxHeader(long maxTransactionId, ref TransactionHeader lastReadTxHeader)
         {
-            return _journalWriter.Read((byte*)txHeader, sizeof(TransactionHeader), pos);
+            int low = 0;
+            int high = _numberOfTransactionHeaders - 1;
+
+            while (low <= high)
+            {
+                int mid = (low + high) >> 1;
+                long midValTxId = _transactionHeaders[mid].TransactionId;
+
+                if (midValTxId < maxTransactionId)
+                    low = mid + 1;
+                else if (midValTxId > maxTransactionId)
+                    high = mid - 1;
+                else // found the max tx id
+                {
+                    lastReadTxHeader = _transactionHeaders[mid];
+                    return;
+                }
+            }
+            if (low == 0)
+            {
+                lastReadTxHeader.TransactionId = -1; // not found
+                return;
+            }
+            if (high != _numberOfTransactionHeaders - 1)
+            {
+                throw new InvalidOperationException("Found a gap in the transaction headers held by this journal file in memory, shouldn't be possible");
+            }
+            lastReadTxHeader = _transactionHeaders[_numberOfTransactionHeaders - 1];
+        }
+
+        /// <summary>
+        /// Write a buffer of transactions (from lazy, usually) to the file
+        /// </summary>
+        public void Write(long posBy4Kb, byte* p, int numberOf4Kbs)
+        {
+            int posBy4Kbs = 0;
+            while (posBy4Kbs < numberOf4Kbs)
+            {
+                var readTxHeader = (TransactionHeader*)(p + (posBy4Kbs * 4 * Constants.Size.Kilobyte));
+                var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize +
+                    sizeof(TransactionHeader) : readTxHeader->UncompressedSize + sizeof(TransactionHeader);
+                var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
+                                   (totalSize % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
+                if (roundTo4Kb > int.MaxValue)
+                {
+                    MathFailure(numberOf4Kbs);
+                }
+
+                // We skip to the next transaction header.
+                posBy4Kbs += (int)roundTo4Kb;
+                if (_transactionHeaders.Length == _numberOfTransactionHeaders)
+                {
+                    var temp = ArrayPool<TransactionHeader>.Shared.Rent(_transactionHeaders.Length * 2);
+                    Array.Copy(_transactionHeaders, temp, _transactionHeaders.Length);
+                    ArrayPool<TransactionHeader>.Shared.Return(_transactionHeaders);
+                    _transactionHeaders = temp;
+                }
+                Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
+                _transactionHeaders[_numberOfTransactionHeaders++] = *readTxHeader;
+            }
+
+            JournalWriter.Write(posBy4Kb, p, numberOf4Kbs);
+        }
+
+        private static void MathFailure(int numberOf4Kbs)
+        {
+            throw new InvalidOperationException("Math failed, total size is larger than 2^31*4KB but we have just: " + numberOf4Kbs + " * 4KB");
         }
 
         /// <summary>
@@ -125,7 +199,7 @@ namespace Voron.Impl.Journal
             {
                 try
                 {
-                    _journalWriter.Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
+                    Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
                 }
                 catch (Exception e)
                 {
@@ -179,6 +253,7 @@ namespace Voron.Impl.Journal
             }
         }
 
+
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
         {
             // REVIEW: This number do not grow easily. There is no way we can go higher than int.MaxValue
@@ -199,7 +274,7 @@ namespace Voron.Impl.Journal
                 long pageNumber = txPage.ScratchPageNumber;
                 if (pageNumber == -1) // if we don't already have it from TX preparing then ReadPage
                 {
-                var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                    var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                     pageNumber = scratchPage.PageNumber;
                 }
 
@@ -226,26 +301,27 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void InitFrom(JournalReader journalReader)
+        public void InitFrom(JournalReader journalReader, TransactionHeader[] transactionHeaders, int transactionsCount)
         {
             _writePosIn4Kb = journalReader.Next4Kb;
+            Array.Copy(transactionHeaders, _transactionHeaders, transactionsCount);
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
-        
-        
+
+
         private static readonly ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior> _scratchPagesPositionsPool = new ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior>(() => new FastList<PagePosition>(), 10);
 
         public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId)
-        {            
+        {
             var unusedPages = _scratchPagesPositionsPool.Allocate();
             var unusedAndFree = _scratchPagesPositionsPool.Allocate();
 
             using (_locker2.Lock())
-            {                
+            {
                 int count = _unusedPages.Count;
                 int originalCount = count;
-                
+
                 for (int i = 0; i < count; i++)
                 {
                     var page = _unusedPages[i];
@@ -253,11 +329,11 @@ namespace Voron.Impl.Journal
                     {
                         unusedAndFree.Add(page);
 
-                        count--;                        
-                        
-                        if ( i < count )
+                        count--;
+
+                        if (i < count)
                             _unusedPages[i] = _unusedPages[count];
-                        
+
                         _unusedPages.RemoveAt(count);
 
                         i--;

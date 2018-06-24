@@ -10,16 +10,16 @@ class sqlMigration {
     static possibleProviders = ["MsSQL", "MySQL"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
-    sourceDatabaseName = ko.observable<string>();
     binaryToAttachment = ko.observable<boolean>(true);
     batchSize = ko.observable<number>(1000);
     
     testImport = ko.observable<boolean>(false);
     maxDocumentsToImportPerTable = ko.observable<number>(1000);
-    
+
     advanced = {
         usePascalCase: ko.observable<boolean>(true),
-        trimUnderscoreId: ko.observable<boolean>(true),
+        trimSuffix: ko.observable<boolean>(true),
+        suffixToTrim: ko.observable<string>("_id"),
         detectManyToMany: ko.observable<boolean>(true) 
     };
     
@@ -55,7 +55,8 @@ class sqlMigration {
     
     private initObservables() {
         this.advanced.usePascalCase.subscribe(() => this.initTransformationFunctions());
-        this.advanced.trimUnderscoreId.subscribe(() => this.initTransformationFunctions());
+        this.advanced.trimSuffix.subscribe(() => this.initTransformationFunctions());
+        this.advanced.suffixToTrim.subscribe(() => this.initTransformationFunctions());
     }
 
     initValidation() {
@@ -67,20 +68,14 @@ class sqlMigration {
             required: true
         });
         
-        this.sourceDatabaseName.extend({
-            required: true
-        });
-        
         this.sqlServerValidationGroup = ko.validatedObservable({
             connectionString: this.sqlServer.connectionString,
-            sourceDatabaseName: this.sourceDatabaseName,
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
 
         this.mySqlValidationGroup = ko.validatedObservable({
             connectionString: this.mySql.connectionString,
-            sourceDatabaseName: this.sourceDatabaseName,
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
@@ -97,15 +92,16 @@ class sqlMigration {
     }
     
     private initTransformationFunctions() {
+        const suffix = this.advanced.suffixToTrim();
         const pascal = (input: string) => _.upperFirst(_.camelCase(input));
-        const removeId = (input: string) => input.toLocaleLowerCase().endsWith("_id") ? input.slice(0, -3) : input;
+        const removeSuffix = (input: string) => input.endsWith(suffix) ? input.slice(0, -suffix.length) : input;
         const identity = (input: string) => input;
         
         this.collectionNameTransformationFunc = this.advanced.usePascalCase() ? pascal : identity;
         if (this.advanced.usePascalCase()) {
-            this.propertyNameTransformationFunc = this.advanced.trimUnderscoreId() ? _.flow(removeId, pascal) : pascal;
+            this.propertyNameTransformationFunc = this.advanced.trimSuffix() ? _.flow(removeSuffix, pascal) : pascal;
         } else {
-            this.propertyNameTransformationFunc = this.advanced.trimUnderscoreId() ? removeId : identity;
+            this.propertyNameTransformationFunc = this.advanced.trimSuffix() ? removeSuffix : identity;
         }
     }
 
@@ -236,6 +232,17 @@ class sqlMigration {
     findLinksToTable(table: abstractSqlTable): Array<sqlReference> {
         return _.flatMap(this.tables().filter(x => x.checked()), t => t.findLinksToTable(table));
     }
+
+    getFactoryName() {
+        switch (this.databaseType()) {
+            case "MySQL":
+                return "MySql.Data.MySqlClient";
+            case "MsSQL":
+                return "System.Data.SqlClient";
+            default:
+                throw new Error(`Can't get factory name: Database type - ${this.databaseType} - is not supported.`);
+        }
+    }
     
     getConnectionString() {
         if (this.connectionStringOverride()) {
@@ -245,11 +252,10 @@ class sqlMigration {
         
         switch (this.databaseType()) {
             case "MySQL":
-                return `${this.mySql.connectionString()}\;database='${this.escape(this.sourceDatabaseName())}'`;
+                return this.mySql.connectionString();
                 
             case "MsSQL":
-                // Append initial catalog. For now we don't take it from the connection string.
-                return `${this.sqlServer.connectionString()}\;Initial Catalog='${this.escape(this.sourceDatabaseName())}'`;
+                return this.sqlServer.connectionString();
                 
             default:
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);
@@ -294,13 +300,15 @@ class sqlMigration {
         return {
             UsePascalCase: this.advanced.usePascalCase(),
             DetectManyToMany: this.advanced.detectManyToMany(),
-            TrimUnderscoreId: this.advanced.trimUnderscoreId()
+            TrimSuffix: this.advanced.trimSuffix(),
+            SuffixToTrim: this.advanced.suffixToTrim()
         }
     }
     
     loadAdvancedSettings(dto: sqlMigrationAdvancedSettingsDto) {
         this.advanced.usePascalCase(dto.UsePascalCase);
-        this.advanced.trimUnderscoreId(dto.TrimUnderscoreId);
+        this.advanced.trimSuffix(dto.TrimSuffix);
+        this.advanced.suffixToTrim(dto.SuffixToTrim);
         this.advanced.detectManyToMany(dto.DetectManyToMany);
     }
 

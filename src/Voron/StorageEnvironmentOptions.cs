@@ -632,24 +632,65 @@ namespace Voron
                     File.Delete(file);
             }
 
+            private AbstractPager GetTemporaryPager(string name, long initialSize, Func<StorageEnvironmentOptions, long?, VoronPathSetting, bool, bool, AbstractPager> getMemoryMapPagerFunc)
+            {
+                // here we can afford to rename the file if needed because this is a scratch / temp
+                // file that is used. We _know_ that no one expects anything from it and that 
+                // the name it uses isn't _that_ important in any way, shape or form. 
+                int index = 0;
+                void Rename()
+                {
+                    var ext = Path.GetExtension(name);
+                    var filename = Path.GetFileNameWithoutExtension(name);
+                    name = filename + "-ren-" + (index++) + ext;
+                }
+                Exception err = null;
+                for (int i = 0; i < 15; i++)
+                {
+                    var tempFile = TempPath.Combine(name);
+                    try
+                    {
+                        if (File.Exists(tempFile.FullPath))
+                            File.Delete(tempFile.FullPath);
+                    }
+                    catch (IOException e)
+                    {
+                        // this can happen if someone is holding the file, shouldn't happen
+                        // but might if there is some FS caching involved where it shouldn't
+                        Rename();
+                        err = e;
+                        continue;
+                    }
+                    try
+                    {
+                        return getMemoryMapPagerFunc(this, initialSize, tempFile,
+                            true, // deleteOnClose
+                            false); //usePageProtection
+                    }
+                    catch (FileNotFoundException e)
+                    {
+                        // unique case, when file was previously deleted, but still exists. 
+                        // This can happen on cifs mount, see RavenDB-10923
+                        // if this is a temp file we can try recreate it in a different name
+                        Rename();
+                        err = e;
+                    }
+                }
+
+                throw new InvalidOperationException("Unable to create temporary mapped file " + name + ", even after trying multiple times.", err);
+            }
+
             public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
-                var scratchFile = TempPath.Combine(name);
-                if (File.Exists(scratchFile.FullPath))
-                    File.Delete(scratchFile.FullPath);
-
-                return GetMemoryMapPager(this, initialSize, scratchFile, deleteOnClose: true);
+                return GetTemporaryPager(name, initialSize, GetMemoryMapPager);
             }
 
             // This is used for special pagers that are used as temp buffers and don't 
             // require encryption: compression, recovery, lazyTxBuffer.
             public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
             {
-                var scratchFile = TempPath.Combine(name);
-                if (File.Exists(scratchFile.FullPath))
-                    File.Delete(scratchFile.FullPath);
+                var pager = GetTemporaryPager(name, initialSize, GetMemoryMapPagerInternal);
 
-                var pager = GetMemoryMapPagerInternal(this, initialSize, scratchFile, deleteOnClose: true);
                 if (EncryptionEnabled)
                 {
                     // even though we don't care need encryption here, we still need to ensure that this

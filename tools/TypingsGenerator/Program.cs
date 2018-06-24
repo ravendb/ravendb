@@ -44,6 +44,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
@@ -137,6 +138,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
+            scripter.AddType(typeof(IndexQuery));
+            scripter.AddType(typeof(DynamicQueryToIndexMatcher.Explanation));
 
             // attachments
             scripter.AddType(typeof(AttachmentName));
@@ -380,6 +383,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MigrationResult));
             scripter.AddType(typeof(MigrationProgress));
             scripter.AddType(typeof(MigrationTestRequest));
+            
+            // document size details
+            scripter.AddType(typeof(DocumentSizeDetails));
 
             return scripter;
         }

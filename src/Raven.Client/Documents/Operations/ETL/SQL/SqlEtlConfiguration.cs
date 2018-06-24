@@ -31,7 +31,9 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         internal string GetFactoryName()
         {
+#pragma warning disable 618
             return Connection.FactoryName ?? FactoryName; // legacy configs from RavenDB 4.0 don't have SqlConnectionString.FactoryName field
+#pragma warning restore 618
         }
 
         public override bool Validate(out List<string> errors)
@@ -149,7 +151,9 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
         {
             var result = base.ToJson();
 
+#pragma warning disable 618
             result[nameof(FactoryName)] = FactoryName;
+#pragma warning restore 618
             result[nameof(ParameterizeDeletes)] = ParameterizeDeletes;
             result[nameof(ForceQueryRecompile)] = ForceQueryRecompile;
             result[nameof(QuoteTables)] = QuoteTables;

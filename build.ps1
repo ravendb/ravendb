@@ -50,6 +50,11 @@ $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin",
 $TESTDRIVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver")
 $TESTDRIVER_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver", "bin", "Release")
 
+$EMBEDDED_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Embedded")
+$EMBEDDED_NUSPEC = [io.path]::combine($OUT_DIR, "Raven.Embedded.nuspec")
+$EMBEDDED_SERVER_OUT_DIR = [io.path]::combine($OUT_DIR, "Raven.Embedded")
+$EMBEDDED_LIB_OUT_DIR = [io.path]::combine($OUT_DIR, "Raven.Embedded", "lib")
+
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
 $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
@@ -101,6 +106,12 @@ if ($targets.Count -eq 0) {
 
 New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
+
+$embeddedDir = Join-Path -Path $OUT_DIR -ChildPath "RavenDB.Embedded"
+if (Test-Path $embeddedDir) {
+    CleanDir $embeddedDir 
+}
+
 CleanSrcDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
 LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR
@@ -126,16 +137,25 @@ if ($JustStudio -eq $False) {
     CreateNugetPackage $TESTDRIVER_SRC_DIR $RELEASE_DIR $versionSuffix
 }
 
-if ($JustNuget) {
-    exit 0
-}
-
 if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
     BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
     BuildStudio $STUDIO_SRC_DIR $version
     write-host "Studio built successfully."
 } else {
     write-host "Not building studio..."
+}
+
+if ($JustStudio -eq $False) {
+    $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
+    BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath $Debug
+    $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
+    $nupkgs = Join-Path $embeddedDir -ChildPath "*.nupkg"
+    Move-Item -Path $nupkgs -Destination $OUT_DIR
+    Remove-Item -Recurse $embeddedDir
+}
+
+if ($JustNuget) {
+    exit 0
 }
 
 if ($JustStudio) {

@@ -26,6 +26,20 @@ namespace Raven.Client.Documents.Operations.Counters
             _returnFullResults = returnFullResults;
         }
 
+        public GetCountersOperation(string docId, string counter, bool returnFullResults = false)
+        {
+            _docId = docId;
+            _counters = new[] { counter };
+            _returnFullResults = returnFullResults;
+        }
+
+        public GetCountersOperation(string docId,  bool returnFullResults = false)
+        {
+            _docId = docId;
+            _counters = Array.Empty<string>();
+            _returnFullResults = returnFullResults;
+        }
+
         public RavenCommand<CountersDetail> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetCounterValuesCommand(_docId, _counters, _returnFullResults);

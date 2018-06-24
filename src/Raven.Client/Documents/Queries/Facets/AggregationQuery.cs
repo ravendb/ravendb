@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -87,13 +88,13 @@ namespace Raven.Client.Documents.Queries.Facets
             return ProcessResults(command.Result, _session.Conventions);
         }
 
-        public async Task<Dictionary<string, FacetResult>> ExecuteAsync()
+        public async Task<Dictionary<string, FacetResult>> ExecuteAsync(CancellationToken token = default)
         {
             var command = GetCommand(isAsync: true);
 
             _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
-            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo).ConfigureAwait(false);
+            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo, token).ConfigureAwait(false);
 
             return ProcessResults(command.Result, _session.Conventions);
         }
@@ -104,10 +105,10 @@ namespace Raven.Client.Documents.Queries.Facets
             return ((DocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
-        public Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync(Action<Dictionary<string, FacetResult>> onEval = null)
+        public Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync(Action<Dictionary<string, FacetResult>> onEval = null, CancellationToken token = default)
         {
             _query = GetIndexQuery(isAsync: true);
-            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval);
+            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval, token);
         }
 
         protected abstract IndexQuery GetIndexQuery(bool isAsync);

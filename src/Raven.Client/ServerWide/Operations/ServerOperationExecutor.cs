@@ -36,22 +36,22 @@ namespace Raven.Client.ServerWide.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task SendAsync(IServerOperation operation, CancellationToken token = default(CancellationToken))
+        public async Task SendAsync(IServerOperation operation, CancellationToken token = default)
         {
             using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
-                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IServerOperation<TResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<TResult> SendAsync<TResult>(IServerOperation<TResult> operation, CancellationToken token = default)
         {
             using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
-                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return command.Result;
             }
         }
@@ -61,13 +61,13 @@ namespace Raven.Client.ServerWide.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task<Operation> SendAsync(IServerOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> SendAsync(IServerOperation<OperationIdResult> operation, CancellationToken token = default)
         {
             using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
-                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return new ServerWideOperation(_requestExecutor, _requestExecutor.Conventions, command.Result.OperationId);
             }
         }

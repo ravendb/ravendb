@@ -46,3 +46,11 @@ INSERT INTO `groups` (`g_id`, `name`, `parent_group_id`) VALUES (54, 'G1.1.2', 5
 INSERT INTO `groups` (`g_id`, `name`, `parent_group_id`) VALUES (55, 'G2', null);
 
 INSERT INTO `groups` (`g_id`, `name`, `parent_group_id`) VALUES (56, 'G2.1', 55);
+
+
+INSERT INTO `customers2` (`c_id`, `vatid`) VALUES (61, 55555);
+INSERT INTO `customers2` (`c_id`, `vatid`) VALUES (62, 44444);
+
+INSERT INTO `orders2` (`o_id`, `customer_vatid`) VALUES (71, 55555);
+INSERT INTO `orders2` (`o_id`, `customer_vatid`) VALUES (72, 55555);
+INSERT INTO `orders2` (`o_id`, `customer_vatid`) VALUES (73, 44444);

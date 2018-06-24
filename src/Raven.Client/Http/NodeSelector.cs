@@ -10,17 +10,15 @@ namespace Raven.Client.Http
         private class NodeSelectorState
         {
             public readonly Topology Topology;
-            public readonly int CurrentNodeIndex;
             public readonly List<ServerNode> Nodes;
             public readonly int[] Failures;
             public readonly int[] FastestRecords;
             public int Fastest;
             public int SpeedTestMode;
 
-            public NodeSelectorState(int currentNodeIndex, Topology topology)
+            public NodeSelectorState(Topology topology)
             {
                 Topology = topology;
-                CurrentNodeIndex = currentNodeIndex;
                 Nodes = topology.Nodes;
                 Failures = new int[topology.Nodes.Count];
                 FastestRecords = new int[topology.Nodes.Count];
@@ -35,7 +33,7 @@ namespace Raven.Client.Http
 
         public NodeSelector(Topology topology)
         {
-            _state = new NodeSelectorState(0, topology);
+            _state = new NodeSelectorState(topology);
         }
 
         public void OnFailedRequest(int nodeIndex)
@@ -55,7 +53,7 @@ namespace Raven.Client.Http
             if (_state.Topology.Etag >= topology.Etag && forceUpdate == false)
                 return false;
 
-            var state = new NodeSelectorState(0, topology);
+            var state = new NodeSelectorState(topology);
 
             Interlocked.Exchange(ref _state, state);
 
@@ -115,7 +113,7 @@ namespace Raven.Client.Http
             if (state.Failures[state.Fastest] == 0 && state.Nodes[state.Fastest].ServerRole == ServerNode.Role.Member)
                 return (state.Fastest, state.Nodes[state.Fastest]);
             
-            // if the fastest node has failures, we'll immeidately schedule
+            // if the fastest node has failures, we'll immediately schedule
             // another run of finding who the fastest node is, in the meantime
             // we'll just use the server preferred node or failover as usual
             
@@ -126,11 +124,16 @@ namespace Raven.Client.Http
         public void RestoreNodeIndex(int nodeIndex)
         {
             var state = _state;
-            if (state.CurrentNodeIndex < nodeIndex)
-                return; // nothing to do
+            if (state.Failures.Length <= nodeIndex)
+                return; // the state was changed and we no longer have it?
 
-            var stateFailure = state.Failures[nodeIndex];
-            Interlocked.Add(ref state.Failures[nodeIndex], -stateFailure);// zero it
+            while (true)
+            {
+                var stateFailure = state.Failures[nodeIndex];
+                stateFailure = Interlocked.Add(ref state.Failures[nodeIndex], -stateFailure);// zero it
+                if (stateFailure >= 0)
+                    break;// someone could add failures in the meanwhile, so we are good with values higher than 0. 
+            }
         }
 
         protected static void ThrowEmptyTopology()

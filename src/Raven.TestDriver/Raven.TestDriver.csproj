@@ -5,7 +5,7 @@
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <AssemblyName>Raven.TestDriver</AssemblyName>
     <PackageId>RavenDB.TestDriver</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
@@ -24,6 +24,19 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
+  </ItemGroup>
+  
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
+    <PackageReference Include="System.AppDomain" Version="2.0.11" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
+    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
 
 </Project>

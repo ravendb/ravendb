@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var process in newProcesses)
                 {
-                    _database.DocumentTombstoneCleaner.Subscribe(process);
+                    _database.TombstoneCleaner.Subscribe(process);
                     process.Start();
                 }
             }
@@ -136,10 +136,10 @@ namespace Raven.Server.Documents.ETL
                     continue;
                 }
 
-                if (ValidateConfiguration(config, uniqueNames) == false)
+                if (config.Disabled)
                     continue;
 
-                if (config.Disabled)
+                if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
 
                 var processState = GetProcessState(config.Transforms, _database, config.Name);
@@ -369,7 +369,7 @@ namespace Raven.Server.Documents.ETL
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
 
             foreach (var process in toRemove)
-                _database.DocumentTombstoneCleaner.Unsubscribe(process);
+                _database.TombstoneCleaner.Unsubscribe(process);
 
             Parallel.ForEach(toRemove, x =>
             {

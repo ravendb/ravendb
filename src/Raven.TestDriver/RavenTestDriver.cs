@@ -6,6 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+#if NETSTANDARD2_0
+using System.Runtime.Loader;
+#endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -126,6 +129,29 @@ namespace Raven.TestDriver
 
             ReportInfo($"Starting global server: { _globalServerProcess.Id }");
 
+            var domainBind = false;
+
+#if NETSTANDARD2_0
+            AssemblyLoadContext.Default.Unloading += c =>
+            {
+                KillGlobalServerProcess();
+            };
+
+            domainBind = true;
+#endif
+
+#if NET461
+            AppDomain.CurrentDomain.DomainUnload += (s, args) =>
+            {
+                KillGlobalServerProcess();
+            };
+
+            domainBind = true;
+#endif
+
+            if (domainBind == false)
+                throw new InvalidOperationException("Should not happen!");
+
             string url = null;
             var output = process.StandardOutput;
             var sb = new StringBuilder();
@@ -223,10 +249,7 @@ namespace Raven.TestDriver
                 }
             }
 
-            if (File.Exists(RavenServerRunner<TServerLocator>.EmptySettingsFilePath))
-            {
-                File.Delete(RavenServerRunner<TServerLocator>.EmptySettingsFilePath);
-            }
+            RavenServerRunner<TServerLocator>.CleanupTempFiles();
         }
 
         public void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)

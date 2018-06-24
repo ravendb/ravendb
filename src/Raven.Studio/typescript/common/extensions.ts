@@ -76,18 +76,18 @@ class extensions {
         return null;
     }
     
-    private static validateDatabaseName(databaseName: string): string {
+    public static validateDatabaseName(databaseName: string): string {
         if (!databaseName) {
             return null;
         }
 
-        const regex1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
-        if (!regex1.test(databaseName)) {
-            return `Database name can't contain any of the following characters: \\ / : * ? " < > |`;
+        const allowedCharacters =  /^([A-Za-z0-9_\-\.]+)$/;
+        if (!allowedCharacters.test(databaseName)) {
+            return `Database name can only contain any of the following characters: a-z A-Z 0-9 _ - .`;
         }
 
-        const regex2 = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        if (regex2.test(databaseName)) {
+        const regex = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        if (regex.test(databaseName)) {
             return "`The name is forbidden for use!";
         }
 

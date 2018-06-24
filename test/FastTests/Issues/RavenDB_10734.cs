@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.ServerWide;
@@ -14,32 +11,32 @@ namespace FastTests.Issues
 {
     public class RavenDB_10734 : RavenTestBase
     {
-        public class StreetLevelAddress
+        private class StreetLevelAddress
         {
             public string Street { get; set; }
 
         }
 
-        public class Address
+        private class Address
         {
             public string City { get; set; }
             public StreetLevelAddress StreetLevelAddressData { get; set; }
         }
 
-        public class User
+        private class User
         {
-            public string Id { get;set; }
+            public string Id { get; set; }
             public Address AddressData { get; set; }
         }
 
-        public class ImageColumn
+        private class ImageColumn
         {
             public byte[] Rows { get; set; }
         }
 
-        public class Image
+        private class Image
         {
-            public string Id { get;set; }
+            public string Id { get; set; }
             public ImageColumn[] Columns { get; set; }
         }
 
@@ -54,16 +51,16 @@ namespace FastTests.Issues
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(ComplexDocument)))
-                using (var blittableJson = context.Read(stringStream,"Reading of foo/bar"))
+                using (var blittableJson = context.Read(stringStream, "Reading of foo/bar"))
                 {
-                    requestExecutor.Execute(new PutDocumentCommand("foo/bar",null,blittableJson),context);
+                    requestExecutor.Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context);
                 }
 
                 var url = $"{store.Urls[0]}/databases/TestDB/docs/class?id=foo/bar";
                 var responseAsString = await SendGetAndReadString(url);
 
-                Assert.DoesNotContain("NotSupportedException",responseAsString);
-                Assert.Contains("public class Item",responseAsString);
+                Assert.DoesNotContain("NotSupportedException", responseAsString);
+                Assert.Contains("public class Item", responseAsString);
             }
         }
 

@@ -138,13 +138,13 @@ namespace Raven.Server.Documents.Queries
             return GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query, DocumentsOperationContext context)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query, DocumentsOperationContext context, out string indexName)
         {
             if (query.Metadata.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             if (_dynamic is DynamicQueryRunner d)
-                return d.ExplainIndexSelection(query, context);
+                return d.ExplainIndexSelection(query, context, out indexName);
 
             throw new NotSupportedException(InvalidQueryRunner.ErrorMessage);
         }
