@@ -174,7 +174,7 @@
                     <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>
                 </button>
             <!-- /ko -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings', visible: timings() }">
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
                 Show timings
             </button> 
         </div>

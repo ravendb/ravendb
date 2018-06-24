@@ -72,8 +72,7 @@ class timingsChart {
 
         const levelDuration = vis.append("svg:text")
             .attr("class", "duration")
-            .attr("y", -8)
-            .text("1 2304 ms");
+            .attr("y", -8);
         
         const path = vis
             .data([json])
@@ -94,6 +93,9 @@ class timingsChart {
         
         // Get total size of the tree = value of root node from partition.
         this.totalSize = (path.node() as any).__data__.value;
+        
+        levelDuration
+            .text(this.totalSize.toLocaleString() + " ms");
     }
     
     private mouseover(vis: d3.Selection<any>, d: graphNode, levelName: d3.Selection<any>, levelDuration: d3.Selection<any>) {
