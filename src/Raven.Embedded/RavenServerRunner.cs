@@ -25,10 +25,31 @@ namespace Raven.Embedded
                 options.CommandLineArgs.Add("--Embedded.ParentProcessId=" + currentProcess.Id);
             }
 
-            options.CommandLineArgs.Add("--ServerUrl=http://127.0.0.1:0");
             options.CommandLineArgs.Add("--License.Eula.Accepted=true");
             options.CommandLineArgs.Add("--Setup.Mode=None");
             options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
+
+            if (options.Security != null)
+            {
+                options.CommandLineArgs.Add("--ServerUrl=https://127.0.0.1:0");
+
+                if (options.Security.CertificatePath != null)
+                {
+                    options.CommandLineArgs.Add("--Security.Certificate.Path=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePath));
+                    if(options.Security.CertificatePassword != null)
+                        options.CommandLineArgs.Add("--Security.Certificate.Password=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePassword));
+                }
+                else
+                {
+                    options.CommandLineArgs.Add("--Security.Certificate.Exec=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateExec));
+                    options.CommandLineArgs.Add("--Security.Certificate.Exec.Arguments=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateArguments));
+                }
+                options.CommandLineArgs.Add("--Security.WellKnownCertificates.Admin=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.ClientCertificate.Thumbprint));
+            }
+            else
+            {
+                options.CommandLineArgs.Add("--ServerUrl=http://127.0.0.1:0");
+            }
 
             options.CommandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));
 

@@ -9,6 +9,8 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Http;
 using Sparrow.Logging;
 using Raven.Client.Util;
 
@@ -20,12 +22,14 @@ namespace Raven.Embedded
 
         internal EmbeddedServer()
         {
+            
         }
-
+        
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
         private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>> _serverTask;
 
         private readonly ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>> _documentStores = new ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>>();
+        private X509Certificate2 _certificate;
 
         public void StartServer(ServerOptions options = null)
         {
@@ -34,6 +38,29 @@ namespace Raven.Embedded
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(() => RunServer(options));
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
                 throw new InvalidOperationException("The server was already started");
+
+            if (options.Security != null)
+            {
+                _certificate = options.Security.ClientCertificate;
+
+                try
+                {
+                    var thumbprint = options.Security.ServerCertificiateThumbprint;
+                    RequestExecutor.ServerCertificateCustomValidationCallback +=
+                        (message, certificate2, chain, errors) =>
+                            certificate2.Thumbprint == thumbprint;
+                }
+                catch (NotSupportedException)
+                {
+                    // not supported on Mono
+                }
+                catch (InvalidOperationException)
+                {
+                    // not supported on MacOSX
+                }
+
+            }
+
 
             // this forces the server to start running in an async manner.
             GC.KeepAlive(startServer.Value);
@@ -74,7 +101,8 @@ namespace Raven.Embedded
                 var store = new DocumentStore
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
-                    Database = databaseName
+                    Database = databaseName,
+                    Certificate = _certificate
 
                 };
                 store.AfterDispose += (sender, args) => _documentStores.TryRemove(databaseName, out _);
@@ -94,7 +122,8 @@ namespace Raven.Embedded
         {
             try
             {
-                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(options.DatabaseName)), token).ConfigureAwait(false);
+                var databaseRecord = options.DatabaseRecord ?? new DatabaseRecord(options.DatabaseName);
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(databaseRecord), token).ConfigureAwait(false);
             }
             catch (ConcurrencyException)
             {
