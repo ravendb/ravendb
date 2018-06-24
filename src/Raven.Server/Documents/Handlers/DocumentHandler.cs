@@ -198,7 +198,8 @@ namespace Raven.Server.Documents.Handlers
             var documents = new List<Document>(ids.Count);
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
-            var counters = GetCountersQueryString(out var counterBatchCmd);
+
+            GetCountersQueryString(Database, context, out var includeCounters);
 
             foreach (var id in ids)
             {
@@ -211,12 +212,10 @@ namespace Raven.Server.Documents.Handlers
 
                 documents.Add(document);
                 includeDocs.Gather(document);
-                counterBatchCmd?.Gather(context, id, counters);
+                includeCounters?.Fill(id);
             }
 
             includeDocs.Fill(includes);
-
-            counterBatchCmd?.Execute(context);
 
             var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes);
 
@@ -231,29 +230,29 @@ namespace Raven.Server.Documents.Handlers
 
             int numberOfResults = 0;
 
-            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, counterBatchCmd?.CountersDetail?.Counters, numberOfResults);
+            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, numberOfResults);
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
         }
 
-        private StringValues GetCountersQueryString(out CountersHandler.ExecuteCounterBatchCommand batchCmd)
+        private void GetCountersQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
         {
-            batchCmd = null;
+            includeCounters = null;
 
             var counters = GetStringValuesQueryString("counter", required: false);
-            if (counters.Count > 0)
-            {
-                batchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database);
+            if (counters.Count == 0)
+                return;
 
-                if (counters.Count == 1 &&
-                    counters[0] == Constants.Counters.All)
-                    return default(StringValues);
+            if (counters.Count == 1 &&
+                counters[0] == Constants.Counters.All)
+            {
+                counters = new string[0];
             }
 
-            return counters;
+            includeCounters = new IncludeCountersCommand(database, context, counters);
         }
 
-        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, List<CounterDetail> counters ,int numberOfResults)
+        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters ,int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
