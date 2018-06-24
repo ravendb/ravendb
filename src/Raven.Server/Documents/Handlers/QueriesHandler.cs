@@ -118,10 +118,10 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-            int numberOfResults = 0;
+            int numberOfResults;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
-                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, numberOfResults);
+                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
                 await writer.OuterFlushAsync();
             }
 

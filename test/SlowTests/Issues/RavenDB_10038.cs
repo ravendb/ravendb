@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(0, stats.CountOfIdentities);
                 Assert.Equal(0, stats.CountOfCompareExchange);
 
@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(1, stats.CountOfIdentities);
                 Assert.Equal(0, stats.CountOfCompareExchange);
 
@@ -46,34 +46,34 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIdentities);
                 Assert.Equal(0, stats.CountOfCompareExchange);
 
                 store.Operations.Send(new PutCompareExchangeValueOperation<Person>("key/1", new Person(), 0));
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIdentities);
                 Assert.Equal(1, stats.CountOfCompareExchange);
 
                 var result = store.Operations.Send(new PutCompareExchangeValueOperation<Person>("key/2", new Person(), 0));
                 Assert.True(result.Successful);
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIdentities);
                 Assert.Equal(2, stats.CountOfCompareExchange);
 
                 result = store.Operations.Send(new PutCompareExchangeValueOperation<Person>("key/2", new Person(), result.Index));
                 Assert.True(result.Successful);
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIdentities);
                 Assert.Equal(2, stats.CountOfCompareExchange);
 
                 result = store.Operations.Send(new DeleteCompareExchangeValueOperation<Person>("key/2", result.Index));
                 Assert.True(result.Successful);
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIdentities);
                 Assert.Equal(1, stats.CountOfCompareExchange);
             }
