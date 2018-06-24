@@ -80,22 +80,6 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            public void Gather(DocumentsOperationContext context, string id, StringValues counters)
-            {
-                var names = counters.Count != 0
-                    ? counters
-                    : _database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, id);
-
-                foreach (var counter in names)
-                {
-                    Add(id, new CounterOperation
-                    {
-                        Type = CounterOperationType.Get,
-                        CounterName = counter
-                    });
-                }
-            }
-
             public override int Execute(DocumentsOperationContext context)
             {
                 if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
@@ -211,13 +195,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 using (context.OpenReadTransaction())
                 {
-                    var names = counters.Count != 0 ? 
-                                counters : 
-                                Database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
-                    foreach (var counter in names)
-                    {
-                        GetCounterValue(context, Database, docId, counter, full, countersDetail);
-                    }
+                    GetInternal(Database, context, counters, docId, full, countersDetail);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -228,6 +206,16 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        public static void GetInternal(DocumentDatabase database, DocumentsOperationContext context, StringValues counters, string docId, bool full, CountersDetail countersDetail)
+        {
+            var names = counters.Count != 0 ? counters : database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
+            foreach (var counter in names)
+            {
+                GetCounterValue(context, database, docId, counter, full, countersDetail);
+            }
+            
         }
 
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]

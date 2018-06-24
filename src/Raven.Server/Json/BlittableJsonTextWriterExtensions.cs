@@ -1193,7 +1193,27 @@ namespace Raven.Server.Json
             return numberOfResults;
         }
 
-        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, List<CounterDetail> counters)
+        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<CounterDetail>> counters)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in counters)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                await writer.WriteCountersForDocumentAsync(kvp.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private static async Task WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters)
         {
             writer.WriteStartArray();
 
@@ -1219,6 +1239,7 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
 
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndArray();
