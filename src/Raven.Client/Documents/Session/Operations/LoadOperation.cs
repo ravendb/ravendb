@@ -129,8 +129,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             _session.RegisterIncludes(result.Includes);
             
-            _session.RegisterCounters(result.Counters, _includeAllCounters, _ids);
-            _session.RegisterMissingCounters(_ids, _counters);
+            _session.RegisterCounters(result.Counters, _counters, _includeAllCounters, _ids);
 
             foreach (BlittableJsonReaderObject document in result.Results)
             {

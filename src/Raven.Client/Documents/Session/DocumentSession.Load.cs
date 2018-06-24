@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session
                 ids.ToArray(), 
                 includeBuilder.DocumentsToInclude?.ToArray(), 
                 includeBuilder.CountersToInclude?.ToArray(), 
-                includeBuilder.IncludeAllCounters);
+                includeBuilder.AllCounters);
         }
 
         private void LoadInternal(string[] ids, LoadOperation operation, Stream stream = null)
