@@ -1784,7 +1784,6 @@ namespace Raven.Client.Documents.Indexes
         /// </returns>
         protected override Expression VisitNewArray(NewArrayExpression node)
         {
-            Out("new DynamicArray(");
             switch (node.NodeType)
             {
                 case ExpressionType.NewArrayInit:
@@ -1792,16 +1791,16 @@ namespace Raven.Client.Documents.Indexes
                     OutputAppropriateArrayType(node);
                     Out("[]");
                     VisitExpressions('{', node.Expressions, '}');
-                    break;
+                    return node;
+
                 case ExpressionType.NewArrayBounds:
                     if (TypeExistsOnServer(node.Type))
                         Out("new " + node.Type.GetElementType());
                     else
                         Out("new object");
                     VisitExpressions('[', node.Expressions, ']');
-                    break;
+                    return node;
             }
-            Out(")");
             return node;
         }
 
