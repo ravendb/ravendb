@@ -808,6 +808,7 @@ namespace Raven.Server
             {
                 Certificate = certificate
             };
+            var wellKnown = Configuration.Security.WellKnownAdminCertificates;
             if (certificate == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
@@ -821,6 +822,10 @@ namespace Raven.Server
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
             else if (certificate.Equals(Certificate.Certificate))
+            {
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
+            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
