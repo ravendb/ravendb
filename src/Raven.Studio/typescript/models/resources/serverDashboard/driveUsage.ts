@@ -7,6 +7,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import appUrl = require("common/appUrl");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import databasesManager = require("common/shell/databasesManager");
 
 class legendColumn<T> implements virtualColumn {
     constructor(
@@ -80,6 +81,14 @@ class driveUsage {
             return _.sum(this.items().map(x => includeTemp ? x.size() + x.tempBuffersSize() : x.size()));
         });
         
+        const isDisabled = (dbName: string) => {
+            const db = databasesManager.default.getDatabaseByName(dbName);
+            if (db) {
+                return db.disabled();
+            }
+            return false;
+        };
+        
         const gridInitialization = this.gridController.subscribe((grid) => {
             grid.headerVisible(true);
 
@@ -90,7 +99,9 @@ class driveUsage {
                 if (this.includeTemp()) {
                     return [
                         new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
-                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "42%"),
+                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "42%", {
+                            extraClass: d => isDisabled(d.database()) ? "disabled" : ""
+                        }),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "16%"),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.tempBuffersSize()), "Temp", "16%"),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.tempBuffersSize() + x.size()), "Total", "16%")
@@ -99,7 +110,9 @@ class driveUsage {
                 } else {
                     return [ 
                         new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
-                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%"),
+                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
+                            extraClass: d => isDisabled(d.database()) ? "disabled" : ""
+                        }),
                         new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Data", "30%") 
                     ]
                 }

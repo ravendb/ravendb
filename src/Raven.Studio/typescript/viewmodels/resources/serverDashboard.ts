@@ -253,8 +253,10 @@ class databasesSection {
             totalResultCount: this.table.length,
             items: this.table
         }), () => {
-            return [
-                new hyperlinkColumn<databaseItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"), 
+            return [ 
+                new hyperlinkColumn<databaseItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%", {
+                    extraClass: x => x.disabled() ? "disabled" : ""
+                }), 
                 new textColumn<databaseItem>(grid, x => x.documentsCount(), "Docs #", "25%"),
                 new textColumn<databaseItem>(grid, 
                         x => x.indexesCount() + ( x.erroredIndexesCount() ? ' (<span class=\'text-danger\'>' + x.erroredIndexesCount() + '</span>)' : '' ), 
