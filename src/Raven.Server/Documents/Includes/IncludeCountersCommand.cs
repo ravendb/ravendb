@@ -24,8 +24,7 @@ namespace Raven.Server.Documents.Includes
 
         public void Fill(string docId)
         {
-            var details = new CountersDetail();
-            CountersHandler.GetInternal(_database, _context, _counters, docId, false, details);
+            var details = CountersHandler.GetInternal(_database, _context, _counters, docId, false);
             Results.Add(docId, details.Counters);
         }
 

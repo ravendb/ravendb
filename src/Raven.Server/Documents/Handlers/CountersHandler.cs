@@ -189,13 +189,13 @@ namespace Raven.Server.Documents.Handlers
             var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
             var counters = GetStringValuesQueryString("counter", required: false);
-            var countersDetail = new CountersDetail();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
+                CountersDetail countersDetail;
                 using (context.OpenReadTransaction())
                 {
-                    GetInternal(Database, context, counters, docId, full, countersDetail);
+                    countersDetail = GetInternal(Database, context, counters, docId, full);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -208,14 +208,20 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        public static void GetInternal(DocumentDatabase database, DocumentsOperationContext context, StringValues counters, string docId, bool full, CountersDetail countersDetail)
+        public static CountersDetail GetInternal(DocumentDatabase database, DocumentsOperationContext context, StringValues counters, string docId, bool full)
         {
-            var names = counters.Count != 0 ? counters : database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
+            var result = new CountersDetail();
+            var names = counters.Count != 0 
+                ? counters 
+                : database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
+
             foreach (var counter in names)
             {
-                GetCounterValue(context, database, docId, counter, full, countersDetail);
+                GetCounterValue(context, database, docId, counter, full, result);
             }
-            
+
+            return result;
+
         }
 
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]
