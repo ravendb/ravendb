@@ -36,7 +36,7 @@ namespace Raven.Embedded
                 if (options.Security.CertificatePath != null)
                 {
                     options.CommandLineArgs.Add("--Security.Certificate.Path=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePath));
-                    if(options.Security.CertificatePassword != null)
+                    if (options.Security.CertificatePassword != null)
                         options.CommandLineArgs.Add("--Security.Certificate.Password=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePassword));
                 }
                 else

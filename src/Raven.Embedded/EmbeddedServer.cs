@@ -21,9 +21,9 @@ namespace Raven.Embedded
 
         internal EmbeddedServer()
         {
-            
+
         }
-        
+
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
         private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>> _serverTask;
 
