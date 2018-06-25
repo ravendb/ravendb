@@ -503,7 +503,7 @@ groupBy( f => f.Foo )
  .aggregate( g => ({
      Foo: g.key,
      Sum: g.values.reduce((total, val) => val.Sum + total,0)
- }))",//TODO: do actual reduction here
+ }))",
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
