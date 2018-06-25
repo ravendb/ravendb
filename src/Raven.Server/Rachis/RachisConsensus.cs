@@ -1215,8 +1215,7 @@ namespace Raven.Server.Rachis
                     var entry = entries[index];
                     if (entry.Index != prevIndex + 1)
                     {
-                        throw new InvalidOperationException(
-                            $"Gap in the entries, prev was {prevIndex} but now trying {entry.Index}");
+                        RachisInvalidOperationException.Throw($"Gap in the entries, prev was {prevIndex} but now trying {entry.Index}");
                     }
 
                     prevIndex = entry.Index;
@@ -1274,7 +1273,7 @@ namespace Raven.Server.Rachis
             {
                 Log.Info(message);
             }
-            throw new InvalidOperationException(message);
+            RachisInvalidOperationException.Throw(message);
         }
 
         internal static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex,
