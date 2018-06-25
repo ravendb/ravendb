@@ -25,8 +25,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 _setResultsVariable,
                 _getGroupByFields,
                 DynamicLambdaExpressionsRewriter.Instance,
-
                 _selectManyRewriter,
+                SelectManyRewriter.SelectMethodOnProperties,
                 SpatialFieldRewriter.Instance,
                 CoalesceRewriter.Instance,
                 InitializerExpressionRewriter.Instance,

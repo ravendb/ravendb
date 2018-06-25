@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 _collectionRetriever,
                 _refCollectionsRetriever,
                 _selectManyRewriter,
+                SelectManyRewriter.SelectMethodOnProperties,
                 new ThrowOnInvalidMethodCalls(),
                 DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
