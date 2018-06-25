@@ -1481,16 +1481,15 @@ namespace Raven.Server.ServerWide
             Debug.Assert(topology != null);
 
             var clusterNodes = clusterTopology.Members.Keys
-                .Concat(clusterTopology.Promotables.Keys)
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
 
             if (record.Encrypted)
             {
                 clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
-                if (clusterNodes.Count == 0)
+                if (clusterNodes.Count < topology.ReplicationFactor)
                     throw new InvalidOperationException(
-                        $"Database {record.DatabaseName} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
+                        $"Database {record.DatabaseName} is encrypted and requires {topology.ReplicationFactor} node(s) which supports SSL. There are {clusterNodes.Count} such node(s) available in the cluster.");
             }
 
             var disconnectedNodes = new List<string>();
