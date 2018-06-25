@@ -207,6 +207,17 @@ namespace Raven.Server.Rachis
                                 continue;
                             }
 
+                            if (lastTerm == rv.LastLogTerm && lastIndex > rv.LastLogIndex)
+                            {
+                                _connection.Send(context, new RequestVoteResponse
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = $"My log {lastIndex} is more up to date than yours {rv.LastLogIndex}"
+                                });
+                                continue;
+                            }
+
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = rv.Term,
@@ -216,7 +227,8 @@ namespace Raven.Server.Rachis
                             continue;
                         }
 
-                        bool alreadyVoted = false;
+                        bool declineVote = false;
+                        string declineReason = null;
                         long votedTerm;
 
                         using (context.OpenWriteTransaction())
@@ -224,26 +236,33 @@ namespace Raven.Server.Rachis
                             (whoGotMyVoteIn, votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
                             if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
                             {
-                                alreadyVoted = true;
+                                declineVote = true;
+                                declineReason = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}";
                             }
                             else if(votedTerm >= rv.Term)
                             {
-                                alreadyVoted = true;
-                                whoGotMyVoteIn = "another node in higher term: " + votedTerm;
+                                declineVote = true;
+                                declineReason = $"Already voted in {rv.LastLogTerm}, for another node in higher term: {votedTerm}";
+                            }
+                            else if(lastTerm == rv.LastLogTerm && lastIndex > rv.LastLogIndex)
+                            {
+                                declineVote = true;
+                                declineReason = $"Vote declined because my log {lastIndex} is more up to date than yours {rv.LastLogIndex}";
                             }
                             else
                             {
                                 _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
+                                context.Transaction.Commit();
                             }
-                            context.Transaction.Commit();
                         }
-                        if (alreadyVoted)
+
+                        if (declineVote)
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = votedTerm,
                                 VoteGranted = false,
-                                Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
+                                Message = declineReason
                             });
                         }
                         else
