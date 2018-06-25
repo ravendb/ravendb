@@ -130,9 +130,17 @@ namespace Raven.Server.Documents.Handlers
                                 // intentionally not setting LastChangeVector, we never use it for
                                 // etl / import and it isn't meaningful in those scenarios
 
-                                _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
-                                    operation.CounterName, operation.ChangeVector, operation.Delta,
-                                    _fromEtl ? CountersStorage.PutCounterMode.Etl : CountersStorage.PutCounterMode.Smuggler);
+                                if (_fromEtl)
+                                {
+                                    _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
+                                        operation.CounterName,  operation.Delta);
+                                }
+                                else
+                                {
+                                    _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
+                                        operation.CounterName, operation.ChangeVector, operation.Delta);
+                                }
+
                                 break;
                             case CounterOperationType.None:
                                 break;

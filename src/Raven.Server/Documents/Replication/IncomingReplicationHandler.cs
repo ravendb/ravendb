@@ -1062,7 +1062,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 database.DocumentsStorage.CountersStorage.PutCounter(context,
                                     item.Id, item.Collection, item.CounterName, item.ChangeVector,
-                                    item.CounterValue, CountersStorage.PutCounterMode.Replication);
+                                    item.CounterValue);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {

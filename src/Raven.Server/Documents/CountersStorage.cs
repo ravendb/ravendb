@@ -205,15 +205,17 @@ namespace Raven.Server.Documents
             };
         }
 
-        public enum PutCounterMode
+        public void PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, long value)
         {
-            None,
-            Replication,
-            Smuggler,
-            Etl
+            PutCounterImpl(context, documentId, collection, name, null, value);
         }
 
-        public void PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, string changeVector, long value, PutCounterMode mode)
+        public void PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, string changeVector, long value)
+        {
+            PutCounterImpl(context, documentId, collection, name, changeVector, value);
+        }
+
+        private void PutCounterImpl(DocumentsOperationContext context, string documentId, string collection, string name, string changeVector, long value)
         {
             if (context.Transaction == null)
             {
@@ -224,40 +226,31 @@ namespace Raven.Server.Documents
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-            using (GetCounterKey(context, documentId, name, mode == PutCounterMode.Etl ? context.Environment.Base64Id : changeVector, out var counterKey))
+            using (GetCounterKey(context, documentId, name, changeVector ?? context.Environment.Base64Id, out var counterKey))
             {
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    switch (mode)
+                    if (changeVector != null)
                     {
-                        case PutCounterMode.Replication:
-                        case PutCounterMode.Smuggler:
-                            Debug.Assert(changeVector != null);
+                        if (table.ReadByKey(counterKey, out var existing))
+                        {
+                            var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
 
-                            if (table.ReadByKey(counterKey, out var existing))
-                            {
-                                var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
-
-                                if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                                    return;
-                            }
-                            break;
+                            if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                                return;
+                        }
                     }
 
                     RemoveTombstoneIfExists(context, documentId, name);
 
                     var etag = _documentsStorage.GenerateNextEtag();
 
-                    switch (mode)
+                    if (changeVector == null)
                     {
-                        case PutCounterMode.Etl:
-                            Debug.Assert(changeVector == null);
-
-                            changeVector = ChangeVectorUtils
-                                .TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty)
-                                .ChangeVector;
-                            break;
+                        changeVector = ChangeVectorUtils
+                            .TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty)
+                            .ChangeVector;
                     }
 
                     using (Slice.From(context.Allocator, changeVector, out var cv))
