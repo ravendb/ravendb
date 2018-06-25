@@ -166,6 +166,15 @@ namespace Raven.Server.Utils
                             LongRunningWork.Current = _workIsDone;
                             _action(_state);
                         }
+                        catch(Exception e)
+                        {
+                            if (_log.IsOperationsEnabled)
+                            {
+                                _log.Operations($"An uncaught exception occurred in '{_name}' and killed the process", e);
+                            }
+
+                            throw;
+                        }
                         finally
                         {
                             _workIsDone.Set();
