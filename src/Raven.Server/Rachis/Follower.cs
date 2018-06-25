@@ -135,6 +135,11 @@ namespace Raven.Server.Rachis
                                     return;
                                 }
                             }
+                            catch (RachisInvalidOperationException)
+                            {
+                                // on raft protocol violation propagate the error and close this follower. 
+                                throw;
+                            }
                             catch (Exception e)
                             {
                                 if (_engine.Log.IsInfoEnabled)
