@@ -18,7 +18,9 @@ namespace SlowTests.Issues
         [Fact]
         public void PlaygroundTest()
         {
-            ExecuteIndexAndWaitForUserToContinueTheTest<DynamicFields>();
+            
+            ExecuteIndexAndWaitForUserToContinueTheTest<RevenuePerProduct>();
+            //ExecuteIndexAndWaitForUserToContinueTheTest<DynamicFields>();
             //ExecuteIndexAndWaitForUserToContinueTheTest<EmployeeAndManager>();
             //ExecuteIndexAndWaitForUserToContinueTheTest<SpatialIndex>();
             //ExecuteIndexAndWaitForUserToContinueTheTest<ProductsSearch>();
@@ -81,14 +83,16 @@ namespace SlowTests.Issues
                 };
             }
 
-            private class EmployeeAndManager : AbstractIndexCreationTask
+        }
+
+        private class EmployeeAndManager : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "EmployeeAndManager",
-                        Maps = new HashSet<string>
+                    Name = "EmployeeAndManager",
+                    Maps = new HashSet<string>
                         {
                             @"map('Employees', function (e){ 
     var m = load(e.ReportsTo , 'Employees');
@@ -100,22 +104,22 @@ namespace SlowTests.Issues
            };                            
 })",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class SpatialIndex : AbstractIndexCreationTask
+        private class SpatialIndex : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "SpatialIndex",
-                        Maps = new HashSet<string>
+                    Name = "SpatialIndex",
+                    Maps = new HashSet<string>
                         {
                             @"map('Companies', function (c){ 
     return { 
@@ -124,22 +128,22 @@ namespace SlowTests.Issues
            };                            
 })",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class ProductsSearch : AbstractIndexCreationTask
+        private class ProductsSearch : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "ProductsSearch",
-                        Maps = new HashSet<string>
+                    Name = "ProductsSearch",
+                    Maps = new HashSet<string>
                         {
                             @"map('Products', function (p){ 
     return { 
@@ -150,23 +154,23 @@ namespace SlowTests.Issues
            };                            
 })",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
 
-            private class OrdersTotal : AbstractIndexCreationTask
+        private class OrdersTotal : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "OrdersTotal",
-                        Maps = new HashSet<string>
+                    Name = "OrdersTotal",
+                    Maps = new HashSet<string>
                         {
                             @"map('Orders', function (o){ 
 function Sum(total, ol)
@@ -180,22 +184,22 @@ function Sum(total, ol)
            };                            
 })",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class OrdersSearch : AbstractIndexCreationTask
+        private class OrdersSearch : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "OrdersSearch",
-                        Maps = new HashSet<string>
+                    Name = "OrdersSearch",
+                    Maps = new HashSet<string>
                         {
                             @"map('Orders', function (o){ 
     return { 
@@ -204,153 +208,191 @@ function Sum(total, ol)
            };                            
 })",
                         },
-                        Fields = new Dictionary<string, IndexFieldOptions>
-                        {
-                            ["Address"] = new IndexFieldOptions
-                            {
-                                TermVector = FieldTermVector.Yes
-                            },
-                            ["Products"] = new IndexFieldOptions
-                            {
-                                TermVector = FieldTermVector.Yes
-                            }
-                        },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
-            }
-
-
-            private class MultiField : AbstractIndexCreationTask
-            {
-                public override IndexDefinition CreateIndexDefinition()
-                {
-                    return new IndexDefinition
+                    Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        Name = "MultiField",
-                        Maps = new HashSet<string>
+                        ["Address"] = new IndexFieldOptions
+                        {
+                            TermVector = FieldTermVector.Yes
+                        },
+                        ["Products"] = new IndexFieldOptions
+                        {
+                            TermVector = FieldTermVector.Yes
+                        }
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+
+        private class MultiField : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "MultiField",
+                    Maps = new HashSet<string>
                         {
                             @"map('Companies', function (c){ return {Query : [c.ExternalId, c.Name, c.Contact.Name] } })"
                         },
-                        Fields = new Dictionary<string, IndexFieldOptions>()
-                        {
-                            ["Query"] = new IndexFieldOptions
-                            {
-                                Suggestions = true,
-                                Indexing = FieldIndexing.Search
-                            }
-                        },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
-            }
-
-            private class MultiMap : AbstractIndexCreationTask
-            {
-                public override IndexDefinition CreateIndexDefinition()
-                {
-                    return new IndexDefinition
+                    Fields = new Dictionary<string, IndexFieldOptions>()
                     {
-                        Name = "MultiMap",
-                        Maps = new HashSet<string>
+                        ["Query"] = new IndexFieldOptions
+                        {
+                            Suggestions = true,
+                            Indexing = FieldIndexing.Search
+                        }
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class MultiMap : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "MultiMap",
+                    Maps = new HashSet<string>
                         {
                             @"map('Employees', function (e){ return {Name: e.FirstName + ' ' + e.LastName}})",
                             @"map('Companies', function (c){ return {Name: c.Contact.Name}})",
                             @"map('Suppliers', function (s){ return {Name: s.Contact.Name}})"
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class EmployeeByName : AbstractIndexCreationTask
+        private class EmployeeByName : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "EmployeeByName",
-                        Maps = new HashSet<string>
+                    Name = "EmployeeByName",
+                    Maps = new HashSet<string>
                         {
                             @"map('Employees', function (e){ 
                             return { Name: e.FirstName + ' ' + e.LastName };                            
                         })",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class RegionsByTerritoriesName : AbstractIndexCreationTask
+        private class RegionsByTerritoriesName : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "RegionsByTerritoriesName",
-                        Maps = new HashSet<string>
+                    Name = "RegionsByTerritoriesName",
+                    Maps = new HashSet<string>
                         {
                             @"map('Regions', function (r){ 
                             return { Name: r.Territories.map(x=>x.Name) };                            
                         })",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class EmployeeIndex : AbstractIndexCreationTask
+        private class EmployeeIndex : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "EmployeeIndex",
-                        Maps = new HashSet<string>
+                    Name = "EmployeeIndex",
+                    Maps = new HashSet<string>
                         {
                             @"map('Employees', function (e){ return e})",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
+        }
 
-            private class EmployeeByHiredAt : AbstractIndexCreationTask
+        private class EmployeeByHiredAt : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
             {
-                public override IndexDefinition CreateIndexDefinition()
+                return new IndexDefinition
                 {
-                    return new IndexDefinition
-                    {
-                        Name = "EmployeeByHiredAt",
-                        Maps = new HashSet<string>
+                    Name = "EmployeeByHiredAt",
+                    Maps = new HashSet<string>
                         {
                             @"
                             map('Employees', function (e){var date = new Date(e.HiredAt); return {HiredAt: date, 'HiredAt.Year':date.getYear()}})",
                         },
-                        Type = IndexType.JavaScriptMap,
-                        LockMode = IndexLockMode.Unlock,
-                        Priority = IndexPriority.Normal,
-                        Configuration = new IndexConfiguration()
-                    };
-                }
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class RevenuePerProduct : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "RevenuePerProduct",
+                    Maps = new HashSet<string>
+                        {
+                            @"map('Orders', function (o){
+var res = []
+
+o.Lines.forEach(l => {
+    res.push({Product: l.Product, Quantity: l.Quantity, Total: (l.Quantity * l.PricePerUnit) * (1 - l.Discount)});
+})
+
+return res;
+})",
+                        },
+                    Reduce = @"groupBy( r => r.Product  )
+ .aggregate( g => ({
+     Product : g.key,
+     Quantity : g.values.reduce((sum, x) => x.Quantity + sum, 0),
+     Total: g.values.reduce((sum, x) => x.Total + sum, 0)
+ }))",
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        ["Product"] = new IndexFieldOptions(),
+                        ["Quantity"] = new IndexFieldOptions(),
+                        ["Total"] = new IndexFieldOptions()
+                    },
+                    Type = IndexType.JavaScriptMapReduce,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
             }
         }
     }
