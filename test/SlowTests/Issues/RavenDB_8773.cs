@@ -34,9 +34,10 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    var attachmentResult = session.Advanced.Attachments.Get("#", "#");
-
-                    Assert.Equal(1, attachmentResult.Details.Size);
+                    using (var attachmentResult = session.Advanced.Attachments.Get("#", "#"))
+                    {
+                        Assert.Equal(1, attachmentResult.Details.Size);
+                    }
                 }
 
                 using (var session = store.OpenSession())
