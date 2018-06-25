@@ -176,7 +176,10 @@ namespace Raven.Server
                     LogTrafficWatch(context, 0, database ?? "N/A");
 
                 if (context.RequestAborted.IsCancellationRequested)
+                {
+                    Console.WriteLine($"Aborted request. Request: {context.Request.Path} {context.Request.QueryString}.{Environment.NewLine}Exception: {e}");
                     return;
+                }
 
                 if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
                 {
