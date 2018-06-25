@@ -408,7 +408,13 @@ namespace Raven.Server.Documents.Patch
                 {
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    var put = _database.DocumentsStorage.Put(_docsCtx, id, _docsCtx.GetLazyString(changeVector), reader);
+                    var put = _database.DocumentsStorage.Put(
+                        _docsCtx, 
+                        id, 
+                        _docsCtx.GetLazyString(changeVector), 
+                        reader, 
+                        nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict
+                        );
 
                     if (DebugMode)
                     {
