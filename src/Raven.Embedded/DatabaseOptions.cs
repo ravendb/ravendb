@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.ServerWide;
+﻿using Raven.Client.ServerWide;
 
 namespace Raven.Embedded
 {
@@ -17,6 +16,5 @@ namespace Raven.Embedded
         {
             DatabaseRecord = databaseRecord;
         }
-
     }
 }

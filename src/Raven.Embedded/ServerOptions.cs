@@ -24,9 +24,10 @@ namespace Raven.Embedded
 
         public ServerOptions Secured(string certificate, string certPassword = null)
         {
-            if (certificate == null) throw new ArgumentNullException(nameof(certificate));
+            if (certificate == null)
+                throw new ArgumentNullException(nameof(certificate));
 
-            if(Security != null)
+            if (Security != null)
                 throw new InvalidOperationException("The security has already been setup for this ServerOptions object");
 
             var cert = new X509Certificate2(certificate, certPassword);
@@ -43,10 +44,14 @@ namespace Raven.Embedded
 
         public ServerOptions Secured(string certExec, string certExecArgs, string serverCertThumbprint, X509Certificate2 clientCert)
         {
-            if (certExec == null) throw new ArgumentNullException(nameof(certExec));
-            if (certExecArgs == null) throw new ArgumentNullException(nameof(certExecArgs));
-            if (serverCertThumbprint == null) throw new ArgumentNullException(nameof(serverCertThumbprint));
-            if (clientCert == null) throw new ArgumentNullException(nameof(clientCert));
+            if (certExec == null)
+                throw new ArgumentNullException(nameof(certExec));
+            if (certExecArgs == null)
+                throw new ArgumentNullException(nameof(certExecArgs));
+            if (serverCertThumbprint == null)
+                throw new ArgumentNullException(nameof(serverCertThumbprint));
+            if (clientCert == null)
+                throw new ArgumentNullException(nameof(clientCert));
 
             if (Security != null)
                 throw new InvalidOperationException("The security has already been setup for this ServerOptions object");
