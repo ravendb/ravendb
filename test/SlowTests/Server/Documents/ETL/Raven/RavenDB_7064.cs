@@ -137,11 +137,12 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Attachments));
 
 
-                    var attachment = session.Advanced.Attachments.Get(doc.Id, item.AttachmentName);
-
-                    Assert.NotNull(attachment);
-                    Assert.Equal(item.AttachmentName, attachment.Details.Name);
-                    Assert.Equal(item.AttachmentData, attachment.Stream.ReadData());
+                    using (var attachment = session.Advanced.Attachments.Get(doc.Id, item.AttachmentName))
+                    {
+                        Assert.NotNull(attachment);
+                        Assert.Equal(item.AttachmentName, attachment.Details.Name);
+                        Assert.Equal(item.AttachmentData, attachment.Stream.ReadData());
+                    }
                 }
             }
         }

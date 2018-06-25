@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Session.Operations
 
         private string[] _ids;
         private string[] _includes;
+        private string[] _counters;
+        private bool _includeAllCounters;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
         public LoadOperation(InMemoryDocumentSessionOperations session)
         {
@@ -31,7 +33,13 @@ namespace Raven.Client.Documents.Session.Operations
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
-            return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
+
+            if (_includeAllCounters)
+                return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, includeAllCounters: true, metadataOnly: false);
+
+            return _counters != null 
+                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _counters, metadataOnly: false) 
+                : new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -52,6 +60,19 @@ namespace Raven.Client.Documents.Session.Operations
         public LoadOperation WithIncludes(string[] includes)
         {
             _includes = includes;
+            return this;
+        }
+
+        public LoadOperation WithCounters(string[] counters)
+        {
+            if (counters != null)   
+                _counters = counters;
+            return this;
+        }
+
+        public LoadOperation WithAllCounters()
+        {
+            _includeAllCounters = true;
             return this;
         }
 
@@ -107,6 +128,8 @@ namespace Raven.Client.Documents.Session.Operations
                 return;
 
             _session.RegisterIncludes(result.Includes);
+            
+            _session.RegisterCounters(result.Counters, _counters, _includeAllCounters, _ids);
 
             foreach (BlittableJsonReaderObject document in result.Results)
             {
@@ -119,6 +142,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
+
         }
     }
 }

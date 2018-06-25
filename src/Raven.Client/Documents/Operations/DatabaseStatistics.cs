@@ -11,6 +11,19 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Operations
 {
+    public class DetailedDatabaseStatistics : DatabaseStatistics
+    {
+        /// <summary>
+        /// Total number of identities in database.
+        /// </summary>
+        public long CountOfIdentities { get; set; }
+
+        /// <summary>
+        /// Total number of compare-exchange values in database.
+        /// </summary>
+        public long CountOfCompareExchange { get; set; }
+    }
+
     public class DatabaseStatistics
     {
         /// <summary>
@@ -62,16 +75,6 @@ namespace Raven.Client.Documents.Operations
         /// Total number of attachments in database.
         /// </summary>
         public long CountOfUniqueAttachments { get; set; }
-
-        /// <summary>
-        /// Total number of identities in database.
-        /// </summary>
-        public long CountOfIdentities { get; set; }
-
-        /// <summary>
-        /// Total number of compare-exchange values in database.
-        /// </summary>
-        public long CountOfCompareExchange { get; set; }
 
         /// <summary>
         /// List of stale index names in database..

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
@@ -223,7 +224,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, int numberOfResults)
+        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly)
         {
             writer.WriteStartObject();
 
@@ -242,7 +243,7 @@ namespace Raven.Server.Json
             writer.WriteArray(nameof(result.IncludedPaths), result.IncludedPaths);
             writer.WriteComma();
 
-            numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly, numberOfResults, partial: true);
+            var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly, partial: true);
 
             if (result.Highlightings != null)
             {
@@ -288,7 +289,7 @@ namespace Raven.Server.Json
                         writer.WriteComma();
                     first = false;
 
-                   writer.WriteArray(kvp.Key, kvp.Value);
+                    writer.WriteArray(kvp.Key, kvp.Value);
                 }
 
                 writer.WriteEndObject();
@@ -381,8 +382,10 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, int numberOfResults, bool partial = false)
+        public static async Task<int> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, bool partial = false)
         {
+            int numberOfResults;
+
             if (partial == false)
                 writer.WriteStartObject();
 
@@ -409,7 +412,7 @@ namespace Raven.Server.Json
 
                 writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
                 writer.WriteComma();
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
             else if (results is List<SuggestionResult> suggestions)
             {
@@ -417,7 +420,7 @@ namespace Raven.Server.Json
 
                 writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
                 writer.WriteComma();
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
             else
                 throw new NotSupportedException($"Cannot write query result of '{typeof(TResult)}' type in '{result.GetType()}'.");
@@ -544,10 +547,34 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteDetailedDatabaseStatistics(this BlittableJsonTextWriter writer, JsonOperationContext context, DetailedDatabaseStatistics statistics)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(statistics.CountOfIdentities));
+            writer.WriteInteger(statistics.CountOfIdentities);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfCompareExchange));
+            writer.WriteInteger(statistics.CountOfCompareExchange);
+            writer.WriteComma();
+
+            WriteDatabaseStatisticsInternal(writer, statistics);
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteDatabaseStatistics(this BlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
         {
             writer.WriteStartObject();
 
+            WriteDatabaseStatisticsInternal(writer, statistics);
+
+            writer.WriteEndObject();
+        }
+
+        private static void WriteDatabaseStatisticsInternal(BlittableJsonTextWriter writer, DatabaseStatistics statistics)
+        {
             writer.WritePropertyName(nameof(statistics.CountOfIndexes));
             writer.WriteInteger(statistics.CountOfIndexes);
             writer.WriteComma();
@@ -585,14 +612,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfIdentities));
-            writer.WriteInteger(statistics.CountOfIdentities);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfCompareExchange));
-            writer.WriteInteger(statistics.CountOfCompareExchange);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
@@ -645,7 +664,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk));
             writer.WriteStartObject();
 
@@ -703,9 +722,8 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
             }
-            writer.WriteEndArray();
 
-            writer.WriteEndObject();
+            writer.WriteEndArray();
         }
 
         public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
@@ -1021,7 +1039,7 @@ namespace Raven.Server.Json
                 first = false;
 
                 WriteDocument(writer, context, document, metadataOnly);
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndArray();
@@ -1094,13 +1112,13 @@ namespace Raven.Server.Json
                 {
                     writer.WritePropertyName(conflict.Id);
                     WriteConflict(writer, conflict);
-                    await writer.MaybeOuterFlsuhAsync();
+                    await writer.MaybeOuterFlushAsync();
                     continue;
                 }
 
                 writer.WritePropertyName(document.Id);
                 WriteDocument(writer, context, metadataOnly: false, document: document);
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndObject();
@@ -1185,11 +1203,63 @@ namespace Raven.Server.Json
                     writer.WriteObject(o);
                 }
 
-                await writer.MaybeOuterFlsuhAsync();
+                await writer.MaybeOuterFlushAsync();
             }
 
             writer.WriteEndArray();
             return numberOfResults;
+        }
+
+        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<CounterDetail>> counters)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in counters)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                await writer.WriteCountersForDocumentAsync(kvp.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private static async Task WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters)
+        {
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var counter in counters)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(CounterDetail.DocumentId));
+                writer.WriteString(counter.DocumentId);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(CounterDetail.CounterName));
+                writer.WriteString(counter.CounterName);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(CounterDetail.TotalValue));
+                writer.WriteDouble(counter.TotalValue);
+
+                writer.WriteEndObject();
+
+                await writer.MaybeOuterFlushAsync();
+            }
+
+            writer.WriteEndArray();
         }
 
         [ThreadStatic]

@@ -40,11 +40,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
 
-                    var attachment = session.Advanced.Attachments.Get("users/1", "photo.jpg");
-
-                    Assert.NotNull(attachment);
-                    Assert.Equal("photo.jpg", attachment.Details.Name);
-                    Assert.Equal(new byte[] {1}, attachment.Stream.ReadData());
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "photo.jpg"))
+                    {
+                        Assert.NotNull(attachment);
+                        Assert.Equal("photo.jpg", attachment.Details.Name);
+                        Assert.Equal(new byte[] { 1 }, attachment.Stream.ReadData());
+                    }
                 }
 
                 etlDone.Reset();

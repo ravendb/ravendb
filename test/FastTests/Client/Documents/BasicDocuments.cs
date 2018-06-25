@@ -106,7 +106,7 @@ namespace FastTests.Client.Documents
                         Assert.Equal("Arek", user2.Name);
                     }
 
-                    getDocumentCommand = new GetDocumentsCommand(new[] {"users/1", "users/2"}, includes: null, 
+                    getDocumentCommand = new GetDocumentsCommand(new[] {"users/1", "users/2"}, includes: null,
                         metadataOnly: true);
 
                     requestExecuter

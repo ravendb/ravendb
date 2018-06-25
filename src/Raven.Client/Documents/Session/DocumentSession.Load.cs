@@ -4,10 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 
 namespace Raven.Client.Documents.Session
@@ -52,6 +54,26 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocuments<T>();
         }
 
+        public T Load<T>(string id, Action<IIncludeBuilder<T>> includes)
+        {
+            return Load(new []{id}, includes).Values.FirstOrDefault();
+        }
+
+        public Dictionary<string, T> Load<T>(IEnumerable<string> ids, Action<IIncludeBuilder<T>> includes)
+        {
+            if (includes == null)
+                return Load<T>(ids);
+
+            var includeBuilder = new IncludeBuilder<T>(Conventions);
+            includes.Invoke(includeBuilder);
+
+            return LoadInternal<T>(
+                ids.ToArray(), 
+                includeBuilder.DocumentsToInclude?.ToArray(), 
+                includeBuilder.CountersToInclude?.ToArray(), 
+                includeBuilder.AllCounters);
+        }
+
         private void LoadInternal(string[] ids, LoadOperation operation, Stream stream = null)
         {
             operation.ByIds(ids);
@@ -67,11 +89,20 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counters = null, bool includeAllCounters = false)
         {
             var loadOperation = new LoadOperation(this);
             loadOperation.ByIds(ids);
             loadOperation.WithIncludes(includes);
+
+            if (includeAllCounters)
+            {
+                loadOperation.WithAllCounters();
+            }
+            else
+            {
+                loadOperation.WithCounters(counters);
+            }
 
             var command = loadOperation.CreateRequest();
             if (command != null)

@@ -50,6 +50,7 @@ using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -1471,6 +1472,62 @@ namespace Raven.Server.ServerWide
             }
 
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
+        }
+
+        public void AssignNodesToDatabase(ClusterTopology clusterTopology, DatabaseRecord record)
+        {
+            var topology = record.Topology;
+
+            Debug.Assert(topology != null);
+
+            var clusterNodes = clusterTopology.Members.Keys
+                .Concat(clusterTopology.Watchers.Keys)
+                .ToList();
+
+            if (record.Encrypted)
+            {
+                clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
+                if (clusterNodes.Count < topology.ReplicationFactor)
+                    throw new InvalidOperationException(
+                        $"Database {record.DatabaseName} is encrypted and requires {topology.ReplicationFactor} node(s) which supports SSL. There are {clusterNodes.Count} such node(s) available in the cluster.");
+            }
+
+            var disconnectedNodes = new List<string>();
+            foreach (var kvp in GetNodesStatuses())
+            {
+                var tag = kvp.Key;
+                var connected = kvp.Value.Connected;
+                if (connected)
+                    continue;
+
+                if (clusterNodes.Remove(tag))
+                {
+                    disconnectedNodes.Add(tag);
+                }
+            }
+
+            var offset = new Random().Next();
+
+            // first we would prefer the connected nodes
+            var factor = topology.ReplicationFactor;
+            var count = Math.Min(clusterNodes.Count, factor);
+            for (var i = 0; i < count; i++)
+            {
+                factor--;
+                AddDatabaseNode(i);
+            }
+
+            // only if all the online nodes are occupied, try to place on the disconnected
+            for (int i = 0; i < Math.Min(disconnectedNodes.Count, factor); i++)
+            {
+                AddDatabaseNode(i);
+            }
+
+            void AddDatabaseNode(int i)
+            {
+                var selectedNode = clusterNodes[(i + offset) % clusterNodes.Count];
+                topology.Members.Add(selectedNode);
+            }
         }
 
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(

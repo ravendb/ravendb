@@ -20,7 +20,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<int> MaybeOuterFlsuhAsync()
+        public ValueTask<int> MaybeOuterFlushAsync()
         {
             var innerStream = _stream as MemoryStream;
             if (innerStream.Length * 2 <= innerStream.Capacity)
