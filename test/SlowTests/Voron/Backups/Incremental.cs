@@ -6,7 +6,9 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using FastTests.Voron.Backups;
+using Raven.Server.Utils;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
@@ -464,6 +466,76 @@ namespace SlowTests.Voron.Backups
 
                     Assert.Equal(overflowValue, readBytes);
                 }
+            }
+        }
+
+        [Fact]
+        public void IncrementalBackupShouldCreateConsecutiveJournalFiles()
+        {
+            IOExtensions.DeleteDirectory(DataDir);
+
+            Options = StorageEnvironmentOptions.ForPath(DataDir);
+            Options.MaxLogFileSize = Constants.Storage.PageSize;
+            Options.IncrementalBackupEnabled = true;
+            Options.ManualFlushing = true;
+
+            var random = new Random();
+            var buffer = new byte[8192];
+            random.NextBytes(buffer);
+
+            for (int j = 0; j < 10; j++)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("foo");
+                    for (int i = j * 50; i < (j + 1) * 50; i++)
+                    {
+                        tree.Add("items/" + i, new MemoryStream(buffer));
+                    }
+
+                    tx.Commit();
+                }
+
+                BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(j));
+
+            }
+
+            // Verify that data is restored
+
+            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var backupFiles = Enumerable.Range(0, 10).Select(n => _incrementalBackupTestUtils.IncrementalBackupFile(n));
+
+            BackupMethods.Incremental.Restore(options, backupFiles);
+
+            using (var env = new StorageEnvironment(options))
+            {
+                using (var tx = env.ReadTransaction())
+                {
+                    var tree = tx.CreateTree("foo");
+                    for (int i = 0; i < 500; i++)
+                    {
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
+                        var memoryStream = new MemoryStream();
+                        readResult.Reader.CopyTo(memoryStream);
+                        Assert.Equal(memoryStream.ToArray(), buffer);
+                    }
+                }
+            }
+
+            // Verify that journal files are consecutive 
+
+            var journalsPath = Path.Combine(DataDir, "Journals");
+            var files = Directory.GetFiles(journalsPath, "*.journal*", SearchOption.AllDirectories);
+
+            Assert.True(files.Length >= 10);
+
+            for (var index = 0; index < files.Length; index++)
+            {
+                var fileName = Path.GetFileNameWithoutExtension(files[index]);
+                int.TryParse(fileName, out var num);
+
+                Assert.Equal(index, num);
             }
         }
 
