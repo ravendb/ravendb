@@ -193,9 +193,18 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
 
+        [DllImport(LIBC_6, SetLastError = true)]
+        private static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, long offset);
+
         public static long pwrite(int fd, void* buf, ulong count, long offset)
         {
-            if(PlatformDetails.RunningOnMacOsx)
+            if (PlatformDetails.Is32Bits)
+            {
+                var rc = (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (long)offset);
+                return rc;
+            }
+
+            if (PlatformDetails.RunningOnMacOsx)
                 return (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
 
             return (long)pwrite64(fd, (IntPtr)buf, (UIntPtr)count, offset);
@@ -266,7 +275,7 @@ namespace Sparrow.Platform.Posix
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;
-                        if (pwrite(fd, &b, 1, size - 1) != 1)
+                        if (pwrite(fd, &b, 1, size - 1) != 1L)
                         {
                             var err = Marshal.GetLastWin32Error();
                             ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
