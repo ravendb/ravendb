@@ -1814,7 +1814,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var fieldType = result.Type;
             var fieldName = result.Path;
-            if (result.MaybeProperty != null &&
+            if (_isMapReduce == false &&
+                result.MaybeProperty != null &&
                 QueryGenerator.Conventions.FindIdentityProperty(result.MaybeProperty))
             {
                 fieldName = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
