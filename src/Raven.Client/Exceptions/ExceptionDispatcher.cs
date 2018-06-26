@@ -24,9 +24,18 @@ namespace Raven.Client.Exceptions
             public string Message { get; set; }
 
             public string Error { get; set; }
+
+            public StringBuilder AdditionalData { get; set; }
         }
 
-        public static Exception Get(ExceptionSchema schema, HttpStatusCode code) => Get(schema.Message, schema.Error, schema.Type, code);
+        public static Exception Get(ExceptionSchema schema, HttpStatusCode code)
+        {
+            var err =   schema.Message + Environment.NewLine +
+                        schema.Error + Environment.NewLine +
+                        schema.AdditionalData;
+
+            return Get(schema.Message, err, schema.Type, code);
+        }
 
         public static Exception Get(string message, string error, string typeAsString, HttpStatusCode code)
         {

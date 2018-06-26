@@ -1055,8 +1055,17 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, CancellationToken token = default)
+        private async Task<bool> HandleServerDown<TResult>(
+            string url,
+            ServerNode chosenNode, 
+            int? nodeIndex, 
+            JsonOperationContext context, 
+            RavenCommand<TResult> command,
+            HttpRequestMessage request, 
+            HttpResponseMessage response, 
+            Exception e, 
+            SessionInfo sessionInfo, 
+            CancellationToken token = default)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
@@ -1144,8 +1153,13 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
-        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestMessage request, HttpResponseMessage response, Exception e)
+        private async Task AddFailedResponseToCommand<TResult>(
+            ServerNode chosenNode, 
+            JsonOperationContext context, 
+            RavenCommand<TResult> command,
+            HttpRequestMessage request, 
+            HttpResponseMessage response, 
+            Exception e)
         {
             if (response != null)
             {
@@ -1180,7 +1194,8 @@ namespace Raven.Client.Http
                 Url = request.RequestUri.ToString(),
                 Message = e.Message,
                 Error = e.ToString(),
-                Type = e.GetType().FullName
+                Type = e.GetType().FullName,
+                AdditionalData = new StringBuilder("ReadBehavior: ").Append(_readBalanceBehavior)
             }, HttpStatusCode.InternalServerError));
         }
 
