@@ -431,7 +431,10 @@ namespace Raven.Client.Http
 
             try
             {
-                var preferredNode = _nodeSelector.GetPreferredNode();
+                var selector = _nodeSelector;
+                if (selector == null)
+                    return;
+                var preferredNode = selector.GetPreferredNode();
                 serverNode = preferredNode.Node;
             }
             catch (Exception e)
@@ -841,7 +844,7 @@ namespace Raven.Client.Http
             if (_topologyTakenFromNode != null)
                 message += $"I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}";
 
-            var nodes = _nodeSelector?.Topology.Nodes;
+            var nodes = _nodeSelector?.Topology?.Nodes;
             if (nodes == null)
             {
                 message += "Topology is empty.";
