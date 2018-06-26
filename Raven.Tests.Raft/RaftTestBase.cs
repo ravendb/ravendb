@@ -240,20 +240,10 @@ namespace Raven.Tests.Raft
 
         protected IDisposable ForceNonClusterRequests(List<DocumentStore> stores)
         {
-            var conventionsRestoreInfo = stores.Select(x => new
-            {
-                Store = x,
-                Convention = x.Conventions.FailoverBehavior
-            }).ToDictionary(x => x.Store, x => x.Convention);
-
-            stores.ForEach(store => store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately);
-
+            stores.ForEach(store => store.AvoidCluster = true);
             return new DisposableAction(() =>
             {
-                foreach (var restoreInfo in conventionsRestoreInfo)
-                {
-                    restoreInfo.Key.Conventions.FailoverBehavior = restoreInfo.Value;
-                }
+                stores.ForEach(store => store.AvoidCluster = false);
             });
         }
 
@@ -306,11 +296,10 @@ namespace Raven.Tests.Raft
                 DatabaseSettings = databaseSettings
             }));
             replicationRequest.ExecuteRequest();
-
-            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+            
             using (ForceNonClusterRequests(clusterStores))
             {
-                
+                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
                 clusterStores.ForEach(store => WaitFor(store.DatabaseCommands, commands =>
                 {
                     using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
