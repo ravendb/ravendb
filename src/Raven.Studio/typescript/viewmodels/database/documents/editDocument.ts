@@ -769,7 +769,10 @@ class editDocument extends viewModelBase {
         const doc = this.document();
         if (doc) {
             const viewModel = new deleteDocuments([doc.getId()], this.activeDatabase());
-            viewModel.deletionTask.done(() => this.connectedDocuments.onDocumentDeleted());
+            viewModel.deletionTask.done(() => {
+                this.dirtyFlag().reset();
+                this.connectedDocuments.onDocumentDeleted();                
+            });
             app.showBootstrapDialog(viewModel, editDocument.editDocSelector);
         } 
     }
