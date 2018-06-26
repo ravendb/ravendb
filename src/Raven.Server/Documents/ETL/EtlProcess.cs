@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.ETL
                         if (this is SqlEtl)
                             break;
 
-                        var lastProcessedDocEtag = Math.Max(stats.LastTransformedEtags[EtlItemType.Document], stats.LastFilteredOutEtags[EtlItemType.Document]);
+                        var lastDocEtag = stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document);
 
                         if (Transformation.ApplyToAllDocuments)
                         {
@@ -187,10 +187,10 @@ namespace Raven.Server.Documents.ETL
                                 .GetEnumerator();
                             scope.EnsureDispose(counterTombstones);
 
-                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, maxEtag: lastProcessedDocEtag);
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, maxEtag: lastDocEtag);
 
                             merged.AddEnumerator(
-                                new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastProcessedDocEtag));
+                                new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastDocEtag));
 
                             merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
                         }
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.ETL
                                 scope.EnsureDispose(counters);
 
                                 merged.AddEnumerator(new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, collection),
-                                    lastProcessedDocEtag));
+                                    lastDocEtag));
                             }
 
                             var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.ETL
                             scope.EnsureDispose(counterTombstones);
 
                             counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter,
-                                fromCollections: Transformation.Collections, maxEtag: lastProcessedDocEtag);
+                                fromCollections: Transformation.Collections, maxEtag: lastDocEtag);
 
                             merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
                         }
@@ -353,15 +353,22 @@ namespace Raven.Server.Documents.ETL
             if (currentItem.Type == EtlItemType.Counter)
             {
                 // we have special counters enumerator which ensures that we iterate counters up to last processed doc etag
-                // although as long as it returns counters we need to ETL all of them
 
-                // TODO arek - if there were no docs modified in current batch we shouldn't iterate all counters probably as there can be a lot of them
-                // e.g. only counters are modified, we need to use below logic then
+                if (stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document) > 0)
+                {
+                    // we had some documents processed in current batch
+                    // as long as the counters enumerator returns items we'll ETL all of them as we track
+                    // the ETL processing state by a single last processed etag
 
-                return true;
+                    return true;
+                }
+
+                // we had no documents in current batch we can send all counters that we have
+                // although need to respect below criteria
             }
 
-            if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
+            if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedItems ||
+                (currentItem.Type == EtlItemType.Document && stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments))
             {
                 var reason = $"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items";
 

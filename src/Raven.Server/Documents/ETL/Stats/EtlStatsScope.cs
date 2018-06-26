@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Utils;
@@ -95,6 +96,11 @@ namespace Raven.Server.Documents.ETL.Stats
         public void RecordBatchCompleteReason(string reason)
         {
             _stats.BatchCompleteReason = reason;
+        }
+
+        public long GetLastTransformedOrFilteredEtag(EtlItemType type)
+        {
+            return Math.Max(LastTransformedEtags[type], LastFilteredOutEtags[type]);
         }
     }
 }
