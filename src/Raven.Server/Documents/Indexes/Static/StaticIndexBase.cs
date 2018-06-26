@@ -98,6 +98,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     {
                         items.Add(LoadDocument(enumerator.Current, collectionName));
                     }
+                    if (items.Count == 0)
+                        return DynamicNullObject.Null;
+
                     return new DynamicArray(items);
                 }
             }
