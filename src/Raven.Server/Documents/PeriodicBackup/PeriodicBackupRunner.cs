@@ -570,6 +570,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return;
             }
 
+            var previousConfiguration = existingBackupState.Configuration;
             existingBackupState.Configuration = newConfiguration;
 
             if (taskState != TaskStatus.ActiveByCurrentNode)
@@ -586,7 +587,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return;
             }
 
-            if (existingBackupState.Configuration.HasBackupFrequencyChanged(newConfiguration) == false &&
+            if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false &&
                 existingBackupState.HasScheduledBackup())
             {
                 // backup frequency hasn't changed
