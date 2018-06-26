@@ -489,6 +489,77 @@ namespace SlowTests.Smuggler
             }
         }
 
+		[Fact]
+        public async Task ShouldAvoidCreatingNewRevisionsDuringImport()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+
+                        await session.StoreAsync(new Person { Name = "Name1" });
+                        await session.StoreAsync(new Person { Name = "Name2" });
+                        await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
+                        await session.SaveChangesAsync();
+                    }
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            var company = await session.LoadAsync<Company>("companies/1-A");
+                            var person = await session.LoadAsync<Person>("people/1-A");
+                            company.Name += " update " + i;
+                            person.Name += " update " + i;
+                            await session.StoreAsync(company);
+                            await session.StoreAsync(person);
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var person = await session.LoadAsync<Person>("people/2-A");
+                        Assert.NotNull(person);
+                        session.Delete(person);
+                        await session.SaveChangesAsync();
+                    }
+
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+
+                    var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(4, stats.CountOfDocuments);
+                    Assert.Equal(8, stats.CountOfRevisionDocuments);
+                }
+
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2"
+                }))
+                {
+                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                    {
+                        SkipRevisionCreation = true
+                    }, file);
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(4, stats.CountOfDocuments);
+                    Assert.Equal(8, stats.CountOfRevisionDocuments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
         private static async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
