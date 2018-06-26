@@ -78,13 +78,15 @@ namespace Raven.Server.ServerWide
 
         static ClusterStateMachine()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
-            Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CompareExchange);
-            Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
-            Slice.From(StorageEnvironment.LabelsContext, "TransactionCommands", out TransactionCommands);
-            Slice.From(StorageEnvironment.LabelsContext, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
-            Slice.From(StorageEnvironment.LabelsContext, "TransactionCommandsIndex", out TransactionCommandsIndex);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Items", out Items);
+                Slice.From(ctx, "CmpXchg", out CompareExchange);
+                Slice.From(ctx, "Identities", out Identities);
+                Slice.From(ctx, "TransactionCommands", out TransactionCommands);
+                Slice.From(ctx, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
+                Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsIndex);
+            }
             ItemsSchema = new TableSchema();
 
             // We use the follow format for the items data

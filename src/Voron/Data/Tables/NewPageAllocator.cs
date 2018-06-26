@@ -39,8 +39,11 @@ namespace Voron.Data.Tables
 
         static NewPageAllocator()
         {
-            Slice.From(StorageEnvironment.LabelsContext, AllocationStorageName, ByteStringType.Immutable,
-                out AllocationStorage);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, AllocationStorageName, ByteStringType.Immutable,
+                    out AllocationStorage);
+            }
         }
 
 

@@ -283,18 +283,17 @@ namespace Raven.Server.Rachis
 
         static RachisConsensus()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "GlobalState", out GlobalStateSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Tag", out TagSlice);
-
-            Slice.From(StorageEnvironment.LabelsContext, "CurrentTerm", out CurrentTermSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "VotedFor", out VotedForSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastCommit", out LastCommitSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Topology", out TopologySlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastTruncated", out LastTruncatedSlice);
-
-
-            Slice.From(StorageEnvironment.LabelsContext, "Entries", out EntriesSlice);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "GlobalState", out GlobalStateSlice);
+                Slice.From(ctx, "Tag", out TagSlice);
+                Slice.From(ctx, "CurrentTerm", out CurrentTermSlice);
+                Slice.From(ctx, "VotedFor", out VotedForSlice);
+                Slice.From(ctx, "LastCommit", out LastCommitSlice);
+                Slice.From(ctx, "Topology", out TopologySlice);
+                Slice.From(ctx, "LastTruncated", out LastTruncatedSlice);
+                Slice.From(ctx, "Entries", out EntriesSlice);
+            }
             /*
              
             index - int64 big endian

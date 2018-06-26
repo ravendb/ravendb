@@ -57,8 +57,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         static ReduceMapResultsBase()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable, out PageNumberSlice);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "PageNumber", ByteStringType.Immutable, out PageNumberSlice);
+            }
             ReduceResultsSchema = new TableSchema()
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
