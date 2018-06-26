@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 syntaxTrees: syntaxTrees,
                 references: res.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
-                    .WithOptimizationLevel(OptimizationLevel.Release)
+                    .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
                 );
 
             var code = formatedCompilationUnit.SyntaxTree.ToString();
