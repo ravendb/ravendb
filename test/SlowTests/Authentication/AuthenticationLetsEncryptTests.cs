@@ -37,7 +37,11 @@ namespace SlowTests.Authentication
 
             UseNewLocalServer(customConfigPath: settingPath);
 
-            var acmeStaging = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            // Use this when testing against pebble
+            //var acmeStaging = "https://localhost:14000/";
+
+            var acmeStaging = "https://acme-staging-v02.api.letsencrypt.org/";
+
             Server.Configuration.Core.AcmeUrl = acmeStaging;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 

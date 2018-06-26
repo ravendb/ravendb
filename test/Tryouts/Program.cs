@@ -8,6 +8,7 @@ using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
 using SlowTests.Issues;
 using SlowTests.MailingList;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -15,23 +16,21 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
-            {
-                try
-                {
-                    Console.WriteLine(i);
-                    using (var test = new RavenDB_6369())
-                    {
-                        test.ShouldTimeout();
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    break;
-                }
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, "C:\\testlogs");
 
+            try
+            {
+                using (var test = new SlowTests.Authentication.AuthenticationLetsEncryptTests())
+                {
+                    await test.CanGetLetsEncryptCertificateAndRenewIt();
+                }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            
         }
     }
 }
