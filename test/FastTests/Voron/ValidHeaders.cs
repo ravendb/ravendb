@@ -20,11 +20,14 @@ namespace FastTests.Voron
             var t = typeof(FileHeader);
 
             var pos = IntPtr.Zero;
-            foreach (var fieldInfo in t.GetFields(BindingFlags.Instance | BindingFlags.Public))
+            foreach (var fieldInfo in t.GetFields(BindingFlags.Instance | BindingFlags.Public)
+                // GetFields has no guranteed sort order
+                .OrderBy(x=> (long)Marshal.OffsetOf<FileHeader>(x.Name))
+                )
             {
                 var offsetOf = Marshal.OffsetOf<FileHeader>(fieldInfo.Name);
                 if (pos != offsetOf)
-                    Assert.False(true, fieldInfo.Name);
+                    Assert.False(true, fieldInfo.Name + " " + pos + " != " + offsetOf);
                 pos += GetSizeOf(fieldInfo.FieldType);
             }
         }
