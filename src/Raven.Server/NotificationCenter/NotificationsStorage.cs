@@ -32,8 +32,11 @@ namespace Raven.Server.NotificationCenter
 
         static NotificationsStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "ByCreatedAt", ByteStringType.Immutable, out ByCreatedAt);
-            Slice.From(StorageEnvironment.LabelsContext, "ByPostponedUntil", ByteStringType.Immutable, out ByPostponedUntil);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "ByCreatedAt", ByteStringType.Immutable, out ByCreatedAt);
+                Slice.From(ctx, "ByPostponedUntil", ByteStringType.Immutable, out ByPostponedUntil);
+            }
         }
 
         public NotificationsStorage(string resourceName)

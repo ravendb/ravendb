@@ -632,19 +632,22 @@ namespace Raven.Server.Documents.Indexes
 
             static IndexSchema()
             {
-                Slice.From(StorageEnvironment.LabelsContext, "Type", ByteStringType.Immutable, out TypeSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "CreatedTimestamp", ByteStringType.Immutable, out CreatedTimestampSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "MapAttempts", ByteStringType.Immutable, out MapAttemptsSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "MapSuccesses", ByteStringType.Immutable, out MapSuccessesSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "MapErrors", ByteStringType.Immutable, out MapErrorsSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "ReduceAttempts", ByteStringType.Immutable, out ReduceAttemptsSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "ReduceSuccesses", ByteStringType.Immutable, out ReduceSuccessesSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "LastIndexingTime", ByteStringType.Immutable, out LastIndexingTimeSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable, out _);
-                Slice.From(StorageEnvironment.LabelsContext, "State", ByteStringType.Immutable, out StateSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "MaxNumberOfOutputsPerDocument", ByteStringType.Immutable, out MaxNumberOfOutputsPerDocument);
+                using (StorageEnvironment.GetStaticContext(out var ctx))
+                {
+                    Slice.From(ctx, "Type", ByteStringType.Immutable, out TypeSlice);
+                    Slice.From(ctx, "CreatedTimestamp", ByteStringType.Immutable, out CreatedTimestampSlice);
+                    Slice.From(ctx, "MapAttempts", ByteStringType.Immutable, out MapAttemptsSlice);
+                    Slice.From(ctx, "MapSuccesses", ByteStringType.Immutable, out MapSuccessesSlice);
+                    Slice.From(ctx, "MapErrors", ByteStringType.Immutable, out MapErrorsSlice);
+                    Slice.From(ctx, "ReduceAttempts", ByteStringType.Immutable, out ReduceAttemptsSlice);
+                    Slice.From(ctx, "ReduceSuccesses", ByteStringType.Immutable, out ReduceSuccessesSlice);
+                    Slice.From(ctx, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);
+                    Slice.From(ctx, "LastIndexingTime", ByteStringType.Immutable, out LastIndexingTimeSlice);
+                    Slice.From(ctx, "Priority", ByteStringType.Immutable, out _);
+                    Slice.From(ctx, "State", ByteStringType.Immutable, out StateSlice);
+                    Slice.From(ctx, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
+                    Slice.From(ctx, "MaxNumberOfOutputsPerDocument", ByteStringType.Immutable, out MaxNumberOfOutputsPerDocument);
+                }
             }
         }
 

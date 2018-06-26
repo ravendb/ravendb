@@ -58,13 +58,15 @@ namespace Raven.Server.Documents
 
         static ConflictsStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ConflictsId", ByteStringType.Immutable, out ConflictsIdSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "IdAndChangeVector", ByteStringType.Immutable, out IdAndChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Conflicts", ByteStringType.Immutable, out ConflictsSlice);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
+                Slice.From(ctx, "ConflictsId", ByteStringType.Immutable, out ConflictsIdSlice);
+                Slice.From(ctx, "IdAndChangeVector", ByteStringType.Immutable, out IdAndChangeVectorSlice);
+                Slice.From(ctx, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
+                Slice.From(ctx, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
+                Slice.From(ctx, "Conflicts", ByteStringType.Immutable, out ConflictsSlice);
+            }
             /*
              The structure of conflicts table starts with the following fields:
              [ Conflicted Doc Id | Separator | Change Vector | ... the rest of fields ... ]
