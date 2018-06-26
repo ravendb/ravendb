@@ -21,10 +21,10 @@ namespace SlowTests.Voron.Bugs
                 {
                     tx.LowLevelTransaction.IsLazyTransaction = true;
                     Slice fst;
-                    Slice.From(StorageEnvironment.LabelsContext, "World", out fst);
+                    Slice.From(tx.Allocator, "World", out fst);
                     var tree = tx.FixedTreeFor(fst, 8);
                     Slice val;
-                    Slice.From(StorageEnvironment.LabelsContext, "Hello123", out val);
+                    Slice.From(tx.Allocator, "Hello123", out val);
                     tree.Add(1, val);
                     tx.Commit();
                 }
