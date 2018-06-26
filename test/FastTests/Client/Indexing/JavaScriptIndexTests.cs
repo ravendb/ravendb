@@ -333,6 +333,7 @@ namespace FastTests.Client.Indexing
                 CanUseSpatialFieldsInternal(kalab, store, "DynamicSpatial");
             }
         }
+
         private static void CanUseSpatialFieldsInternal(int kalab, DocumentStore store, string indexName)
         {
             using (var session = store.OpenSession())
@@ -358,6 +359,27 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        [Fact]
+        public void CanReduceNullValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersReducedByName());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = null});
+                    session.Store(new User { Name = null });
+                    session.Store(new User { Name = null });
+                    session.Store(new User { Name = "Tal" });
+                    session.Store(new User { Name = "Maxim" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var res = session.Query<User>("UsersReducedByName").OfType<ReduceResults>().Single(x => x.Count == 3);
+                    Assert.Null(res.Name);
+                }
+
+            }
+        }
         private class User
         {
             public string Name { get; set; }
@@ -699,6 +721,30 @@ map('Users', function (u){
                             @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                             @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                         },
+                    Reduce = @"groupBy( x =>  x.Name )
+                                .aggregate(g => {return {
+                                    Name: g.key,
+                                    Count: g.values.reduce((total, val) => val.Count + total,0)
+                               };})",
+                    Type = IndexType.JavaScriptMapReduce,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class UsersReducedByName : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "UsersReducedByName",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                    },
                     Reduce = @"groupBy( x =>  x.Name )
                                 .aggregate(g => {return {
                                     Name: g.key,

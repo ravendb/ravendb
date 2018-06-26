@@ -333,6 +333,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             };
         }
 
+        public bool IsBufferSet => _buffer != null;
+
         public void ReleaseBuffer()
         {
             if (_buffer != null)
