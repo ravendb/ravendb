@@ -85,10 +85,21 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     if (xCalCulated == false)
                         _xKey.Process(_allocator, xVal);
+
                     if (yCalculated == false)
                         _yKey.Process(_allocator, yVal);
                 }
 
+                var xIsNotAllNulls = _xKey.IsBufferSet;
+                var yIsNotAllNulls = _yKey.IsBufferSet;
+                // null == null
+                if (xIsNotAllNulls == false && yIsNotAllNulls == false)
+                    return true;
+                // x == null and y != null or y != null and y == null
+                if (xIsNotAllNulls == false || yIsNotAllNulls == false)
+                    return false;
+
+                //At this point both buffer should be populated
                 var xBuffer = _xKey.GetBuffer();
                 var yBuffer = _yKey.GetBuffer();
                 _lastUsedBucket = x;
