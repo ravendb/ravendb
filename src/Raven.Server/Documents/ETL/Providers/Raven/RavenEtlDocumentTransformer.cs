@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             throw  new NotImplementedException("TODO arek");
                         else
                         {
-                            var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterName(item.CounterTombstoneId);
+                            var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterName(Context, item.CounterTombstoneId);
                             _currentRun.DeleteCounter(docId, counterName);
                         }
 
