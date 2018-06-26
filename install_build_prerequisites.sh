@@ -23,7 +23,7 @@ fi
 
 eval 
 
-echo "Installing .NET Core SDK 2.1.105..."
+echo "Installing .NET Core SDK 2.1"
 
 if [ -z "$CURL_CMD" ]; then
     sudo apt-get install -y curl 
@@ -38,7 +38,7 @@ elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
 fi
 
 sudo apt-get update
-sudo apt-get install -y dotnet-sdk-2.1.105
+sudo apt-get install -y dotnet-sdk-2.1
 
 mkdir ./dotnet_tmp
 cd ./dotnet_tmp
