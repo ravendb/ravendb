@@ -504,7 +504,7 @@ class appUrl {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
 
-            messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+            messagePublisher.reportWarning("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
             const appUrls = appUrl.currentDbComputeds;
             location.href = appUrls.databasesManagement();
