@@ -1303,7 +1303,7 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
         }
 
-        private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> _serverCertificateCustomValidationCallback;
+        private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>[] _serverCertificateCustomValidationCallback = Array.Empty<Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>>();
         private static ConcurrentDictionary<WeakReference<Action>, object> _liveClients = new ConcurrentDictionary<WeakReference<Action>, object>();
         private Action _updateHttpHandlerDelegate;// we need this to hold a reference to the action as long as the executer is alive
         private static readonly ReaderWriterLockSlim _serverCallbackRWLock = new ReaderWriterLockSlim();
@@ -1315,7 +1315,7 @@ namespace Raven.Client.Http
                 _serverCallbackRWLock.EnterWriteLock();
                 try
                 {
-                    _serverCertificateCustomValidationCallback += value;
+                    _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Concat(new[] { value }).ToArray();
                     ForceUpdateOfAllHttpClients();
                 }
                 finally
@@ -1325,8 +1325,16 @@ namespace Raven.Client.Http
             }
             remove
             {
-                _serverCertificateCustomValidationCallback -= value;
-                ForceUpdateOfAllHttpClients();
+                _serverCallbackRWLock.EnterWriteLock();
+                try
+                {
+                    _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Except(new[] { value }).ToArray();
+                    ForceUpdateOfAllHttpClients();
+                }
+                finally
+                {
+                    _serverCallbackRWLock.ExitWriteLock();
+                }
             }
         }
 
@@ -1357,9 +1365,17 @@ namespace Raven.Client.Http
         private static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
-            if (onServerCertificateCustomValidationCallback == null)
+            if (onServerCertificateCustomValidationCallback == null ||
+                onServerCertificateCustomValidationCallback.Length == 0)
                 return errors == SslPolicyErrors.None;
-            return onServerCertificateCustomValidationCallback(msg, cert, chain, errors);
+
+            for (int i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
+            {
+                var result = onServerCertificateCustomValidationCallback[i](msg, cert, chain, errors);
+                if (result)
+                    return true;
+            }
+            return false;
         }
 
         public class NodeStatus : IDisposable
