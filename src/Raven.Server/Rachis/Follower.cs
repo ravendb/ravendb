@@ -127,7 +127,7 @@ namespace Raven.Server.Rachis
                                 {
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                                        _engine.Log.Info("Was notified that I was removed from the node topology, will be moving to passive mode now.");
                                     }
 
                                     _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
