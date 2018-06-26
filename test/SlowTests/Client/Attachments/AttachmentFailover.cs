@@ -157,16 +157,7 @@ namespace SlowTests.Client.Attachments
                     await task;
                     var attachment = command.Result;
                     Assert.Equal("File", attachment.Name);
-
-                    if (PlatformDetails.RunningOnPosix == false)
-                        Assert.Equal(size, stream.Position);
-                    else
-                    {
-                        // on Posix the position is set to initial one automatically
-                        // https://github.com/dotnet/corefx/issues/23782
-                        Assert.Equal(0, stream.Position);
-                    }
-
+                    Assert.Equal(size, stream.Position);
                     Assert.Equal(size, attachment.Size);
                     Assert.Equal("application/pdf", attachment.ContentType);
                     Assert.Equal(hash, attachment.Hash);
