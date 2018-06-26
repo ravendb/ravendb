@@ -92,15 +92,14 @@ class indexDefinition {
         
         const checkIndexName = (val: string,
                                 params: any,
-                                callback: (currentValue: string, result: boolean) => void) => {
-                                    new validateNameCommand('index', val)
+                                callback: (currentValue: string, errorMessageOrValidationResult: string | boolean) => void) => {
+                                    new validateNameCommand('Index', val)
                                         .execute()
                                         .done((result) => {
                                             if (result.IsValid) {
                                                 callback(this.name(), true);
                                             } else {
-                                                callback(this.name(), false);
-                                                this.name.setError(result.ErrorMessage);
+                                                callback(this.name(), result.ErrorMessage);
                                             }
                                         })
                                };
