@@ -33,6 +33,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\help.ps1'
 . '.\scripts\sign.ps1'
 . '.\scripts\docker.ps1'
+. '.\scripts\schemaInfo.ps1'
 
 if ($Help) {
     Help
@@ -122,6 +123,8 @@ $versionSuffix = $versionObj.VersionSuffix
 $buildNumber = $versionObj.BuildNumber
 $buildType = $versionObj.BuildType.ToLower()
 Write-Host -ForegroundColor Green "Building $version"
+
+SetSchemaInfoInTeamCity $PROJECT_DIR
 
 ValidateClientDependencies $CLIENT_SRC_DIR $SPARROW_SRC_DIR
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
