@@ -223,7 +223,7 @@ namespace Raven.Embedded
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{serverUrl.AbsoluteUri}\"")); // Works ok on windows
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{serverUrl.AbsoluteUri}\"")); // Works ok on windows
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -231,7 +231,7 @@ namespace Raven.Embedded
             }
             else
             {
-                Console.WriteLine("Do it yourself!");
+                throw new PlatformNotSupportedException("Cannot open browser with Studio on your current platform");
             }
         }
 
