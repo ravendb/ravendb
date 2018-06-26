@@ -247,6 +247,12 @@ namespace Raven.Server.Documents.Revisions
                     return true;
                 if (existingDocument == null)
                 {
+                    if ((nonPersistentFlags & NonPersistentDocumentFlags.SkipRevisionCreation) == NonPersistentDocumentFlags.SkipRevisionCreation)
+                    {
+                        // Smuggler is configured to avoid creating new revisions during import
+                        return false;
+                    }
+
                     // we are not going to create a revision if it's an import from v3
                     // (since this import is going to import revisions as well)
                     return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyHasRevisions) != NonPersistentDocumentFlags.LegacyHasRevisions;
