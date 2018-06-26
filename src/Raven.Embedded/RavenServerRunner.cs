@@ -20,12 +20,15 @@ namespace Raven.Embedded
             if (File.Exists(serverDllPath) == false)
                 throw new FileNotFoundException("Server file was not found", serverDllPath);
 
+            if (string.IsNullOrWhiteSpace(options.DotnetApplicationPath))
+                throw new ArgumentNullException(nameof(options.DotnetApplicationPath));
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 options.CommandLineArgs.Add("--Embedded.ParentProcessId=" + currentProcess.Id);
             }
 
-            options.CommandLineArgs.Add("--License.Eula.Accepted=true");
+            options.CommandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
             options.CommandLineArgs.Add("--Setup.Mode=None");
             options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
 
@@ -60,7 +63,7 @@ namespace Raven.Embedded
 
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = "dotnet",
+                FileName = options.DotnetApplicationPath,
                 Arguments = argumentsString,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,

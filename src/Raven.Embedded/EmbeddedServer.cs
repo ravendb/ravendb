@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
@@ -214,6 +215,24 @@ namespace Raven.Embedded
             }
 
             return (new Uri(url), process);
+        }
+
+        public void OpenStudioInBrowser()
+        {
+            var serverUrl = AsyncHelpers.RunSync(() => GetServerUriAsync());
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{serverUrl.AbsoluteUri}\"")); // Works ok on windows
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", serverUrl.AbsoluteUri); // Works ok on linux
+            }
+            else
+            {
+                Console.WriteLine("Do it yourself!");
+            }
         }
 
         public void Dispose()
