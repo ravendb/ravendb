@@ -85,7 +85,7 @@ class visualizer extends viewModelBase {
     }
 
     private onIndexesLoaded(indexes: Raven.Client.Documents.Indexes.IndexStats[]) {
-        this.indexes(indexes.filter(x => x.Type === "AutoMapReduce" || x.Type === "MapReduce").map(x => x.Name));
+        this.indexes(indexes.filter(x => x.Type === "AutoMapReduce" || x.Type === "MapReduce" || x.Type === "JavaScriptMapReduce").map(x => x.Name));
     }
 
     setSelectedIndex(indexName: string) {

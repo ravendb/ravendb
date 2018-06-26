@@ -46,7 +46,7 @@ class indexStatistics {
         this.reducedPerSecondRate = dto.ReducedPerSecondRate;
         this.reducedPerSecondRateStr = dto.ReducedPerSecondRate > 1 ? genUtils.formatNumberToStringFixed(dto.ReducedPerSecondRate, 2) : "";
 
-        this.isReduceIndex = this.indexType === "AutoMapReduce" || this.indexType === "MapReduce";
+        this.isReduceIndex = this.indexType === "AutoMapReduce" || this.indexType === "MapReduce" || this.indexType === "JavaScriptMapReduce";
         this.isFaultyIndex = this.indexType === "Faulty";
     }
 }
