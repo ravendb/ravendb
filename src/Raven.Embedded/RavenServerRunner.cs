@@ -20,8 +20,8 @@ namespace Raven.Embedded
             if (File.Exists(serverDllPath) == false)
                 throw new FileNotFoundException("Server file was not found", serverDllPath);
 
-            if (string.IsNullOrWhiteSpace(options.DotnetApplicationPath))
-                throw new ArgumentNullException(nameof(options.DotnetApplicationPath));
+            if (string.IsNullOrWhiteSpace(options.DotNetPath))
+                throw new ArgumentNullException(nameof(options.DotNetPath));
 
             using (var currentProcess = Process.GetCurrentProcess())
             {
@@ -63,7 +63,7 @@ namespace Raven.Embedded
 
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = options.DotnetApplicationPath,
+                FileName = options.DotNetPath,
                 Arguments = argumentsString,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
