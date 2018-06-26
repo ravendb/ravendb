@@ -115,14 +115,14 @@ namespace Raven.Server.Documents.TcpHandlers
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
             
+            // first, validate details and make sure subscription exists
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId,_options.SubscriptionName);
-
-            (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
-
+            
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
-
+            
             bool shouldRetry;
+            bool waitedAnyTime = false;
             do
             {
                 try
@@ -132,6 +132,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (TimeoutException)
                 {
+                    waitedAnyTime = true;
                     if (timeout == TimeSpan.Zero && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
@@ -142,6 +143,12 @@ namespace Raven.Server.Documents.TcpHandlers
                     shouldRetry = true;
                 }
             } while (shouldRetry);
+
+            // if waited, refresh subscription data (change vector may have been updated)
+            if (waitedAnyTime)
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+
+            (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
             try
             {
