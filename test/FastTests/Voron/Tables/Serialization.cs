@@ -123,14 +123,14 @@ namespace FastTests.Voron.Tables
                     StartIndex = 2,
                     Count = 1,
                 };
-                Slice.From(StorageEnvironment.LabelsContext, "Test Name 2", ByteStringType.Immutable, out def1.Name);
+                Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def1.Name);
 
                 var def2 = new TableSchema.FixedSizeSchemaIndexDef()
                 {
                     StartIndex = 2,
                     IsGlobal = true,
                 };
-                Slice.From(StorageEnvironment.LabelsContext, "Test Name 1", ByteStringType.Immutable, out def2.Name);
+                Slice.From(tx.Allocator, "Test Name 1", ByteStringType.Immutable, out def2.Name);
 
                 var tableSchema = new TableSchema()
                     .DefineIndex(def1)
@@ -165,21 +165,21 @@ namespace FastTests.Voron.Tables
                     StartIndex = 2,
                     Count = 1,
                 };
-                Slice.From(StorageEnvironment.LabelsContext, "Test Name 1", ByteStringType.Immutable, out def1.Name);
+                Slice.From(tx.Allocator, "Test Name 1", ByteStringType.Immutable, out def1.Name);
 
                 var def2 = new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 1,
                     Count = 1,
                 };
-                Slice.From(StorageEnvironment.LabelsContext, "Test Name 2", ByteStringType.Immutable, out def2.Name);
+                Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def2.Name);
 
                 var def3 = new TableSchema.FixedSizeSchemaIndexDef()
                 {
                     StartIndex = 2,
                     IsGlobal = true,
                 };
-                Slice.From(StorageEnvironment.LabelsContext, "Test Name 3", ByteStringType.Immutable, out def3.Name);
+                Slice.From(tx.Allocator, "Test Name 3", ByteStringType.Immutable, out def3.Name);
 
                 var tableSchema = new TableSchema()
                     .DefineIndex(def1)

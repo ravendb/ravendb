@@ -146,7 +146,10 @@ namespace Raven.Server.Documents.Indexes
 
         static IndexDefinitionBase()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable, out DefinitionSlice);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Definition", ByteStringType.Immutable, out DefinitionSlice);
+            }
         }
 
         public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)

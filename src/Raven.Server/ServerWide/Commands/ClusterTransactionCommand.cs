@@ -98,7 +98,10 @@ namespace Raven.Server.ServerWide.Commands
 
         static ClusterTransactionCommand()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "CommandsCountKey", out CommandsCountKey);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "CommandsCountKey", out CommandsCountKey);
+            }
         }
 
         public ClusterTransactionCommand() { }

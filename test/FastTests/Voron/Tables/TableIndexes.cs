@@ -13,7 +13,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out var etagIndexName);
+                Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
                 var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
                 {
                     Name = etagIndexName,
@@ -58,7 +58,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out var etagIndexName);
+                Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
                 var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
                 {
                     Name = etagIndexName,
@@ -121,7 +121,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out var etagIndexName);
+                Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
                 var index = new TableSchema.SchemaIndexDef
                 {
                     Name = etagIndexName,
@@ -137,7 +137,7 @@ namespace FastTests.Voron.Tables
                         Count = 1,
                     });
 
-                Slice.From(StorageEnvironment.LabelsContext, "Items", out var items);
+                Slice.From(tx.Allocator, "Items", out var items);
 
                 tableSchema.Create(tx, "Items", 16);
                 var itemsTable = tx.OpenTable(tableSchema, "Items");
@@ -166,7 +166,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out var etagIndexName);
+                Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
                 var index = new TableSchema.SchemaIndexDef
                 {
                     Name = etagIndexName,

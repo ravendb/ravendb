@@ -89,20 +89,22 @@ namespace Raven.Server.Documents
 
         static DocumentsStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Etags", ByteStringType.Immutable, out EtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Docs", ByteStringType.Immutable, out DocsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Collections", ByteStringType.Immutable, out CollectionsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
-            Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
+                Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
+                Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
+                Slice.From(ctx, "Docs", ByteStringType.Immutable, out DocsSlice);
+                Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
+                Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
+                Slice.From(ctx, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
+                Slice.From(ctx, "Collections", ByteStringType.Immutable, out CollectionsSlice);
+                Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
+                Slice.From(ctx, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
+                Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
+                Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
+                Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
+            }
             /*
             Collection schema is:
             full name

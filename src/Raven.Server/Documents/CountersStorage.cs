@@ -53,10 +53,12 @@ namespace Raven.Server.Documents
 
         static CountersStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Counters", ByteStringType.Immutable, out CountersSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "CountersEtag", ByteStringType.Immutable, out CountersEtagSlice);
-            Slice.From(StorageEnvironment.LabelsContext, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Counters", ByteStringType.Immutable, out CountersSlice);
+                Slice.From(ctx, "CountersEtag", ByteStringType.Immutable, out CountersEtagSlice);
+                Slice.From(ctx, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
+            }
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)CountersTable.CounterKey,

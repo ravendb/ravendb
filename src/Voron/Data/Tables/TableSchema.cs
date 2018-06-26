@@ -41,15 +41,18 @@ namespace Voron.Data.Tables
 
         static TableSchema()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable,
-                out ActiveSectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable,
-                out InactiveSectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable,
-                out ActiveCandidateSectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable, out StatsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable, out SchemasSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "PK", ByteStringType.Immutable, out PkSlice);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Active-Section", ByteStringType.Immutable, 
+                    out ActiveSectionSlice);
+                Slice.From(ctx, "Inactive-Section", ByteStringType.Immutable,
+                    out InactiveSectionSlice);
+                Slice.From(ctx, "Active-Candidate-Section", ByteStringType.Immutable,
+                    out ActiveCandidateSectionSlice);
+                Slice.From(ctx, "Stats", ByteStringType.Immutable, out StatsSlice);
+                Slice.From(ctx, "Schemas", ByteStringType.Immutable, out SchemasSlice);
+                Slice.From(ctx, "PK", ByteStringType.Immutable, out PkSlice);
+            }
         }
 
         public SchemaIndexDef Key => _primaryKey;
@@ -70,7 +73,7 @@ namespace Voron.Data.Tables
 
         public class SchemaIndexDef
         {
-            
+
             public TableIndexType Type = TableIndexType.Default;
 
             /// <summary>
@@ -110,7 +113,7 @@ namespace Voron.Data.Tables
                     throw new ArgumentOutOfRangeException(nameof(totalSize),
                         "Reading a slice that too big to be a slice");
 #endif
-                return Slice.External(context, ptr, (ushort) totalSize, out slice);
+                return Slice.External(context, ptr, (ushort)totalSize, out slice);
             }
 
             public ByteStringContext.Scope GetSlice(ByteStringContext context, TableValueBuilder value,
@@ -160,7 +163,7 @@ namespace Voron.Data.Tables
             public byte[] Serialize()
             {
                 // We serialize the Type enum as ulong to be "future-proof"
-                var castedType = (long) Type;
+                var castedType = (long)Type;
 
                 var serializer = new TableValueBuilder
                 {
@@ -188,13 +191,13 @@ namespace Voron.Data.Tables
 
                 int currentSize;
                 byte* currentPtr = input.Read(0, out currentSize);
-                indexDef.Type = (TableIndexType) (*(ulong*) currentPtr);
+                indexDef.Type = (TableIndexType)(*(ulong*)currentPtr);
 
                 currentPtr = input.Read(1, out currentSize);
-                indexDef.StartIndex = *(int*) currentPtr;
+                indexDef.StartIndex = *(int*)currentPtr;
 
                 currentPtr = input.Read(2, out currentSize);
-                indexDef.Count = *(int*) currentPtr;
+                indexDef.Count = *(int*)currentPtr;
 
                 currentPtr = input.Read(3, out currentSize);
                 indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
@@ -248,7 +251,7 @@ namespace Voron.Data.Tables
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
                 Debug.Assert(totalSize == sizeof(long), $"{totalSize} == sizeof(long) - {Name}");
-                return Bits.SwapBytes(*(long*) ptr);
+                return Bits.SwapBytes(*(long*)ptr);
             }
 
             public long GetValue(ByteStringContext context, TableValueBuilder value)
@@ -285,7 +288,7 @@ namespace Voron.Data.Tables
 
                 int currentSize;
                 byte* currentPtr = input.Read(0, out currentSize);
-                output.StartIndex = *(int*) currentPtr;
+                output.StartIndex = *(int*)currentPtr;
 
                 currentPtr = input.Read(1, out currentSize);
                 output.IsGlobal = Convert.ToBoolean(*currentPtr);
@@ -388,7 +391,7 @@ namespace Voron.Data.Tables
                 _fixedSizeIndexes.All(x => x.Value.IsGlobal))
                 throw new InvalidOperationException($"Cannot create table {name} with a global primary key and without at least a single local index, " +
                                                     $"otherwise we can't compact it, this is a bug in the table schema.");
-            
+
 
             var tableTree = tx.CreateTree(name, RootObjectType.Table);
             if (tableTree.State.NumberOfEntries > 0)
@@ -400,13 +403,13 @@ namespace Voron.Data.Tables
                 long val = rawDataActiveSection.PageNumber;
                 Slice pageNumber;
                 using (
-                    Slice.External(tx.Allocator, (byte*) &val, sizeof(long), ByteStringType.Immutable, out pageNumber))
+                    Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
                 {
                     tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
 
                 byte* ptr;
-                using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats),out ptr))
+                using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats), out ptr))
                 {
                     var stats = (TableSchemaStats*)ptr;
                     stats->NumberOfEntries = 0;
@@ -423,12 +426,12 @@ namespace Voron.Data.Tables
                 {
                     if (_primaryKey.IsGlobal == false)
                     {
-                        
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree:true, newPageAllocator: tablePageAllocator))
+
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
                         {
-                            using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader),out ptr))
+                            using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out ptr))
                             {
-                                indexTree.State.CopyTo((TreeRootHeader*) ptr);
+                                indexTree.State.CopyTo((TreeRootHeader*)ptr);
                             }
                         }
                     }
@@ -442,9 +445,9 @@ namespace Voron.Data.Tables
                 {
                     if (indexDef.IsGlobal == false)
                     {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree:true, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
                         {
-                            using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader),out ptr))
+                            using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out ptr))
                             {
                                 indexTree.State.CopyTo((TreeRootHeader*)ptr);
                             }
@@ -549,7 +552,7 @@ namespace Voron.Data.Tables
 
             // Read common schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
-            int indexCount = *(int*) currentPtr;
+            int indexCount = *(int*)currentPtr;
 
             while (indexCount > 0)
             {
@@ -562,7 +565,7 @@ namespace Voron.Data.Tables
 
             // Read fixed size schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
-            indexCount = *(int*) currentPtr;
+            indexCount = *(int*)currentPtr;
 
             while (indexCount > 0)
             {

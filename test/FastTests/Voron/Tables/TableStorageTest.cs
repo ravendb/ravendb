@@ -19,8 +19,11 @@ namespace FastTests.Voron.Tables
 
         static TableStorageTest()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Etags", ByteStringType.Immutable, out EtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Etag&Collection", ByteStringType.Immutable, out EtagAndCollectionSlice);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
+                Slice.From(ctx, "Etag&Collection", ByteStringType.Immutable, out EtagAndCollectionSlice);
+            }
         }
 
         protected override void Configure(StorageEnvironmentOptions options)
