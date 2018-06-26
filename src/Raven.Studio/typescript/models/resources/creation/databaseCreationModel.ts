@@ -289,15 +289,14 @@ class databaseCreationModel {
 
         const checkDatabaseName = (val: string,
                                    params: any,
-                                   callback: (currentValue: string, result: boolean) => void) => {
-            new validateNameCommand('database', val)
+                                   callback: (currentValue: string, result: string | boolean) => void) => {
+            new validateNameCommand('Database', val)
                 .execute()
                 .done((result) => {
                     if (result.IsValid) {
                         callback(this.name(), true);
                     } else {
-                        callback(this.name(), false);
-                        this.name.setError(result.ErrorMessage);
+                        callback(this.name(), result.ErrorMessage);
                     }
                 })
         };
