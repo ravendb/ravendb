@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Raven.Client.Documents.Linq;
 using Sparrow;
 using Xunit;
 
@@ -19,7 +21,7 @@ namespace FastTests.Sparrow
             Assert.Equal(1000, ptr.Size);
             Assert.True(ptr.IsValid);
 
-            allocator.Release(ptr);
+            allocator.Release(ref ptr);
             Assert.False(ptr.IsValid);
         }
 
@@ -41,7 +43,7 @@ namespace FastTests.Sparrow
             Assert.Equal(10 * sizeof(MyStruct), ptr.SizeAsBytes);
             Assert.True(ptr.IsValid);
 
-            allocator.Release(ptr);
+            allocator.Release(ref ptr);
             Assert.False(ptr.IsValid);
         }
 
@@ -90,6 +92,21 @@ namespace FastTests.Sparrow
                 Assert.Equal(i < 200 ? 3 : 0, whole[i]);
         }
 
+        //[Fact]
+        //public void Alloc_NativeSpanByByte_4KAligned()
+        //{
+        //    var allocator = new Allocator<NativeBlockAllocator<NativeBlockAllocator.Default4K>>();
+        //    allocator.Initialize(default(NativeBlockAllocator.Default4K));
+
+        //    var ptr = allocator.Allocate(1000);
+        //    Assert.True((long)ptr.Ptr % 4096 == 0);
+        //    Assert.Equal(1000, ptr.Size);
+        //    Assert.True(ptr.IsValid);
+
+        //    allocator.Release(ptr);
+        //    Assert.False(ptr.IsValid);
+        //}
+
         [Fact]
         public void Alloc_NativeUnsupported()
         {
@@ -100,6 +117,65 @@ namespace FastTests.Sparrow
 
             Assert.Throws<NotSupportedException>(() => allocator.Reset());
             Assert.Throws<NotSupportedException>(() => allocator.Renew());
+        }
+
+
+        [Fact]
+        public void Alloc_ThreadAffinePoolReturnUsedBytes()
+        {
+            var allocator = new Allocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
+            allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
+
+            var ptr = allocator.Allocate(1000);
+            Assert.Equal(1000, ptr.Size);
+            Assert.True(ptr.IsValid);
+
+            long pointerAddress = (long)ptr.Ptr;
+
+            allocator.Release(ref ptr);
+            Assert.False(ptr.IsValid);
+
+            ptr = allocator.Allocate(1000);
+            Assert.Equal(1000, ptr.Size);
+            Assert.True(ptr.IsValid);
+
+            Assert.Equal(pointerAddress, (long)ptr.Ptr);
+        }
+
+        [Fact]
+        public void Alloc_ThreadAffinePoolReturnBlockBytes()
+        {
+            var allocator = new Allocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
+            allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
+
+            long[] addresses = new long[5];
+            BlockPointer[] pointers = new BlockPointer[5];
+            for (int i = 0; i < 5; i++)
+            {
+                var ptr = allocator.Allocate(1000);
+                Assert.Equal(1000, ptr.Size);
+                Assert.True(ptr.IsValid);
+
+                pointers[i] = ptr;
+                addresses[i] = (long)ptr.Ptr;
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                allocator.Release(ref pointers[i]);
+                Assert.False(pointers[i].IsValid);
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var ptr = allocator.Allocate(1000);
+                Assert.Contains((long)ptr.Ptr, addresses);
+            }
+
+            var nonReusedPtr = allocator.Allocate(1000);
+            Assert.Equal(1000, nonReusedPtr.Size);
+            Assert.True(nonReusedPtr.IsValid);
+            // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
 
         [Fact]
@@ -156,7 +232,15 @@ namespace FastTests.Sparrow
             {
                 throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
             }
-  
+
+            public void OnAllocate(ref StubAllocator<TOptions> allocator, BlockPointer ptr)
+            {
+            }
+
+            public void OnRelease(ref StubAllocator<TOptions> allocator, BlockPointer ptr)
+            {
+            }
+
             public void Dispose()
             {
             }
