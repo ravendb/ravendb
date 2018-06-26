@@ -189,11 +189,21 @@ namespace RachisTests.DatabaseCluster
                     "Removed node wasn't move to passive state.");
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
-                if (replicationFactor == 1 && removed.WebUrl != firstLeader.WebUrl)
+
+                if (removed.WebUrl == firstLeader.WebUrl)
                 {
+                    Assert.Equal(replicationFactor, record.Topology.Count);
+                    Assert.Equal(replicationFactor, record.Topology.ReplicationFactor);
+                    return removed;
+                }
+
+                if (replicationFactor == 1)
+                {
+                    // if we remove the only node that have the database, it should delete the record in the cluster.
                     Assert.Null(record);
                     return removed;
                 }
+
                 Assert.Equal(replicationFactor - 1, record.Topology.Count);
                 Assert.Equal(replicationFactor - 1, record.Topology.ReplicationFactor);
             }
