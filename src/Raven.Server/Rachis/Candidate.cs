@@ -171,7 +171,7 @@ namespace Raven.Server.Rachis
                             StateChange();
 
                             var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
-                            string msg = $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm} with cluster version of {minimalVersion}";
+                            string msg = $"Was elected by {realElectionsCount} nodes for leadership in term {ElectionTerm} with cluster version of {minimalVersion}";
                             _engine.SwitchToLeaderState(ElectionTerm, minimalVersion, msg, connections);
                             break;
                         }

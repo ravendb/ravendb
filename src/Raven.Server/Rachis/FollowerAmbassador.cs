@@ -67,6 +67,8 @@ namespace Raven.Server.Rachis
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         private readonly long _term;
 
+        private static int _uniqueId;
+
         public string Tag => _tag;
 
         public string ThreadStatus
@@ -124,8 +126,8 @@ namespace Raven.Server.Rachis
             _connection = connection;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_term}";
-            
-            _debugName = $"Follower Ambassador for {_tag} in term {_term}";
+            var id = Interlocked.Increment(ref _uniqueId);
+            _debugName = $"Follower Ambassador for {_tag} in term {_term} (id:{id})";
             _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
         }
         
@@ -469,8 +471,8 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var earliestIndexEtry = _engine.GetFirstEntryIndex(context);
-                if (_followerMatchIndex >= earliestIndexEtry)
+                var earliestIndexEntry = _engine.GetFirstEntryIndex(context);
+                if (_followerMatchIndex >= earliestIndexEntry)
                 {
                     // we don't need a snapshot, so just send updated topology
                     UpdateLastSend("Send empty snapshot");
@@ -480,8 +482,8 @@ namespace Raven.Server.Rachis
                     }
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = earliestIndexEtry,
-                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
+                        LastIncludedIndex = earliestIndexEntry,
+                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEntry),
                         Topology = _engine.GetTopologyRaw(context)
                     });
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
