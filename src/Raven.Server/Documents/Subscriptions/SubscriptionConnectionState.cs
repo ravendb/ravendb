@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly long _subscriptionId;
         private readonly SubscriptionStorage _storage;
         internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
+        private long isConnectionInUse = 0;
 
         public SubscriptionConnectionState(long subscriptionId, SubscriptionStorage storage)
         {
@@ -46,8 +47,8 @@ namespace Raven.Server.Documents.Subscriptions
             TimeSpan timeToWait)
         {
             try
-            {
-                if (await ConnectionInUse.WaitAsync(timeToWait) == false)
+            {                
+                if (await ConnectionInUse.WaitAsync(timeToWait) == false || Interlocked.CompareExchange(ref isConnectionInUse, 1,0) == 1)
                 {
                     switch (incomingConnection.Strategy)
                     {
@@ -98,6 +99,7 @@ namespace Raven.Server.Documents.Subscriptions
                 _recentConnections.Enqueue(incomingConnection);
                 Interlocked.CompareExchange(ref _currentConnection, null, incomingConnection);
                 ConnectionInUse.Set();
+                Interlocked.Exchange(ref isConnectionInUse, 0);
             });
         }
 
