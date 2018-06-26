@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private Dictionary<JsValue, List<(string Name, long Value)>> _addCounters;
 
-        private Dictionary<string, List<CounterOperation>> _counters;
+        private Dictionary<LazyStringValue, List<CounterOperation>> _counters;
 
         private Dictionary<JsValue, Attachment> _loadedAttachments;
 
@@ -107,10 +107,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             counters.Add((name ?? counter.Name, counter.Value));
         }
 
-        public void AddCounter(string documentId, string counterName, long value)
+        public void AddCounter(LazyStringValue documentId, string counterName, long value)
         {
             if (_counters == null)
-                _counters = new Dictionary<string, List<CounterOperation>>();
+                _counters = new Dictionary<LazyStringValue, List<CounterOperation>>(LazyStringValueComparer.Instance);
 
             if (_counters.TryGetValue(documentId, out var counters) == false)
             {
@@ -126,10 +126,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             });
         }
 
-        public void DeleteCounter(string documentId, string counterName)
+        public void DeleteCounter(LazyStringValue documentId, string counterName)
         {
             if (_counters == null)
-                _counters = new Dictionary<string, List<CounterOperation>>();
+                _counters = new Dictionary<LazyStringValue, List<CounterOperation>>(LazyStringValueComparer.Instance);
 
             if (_counters.TryGetValue(documentId, out var counters) == false)
             {

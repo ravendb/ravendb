@@ -170,7 +170,7 @@ namespace Raven.Server.Documents
             return (doc, name);
         }
 
-        public static (string DocId, string CounterName) ExtractDocIdAndCounterName(LazyStringValue counterTombstoneId)
+        public static (LazyStringValue DocId, string CounterName) ExtractDocIdAndCounterName(JsonOperationContext context, LazyStringValue counterTombstoneId)
         {
             var p = counterTombstoneId.Buffer;
             var size = counterTombstoneId.Size;
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents
                     break;
             }
 
-            var doc = Encoding.UTF8.GetString(p, sizeOfDocId);
+            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
             var name = Encoding.UTF8.GetString(p + sizeOfDocId + 1, size - (sizeOfDocId + 2));
 
             return (doc, name);
