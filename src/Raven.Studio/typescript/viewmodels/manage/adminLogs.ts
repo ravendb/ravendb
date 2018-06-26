@@ -64,6 +64,7 @@ class adminLogs extends viewModelBase {
     private allData = [] as string[];
     
     filter = ko.observable<string>("");
+    onlyErrors = ko.observable<boolean>(false);
     
     private appendElementsTask: number;
     private pendingMessages = [] as string[];
@@ -85,9 +86,10 @@ class adminLogs extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry");
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));        
-        this.initValidation();       
+        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry", "itemHtmlProvider");
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
+        this.onlyErrors.subscribe(() => this.filterLogEntries(true));
+        this.initValidation(); 
     }
     
     private initValidation() {
@@ -120,15 +122,27 @@ class adminLogs extends viewModelBase {
 
     filterLogEntries(fromFilterChange: boolean) {
         const searchText = this.filter().toLocaleLowerCase();
+        const errorsOnly = this.onlyErrors();
 
         if (fromFilterChange) {
             this.listController().reset();
         }
 
-        if (searchText) {
-            const filteredItems = fromFilterChange ? this.allData.filter(x => x.toLocaleLowerCase().includes(searchText)) : this.pendingMessages.filter(x => x.toLocaleLowerCase().includes(searchText));
+        if (searchText || errorsOnly) {
+            let filterFunction: (item: string) => boolean = null;
+            if (searchText && errorsOnly) {
+                filterFunction = x => x.toLocaleLowerCase().includes(searchText) && this.hasError(x);
+            } else if (searchText) {
+                filterFunction = x => x.toLocaleLowerCase().includes(searchText);
+            } else {
+                filterFunction = x => this.hasError(x);
+            }
+            
+            const filteredItems = fromFilterChange 
+                ? this.allData.filter(filterFunction)
+                : this.pendingMessages.filter(filterFunction);
+            
             this.listController().pushElements(filteredItems);
-
         } else {
             this.listController().pushElements(fromFilterChange ? this.allData : this.pendingMessages);
         }
@@ -150,12 +164,14 @@ class adminLogs extends viewModelBase {
         return this.heightCalculator.measure(item, row);
     }
     
+    private hasError(item: string): boolean {
+        return item.includes("EXCEPTION:") || item.includes("Exception:") || item.includes("FATAL ERROR:");
+    }    
+    
     // noinspection JSMethodCanBeStatic
-    itemHtmlProvider(item: string) {    
-        const hasError = item.includes("EXCEPTION:") || item.includes("Exception:");
-               
+    itemHtmlProvider(item: string) {
         return $("<pre class='item'></pre>")
-            .toggleClass("bg-danger", hasError)
+            .toggleClass("bg-danger", this.hasError(item))
             .text(item);
     }
     
