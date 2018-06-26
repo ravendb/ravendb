@@ -40,6 +40,8 @@ namespace Raven.Server.Smuggler.Documents.Data
                         result.MaxStepsForTransformScript = int.Parse(item.Value[0]);
                     else if (string.Equals(key, "collection", StringComparison.OrdinalIgnoreCase))
                         result.Collections.AddRange(item.Value);
+                    else if (string.Equals(key, nameof(SkipRevisionCreation), StringComparison.OrdinalIgnoreCase))
+                        result.SkipRevisionCreation = bool.Parse(item.Value[0]);
                 }
                 catch (Exception e)
                 {
