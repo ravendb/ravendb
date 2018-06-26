@@ -18,8 +18,7 @@ class validateNameCommand extends commandBase {
         
         return this.query<Raven.Server.Utils.NameValidation>(url, null)
            .fail((response: JQueryXHR) => { 
-               const text = this.type === 'database' ? 'database' : 'index';
-               this.reportError(`Failed to validate the ${text} name`, response.responseText, response.statusText);
+               this.reportError(`Failed to validate the ${this.type.toLocaleLowerCase()} name`, response.responseText, response.statusText);
             });
     }
 }

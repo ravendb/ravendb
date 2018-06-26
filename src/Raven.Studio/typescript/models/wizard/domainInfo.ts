@@ -41,7 +41,7 @@ class domainInfo {
 
         const checkDomain = (val: string, 
                              params: any, 
-                             callback: (currentValue: string, result: boolean) => void) => {
+                             callback: (currentValue: string, errorMessageOrValidationResult: boolean | string) => void) => {
                                                 new checkDomainAvailabilityCommand(val, this.licenseProvider())
                                                     .execute()
                                                     .done((result: domainAvailabilityResult) => {
@@ -51,8 +51,7 @@ class domainInfo {
                                                         if (result.status === 400) {
                                                             const error = domainInfo.tryExtractValidationError(result);
                                                             if (error) {
-                                                                callback(this.domain(), false);
-                                                                this.domain.setError(error);
+                                                                callback(this.domain(), error);
                                                             }
                                                         }
                                                     });

@@ -20,10 +20,10 @@ namespace Raven.Server.Web.Studio
 {
     public enum ElementType
     {
-        index,
-        database
-    }
-
+        Index,
+        Database
+    }  
+    
     public class StudioTasksHandler : RequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
@@ -82,10 +82,10 @@ namespace Raven.Server.Web.Studio
 
                 switch (elementType)
                 {
-                    case ElementType.database:
+                    case ElementType.Database:
                         isValid = ResourceNameValidator.IsValidResourceName(name, path, out errorMessage);
                         break;
-                    case ElementType.index:
+                    case ElementType.Index:
                         isValid = IndexStoreStatic.IsValidResourceName(name, isStatic: true, out errorMessage);
                         break;
                 }
