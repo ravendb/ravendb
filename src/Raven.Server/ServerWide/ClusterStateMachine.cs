@@ -73,9 +73,12 @@ namespace Raven.Server.ServerWide
 
         static ClusterStateMachine()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
-            Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CompareExchange);
-            Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Items", out Items);
+                Slice.From(ctx, "CmpXchg", out CompareExchange);
+                Slice.From(ctx, "Identities", out Identities);
+            }
 
             ItemsSchema = new TableSchema();
 
@@ -252,7 +255,7 @@ namespace Raven.Server.ServerWide
                             }
                             catch (Exception e)
                             {
-                                if(_parent.Log.IsOperationsEnabled)
+                                if (_parent.Log.IsOperationsEnabled)
                                     _parent.Log.Operations($"Failed to register {cert.Name} in the operating system", e);
                             }
                         });
@@ -390,7 +393,7 @@ namespace Raven.Server.ServerWide
             {
                 if (_parent.Log.IsOperationsEnabled)
                     _parent.Log.Operations($"{nameof(InstallUpdatedServerCertificate)} failed.", e);
-                
+
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
                     "Server certificate",
@@ -416,7 +419,7 @@ namespace Raven.Server.ServerWide
                     {
                         // delete immediately if this node was removed.
                         var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
-                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow) 
+                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
                             NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
@@ -466,7 +469,7 @@ namespace Raven.Server.ServerWide
             // ReSharper disable once UseNullPropagation
             if (leader == null)
                 return;
-            
+
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
@@ -544,7 +547,7 @@ namespace Raven.Server.ServerWide
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
-                
+
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
@@ -788,14 +791,14 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
-        
+
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand
             {
                 RemovedNode = nodeTag
             }.ToJson(context);
-            
+
             var index = _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -805,7 +808,7 @@ namespace Raven.Server.ServerWide
                 }
             };
         }
-        
+
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
@@ -935,7 +938,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseChanged(context, databaseName, index, type);
             }
         }
-        
+
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
@@ -1077,8 +1080,8 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-        
-        
+
+
         public BlittableJsonReaderObject GetItem(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -1118,7 +1121,7 @@ namespace Raven.Server.ServerWide
                     }, null);
             };
         }
-        
+
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -1134,8 +1137,8 @@ namespace Raven.Server.ServerWide
                 return (-1, null);
             }
         }
-        
-        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context, 
+
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context,
             string dbName, string prefix, int start = 0, int pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -1149,8 +1152,8 @@ namespace Raven.Server.ServerWide
                     var index = ReadCompareExchangeIndex(item.Value.Reader);
                     var value = ReadCompareExchangeValue(context, item.Value.Reader);
                     yield return (key, index, value);
-                    
-                    if(pageSize == 0)
+
+                    if (pageSize == 0)
                         yield break;
                 }
             }
@@ -1288,7 +1291,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice, 
+        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice,
             RootObjectType type = RootObjectType.VariableSizeTree)
             where T : RavenTransaction
         {
@@ -1464,7 +1467,8 @@ namespace Raven.Server.ServerWide
                             //Happens, we don't really care at this point
                         }
                     }
-                });
+                }
+                );
             }
             catch (Exception)
             {
