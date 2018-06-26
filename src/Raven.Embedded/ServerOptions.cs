@@ -13,6 +13,9 @@ namespace Raven.Embedded
 
         internal string ServerDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDBServer");
 
+        public string DotnetApplicationPath { get; set; } = "dotnet";
+
+        public bool AcceptEula { get; set; } = true;
 
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 
