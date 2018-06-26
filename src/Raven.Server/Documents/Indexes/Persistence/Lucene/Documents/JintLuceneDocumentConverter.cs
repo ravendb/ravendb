@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private object GetValue(JsValue jsValue)
         {
-            if (jsValue.IsNull())
+            if (jsValue.IsNull() || jsValue.IsUndefined())
                 return null;
             if (jsValue.IsString())
                 return jsValue.AsString();
@@ -208,7 +208,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 return JavaScriptIndexUtils.StringifyObject(jsValue);
             }
-            
             ThrowInvalidObject(jsValue);
             return null;
         }
