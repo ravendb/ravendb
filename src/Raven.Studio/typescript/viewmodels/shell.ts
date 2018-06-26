@@ -223,7 +223,7 @@ class shell extends viewModelBase {
         
         sys.error = (e: any) => {
             console.error(e);
-            messagePublisher.reportError("Failed to load routed module!", e);
+            messagePublisher.reportWarning("Failed to load routed module!", e);
         };
     }
 
