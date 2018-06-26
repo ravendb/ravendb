@@ -1010,9 +1010,11 @@ namespace Raven.Client.Http
                         command.SetResponseRaw(response, null, context);
                     return true;
                 case HttpStatusCode.Forbidden:
+                    var msg = await TryGetResponseOfError(response).ConfigureAwait(false);
                     throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url + ", " +
-                        (Certificate == null ? "a certificate is required." : Certificate.FriendlyName + " does not have permission to access it or is unknown. ") +
-                        $"Method: {request.Method}, Request: {request.RequestUri}");
+                        (Certificate == null ? "a certificate is required. " : Certificate.FriendlyName + " does not have permission to access it or is unknown. ") +
+                        $"Method: {request.Method}, Request: {request.RequestUri}" + Environment.NewLine + msg
+                        );
                 case HttpStatusCode.Gone: // request not relevant for the chosen node - the database has been moved to a different one
                     if (shouldRetry == false)
                         return false;
@@ -1035,6 +1037,18 @@ namespace Raven.Client.Http
                     break;
             }
             return false;
+        }
+
+        private static async Task<string> TryGetResponseOfError(HttpResponseMessage response)
+        {
+            try
+            {
+                return (await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            }
+            catch (Exception e)
+            {
+                return "Could not read request: " + e.Message;
+            }
         }
 
         private static Task HandleConflict(JsonOperationContext context, HttpResponseMessage response)
