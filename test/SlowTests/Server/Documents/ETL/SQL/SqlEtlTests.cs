@@ -527,7 +527,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-11248")]
         public async Task WillLog()
         {
             using (var client = new ClientWebSocket())
