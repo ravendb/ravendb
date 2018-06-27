@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldToFetch.QueryField.Function != null)
             {
-                using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Function)))
+                using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
                 {
                     var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                     for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
