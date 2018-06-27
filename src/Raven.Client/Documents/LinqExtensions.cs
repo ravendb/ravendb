@@ -862,11 +862,39 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
+        /// Perform an initial sort by lucene score.
+        /// </summary>
+        public static IOrderedQueryable<T> ThenByScore<T>(this IQueryable<T> self)
+        {
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(ThenByScore));
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(self);
+
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        /// <summary>
         /// Perform an initial sort by lucene score descending.
         /// </summary>
         public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScoreDescending));
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(self);
+
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        /// <summary>
+        /// Perform an initial sort by lucene score descending.
+        /// </summary>
+        public static IOrderedQueryable<T> ThenByScoreDescending<T>(this IQueryable<T> self)
+        {
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(ThenByScoreDescending));
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);
@@ -1211,6 +1239,7 @@ namespace Raven.Client.Documents
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
+
         }
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
