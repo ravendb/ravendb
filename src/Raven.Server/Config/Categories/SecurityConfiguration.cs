@@ -23,7 +23,7 @@ namespace Raven.Server.Config.Categories
         [Description("How far back we should retain audit log entries")]
         [DefaultValue(365 * 24)]
         [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting AuditLogRetention { get; set; }
 
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]
