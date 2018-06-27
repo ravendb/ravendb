@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Lucene;
             public static string Highlightings;
             public static string Explanations;
-            public static string Function;
+            public static string JavaScript;
             public static string Storage;
             public static string Projection;
             public static string Retriever;
