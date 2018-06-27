@@ -92,8 +92,8 @@ namespace Raven.Server.Dashboard
 
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
-                        // database does not exist on this server or disabled
-                        SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: true);
+                        // database does not exist on this server, is offline or disabled
+                        SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: IsDatabaseDisabled(databaseTuple.Value));
                         continue;
                     }
 
@@ -276,10 +276,10 @@ namespace Raven.Server.Dashboard
 
         private static int GetReplicationFactor(BlittableJsonReaderObject databaseRecordBlittable)
         {
-            if (databaseRecordBlittable.TryGet("Topology", out BlittableJsonReaderObject topology) == false)
+            if (databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
                 return 1;
 
-            if (topology.TryGet("ReplicationFactor", out int replicationFactor) == false)
+            if (topology.TryGet(nameof(DatabaseTopology.ReplicationFactor), out int replicationFactor) == false)
                 return 1;
 
             return replicationFactor;
@@ -295,6 +295,16 @@ namespace Raven.Server.Dashboard
 
             database = databaseTask.Result;
             return database.DatabaseShutdown.IsCancellationRequested == false;
+        }
+
+        private static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecordBlittable)
+        {
+            if (databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false)
+            {
+                return false;
+            }
+
+            return disabled;
         }
     }
 }
