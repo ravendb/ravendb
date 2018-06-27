@@ -197,6 +197,8 @@ namespace Raven.Client.Documents.Linq
             {
                 switch (expression.NodeType)
                 {
+                    case ExpressionType.Convert:
+                    case ExpressionType.ConvertChecked:
                     case ExpressionType.Quote:
                         expression = ((UnaryExpression)expression).Operand;
                         break;
@@ -468,3 +470,4 @@ namespace Raven.Client.Documents.Linq
 
     }
 }
+
