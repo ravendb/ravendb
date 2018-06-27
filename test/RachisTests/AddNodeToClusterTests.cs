@@ -164,8 +164,7 @@ namespace RachisTests
                 Assert.True(WaitForDocument<User>(watcherStore, "users/3", u => u.Name == "Karmel3", 30_000));
 
                 // rejoin the node
-                var newLeader = Servers.Single(s => s.ServerStore.IsLeader());
-                Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
+                var newLeader = await ActionWithLeader(l => l.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode));
                 Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(fromSeconds));
 
                 using (var newLeaderStore = new DocumentStore
