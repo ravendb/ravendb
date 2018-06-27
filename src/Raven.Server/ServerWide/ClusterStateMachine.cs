@@ -479,12 +479,6 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    if (_parent.Tag == removed)
-                    {
-                        //If no deletion was issued, then the removed node will keep all his data until either he will be bootstrapped or rejoined with the cluster.
-                        continue;
-                    }
-
                     if (record.Topology.RelevantFor(removed))
                     {
                         record.Topology.RemoveFromTopology(removed);
