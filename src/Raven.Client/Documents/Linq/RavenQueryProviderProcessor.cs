@@ -1008,33 +1008,41 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             switch (expression.Method.Name)
             {
-                case "Search":
+                case nameof(LinqExtensions.Search):
                     VisitSearch(expression);
                     break;
-                case "OrderByScore":
+                case nameof(LinqExtensions.OrderByScore):
                     _documentQuery.OrderByScore();
                     VisitExpression(expression.Arguments[0]);
                     break;
-                case "OrderByScoreDescending":
+                case nameof(LinqExtensions.ThenByScore):
+                    VisitExpression(expression.Arguments[0]);
+                    _documentQuery.OrderByScore();
+                    break;
+                case nameof(LinqExtensions.OrderByScoreDescending):
                     _documentQuery.OrderByScoreDescending();
                     VisitExpression(expression.Arguments[0]);
                     break;
-                case "Intersect":
+                case nameof(LinqExtensions.ThenByScoreDescending):
+                    VisitExpression(expression.Arguments[0]);
+                    _documentQuery.OrderByScoreDescending();
+                    break;
+                case nameof(LinqExtensions.Intersect):
                     VisitExpression(expression.Arguments[0]);
                     _documentQuery.Intersect();
                     _chainedWhere = false;
                     break;
-                case "In":
+                case nameof(RavenQueryableExtensions.In):
                     var memberInfo = GetMember(expression.Arguments[0]);
                     var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
                     _documentQuery.WhereIn(memberInfo.Path, ((IEnumerable)objects).Cast<object>(), _insideExact);
                     break;
-                case "ContainsAny":
+                case nameof(RavenQueryableExtensions.ContainsAny):
                     memberInfo = GetMember(expression.Arguments[0]);
                     objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
                     _documentQuery.ContainsAny(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
                     break;
-                case "ContainsAll":
+                case nameof(RavenQueryableExtensions.ContainsAll):
                     memberInfo = GetMember(expression.Arguments[0]);
                     objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
                     _documentQuery.ContainsAll(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
