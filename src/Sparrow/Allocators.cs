@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Global;
+using Sparrow.Json;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Threading;
@@ -465,21 +466,6 @@ namespace Sparrow
         }
     }
 
-    public static class Allocators
-    {
-        //    public readonly AllocatorBuilder<PoolAllocator> Pool = new AllocatorBuilder<PoolAllocator>();
-        //    public readonly AllocatorBuilder<ArenaAllocator> Arena = new AllocatorBuilder<ArenaAllocator>();
-    }
-
-
-    public class Allocator
-    {
-        //public static Allocator Create<T>(AllocatorBuilder<T> blockAllocator) where T : struct, IAllocator
-        //{
-        //    throw new NotImplementedException();
-        //}
-    }
-
     public interface IAllocatorOptions
     {
     }
@@ -503,7 +489,20 @@ namespace Sparrow
         void Renew(ref TAllocator allocator);
     }
 
-    public interface IAllocator { }
+    public interface IAllocator
+    {
+    }
+
+    public interface IAllocatorComposer
+    {
+        void Initialize<TBlockAllocatorOptions>(TBlockAllocatorOptions options) where TBlockAllocatorOptions : struct, IAllocatorOptions;
+
+        BlockPointer Allocate(int size);
+        BlockPointer<TType> Allocate<TType>(int size) where TType : struct;
+
+        void Release(ref BlockPointer ptr);
+        void Release<TType>(ref BlockPointer<TType> ptr) where TType : struct;
+    }
 
     public unsafe interface IAllocator<T> where T : struct, IAllocator, IDisposable
     {
@@ -511,8 +510,7 @@ namespace Sparrow
 
         void Initialize(ref T allocator);
 
-        void Configure<TConfig>(ref T allocator, ref TConfig configuration)
-            where TConfig : struct, IAllocatorOptions;
+        void Configure<TConfig>(ref T allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions;
 
         void Allocate(ref T allocator, int size, out BlockPointer.Header* header);
         void Release(ref T allocator, in BlockPointer.Header* header);
@@ -522,7 +520,7 @@ namespace Sparrow
         void OnRelease(ref T allocator, BlockPointer ptr);
     }
 
-    public sealed class Allocator<TAllocator> : IDisposable, ILowMemoryHandler
+    public sealed class Allocator<TAllocator> : IAllocatorComposer, IDisposable, ILowMemoryHandler
         where TAllocator : struct, IAllocator<TAllocator>, IAllocator, IDisposable
     {
         private TAllocator _allocator;
@@ -652,217 +650,156 @@ namespace Sparrow
         }
     }
 
-    public interface INativeBlockOptions : IAllocatorOptions
+    public interface IArenaAllocatorOptions : INativeBlockOptions
     {
-        bool UseSecureMemory { get; }
-        bool ElectricFenceEnabled { get; }
-        bool Zeroed { get; }
+        int InitialBlockSize { get; }
+        int MaxBlockSize { get; }
+        IAllocatorComposer CreateAllocator();
     }
 
-    public enum ThreadAffineWorkload : byte
-    {
-        Peaceful = 4,
-        Default = 16,
-        Contended = 64,
-        Absurd = 128
-    }
 
-    public interface IThreadAffineBlockOptions : INativeBlockOptions
+    public static class ArenaAllocator
     {
-        int BlockSize { get; }
-        ThreadAffineWorkload Workload { get; }
-    }
-
-    public static class ThreadAffineBlockAllocator
-    {
-        public struct Default : IThreadAffineBlockOptions
+        public struct Default : IArenaAllocatorOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
-            public int BlockSize => 4 * Constants.Size.Kilobyte;
-            public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
+
+            public int InitialBlockSize => 1 * Constants.Size.Megabyte;
+            public int MaxBlockSize => 16 * Constants.Size.Megabyte;
+            public IAllocatorComposer CreateAllocator() => new Allocator<NativeBlockAllocator<NativeBlockAllocator.Default>>();
+        }
+
+        public struct ThreadAffineDefault : IArenaAllocatorOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public int InitialBlockSize => 1 * Constants.Size.Megabyte;
+            public int MaxBlockSize => 16 * Constants.Size.Megabyte;
+            public IAllocatorComposer CreateAllocator() => new Allocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
+        }
+
+        public struct ThreadAffineDefault<T> : IArenaAllocatorOptions where T : struct, IThreadAffineBlockOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public int InitialBlockSize => 1 * Constants.Size.Megabyte;
+            public int MaxBlockSize => 16 * Constants.Size.Megabyte;
+            public IAllocatorComposer CreateAllocator() => new Allocator<ThreadAffineBlockAllocator<T>>();
         }
     }
 
-    public static class NativeBlockAllocator
+    public interface IPoolAllocatorOptions : INativeBlockOptions
     {
-        public struct Default : INativeBlockOptions
-        {
-            public bool UseSecureMemory => false;
-            public bool ElectricFenceEnabled => false;
-            public bool Zeroed => false;
-        }
 
-        public struct DefaultZero : INativeBlockOptions
-        {
-            public bool UseSecureMemory => false;
-            public bool ElectricFenceEnabled => false;
-            public bool Zeroed => true;
-        }
+    }
 
-        public struct Secure : INativeBlockOptions
+    public static class PoolAllocator
+    {
+        internal unsafe struct FreeSection
         {
-            public bool UseSecureMemory => true;
-            public bool ElectricFenceEnabled => false;
-            public bool Zeroed => false;
-        }
-
-        public struct ElectricFence : INativeBlockOptions
-        {
-            public bool UseSecureMemory => false;
-            public bool ElectricFenceEnabled => true;
-            public bool Zeroed => false;
+            public FreeSection* Previous;
+            public int SizeInBytes;
         }
     }
 
-    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
-        where TOptions : struct, IThreadAffineBlockOptions
+    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
+        where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
-        private NativeBlockAllocator<TOptions> _nativeAllocator;
-        private Container[] _container;
+        
+        private int _allocated;
+        private int _used;
 
-        private struct Container
+        private PoolAllocator.FreeSection*[] _freed;
+
+
+        public int Allocated => _allocated;
+        public int Used => _used;
+
+        public void Initialize(ref PoolAllocator<TOptions> allocator)
         {
-            public IntPtr _block1;
-            public IntPtr _block2;
-            public IntPtr _block3;
-            public IntPtr _block4;
+            // Initialize the struct pointers structure used to navigate over the allocated memory.
+            allocator._freed = new PoolAllocator.FreeSection*[32];
         }
 
-        public int Allocated { get; }
-
-        public void Initialize(ref ThreadAffineBlockAllocator<TOptions> allocator)
+        public void Configure<TConfig>(ref PoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
-            allocator._nativeAllocator.Initialize(ref allocator._nativeAllocator);
-            allocator._container = new Container[(int)allocator._options.Workload]; // PERF: This should be a constant.
+            throw new NotImplementedException();
         }
 
-        public void Configure<TConfig>(ref ThreadAffineBlockAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+        public void Allocate(ref PoolAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
         {
-            if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
-                throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TOptions)}");
-
-            // This cast will get evicted by the JIT. 
-            allocator._options = (TOptions)(object)configuration;
+            throw new NotImplementedException();
         }
 
-        public void Allocate(ref ThreadAffineBlockAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
+        public void Release(ref PoolAllocator<TOptions> allocator, in BlockPointer.Header* header)
         {
-            if (size < allocator._options.BlockSize)
-            {
-                // PERF: Bitwise add should emit a 'and' instruction followed by a constant.
-                int threadId = Thread.CurrentThread.ManagedThreadId & ((int)allocator._options.Workload - 1);
-
-                ref Container container = ref allocator._container[threadId];
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block1, IntPtr.Zero, container._block1);
-                if (header != null)
-                    return;
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block2, IntPtr.Zero, container._block2);
-                if (header != null)
-                    return;
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block3, IntPtr.Zero, container._block3);
-                if (header != null)
-                    return;
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block4, IntPtr.Zero, container._block4);
-                if (header != null)
-                    return;
-            }
-
-            allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, size, out header);
+            throw new NotImplementedException();
         }
 
-        public void Release(ref ThreadAffineBlockAllocator<TOptions> allocator, in BlockPointer.Header* header)
+        public void Renew(ref PoolAllocator<TOptions> allocator)
         {
-            if (header->Size < allocator._options.BlockSize)
-            {
-                // PERF: Bitwise add should emit a and instruction followed by a constant.
-                int threadId = Thread.CurrentThread.ManagedThreadId & ((int)allocator._options.Workload - 1);
-
-                ref Container container = ref allocator._container[threadId];
-
-                if (Interlocked.CompareExchange(ref container._block1, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
-                    return;
-                if (Interlocked.CompareExchange(ref container._block2, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
-                    return;
-                if (Interlocked.CompareExchange(ref container._block3, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
-                    return;
-                if (Interlocked.CompareExchange(ref container._block4, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
-                    return;
-            }
-
-            allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
+            throw new NotImplementedException();
         }
 
-        public void Reset(ref ThreadAffineBlockAllocator<TOptions> allocator)
+        public void Reset(ref PoolAllocator<TOptions> allocator)
         {
-            throw new NotSupportedException($"{nameof(ThreadAffineBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+            throw new NotImplementedException();
         }
 
-        public void OnAllocate(ref ThreadAffineBlockAllocator<TOptions> allocator, BlockPointer ptr) {}
-        public void OnRelease(ref ThreadAffineBlockAllocator<TOptions> allocator, BlockPointer ptr) {}
+        public void OnAllocate(ref PoolAllocator<TOptions> allocator, BlockPointer ptr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void OnRelease(ref PoolAllocator<TOptions> allocator, BlockPointer ptr)
+        {
+            throw new NotImplementedException();
+        }
 
         public void Dispose()
         {
-            CleanupPool(ref this);
+            throw new NotImplementedException();
         }
 
-        public void NotifyLowMemory(ref ThreadAffineBlockAllocator<TOptions> allocator)
+        public void NotifyLowMemory(ref PoolAllocator<TOptions> allocator)
         {
-            CleanupPool(ref allocator);
+            throw new NotImplementedException();
         }
 
-        private void CleanupPool(ref ThreadAffineBlockAllocator<TOptions> allocator)
+        public void NotifyLowMemoryOver(ref PoolAllocator<TOptions> allocator)
         {
-            // We move over the whole pool and release what we find. 
-            for (int i = 0; i < allocator._container.Length; i++)
-            {
-                ref Container container = ref allocator._container[i];
-
-                BlockPointer.Header* header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block1, IntPtr.Zero, container._block1);
-                if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block2, IntPtr.Zero, container._block2);
-                if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block3, IntPtr.Zero, container._block3);
-                if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
-
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container._block4, IntPtr.Zero, container._block4);
-                if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
-            }
-        }
-
-        public void NotifyLowMemoryOver(ref ThreadAffineBlockAllocator<TOptions> allocator)
-        {
-            // Nothing to do here. 
+            throw new NotImplementedException();
         }
     }
 
-    public struct NativeBlockAllocator<TOptions> : IAllocator<NativeBlockAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<NativeBlockAllocator<TOptions>>
-        where TOptions : struct, INativeBlockOptions
+    public unsafe struct ArenaAllocator<TOptions> : IAllocator<ArenaAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<ArenaAllocator<TOptions>>
+        where TOptions : struct, IArenaAllocatorOptions
     {
         private TOptions _options;
+        private IAllocatorComposer _internalAllocator;
 
-        public void Configure<TConfig>(ref NativeBlockAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+        private byte* _ptrStart;
+        private byte* _ptrCurrent;
+
+        private long _allocated;
+        private long _used;
+
+        public void Configure<TConfig>(ref ArenaAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
             if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
                 throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TOptions)}");
 
             // This cast will get evicted by the JIT. 
             allocator._options = (TOptions)(object)configuration;
-
-            if (((TOptions)(object)configuration).ElectricFenceEnabled && ((TOptions)(object)configuration).UseSecureMemory)
-                throw new NotSupportedException($"{nameof(TConfig)} is asking for secure, electric fenced memory. The combination is not supported.");
+            // PERF: This should be devirtualized. 
+            allocator._internalAllocator = allocator._options.CreateAllocator();
         }
 
         public int Allocated
@@ -874,71 +811,42 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Initialize(ref NativeBlockAllocator<TOptions> allocator)
+        public void Initialize(ref ArenaAllocator<TOptions> allocator)
         {
-            allocator.Allocated = 0;
+            allocator._internalAllocator.Initialize(_options);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Allocate(ref NativeBlockAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
+        public void Allocate(ref ArenaAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
         {
-            byte* memory;
-            int allocatedSize = size + sizeof(BlockPointer.Header);
-
-            // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
-            //       JIT will be able to fold all this if sequence into a branchless single call.
-            if (allocator._options.ElectricFenceEnabled)
-                memory = ElectricFencedMemory.Allocate(allocatedSize);
-            else if (allocator._options.UseSecureMemory)
-                throw new NotImplementedException();
-            else
-                memory = NativeMemory.AllocateMemory(allocatedSize);
-
-            if (allocator._options.Zeroed)
-                Memory.Set(memory, 0, allocatedSize);
-
-            header = (BlockPointer.Header*)memory;
-            *header = new BlockPointer.Header(memory + sizeof(BlockPointer.Header), size);
-
-            allocator.Allocated += size + sizeof(BlockPointer.Header);
+            throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Release(ref NativeBlockAllocator<TOptions> blockAllocator, in BlockPointer.Header* header)
+        public void Release(ref ArenaAllocator<TOptions> blockAllocator, in BlockPointer.Header* header)
         {
-            blockAllocator.Allocated -= header->Size + sizeof(BlockPointer.Header);            
-
-            // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
-            //       JIT will be able to fold all this if sequence into a branchless single call.
-            if (blockAllocator._options.ElectricFenceEnabled)
-                ElectricFencedMemory.Free((byte*)header);
-            else if (blockAllocator._options.UseSecureMemory)
-                throw new NotImplementedException();
-            else
-                NativeMemory.Free((byte*) header, header->Size + sizeof(BlockPointer.Header));          
         }
 
-        public void Reset(ref NativeBlockAllocator<TOptions> blockAllocator)
+        public void Reset(ref ArenaAllocator<TOptions> blockAllocator)
         {
-            throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
         }
 
-        public void OnAllocate(ref NativeBlockAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnAllocate(ref ArenaAllocator<TOptions> allocator, BlockPointer ptr)
         {
             // This allocator does not keep track of anything.
         }
 
-        public void OnRelease(ref NativeBlockAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnRelease(ref ArenaAllocator<TOptions> allocator, BlockPointer ptr)
         {
             // This allocator does not keep track of anything.
         }
 
-        public void NotifyLowMemory(ref NativeBlockAllocator<TOptions> blockAllocator)
+        public void NotifyLowMemory(ref ArenaAllocator<TOptions> blockAllocator)
         {
             // This allocator cannot do anything with this signal.
         }
 
-        public void NotifyLowMemoryOver(ref NativeBlockAllocator<TOptions> blockAllocator)
+        public void NotifyLowMemoryOver(ref ArenaAllocator<TOptions> blockAllocator)
         {
             // This allocator cannot do anything with this signal.
         }
@@ -947,4 +855,5 @@ namespace Sparrow
         {
         }
     }
+
 }
