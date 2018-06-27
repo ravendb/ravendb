@@ -94,7 +94,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 FastCompare(name, MetadataIdPropertyIndex))
             {
                 if (BlittableJson.TryGetMember(name, out result))
+                {
+                    result = TypeConverter.ToDynamicType(result);
                     return true;
+                }
 
                 if (_doc == null)
                 {
