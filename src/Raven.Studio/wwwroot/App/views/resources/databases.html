@@ -223,7 +223,7 @@
 </div>
 
 <script type="text/html" id="invalid-database-properties-template">
-    <div class="text-danger">
+    <div class="text-danger flex-grow">
         <i class="icon-exclamation"></i>
         <span data-bind="text: loadError"></span>
     </div>
@@ -241,11 +241,11 @@
     <div class="properties-item" data-bind="visible: $root.createIsLocalDatabaseObservable(name)()">
         <div class="properties-value value-only">
             <a class="set-size text-disabled" title="Number of documents. Click to view documents list"
-               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, if: documentsCount()">
                 <i class="icon-document-group"></i>
                 <span data-bind="text: documentsCount().toLocaleString()"></span>
             </a>
-            <a class="set-size text-disabled" title="Number of indexes. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+            <a class="set-size text-disabled" title="Number of indexes. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, if: indexesCount()">
                 <i class="icon-index"></i>
                 <span data-bind="text: indexesCount().toLocaleString()"></span>
             </a>
@@ -271,7 +271,6 @@
             </div>
         </div>
     </div>
-
     <div class="properties-item" data-bind="visible: indexingErrors()">
         <div class="properties-value value-only">
             <a class="set-size text-danger" title="Indexing errors. Click to view details" data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
@@ -289,7 +288,6 @@
             </a>
         </div>
     </div>
-
     <div class="properties-item" data-bind="visible: indexingDisabled()">
         <div class="properties-value value-only">
             <div class="set-size text-danger" title="Indexing disabled">
@@ -315,5 +313,4 @@
             </div>
         </div>
     </div>
-
 </script>
