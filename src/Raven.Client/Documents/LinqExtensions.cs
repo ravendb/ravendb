@@ -848,7 +848,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Perform an initial sort by lucene score.
         /// </summary>
-        public static IOrderedQueryable<T> ThenByScore<T>(this IQueryable<T> self)
+        public static IOrderedQueryable<T> ThenByScore<T>(this IOrderedQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(ThenByScore));
 
@@ -876,7 +876,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Perform an initial sort by lucene score descending.
         /// </summary>
-        public static IOrderedQueryable<T> ThenByScoreDescending<T>(this IQueryable<T> self)
+        public static IOrderedQueryable<T> ThenByScoreDescending<T>(this IOrderedQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(ThenByScoreDescending));
 
