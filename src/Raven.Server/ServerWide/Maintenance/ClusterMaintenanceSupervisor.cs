@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -332,7 +333,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             case TcpConnectionStatus.Ok:
                                 break;
                             case TcpConnectionStatus.AuthorizationFailed:
-                                throw new UnauthorizedAccessException(
+                                throw new AuthorizationException(
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 //Kindly request the server to drop the connection

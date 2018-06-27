@@ -28,6 +28,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Raven.Client.Exceptions.Security;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -511,7 +512,7 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.Ok:
                         break;
                     case TcpConnectionStatus.AuthorizationFailed:
-                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                        throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
                         //Kindly request the server to drop the connection
                         documentsContext.Write(writer, new DynamicJsonValue

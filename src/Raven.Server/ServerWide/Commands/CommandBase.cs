@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -42,7 +43,7 @@ namespace Raven.Server.ServerWide.Commands
             if (isClusterAdmin)
                 return;
 
-            throw new UnauthorizedAccessException("Attempted to " + GetType().Name + " but this is only available for cluster administrators");
+            throw new AuthorizationException("Attempted to " + GetType().Name + " but this is only available for cluster administrators");
         }
 
         public virtual object FromRemote(object remoteResult)
