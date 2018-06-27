@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -197,7 +198,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 return await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, true, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, null, _serverStore.ServerShutdown);
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception e) when (e is UnauthorizedAccessException || e is AuthorizationException)
             {
                 return new List<string>();
             }
@@ -215,7 +216,7 @@ namespace Raven.Server.Smuggler.Migration
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
                     : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, isLegacyOAuthToken, _serverStore.ServerShutdown);
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception e) when (e is UnauthorizedAccessException || e is AuthorizationException)
             {
                 authorized.Value = false;
                 return new List<string>();

@@ -29,6 +29,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Raven.Client.Exceptions.Security;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -530,7 +531,7 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.Ok:
                         break;
                     case TcpConnectionStatus.AuthorizationFailed:
-                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                        throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (_legacyReplicationMode == LegacyReplicationMode.None &&
                             headerResponse.Version == TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion)
