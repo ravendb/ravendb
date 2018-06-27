@@ -22,6 +22,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
@@ -64,6 +65,8 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderResponse> TcpConnectionHeaderResponse = GenerateJsonDeserializationRoutine<TcpConnectionHeaderResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabasePutResult> DatabasePutResult = GenerateJsonDeserializationRoutine<DatabasePutResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetLogsConfigurationResult> GetLogsConfigurationResult = GenerateJsonDeserializationRoutine<GetLogsConfigurationResult>();
 
         public static readonly Func<BlittableJsonReaderObject, ModifyOngoingTaskResult> ModifyOngoingTaskResult = GenerateJsonDeserializationRoutine<ModifyOngoingTaskResult>();
 
