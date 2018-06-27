@@ -524,10 +524,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    if (_destination is DatabaseDestination
-                        && _options.SkipRevisionCreation
-                        && _options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments)
-                        && item.Document.Flags.HasFlag(DocumentFlags.HasRevisions))
+                    if (_options.SkipRevisionCreation)
                     {
                         item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
                     }
