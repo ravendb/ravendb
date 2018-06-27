@@ -14,16 +14,10 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Voron.Util.Settings;
-using IndexStoreStatic = Raven.Server.Documents.Indexes.IndexStore;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Web.Studio
 {
-    public enum ElementType
-    {
-        Index,
-        Database
-    }  
-    
     public class StudioTasksHandler : RequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
@@ -66,7 +60,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]
         public Task IsValidName()
         {
-            if (Enum.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("type").Trim(), out ElementType elementType) == false)
+            if (Enum.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("type").Trim(), out ItemType elementType) == false)
             {
                 throw new ArgumentException($"Type {elementType} is not supported");
             }
@@ -76,17 +70,16 @@ namespace Raven.Server.Web.Studio
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 bool isValid = true;
                 string errorMessage = null;
 
                 switch (elementType)
                 {
-                    case ElementType.Database:
+                    case ItemType.Database:
                         isValid = ResourceNameValidator.IsValidResourceName(name, path, out errorMessage);
                         break;
-                    case ElementType.Index:
-                        isValid = IndexStoreStatic.IsValidResourceName(name, isStatic: true, out errorMessage);
+                    case ItemType.Index:
+                        isValid = IndexStore.IsValidIndexName(name, isStatic: true, out errorMessage);
                         break;
                 }
 
@@ -157,6 +150,12 @@ namespace Raven.Server.Web.Studio
                     [nameof(Expression)] = Expression
                 };
             }
+        }
+        
+        public enum ItemType
+        {
+            Index,
+            Database
         }
     }
 }
