@@ -43,7 +43,30 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void Start()
         {
-            _collectingTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => CollectDatabasesStatusReport(), null, _name);
+            _collectingTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    CollectDatabasesStatusReport();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // expected
+                }
+                catch (OperationCanceledException)
+                {
+                    // expected
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}. Task is closed.", e);
+                    }
+                    // we don't want to crash the process so we don't propagate this exception.
+                }
+            }
+            , null, _name);
         }
 
         public void CollectDatabasesStatusReport()
