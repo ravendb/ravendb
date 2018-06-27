@@ -524,7 +524,7 @@ namespace Raven.Server.Documents.Indexes
             return IndexCreationOptions.Update;
         }
 
-        public static bool IsValidResourceName(string name, bool isStatic, out string errorMessage)
+        public static bool IsValidIndexName(string name, bool isStatic, out string errorMessage)
         {
             errorMessage = null;
             

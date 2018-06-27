@@ -128,7 +128,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(BatchRequestParser.CommandData));
             
             // name validation
-            scripter.AddType(typeof(ElementType));
+            scripter.AddType(typeof(StudioTasksHandler.ItemType));
             scripter.AddType(typeof(NameValidation));
 
             // database

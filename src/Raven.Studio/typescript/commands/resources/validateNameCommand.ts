@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class validateNameCommand extends commandBase {
 
-    constructor(private type: Raven.Server.Web.Studio.ElementType, private name: string, private dataPath?: string) {
+    constructor(private type: Raven.Server.Web.Studio.StudioTasksHandler.ItemType, private name: string, private dataPath?: string) {
         super();
     }
 
