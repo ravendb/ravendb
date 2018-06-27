@@ -305,7 +305,7 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is UnauthorizedAccessException)
+            if (exception is AuthorizationException)
             {
                 response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;

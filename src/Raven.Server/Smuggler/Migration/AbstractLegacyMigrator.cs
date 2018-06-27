@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -84,7 +85,7 @@ namespace Raven.Server.Smuggler.Migration
             }, apiKey, serverUrl, enableBasicAuthenticationOverUnsecuredHttp, httpClient, isLegacyOAuthToken);
             
             if (response.StatusCode == HttpStatusCode.Unauthorized)
-                throw new UnauthorizedAccessException();
+                throw new AuthorizationException();
 
             if (response.IsSuccessStatusCode == false)
             {
