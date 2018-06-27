@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -704,7 +705,7 @@ namespace Raven.Server.Web.System
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
                 return;
 
-            throw new UnauthorizedAccessException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
+            throw new AuthorizationException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
         }
 
         private static string IpAddressToUrl(string address, int port, string scheme = "http")
