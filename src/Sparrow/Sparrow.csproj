@@ -4,7 +4,6 @@
     <RuntimeFrameworkVersion>2.1.2</RuntimeFrameworkVersion>
     <RuntimeFrameworkVersion>2.1.1</RuntimeFrameworkVersion>
     <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
-    <RuntimeFrameworkVersion>2.1.0-rc1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Sparrow</AssemblyName>
     <PackageId>Sparrow</PackageId>
@@ -48,6 +47,7 @@
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.1" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.1" />
+    <PackageReference Include="System.Memory" Version="4.5.1" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
@@ -65,14 +65,6 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
-  </ItemGroup>
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0-rc1" />
-    <PackageReference Include="System.Buffers" Version="4.5.0-rc1" />
-    <PackageReference Include="System.Memory" Version="4.5.0-rc1" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.0-rc1" />
-    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.0-rc1" />
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.10">
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="System.Memory" Version="4.5.0" />    
   </ItemGroup>
 </Project>
