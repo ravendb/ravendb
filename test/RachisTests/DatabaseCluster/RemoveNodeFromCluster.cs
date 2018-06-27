@@ -184,7 +184,7 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                await firstLeader.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag);
+                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag));
                 Assert.True(await removed.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
                     "Removed node wasn't move to passive state.");
 
