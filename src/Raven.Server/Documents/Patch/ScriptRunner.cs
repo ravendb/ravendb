@@ -412,7 +412,8 @@ namespace Raven.Server.Documents.Patch
                         _docsCtx, 
                         id, 
                         _docsCtx.GetLazyString(changeVector), 
-                        reader, 
+                        reader,
+                        //RavenDB-11391 This flag was added to cause attachment metadata table check & remove metadata properties if not necessary
                         nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict
                         );
 
