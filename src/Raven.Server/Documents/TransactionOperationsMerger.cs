@@ -1126,18 +1126,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void Replay(string filePath)
+        public void Replay(Stream replayStream)
         {
             DocumentsOperationContext txCtx = null;
             IDisposable txDisposable = null;
 
-            using (var fileStream = File.OpenRead(filePath))
-                //Todo to use zip
-            //using (var gZipStreamDocuments = new GZipStream(fileStream, CompressionMode.Compress, true))
             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.GetManagedBuffer(out var buffer))
             {
-                var peepingTomStream = new PeepingTomStream(fileStream, context);
+                var peepingTomStream = new PeepingTomStream(replayStream, context);
                 var state = new JsonParserState();
                 var parser = new UnmanagedJsonParser(context, state, "file");
 

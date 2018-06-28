@@ -7,28 +7,40 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TransactionsRecordingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replay_transactions", "Get", AuthorizationStatus.ValidUser)]
-        public async Task ReplayRecording()
+        [RavenAction("/databases/*/transactions/replay", "POST", AuthorizationStatus.ValidUser)]
+        public Task ReplayRecording()
         {
-            var filePath = GetStringQueryString("file_path");
-            Database.TxMerger.Replay(filePath);
+            var replayStream = RequestBodyStream();
+            //Todo to use zip
+            //using (var gZipStreamDocuments = new GZipStream(fileStream, CompressionMode.Compress, true))
+            Database.TxMerger.Replay(replayStream);
+
+            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/start_transactions_recording", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/transactions/start-recording", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task StartRecording()
         {
-            var filePath = GetStringQueryString("file_path");
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                const string filePropertyName = "file";
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "body request");
+                if (false == input.TryGet(filePropertyName, out string filePath))
+                {
+                    ThrowRequiredPropertyNameInRequest(filePropertyName);
+                }
 
-            var command = new TransactionsRecordingCommand(
-                    Database.TxMerger,
-                    TransactionsRecordingCommand.Instruction.Start,
-                    filePath
-                );
+                var command = new TransactionsRecordingCommand(
+                        Database.TxMerger,
+                        TransactionsRecordingCommand.Instruction.Start,
+                        filePath
+                    );
 
-            await Database.TxMerger.Enqueue(command);
+                await Database.TxMerger.Enqueue(command);
+            }
         }
 
-        [RavenAction("/databases/*/stop_transactions_recording", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/transactions/stop-recording", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task StopRecording()
         {
             var command = new TransactionsRecordingCommand(

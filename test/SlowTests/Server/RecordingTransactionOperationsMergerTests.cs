@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -26,49 +27,6 @@ namespace SlowTests.Server
 {
     public class RecordingTransactionOperationsMergerTests : RavenTestBase
     {
-        private const string AgeKey = "age";
-
-        [Fact]
-        public void JustRecord()
-        {
-            var dateString = DateTime.Now.ToString("G").Replace(" ", "").Replace(":", "").Replace(@"/", "");
-            var filePath = $@"C:\Records\record_{dateString}.json";
-
-            var expectedNames = new[] { "Avi" };//}, "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper" };
-            var users = expectedNames.Select(n => new User { Name = n }).ToArray();
-            User[] documents = { };
-
-
-            //Recording
-            using (var store = GetDocumentStore())
-            {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
-                using (var session = store.OpenSession())
-                {
-                    foreach (var user in users)
-                    {
-                        session.Store(user);
-                    }
-
-                    session.SaveChanges();
-                }
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
-                //WaitForUserToContinueTheTest(store);
-            }
-        }
-
-        [Fact]
-        public void JustReplay()
-        {
-            const string filePath = @"C:\Records\test.json";
-
-            using (var store = GetDocumentStore())
-            {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
-                WaitForUserToContinueTheTest(store);
-            }
-        }
-
         [Fact]
         public void Attachments()
         {
@@ -84,7 +42,7 @@ namespace SlowTests.Server
 
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
 
                 using (var session = store.OpenSession())
                 using (var picture = File.Open(@"C:\Records\Igal.jpg", FileMode.Open))
@@ -96,13 +54,13 @@ namespace SlowTests.Server
                     session.SaveChanges();
 
                 }
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
-                WaitForUserToContinueTheTest(store);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
             }
         }
 
@@ -114,7 +72,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
             }
 
             //Todo to change to zip after recording will change to zip
@@ -142,7 +100,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
                     foreach (var user in users)
@@ -153,14 +111,14 @@ namespace SlowTests.Server
 
                     store.Commands().Execute(new DeleteDocumentCommand(users.First().Id, null));
                 }
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
-                //WaitForUserToContinueTheTest(store);
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
                     documents = session.Query<User>().ToArray();
@@ -177,14 +135,16 @@ namespace SlowTests.Server
         {
             var filePath = Path.GetTempFileName();
 
+
             var users = names.Select(n => new User { Name = n }).ToArray();
 
+            const string AgeKey = "age";
             const int newAge = 34;
 
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
                     foreach (var user in users)
@@ -201,15 +161,16 @@ namespace SlowTests.Server
                     .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }))
                     .WaitForCompletion();
 
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
 
             }
 
             //Replay
             User[] replayUsers;
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
                     replayUsers = session.Query<User>().ToArray();
@@ -233,7 +194,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
                     session.Store(user);
@@ -242,13 +203,14 @@ namespace SlowTests.Server
                     session.Advanced.Patch(user, u => u.Name, newName);
                     session.SaveChanges();
                 }
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
                     documents = session.Query<User>().ToArray();
@@ -271,7 +233,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
                     foreach (var name in expected)
@@ -281,13 +243,14 @@ namespace SlowTests.Server
 
                     session.SaveChanges();
                 }
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
                     documents = session.Query<User>().ToArray();
@@ -309,7 +272,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
                     session.Store(toRemove);
@@ -318,13 +281,14 @@ namespace SlowTests.Server
                     session.Delete(toRemove);
                     session.SaveChanges();
                 }
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(filePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
                     documents = session.Query<User>().ToArray();
@@ -363,20 +327,19 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(recordFilePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFilePath);
 
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
-
-//                WaitForUserToContinueTheTest(store);
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             User[] actualUsers;
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(recordFilePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
                     actualUsers = session.Query<User>().ToArray();
@@ -404,7 +367,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(recordFilePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
                 foreach (var user in expectedUsers)
                 {
@@ -414,16 +377,15 @@ namespace SlowTests.Server
                     });
                 }
 
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
-
-//                WaitForUserToContinueTheTest(store);
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             User[] actualUsers;
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(recordFilePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
 
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
@@ -448,7 +410,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Commands().Execute(new StartTransactionsRecordingCommand(recordFilePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -458,14 +420,15 @@ namespace SlowTests.Server
                     }
                 }
 
-                store.Commands().Execute(new StopTransactionsRecordingCommand());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
             User[] actualUsers;
             using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Commands().Execute(new ReplayTransactionsRecordingCommand(recordFilePath));
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
 
                 using (var session = store.OpenSession())
                 {
@@ -476,6 +439,52 @@ namespace SlowTests.Server
             //Assert
             Assert.Equal(expectedUsers, actualUsers, new UserComparer());
         }
+
+        //        [Fact]
+        //        public void RecordingBulkOperation()
+        //        {
+        //            var recordFilePath = Path.GetTempFileName();
+        //            const int newAge = 57;
+        //            var user = new User { Name = "Avi"};
+        //
+        //            //Recording
+        //            using (var store = GetDocumentStore())
+        //            {
+        //                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+        //
+        //                using (var session = store.OpenSession())
+        //                {
+        //                        session.Store(user);
+        //                    session.SaveChanges();
+        //                }
+        //
+        //                store.Operations.Send(new PatchOperation(user.Id, null, new PatchRequest
+        //                {
+        //                    Script = $"this.{nameof(User.Age)} = args.{nameof(User.Age)};",
+        //                    Values =
+        //                    {
+        //                        {nameof(User.Age), newAge }
+        //                    }
+        //                }));
+        //
+        //                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+        //            }
+        //
+        //            //Replay
+        //            User actualUser;
+        //            using (var store = GetDocumentStore())
+        //            {
+        //                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(recordFilePath));
+        //                WaitForUserToContinueTheTest(store);
+        //                using (var session = store.OpenSession())
+        //                {
+        //                    actualUser = session.Load<User>(user.Id);
+        //                }
+        //            }
+        //
+        //            //Assert
+        //            Assert.True(actualUser.Age == newAge, $"The age of {actualUser.Name} is {actualUser.Age} but should be {newAge}");
+        //        }
 
         private class UserComparer : IEqualityComparer<User>
         {
