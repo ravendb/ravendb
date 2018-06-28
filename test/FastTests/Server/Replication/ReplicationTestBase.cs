@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -63,6 +64,7 @@ namespace FastTests.Server.Replication
                     throw new XunitException($"Timed out while waiting for conflicts on {docId} we have {conflicts.Length} conflicts " +
                                              $"on database {store.Database}");
                 }
+                Thread.Sleep(100);
             } while (true);
         }
 
@@ -89,6 +91,7 @@ namespace FastTests.Server.Replication
                         // expected that we might get conflict, ignore and wait
                     }
                 }
+                Thread.Sleep(100);
             }
             using (var session = store.OpenSession())
             {
@@ -122,7 +125,7 @@ namespace FastTests.Server.Replication
                 {
                     Assert.False(true, store.Identifier + " -> Timed out while waiting for tombstones, we have " + tombstones.Count + " tombstones, but should have " + count);
                 }
-
+                Thread.Sleep(100);
             } while (true);
             return tombstones ?? new List<string>();
         }
@@ -151,6 +154,7 @@ namespace FastTests.Server.Replication
                     if (doc != null)
                         return doc;
                 }
+                Thread.Sleep(100);
             }
 
             return null;
