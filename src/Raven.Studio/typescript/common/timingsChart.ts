@@ -4,16 +4,22 @@ import d3 = require("d3");
 
 interface graphNode extends d3.layout.partition.Node {
     name: string;
+    duration: number;
 } 
 
 class timingsChart {
+
+    useLogScale = ko.observable<boolean>(false);
     
     private totalSize = 0;
+    private data: Raven.Client.Documents.Queries.Timings.QueryTimings;
     
     constructor(private selector: string) {
+        this.useLogScale.subscribe(() => this.draw(this.data));
     }
     
     draw(data: Raven.Client.Documents.Queries.Timings.QueryTimings) {
+        this.data = data;
         d3.select(this.selector).select("svg").remove();
         
         const container = $(this.selector);
@@ -24,13 +30,21 @@ class timingsChart {
         const height = container.height();
         const radius = Math.min(width, height) - topPadding;
         
-        const colors = { //TODO: update me!
-            "Storage": "#5687d1",
-            "Function": "#7b615c",
-            "Lucene": "#de783b",
-            "Projection": "#6ab975",
-            "Staleness": "#a173d1",
-            "Query": "#bbbbbb"
+        const colors = {
+            "Optimizer": "#689f39",
+            "Query": "#1482c8",
+            "Retriever": "#34b3e4",
+            "Projection": "#046293",
+            "JavaScript": "#0077b5",
+            "Storage": "#008cc9",
+            "Lucene": "#a487ba",
+            "Includes": "#98041b",
+            "Fill": "#ff7000",
+            "Gather": "#fe8f01",
+            "Highlightings": "#890e4f",
+            "Setup": "#ad1457",
+            "Explanations": "#ec407a",
+            "Staleness": "#fed101",
         } as dictionary<string>;
         
         const vis = d3.select(this.selector)
@@ -39,10 +53,14 @@ class timingsChart {
             .attr("height", height)
             .append("svg:g")
             .attr("id", "container")
-            .attr("transform", "translate(" + width / 2 + "," + height + ")");
+            .attr("transform", "translate(" + width / 2 + "," + (height - 20) + ")");
+        
+        const useLogScale = this.useLogScale();
         
         const partition = d3.layout.partition<graphNode>()
-            .size([Math.PI, radius * radius]);
+            .sort(null)
+            .size([Math.PI, radius * radius])
+            .value(x => useLogScale ? Math.log1p(x.duration) : x.duration);
         
         const arc = d3.svg.arc<graphNode>()
             .startAngle(d => -0.5 * Math.PI + d.x)
@@ -51,6 +69,8 @@ class timingsChart {
             .outerRadius(d => Math.sqrt(d.y + d.dy));
         
         const json = this.convertHierarchy("root", data);
+
+        this.totalSize = data.DurationInMs;
         
         // Bounding circle underneath the sunburst, to make it easier to detect
         // when the mouse leaves the parent g.
@@ -59,10 +79,8 @@ class timingsChart {
             .attr("r", radius)
             .style("opacity", 0);
 
-        // For efficiency, filter nodes to keep only those large enough to see.
         const nodes = partition
-            .nodes(json)
-            .filter(d => d.dx > 0.005);
+            .nodes(json);
 
         const levelName = vis
             .append("svg:text")
@@ -83,7 +101,7 @@ class timingsChart {
             .attr("display", d => d.depth ? null : "none")
             .attr("d", arc)
             .attr("fill-rule", "evenodd")
-            .style("fill", d => colors[d.name] ||  "#554433") //TODO: update callback color
+            .style("fill", d => colors[d.name] ||  "#cccccc")
             .style("opacity", 1)
             .on("mouseover", d => this.mouseover(vis, d, levelName, levelDuration));
 
@@ -91,16 +109,13 @@ class timingsChart {
         vis
             .on("mouseleave", () => this.mouseleave(vis, levelName, levelDuration));
         
-        // Get total size of the tree = value of root node from partition.
-        this.totalSize = (path.node() as any).__data__.value;
-        
         levelDuration
             .text(this.totalSize.toLocaleString() + " ms");
     }
     
     private mouseover(vis: d3.Selection<any>, d: graphNode, levelName: d3.Selection<any>, levelDuration: d3.Selection<any>) {
         // Fade all but the current sequence, and show it in the breadcrumb trail.
-        const percentage = (100 * d.value / this.totalSize);
+        const percentage = (100 * d.duration / this.totalSize);
         let percentageString = percentage.toPrecision(3) + "%";
         
         if (percentage < 0.1) {
@@ -111,7 +126,7 @@ class timingsChart {
             .text(d.name);
         
         levelDuration
-            .text(d.value.toLocaleString() + " ms");
+            .text(d.duration.toLocaleString() + " ms");
         
         const sequenceArray = this.getAncestors(d);
         
@@ -153,7 +168,7 @@ class timingsChart {
     private convertHierarchy(name: string, data: Raven.Client.Documents.Queries.Timings.QueryTimings): graphNode {
         return {
             name: name,
-            value: data.DurationInMs,
+            duration: data.DurationInMs || 0.1, // use some default tiny value
             children: _.map(data.Timings, (value, key) => this.convertHierarchy(key, value)) as any
         }
     }

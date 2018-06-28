@@ -136,6 +136,7 @@ class query extends viewModelBase {
     
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
+    fromCache = ko.observable<boolean>(false);
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
     totalResults: KnockoutComputed<number>;
@@ -655,7 +656,13 @@ class query extends viewModelBase {
                         }
                     
                         const endQueryTime = new Date().getTime();
-                        queryResults.additionalResultInfo.DurationInMs = Math.min(endQueryTime-startQueryTime, queryResults.additionalResultInfo.DurationInMs);
+                        const localQueryTime = endQueryTime - startQueryTime;
+                        if (localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                            queryResults.additionalResultInfo.DurationInMs = localQueryTime;
+                            this.fromCache(true);
+                        } else {
+                            this.fromCache(false);
+                        }
                         
                         const emptyFieldsResult = queryForAllFields 
                             && queryResults.totalResultCount > 0 
