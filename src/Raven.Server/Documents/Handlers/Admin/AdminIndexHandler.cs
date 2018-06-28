@@ -29,7 +29,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 foreach (var indexToAdd in indexes)
                 {
                     var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
-
+                    indexDefinition.Name = indexDefinition.Name?.Trim();
+                    
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
                         var clientCert = GetCurrentCertificate();
