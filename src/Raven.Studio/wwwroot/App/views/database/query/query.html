@@ -153,6 +153,15 @@
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
                 <div class="panel-body js-timings-container absolute-fill" data-bind="visible: currentTab() === 'timings'">
+                    <div class="toggle toggle-right">
+                        <input id="log-scale" class="styled" type="checkbox" data-bind="checked: graph.useLogScale">
+                        <label for="log-scale" class="properties-label">
+                            Use logarithmic scale
+                        </label>
+                    </div>
+                    <div class="from-cache bg-info padding padding-sm" data-bind="visible: $root.fromCache">
+                        <i class="icon-info"></i> <span>Using cached timinigs</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -175,7 +184,7 @@
                 </button>
             <!-- /ko -->
             <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
-                Show timings
+                Timings
             </button> 
         </div>
     </div>
