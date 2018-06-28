@@ -20,9 +20,9 @@ namespace Raven.Client.Documents.Session
     {
         DocumentConventions Conventions { get; }
 
-        Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, CancellationToken token = default (CancellationToken));
+        Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counters = null, bool includeAllCounters = false, CancellationToken token = default);
 
-        Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default);
 
     }
 }

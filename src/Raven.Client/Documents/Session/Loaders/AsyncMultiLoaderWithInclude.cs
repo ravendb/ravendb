@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <returns></returns>
         public Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids, CancellationToken token = default)
         {
-            return _session.LoadAsyncInternal<T>(ids.ToArray(), _includes.ToArray(), token);
+            return _session.LoadAsyncInternal<T>(ids.ToArray(), _includes.ToArray(), token: token);
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <returns></returns>
         public Task<T> LoadAsync(string id, CancellationToken token = default)
         {
-            return _session.LoadAsyncInternal<T>(new[] { id }, _includes.ToArray(), token).ContinueWith(x => x.Result.Values.FirstOrDefault(), token);
+            return _session.LoadAsyncInternal<T>(new[] { id }, _includes.ToArray(), token: token).ContinueWith(x => x.Result.Values.FirstOrDefault(), token);
         }
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <returns></returns>
         public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token = default)
         {
-            return _session.LoadAsyncInternal<TResult>(ids.ToArray(), _includes.ToArray(), token);
+            return _session.LoadAsyncInternal<TResult>(ids.ToArray(), _includes.ToArray(), token: token);
         }
 
         /// <summary>
