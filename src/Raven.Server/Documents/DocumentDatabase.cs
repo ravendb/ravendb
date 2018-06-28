@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
             _disposeOnce.Dispose();
         }
 
-        private unsafe void disposeInternal()
+        private unsafe void DisposeInternal()
         {
 
             //before we dispose of the database we take its latest info to be displayed in the studio
