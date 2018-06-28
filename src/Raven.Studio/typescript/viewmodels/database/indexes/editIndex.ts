@@ -478,10 +478,8 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
+    private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<string> {
         eventsCollector.default.reportEvent("index", "save");
-
-        const originalIndexName = indexDto.Name;
 
         if (indexDto.Name.startsWith(index.SideBySideIndexPrefix)) {
             // trim side by side prefix
@@ -490,7 +488,7 @@ class editIndex extends viewModelBase {
 
         return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
             .execute()
-            .done(() => {
+            .done((savedIndexName) => {
                 this.resetDirtyFlag();
                 
                 this.editedIndex().name.valueHasMutated();
@@ -498,7 +496,7 @@ class editIndex extends viewModelBase {
 
                 if (!this.isEditingExistingIndex()) {
                     this.isEditingExistingIndex(true);
-                    this.editExistingIndex(originalIndexName);
+                    this.editExistingIndex(savedIndexName); 
                 }
                 /* TODO merge suggestion
                 if (isSavingMergedIndex) {
@@ -507,7 +505,7 @@ class editIndex extends viewModelBase {
                     this.mergeSuggestion(null);
                 }*/
 
-                this.updateUrl(originalIndexName, false /* TODO isSavingMergedIndex */);
+                this.updateUrl(savedIndexName, false /* TODO isSavingMergedIndex */);
             });
     }
     
