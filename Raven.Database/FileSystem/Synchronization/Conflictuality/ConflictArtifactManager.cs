@@ -14,11 +14,13 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
     {
         private readonly IndexStorage index;
         private readonly ITransactionalStorage storage;
+        private readonly RavenFileSystem fs;
 
-        public ConflictArtifactManager(ITransactionalStorage storage, IndexStorage index)
+        public ConflictArtifactManager(ITransactionalStorage storage, IndexStorage index, RavenFileSystem fs)
         {
             this.storage = storage;
             this.index = index;
+            this.fs = fs;
         }
 
         public void Create(string fileName, ConflictItem conflict)
@@ -26,14 +28,17 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
             RavenJObject metadata = null;
             FileUpdateResult updateMetadata = null;
 
-            storage.Batch(
-                accessor =>
-                {
-                    metadata = accessor.GetFile(fileName, 0, 0).Metadata;
-                    accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName), JsonExtensions.ToJObject(conflict) );
-                    metadata[SynchronizationConstants.RavenSynchronizationConflict] = true;
-                    updateMetadata = accessor.UpdateFileMetadata(fileName, metadata, null);
-                });
+            using (fs.FileLock.Lock())
+            {
+                storage.Batch(
+                    accessor =>
+                    {
+                        metadata = accessor.GetFile(fileName, 0, 0).Metadata;
+                        accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName), JsonExtensions.ToJObject(conflict));
+                        metadata[SynchronizationConstants.RavenSynchronizationConflict] = true;
+                        updateMetadata = accessor.UpdateFileMetadata(fileName, metadata, null);
+                    });
+            }
 
             if (metadata != null)
                 index.Index(fileName, metadata, updateMetadata.Etag);
@@ -59,7 +64,10 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
             }
             else
             {
-                storage.Batch(delete);
+                using (fs.FileLock.Lock())
+                {
+                    storage.Batch(delete);
+                }
             }
 
             if (metadata != null)

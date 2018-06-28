@@ -179,9 +179,12 @@ namespace Raven.Database.FileSystem.Actions
             {
                 if (putResult != null)
                 {
-                    using (FileSystem.DisableAllTriggersForCurrentThread())
+                    using (FileSystem.FileLock.Lock())
                     {
-                        IndicateFileToDelete(name, null);
+                        using (FileSystem.DisableAllTriggersForCurrentThread())
+                        {
+                            IndicateFileToDelete(name, null);
+                        }
                     }
                 }
 

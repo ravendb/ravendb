@@ -86,6 +86,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
                         if (type == SynchronizationType.ContentUpdateNoRDC)
                         {
+                            using (fs.FileLock.Lock())
                             using (fs.DisableAllTriggersForCurrentThread())
                             {
                                 fs.Files.IndicateFileToDelete(fileName, null);
@@ -105,8 +106,10 @@ namespace Raven.Database.FileSystem.Synchronization
                         throw new ArgumentOutOfRangeException("type", type.ToString());
                 }
 
-
-                fs.SynchronizationTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, sourceMetadata, type, afterSynchronizationTriggerData));
+                using (fs.FileLock.Lock())
+                {
+                    fs.SynchronizationTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, sourceMetadata, type, afterSynchronizationTriggerData));
+                }
 
                 if (conflictResolved)
                 {
@@ -183,17 +186,20 @@ namespace Raven.Database.FileSystem.Synchronization
 
         private void Prepare()
         {
-            fs.Storage.Batch(accessor =>
+            using (fs.FileLock.Lock())
             {
-                // remove previous SyncResult
-                fs.Synchronizations.DeleteSynchronizationReport(fileName, accessor);
-
-                using (fs.DisableAllTriggersForCurrentThread())
+                fs.Storage.Batch(accessor =>
                 {
-                    // remove previous .downloading file
-                    fs.Files.IndicateFileToDelete(RavenFileNameHelper.DownloadingFileName(fileName), null);
-                }
-            });
+                    // remove previous SyncResult
+                    fs.Synchronizations.DeleteSynchronizationReport(fileName, accessor);
+
+                    using (fs.DisableAllTriggersForCurrentThread())
+                    {
+                        // remove previous .downloading file
+                        fs.Files.IndicateFileToDelete(RavenFileNameHelper.DownloadingFileName(fileName), null);
+                    }
+                });
+            }
         }
 
         private void AssertConflictDetection(RavenJObject localMetadata, out bool isConflictResolved)
