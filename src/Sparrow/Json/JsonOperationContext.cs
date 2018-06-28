@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -13,6 +14,7 @@ using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform.Posix.macOS;
+using Sparrow.Platform.Win32;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -228,8 +230,9 @@ namespace Sparrow.Json
             private static BufferSegment CreateSmallBuffers()
             {
                 Debug.Assert(Size * 8 > 80 * 1024);// expected to reside on LOH
-                var buffer = new byte[Size * 8]; 
-                for (int i = 1; i < 8; i++)
+                var buffer = new byte[Size * 8];
+
+                for (int i = 0; i < 7; i++)
                 {
                     // we put the remaining values in the buffer pool
                     _smallBufferSegments.Free(new BufferSegment
@@ -243,7 +246,7 @@ namespace Sparrow.Json
                 {
                     Array = buffer,
                     Count = Size,
-                    Offset = 0
+                    Offset = Size * 7,
                 };
             }
 
