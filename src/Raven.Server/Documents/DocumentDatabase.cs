@@ -289,6 +289,9 @@ namespace Raven.Server.Documents
 
         private void TryAcquireWriteLock()
         {
+            if (Configuration.Core.RunInMemory)
+                return; // no lock required;
+
             _addToInitLog("Creating db.lock file");
 
             _lockFile = Configuration.Core.DataDirectory.Combine("db.lock").FullPath;
