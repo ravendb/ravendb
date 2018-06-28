@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-                _documentStore.SetLastTransactionIndex(DatabaseName, command.Result.TransactionIndex);
+                UpdateSessionAfterSaveChanges(command.Result);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

@@ -84,9 +84,7 @@ namespace Raven.Client.Documents.Session
                     return;
 
                 RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-                var returnedTransactionIndex = command.Result.TransactionIndex;
-                _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
-                SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
+                UpdateSessionAfterSaveChanges(command.Result);
                 saveChangesOperation.SetResult(command.Result);
             }
         }
