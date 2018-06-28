@@ -1196,17 +1196,26 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
+        public static HttpMessageHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
+#if NETCOREAPP
+            var httpMessageHandler = new SocketsHttpHandler();
+            httpMessageHandler.PooledConnectionLifetime = Timeout.InfiniteTimeSpan;
+            httpMessageHandler.PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan;
+            var supportsAutomaticDecompression = true;
+#else
             var httpMessageHandler = new HttpClientHandler();
-            if (httpMessageHandler.SupportsAutomaticDecompression)
+            var supportsAutomaticDecompression = httpMessageHandler.SupportsAutomaticDecompression;
+#endif
+
+            if (supportsAutomaticDecompression)
             {
                 httpMessageHandler.AutomaticDecompression =
                     useCompression ?
                         DecompressionMethods.GZip | DecompressionMethods.Deflate
                         : DecompressionMethods.None;
             }
-            else if (httpMessageHandler.SupportsAutomaticDecompression == false &&
+            else if (supportsAutomaticDecompression == false &&
                      useCompression &&
                      hasExplicitlySetCompressionUsage)
             {
@@ -1222,17 +1231,35 @@ namespace Raven.Client.Http
                 }
                 else
                 {
+#if NETCOREAPP
+                    httpMessageHandler.SslOptions.RemoteCertificateValidationCallback += OnRemoteCertificateValidationCallback;
+#else
                     httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+#endif
                 }
             }
 
             if (certificate != null)
             {
+#if NETCOREAPP
+                if (httpMessageHandler.SslOptions.ClientCertificates == null)
+                    httpMessageHandler.SslOptions.ClientCertificates = new X509Certificate2Collection();
+
+                httpMessageHandler.SslOptions.ClientCertificates.Add(certificate);
+#else
                 httpMessageHandler.ClientCertificates.Add(certificate);
+#endif
                 try
                 {
                     if (setSslProtocols)
+                    {
+#if NETCOREAPP
+                        httpMessageHandler.SslOptions.EnabledSslProtocols = SslProtocols.Tls12;
+#else
                         httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+#endif
+                    }
+
                 }
                 catch (PlatformNotSupportedException)
                 {
@@ -1335,6 +1362,16 @@ namespace Raven.Client.Http
                 else
                     _liveClients.TryRemove(client, out _);
             }
+        }
+
+        private static bool OnRemoteCertificateValidationCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
+        {
+            var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
+            if (onServerCertificateCustomValidationCallback == null ||
+                onServerCertificateCustomValidationCallback.Length == 0)
+                return errors == SslPolicyErrors.None;
+
+            return true;
         }
 
         private static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
