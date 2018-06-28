@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Xunit;
@@ -45,6 +47,15 @@ namespace FastTests.Server.Documents
                     Assert.Equal(1, people.Value);
                 }
             }
+
+            for (int i = 0; i < 15; i++)
+            {
+                if (File.Exists(Path.Combine(path, "db.lock")) == false)
+                    break;
+                Thread.Sleep(50);
+            }
+            Assert.False(File.Exists(Path.Combine(path, "db.lock")), "The database lock file was still there?");
+
 
             using (var store = GetDocumentStore(new Options
             {
