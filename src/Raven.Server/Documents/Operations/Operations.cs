@@ -99,6 +99,7 @@ namespace Raven.Server.Documents.Operations
             OperationType operationType,
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id,
+            IOperationDetailedDescription detailedDescription = null,
             OperationCancelToken token = null)
         {
             var operationState = new OperationState
@@ -116,7 +117,8 @@ namespace Raven.Server.Documents.Operations
             {
                 Description = description,
                 TaskType = operationType,
-                StartTime = SystemTime.UtcNow
+                StartTime = SystemTime.UtcNow,
+                DetailedDescription = detailedDescription
             };
 
             var operation = new Operation
@@ -340,15 +342,17 @@ namespace Raven.Server.Documents.Operations
             public OperationType TaskType;
             public DateTime StartTime;
             public DateTime? EndTime;
+            public IOperationDetailedDescription DetailedDescription;
 
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
                 {
-                    ["Description"] = Description,
-                    ["TaskType"] = TaskType.ToString(),
-                    ["StartTime"] = StartTime,
-                    ["EndTime"] = EndTime
+                    [nameof(Description)] = Description,
+                    [nameof(TaskType)] = TaskType.ToString(),
+                    [nameof(StartTime)] = StartTime,
+                    [nameof(EndTime)] = EndTime,
+                    [nameof(DetailedDescription)] = DetailedDescription?.ToJson()
                 };
             }
         }
@@ -358,11 +362,11 @@ namespace Raven.Server.Documents.Operations
             [Description("Setup")]
             Setup,
 
-            [Description("Update by index")]
-            UpdateByIndex,
+            [Description("Update by Query")]
+            UpdateByQuery,
 
-            [Description("Delete by index")]
-            DeleteByIndex,
+            [Description("Delete by Query")]
+            DeleteByQuery,
 
             [Description("Database export")]
             DatabaseExport,

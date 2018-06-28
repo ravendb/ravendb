@@ -16,7 +16,7 @@ namespace SlowTests.Client.Indexing
     public class IndexesFromClient : RavenTestBase
     {
         [Fact]
-        public async Task DeleteByIndex()
+        public async Task DeleteByQuery()
         {
             using (var store = GetDocumentStore())
             {
@@ -89,7 +89,7 @@ namespace SlowTests.Client.Indexing
         }
 
         [Fact]
-        public async Task UpdateByIndex()
+        public async Task UpdateByQuery()
         {
             using (var store = GetDocumentStore())
             {

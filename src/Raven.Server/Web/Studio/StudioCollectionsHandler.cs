@@ -330,7 +330,7 @@ namespace Raven.Server.Web.Studio
             var options = new CollectionOperationOptions();
 
             var task = Database.Operations.AddOperation(Database, collectionName, operationType, onProgress =>
-                     operation(collectionRunner, collectionName, options, onProgress, token), operationId, token);
+                     operation(collectionRunner, collectionName, options, onProgress, token), operationId, token: token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
 

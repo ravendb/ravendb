@@ -156,6 +156,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AlertRaised));
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
+            scripter.AddType(typeof(BulkOperationResult.OperationDetails));
             scripter.AddType(typeof(DatabaseChanged));
             scripter.AddType(typeof(ClusterTopologyChanged));
             scripter.AddType(typeof(DatabaseStatsChanged));
@@ -395,7 +396,7 @@ namespace TypingsGenerator
             
             // document size details
             scripter.AddType(typeof(DocumentSizeDetails));
-
+            
             return scripter;
         }
     }

@@ -71,16 +71,16 @@ namespace Raven.Client.Documents.Operations
 
         public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteByIndexCommand(conventions, _queryToDelete, _options);
+            return new DeleteByQueryCommand(conventions, _queryToDelete, _options);
         }
 
-        private class DeleteByIndexCommand : RavenCommand<OperationIdResult>
+        private class DeleteByQueryCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly IndexQuery _queryToDelete;
             private readonly QueryOperationOptions _options;
 
-            public DeleteByIndexCommand(DocumentConventions conventions, IndexQuery queryToDelete, QueryOperationOptions options = null)
+            public DeleteByQueryCommand(DocumentConventions conventions, IndexQuery queryToDelete, QueryOperationOptions options = null)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _queryToDelete = queryToDelete ?? throw new ArgumentNullException(nameof(queryToDelete));

@@ -16,8 +16,8 @@
             </div>
         </div>
         <div class="modal-body">
-            <div class="modal-details" data-bind="with: progress">
-                <div class="details-item">
+            <div class="modal-details" data-bind="visible: progress">
+                <div class="details-item" data-bind="with: progress">
                     <div class="row">
                         <div class="col-sm-6 text-right">Processed:</div>
                         <div class="col-sm-6 details-value" data-bind="text: Processed.toLocaleString()"></div>
@@ -29,13 +29,13 @@
                         <div class="col-sm-6 details-value" data-bind="text: $root.processingSpeed"></div>
                     </div>
                 </div>
-                <div class="details-item">
+                <div class="details-item" data-bind="with: progress">
                     <div class="row">
                         <div class="col-sm-6 text-right"> Batch count: </div>
                         <div class="col-sm-6 details-value" data-bind="text: BatchCount.toLocaleString()"></div>
                     </div>
                 </div>
-                <div class="details-item">
+                <div class="details-item" data-bind="with: progress">
                     <div class="row">
                         <div class="col-sm-6 text-right">Last processed document ID</div>
                         <div class="col-sm-6 details-value" data-bind="text: LastProcessedId"></div>
