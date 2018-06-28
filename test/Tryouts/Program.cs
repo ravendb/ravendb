@@ -3,9 +3,12 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
+using SlowTests.Client.Attachments;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 
@@ -15,23 +18,13 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10; i++)
             {
-                try
+                Console.WriteLine(i);
+                using (var a = new AttachmentFailover())
                 {
-                    Console.WriteLine(i);
-
-                    using (var test = new RavenDB_6369())
-                    {
-                        test.ShouldTimeout();
-                    }
+                    await a.PutAttachmentsWithFailover_LowLevel();
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    break;
-                }
-
             }
         }
     }
