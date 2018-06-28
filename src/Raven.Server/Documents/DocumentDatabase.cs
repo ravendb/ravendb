@@ -92,7 +92,7 @@ namespace Raven.Server.Documents
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
-            _disposeOnce = new DisposeOnce<SingleAttempt>(disposeInternal);
+            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
