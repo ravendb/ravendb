@@ -17,7 +17,9 @@ namespace Raven.Client.Documents.Session
     internal interface IDocumentSessionImpl : IDocumentSession, ILazySessionOperations, IEagerSessionOperations
     {
         DocumentConventions Conventions { get; }
+
         Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counters = null, bool includeAllCounters = false);
+
         Lazy<Dictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval);
     }
 }
