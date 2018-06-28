@@ -40,8 +40,8 @@ namespace Raven.Server.Smuggler.Migration
             _buildVersion = configuration.BuildVersion;
 
             //because of backward compatibility useCompression == false here
-            var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false);
-            httpClientHandler.UseDefaultCredentials = false;
+            var httpClientHandler = (SocketsHttpHandler)RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false);
+            //httpClientHandler.UseDefaultCredentials = false;
 
             if (string.IsNullOrWhiteSpace(configuration.ApiKey) == false)
             {
