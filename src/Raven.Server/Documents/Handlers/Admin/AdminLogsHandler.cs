@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminLogsHandler : RequestHandler
     {
-        [RavenAction("/admin/logs/configuration", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/logs/configuration", "GET", AuthorizationStatus.Operator)]
         public Task GetConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/logs/configuration", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/logs/configuration", "POST", AuthorizationStatus.Operator)]
         public async Task SetConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
