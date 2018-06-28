@@ -6,22 +6,24 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Sparrow;
+using Sparrow.Threading;
 using Voron;
 
 namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
-    {
+    {        
         public TransactionContextPool ContextPool { get; }
 
         public NotificationsStorage NotificationsStorage { get; }
 
         public OperationsStorage OperationsStorage { get; }
 
-        public StorageEnvironment Environment { get; }
+        public StorageEnvironment Environment { get; }        
 
         public ConfigurationStorage(DocumentDatabase db)
         {
+            _disposeOnce = new DisposeOnce<SingleAttempt>(disposeInternal);
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
             string tempPath = null;
             if (db.Configuration.Storage.TempPath != null)
@@ -61,7 +63,14 @@ namespace Raven.Server.Documents
             OperationsStorage.Initialize(Environment, ContextPool);
         }
 
+        private DisposeOnce<SingleAttempt> _disposeOnce;
+
         public void Dispose()
+        {
+            _disposeOnce.Dispose();
+        }
+
+        private void disposeInternal()
         {
             ContextPool?.Dispose();
             Environment.Dispose();

@@ -20,11 +20,13 @@ namespace Tryouts
                 try
                 {
                     Console.WriteLine(i);
-
-                    using (var test = new RavenDB_6369())
+                    Parallel.For(0,8,(_)=>
                     {
-                        test.ShouldTimeout();
-                    }
+                        using (var test = new FastTests.Server.Documents.Collections())
+                        {
+                            test.CanSurviveRestart();
+                        }
+                    });
                 }
                 catch (Exception e)
                 {
