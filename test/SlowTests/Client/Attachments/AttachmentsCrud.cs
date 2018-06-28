@@ -698,8 +698,9 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(3, profileStream.Position);
                     else
                     {
-                        // on Posix the position is set to initial one automatically
-                        // https://github.com/dotnet/corefx/issues/23782
+                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
+                        // Remove this workaround when this line is removed from request executor:
+                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
                         Assert.Equal(0, profileStream.Position);
                     }
 
