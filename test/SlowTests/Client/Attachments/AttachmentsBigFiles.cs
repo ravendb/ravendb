@@ -39,13 +39,14 @@ namespace SlowTests.Client.Attachments
                     using (var bigStream = new BigDummyStream(size))
                     using (var attachment = session.Advanced.Attachments.Get(user, "big-file"))
                     {
-                        attachment.Stream.CopyTo(bigStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal(hash, attachment.Details.Hash);
-                        Assert.Equal(size, bigStream.Position);
                         Assert.Equal(size, attachment.Details.Size);
                         Assert.Equal("", attachment.Details.ContentType);
+
+                        attachment.Stream.CopyTo(bigStream);
+                        Assert.Equal(size, bigStream.Position);
                     }
                 }
             }
