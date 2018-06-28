@@ -9,6 +9,7 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
@@ -42,6 +43,8 @@ namespace Voron
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
         private long _reuseCounter;
         private long _lastReusedJournalCountOnSync;
+
+        static protected ConcurrentDictionary<string, long> debug = new ConcurrentDictionary<string, long>();
 
         public void SetLastReusedJournalCountOnSync(long journalNum)
         {
@@ -170,7 +173,6 @@ namespace Voron
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
-        protected bool Disposed;
         private long _initialLogFileSize;
         private long _maxLogFileSize;
 
@@ -180,6 +182,17 @@ namespace Voron
 
         protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
+            debug.AddOrUpdate(tempPath.FullPath, 1, (_, count) =>
+            {
+                if (Interlocked.Increment(ref count) > 1)
+                {
+                    Console.ReadLine();
+                }
+                return count;
+            });
+
+            disposeOnce = new DisposeOnce<SingleAttempt>(disposeInternal);
+
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
 
             DisposeWaitTime = TimeSpan.FromSeconds(15);
@@ -323,6 +336,7 @@ namespace Voron
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
                 : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification)
             {
+                                
                 Debug.Assert(basePath != null);
                 Debug.Assert(journalPath != null);
 
@@ -549,11 +563,7 @@ namespace Voron
             }
 
             protected override void Disposing()
-            {
-                if (Disposed)
-                    return;
-
-                Disposed = true;
+            {                
                 if (_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
                 foreach (var journal in _journals)
@@ -576,6 +586,15 @@ namespace Voron
                         }
                     }
                 }
+                debug.AddOrUpdate(TempPath.FullPath, 0, (_, count) =>
+                {
+                    if (Interlocked.Decrement(ref count) != 0)
+                    {
+                        Console.WriteLine("Damn!");
+                        Console.ReadLine();
+                    }
+                    return count;
+                });
             }
 
             public override bool TryDeleteJournal(long number)
@@ -878,10 +897,6 @@ namespace Voron
 
             protected override void Disposing()
             {
-                if (Disposed)
-                    return;
-                Disposed = true;
-
                 _dataPager.Value.Dispose();
                 foreach (var virtualPager in _logs)
                 {
@@ -909,7 +924,7 @@ namespace Voron
 
             public override unsafe bool ReadHeader(string filename, FileHeader* header)
             {
-                if (Disposed)
+                if (disposeOnce.Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
                 IntPtr ptr;
                 if (_headers.TryGetValue(filename, out ptr) == false)
@@ -923,7 +938,7 @@ namespace Voron
 
             public override unsafe void WriteHeader(string filename, FileHeader* header)
             {
-                if (Disposed)
+                if (disposeOnce.Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 
                 IntPtr ptr;
@@ -1037,7 +1052,14 @@ namespace Voron
             return string.Format("scratch.{0:D10}.buffers", number);
         }
 
-        public unsafe void Dispose()
+        protected DisposeOnce<SingleAttempt> disposeOnce;
+
+        public void Dispose()
+        {
+            disposeOnce.Dispose();
+        }
+
+        private unsafe void disposeInternal()
         {
             var copy = MasterKey;
             if (copy != null)
