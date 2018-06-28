@@ -95,6 +95,8 @@ namespace Raven.Server.Documents
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
+                TryAcquireWriteLock();
+
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -153,7 +155,8 @@ namespace Raven.Server.Documents
         public readonly SystemTime Time = new SystemTime();
 
         public ScriptRunnerCache Scripts;
-
+        private FileStream _writeLockFile;
+        private string _lockFile;
         public readonly TransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
@@ -285,6 +288,28 @@ namespace Raven.Server.Documents
             {
                 Dispose();
                 throw;
+            }
+        }
+
+        private void TryAcquireWriteLock()
+        {
+            _addToInitLog("Creating db.lock file");
+
+            _lockFile = Configuration.Core.DataDirectory.Combine("db.lock").FullPath;
+
+            try
+            {
+                if (Directory.Exists(Configuration.Core.DataDirectory.FullPath) == false)
+                    Directory.CreateDirectory(Configuration.Core.DataDirectory.FullPath);
+
+                _writeLockFile = new FileStream(_lockFile, FileMode.Create,
+                    FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+                _writeLockFile.SetLength(1);
+                _writeLockFile.Lock(0, 1);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Cannot open database buecase RavenDB was unable to open: " + _lockFile, e);
             }
         }
 
@@ -465,6 +490,23 @@ namespace Raven.Server.Documents
                 fixed (byte* pKey = MasterKey)
                 {
                     Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
+                }
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                if (_writeLockFile != null)
+                {
+                    _writeLockFile.Unlock(0, 1);
+                    _writeLockFile.Dispose();
+                    try
+                    {
+                        if (File.Exists(_lockFile))
+                            File.Delete(_lockFile);
+                    }
+                    catch (IOException)
+                    {
+                    }
                 }
             });
 
