@@ -642,8 +642,16 @@ namespace SlowTests.Client.Attachments
                 {
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
 
-                    Assert.Equal(3, profileStream.Position);
-                    
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(3, profileStream.Position);
+                    else
+                    {
+                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
+                        // Remove this workaround when this line is removed from request executor:
+                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
+                        Assert.Equal(0, profileStream.Position);
+                    }
+
                     profileStream.Position = 0;
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg"));
                 }
@@ -685,8 +693,16 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("IMAGE/png", result.ContentType);
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                     Assert.Equal(3, result.Size);
-                    Assert.Equal(3, profileStream.Position);
-                    
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(3, profileStream.Position);
+                    else
+                    {
+                        // on Posix the position is set to initial one automatically
+                        // https://github.com/dotnet/corefx/issues/23782
+                        Assert.Equal(0, profileStream.Position);
+                    }
+
                     profileStream.Position = 0;
                     result = store.Operations.Send(new PutAttachmentOperation("users/1", "PROFILE", profileStream, "image/PNG"));
                     Assert.True(result.ChangeVector.StartsWith("A:4"));
