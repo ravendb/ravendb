@@ -75,7 +75,16 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("", result.ContentType);
                     Assert.Equal(hash, result.Hash);
                     Assert.Equal(size, result.Size);
-                    Assert.Equal(size, bigStream.Position);
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                        Assert.Equal(size, bigStream.Position);
+                    else
+                    {
+                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
+                        // Remove this workaround when this line is removed from request executor:
+                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
+                        Assert.Equal(0, bigStream.Position);
+                    }
                 }
 
                 using (var session = store.OpenSession())
