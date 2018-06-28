@@ -1563,6 +1563,13 @@ more responsive application.
             }
         }
 
+        protected void UpdateSessionAfterSaveChanges(BatchCommandResult result)
+        {
+            var returnedTransactionIndex = result.TransactionIndex;
+            _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
+            SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
+        }
+
         public void OnAfterSaveChangesInvoke(AfterSaveChangesEventArgs afterSaveChangesEventArgs)
         {
             OnAfterSaveChanges?.Invoke(this, afterSaveChangesEventArgs);
