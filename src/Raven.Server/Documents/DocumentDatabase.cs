@@ -309,7 +309,7 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Cannot open database buecase RavenDB was unable to open: " + _lockFile, e);
+                 throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e); 
             }
         }
 
