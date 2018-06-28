@@ -5,11 +5,11 @@ using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IArenaAllocatorOptions : INativeBlockOptions
+    public interface IArenaAllocatorOptions : INativeOptions
     {
         int InitialBlockSize { get; }
         int MaxBlockSize { get; }
-        IAllocatorComposer<BlockPointer> CreateAllocator();
+        IAllocatorComposer<Pointer> CreateAllocator();
     }
 
     public static class ArenaAllocator
@@ -22,29 +22,7 @@ namespace Sparrow
 
             public int InitialBlockSize => 1 * Constants.Size.Megabyte;
             public int MaxBlockSize => 16 * Constants.Size.Megabyte;
-            public IAllocatorComposer<BlockPointer> CreateAllocator() => new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.Default>>();
-        }
-
-        public struct ThreadAffineDefault : IArenaAllocatorOptions
-        {
-            public bool UseSecureMemory => false;
-            public bool ElectricFenceEnabled => false;
-            public bool Zeroed => false;
-
-            public int InitialBlockSize => 1 * Constants.Size.Megabyte;
-            public int MaxBlockSize => 16 * Constants.Size.Megabyte;
-            public IAllocatorComposer<BlockPointer> CreateAllocator() => new BlockAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
-        }
-
-        public struct ThreadAffineDefault<T> : IArenaAllocatorOptions where T : struct, IThreadAffineBlockOptions
-        {
-            public bool UseSecureMemory => false;
-            public bool ElectricFenceEnabled => false;
-            public bool Zeroed => false;
-
-            public int InitialBlockSize => 1 * Constants.Size.Megabyte;
-            public int MaxBlockSize => 16 * Constants.Size.Megabyte;
-            public IAllocatorComposer<BlockPointer> CreateAllocator() => new BlockAllocator<ThreadAffineBlockAllocator<T>>();
+            public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<NativeAllocator.Default>>();
         }
     }
 
@@ -52,10 +30,7 @@ namespace Sparrow
         where TOptions : struct, IArenaAllocatorOptions
     {
         private TOptions _options;
-        private IAllocatorComposer<BlockPointer> _internalAllocator;
-
-        private byte* _ptrStart;
-        private byte* _ptrCurrent;
+        private IAllocatorComposer<Pointer> _internalAllocator;
 
         private long _allocated;
         private long _used;

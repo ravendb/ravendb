@@ -14,8 +14,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_NativeDefaultByBytes()
         {
-            var allocator = new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.Default>>();
-            allocator.Initialize(default(NativeBlockAllocator.Default));
+            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
+            allocator.Initialize(default(NativeAllocator.Default));
 
             var ptr = allocator.Allocate(1000);
             Assert.Equal(1000, ptr.Size);
@@ -35,8 +35,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_NativeDefaultByType()
         {
-            var allocator = new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.Default>>();
-            allocator.Initialize(default(NativeBlockAllocator.Default));
+            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
+            allocator.Initialize(default(NativeAllocator.Default));
 
             var ptr = allocator.Allocate<MyStruct>(10);
             Assert.Equal(10, ptr.Size);
@@ -50,8 +50,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_NativeSpanByByte_Whole()
         {
-            var allocator = new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.Default>>();
-            allocator.Initialize(default(NativeBlockAllocator.Default));
+            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
+            allocator.Initialize(default(NativeAllocator.Default));
 
             var ptr = allocator.Allocate(1000);
 
@@ -69,8 +69,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_NativeSpanByByte_Chunk()
         {
-            var allocator = new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.DefaultZero>>();
-            allocator.Initialize(default(NativeBlockAllocator.DefaultZero));
+            var allocator = new Allocator<NativeAllocator<NativeAllocator.DefaultZero>>();
+            allocator.Initialize(default(NativeAllocator.DefaultZero));
 
             var ptr = allocator.Allocate(1000);
 
@@ -95,8 +95,8 @@ namespace FastTests.Sparrow
         //[Fact]
         //public void Alloc_NativeSpanByByte_4KAligned()
         //{
-        //    var allocator = new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.Default4K>>();
-        //    allocator.Initialize(default(NativeBlockAllocator.Default4K));
+        //    var allocator = new Allocator<NativeAllocator<NativeAllocator.Default4K>>();
+        //    allocator.Initialize(default(NativeAllocator.Default4K));
 
         //    var ptr = allocator.Allocate(1000);
         //    Assert.True((long)ptr.Ptr % 4096 == 0);
@@ -110,10 +110,10 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_NativeUnsupported()
         {
-            var allocator = new BlockAllocator<NativeBlockAllocator<NativeBlockAllocator.Default>>();
-            Assert.Throws<NotSupportedException>(() => allocator.Initialize(default(NativeBlockAllocator.DefaultZero)));
+            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
+            Assert.Throws<NotSupportedException>(() => allocator.Initialize(default(NativeAllocator.DefaultZero)));
 
-            allocator.Initialize(default(NativeBlockAllocator.Default));
+            allocator.Initialize(default(NativeAllocator.Default));
 
             Assert.Throws<NotSupportedException>(() => allocator.Reset());
             Assert.Throws<NotSupportedException>(() => allocator.Renew());
@@ -126,8 +126,10 @@ namespace FastTests.Sparrow
             var allocator = new BlockAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
             allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
 
-            var ptr = allocator.Allocate(1000);
-            Assert.Equal(1000, ptr.Size);
+            var config = default(ThreadAffineBlockAllocator.Default);
+
+            var ptr = allocator.Allocate();
+            Assert.Equal(config.BlockSize, ptr.Size);
             Assert.True(ptr.IsValid);
 
             long pointerAddress = (long)ptr.Ptr;
@@ -135,8 +137,8 @@ namespace FastTests.Sparrow
             allocator.Release(ref ptr);
             Assert.False(ptr.IsValid);
 
-            ptr = allocator.Allocate(1000);
-            Assert.Equal(1000, ptr.Size);
+            ptr = allocator.Allocate();
+            Assert.Equal(config.BlockSize, ptr.Size);
             Assert.True(ptr.IsValid);
 
             Assert.Equal(pointerAddress, (long)ptr.Ptr);
@@ -148,12 +150,14 @@ namespace FastTests.Sparrow
             var allocator = new BlockAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
             allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
 
+            var config = default(ThreadAffineBlockAllocator.Default);
+
             long[] addresses = new long[5];
-            BlockPointer[] pointers = new BlockPointer[5];
+            var pointers = new Pointer[5];
             for (int i = 0; i < 5; i++)
             {
-                var ptr = allocator.Allocate(1000);
-                Assert.Equal(1000, ptr.Size);
+                var ptr = allocator.Allocate();
+                Assert.Equal(config.BlockSize, ptr.Size);
                 Assert.True(ptr.IsValid);
 
                 pointers[i] = ptr;
@@ -168,12 +172,12 @@ namespace FastTests.Sparrow
 
             for (int i = 0; i < 4; i++)
             {
-                var ptr = allocator.Allocate(1000);
+                var ptr = allocator.Allocate();
                 Assert.Contains((long)ptr.Ptr, addresses);
             }
 
-            var nonReusedPtr = allocator.Allocate(1000);
-            Assert.Equal(1000, nonReusedPtr.Size);
+            var nonReusedPtr = allocator.Allocate();
+            Assert.Equal(config.BlockSize, nonReusedPtr.Size);
             Assert.True(nonReusedPtr.IsValid);
             // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
@@ -181,8 +185,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_StubLifecycle()
         {
-            var allocator = new BlockAllocator<StubBlockAllocator<NativeBlockAllocator.Default>>();         
-            allocator.Initialize(default(NativeBlockAllocator.Default));
+            var allocator = new Allocator<StubAllocator<NativeAllocator.Default>>();         
+            allocator.Initialize(default(NativeAllocator.Default));
 
             Assert.Throws<NotSupportedException>(() => allocator.Reset());
             Assert.Throws<NotSupportedException>(() => allocator.Renew());
@@ -191,12 +195,12 @@ namespace FastTests.Sparrow
             Assert.Throws<NotSupportedException>(() => allocator.LowMemoryOver());
         }
 
-        public struct StubBlockAllocator<TOptions> : IAllocator<StubBlockAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<StubBlockAllocator<TOptions>>, IRenewable<StubBlockAllocator<TOptions>>, ILifecycleHandler<StubBlockAllocator<TOptions>>
-            where TOptions : struct, INativeBlockOptions
+        public struct StubAllocator<TOptions> : IAllocator<StubAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<StubAllocator<TOptions>>, IRenewable<StubAllocator<TOptions>>, ILifecycleHandler<StubAllocator<TOptions>>
+            where TOptions : struct, INativeOptions
         {
             private TOptions Options;
 
-            public void Configure<TConfig>(ref NativeBlockAllocator<TOptions> blockAllocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+            public void Configure<TConfig>(ref NativeAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
             {
             }
 
@@ -206,38 +210,38 @@ namespace FastTests.Sparrow
                 private set;
             }
 
-            public void Initialize(ref StubBlockAllocator<TOptions> allocator)
+            public void Initialize(ref StubAllocator<TOptions> allocator)
             {               
             }
 
-            public void Configure<TConfig>(ref StubBlockAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+            public void Configure<TConfig>(ref StubAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
             {             
             }
 
-            public BlockPointer Allocate(ref StubBlockAllocator<TOptions> allocator, int size)
+            public Pointer Allocate(ref StubAllocator<TOptions> allocator, int size)
             {
-                return new BlockPointer();
+                return new Pointer();
             }
 
-            public void Release(ref StubBlockAllocator<TOptions> allocator, ref BlockPointer ptr)
+            public void Release(ref StubAllocator<TOptions> allocator, ref Pointer ptr)
             {                
             }
 
-            public void Renew(ref StubBlockAllocator<TOptions> allocator)
+            public void Renew(ref StubAllocator<TOptions> allocator)
             {
-                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+                throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
             }
 
-            public void Reset(ref StubBlockAllocator<TOptions> allocator)
+            public void Reset(ref StubAllocator<TOptions> allocator)
             {
-                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+                throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
             }
 
-            public void OnAllocate(ref StubBlockAllocator<TOptions> allocator, BlockPointer ptr)
+            public void OnAllocate(ref StubAllocator<TOptions> allocator, Pointer ptr)
             {
             }
 
-            public void OnRelease(ref StubBlockAllocator<TOptions> allocator, BlockPointer ptr)
+            public void OnRelease(ref StubAllocator<TOptions> allocator, Pointer ptr)
             {
             }
 
@@ -245,40 +249,40 @@ namespace FastTests.Sparrow
             {
             }
 
-            public void NotifyLowMemory(ref StubBlockAllocator<TOptions> allocator)
+            public void NotifyLowMemory(ref StubAllocator<TOptions> allocator)
             {
-                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+                throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
             }
 
-            public void NotifyLowMemoryOver(ref StubBlockAllocator<TOptions> allocator)
+            public void NotifyLowMemoryOver(ref StubAllocator<TOptions> allocator)
             {
-                throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+                throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
             }
 
             public bool BeforeInitializedCalled;
 
-            public void BeforeInitialize(ref StubBlockAllocator<TOptions> allocator)
+            public void BeforeInitialize(ref StubAllocator<TOptions> allocator)
             {
                 BeforeInitializedCalled = true;
             }
 
             public bool AfterInitializeCalled;
 
-            public void AfterInitialize(ref StubBlockAllocator<TOptions> allocator)
+            public void AfterInitialize(ref StubAllocator<TOptions> allocator)
             {
                 AfterInitializeCalled = true;
             }
 
             public bool BeforeDisposeCalled;
 
-            public void BeforeDispose(ref StubBlockAllocator<TOptions> allocator)
+            public void BeforeDispose(ref StubAllocator<TOptions> allocator)
             {
                 BeforeDisposeCalled = true;
             }
 
             public bool BeforeFinalizationCalled;
 
-            public void BeforeFinalization(ref StubBlockAllocator<TOptions> allocator)
+            public void BeforeFinalization(ref StubAllocator<TOptions> allocator)
             {
                 BeforeFinalizationCalled = true;
             }

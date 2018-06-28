@@ -1,23 +1,39 @@
 ﻿using System;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Sparrow.Binary;
+using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IPoolAllocatorOptions : INativeBlockOptions
+    public interface IPoolAllocatorOptions : INativeOptions
     {
-
+        IAllocatorComposer<Pointer> CreateAllocator();
     }
 
     public static class PoolAllocator
     {
-        internal unsafe struct FreeSection
+        [StructLayout(LayoutKind.Explicit, Size = 20)]
+        internal struct PoolHeader
         {
-            public FreeSection* Previous;
-            public int SizeInBytes;
+            [FieldOffset(0)]
+            public int Size;
+
+            [FieldOffset(4)]
+            public Pointer Header;            
+        }
+
+        public struct Default : IPoolAllocatorOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<NativeAllocator.Default>>();
         }
     }
 
-    public unsafe struct PoolBlockAllocator<TOptions> : IAllocator<PoolBlockAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolBlockAllocator<TOptions>>, IRenewable<PoolBlockAllocator<TOptions>>
+    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
@@ -25,45 +41,63 @@ namespace Sparrow
         private int _allocated;
         private int _used;
 
-        private PoolAllocator.FreeSection*[] _freed;
+        private PoolAllocator.PoolHeader*[] _freed;
+        private IAllocatorComposer<Pointer> _internalAllocator;
 
 
         public int Allocated => _allocated;
         public int Used => _used;
 
-        public void Initialize(ref PoolBlockAllocator<TOptions> allocator)
+        public void Initialize(ref PoolAllocator<TOptions> allocator)
         {
             // Initialize the struct pointers structure used to navigate over the allocated memory.
-            allocator._freed = new PoolAllocator.FreeSection*[32];
+            allocator._freed = new PoolAllocator.PoolHeader*[32];            
         }
 
-        public void Configure<TConfig>(ref PoolBlockAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+        public void Configure<TConfig>(ref PoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
-            throw new NotImplementedException();
+            if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
+                throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TOptions)}");
+
+            // This cast will get evicted by the JIT. 
+            allocator._options = (TOptions)(object)configuration;
+            // PERF: This should be devirtualized. 
+            allocator._internalAllocator = allocator._options.CreateAllocator();
         }
 
-        public BlockPointer Allocate(ref PoolBlockAllocator<TOptions> allocator, int size)
+        public Pointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
             //if (allocator.__ptrStart == null)
             //    ThrowInvalidAllocateFromResetWithoutRenew();
-
-            if (size < sizeof(PoolAllocator.FreeSection))
-                size = sizeof(PoolAllocator.FreeSection);
 
             size = Bits.NextPowerOf2(size);
 
             var index = Bits.MostSignificantBit(size) - 1;
             if (_freed[index] != null)
-            {
+            {                
                 var section = _freed[index];
-                _freed[index] = section->Previous;
 
+                // Pointer was holding the next released block instead. 
+                _freed[index] = (PoolAllocator.PoolHeader*) section->Header.Ptr; 
+
+                allocator._used += section->Size;
+
+                //return new Pointer(&section->Header);
             }
+
+            allocator._used += size;
+
+            //BlockPointer nativePtr = _internalAllocator.Allocate(size + sizeof(PoolBlockAllocator.PoolBlockHeader));
+
+            //var blockPtr = (PoolBlockAllocator.PoolBlockHeader*) nativePtr._header;
+            //nativePtr._header->Ptr = 
+            //new BlockPointer( )
+
 
             throw new NotImplementedException();
         }
 
-        public void Release(ref PoolBlockAllocator<TOptions> allocator, ref BlockPointer ptr)
+        public void Release(ref PoolAllocator<TOptions> allocator, ref Pointer ptr)
         {
             throw new NotImplementedException();
         }
@@ -74,27 +108,27 @@ namespace Sparrow
             throw new InvalidOperationException("Attempt to allocate from reset arena without calling renew");
         }
 
-        private void ThrowAlreadyDisposedException()
+        private static void ThrowAlreadyDisposedException()
         {
             throw new ObjectDisposedException("This ArenaMemoryAllocator is already disposed");
         }
 
-        public void Renew(ref PoolBlockAllocator<TOptions> allocator)
+        public void Renew(ref PoolAllocator<TOptions> allocator)
         {
             throw new NotImplementedException();
         }
 
-        public void Reset(ref PoolBlockAllocator<TOptions> allocator)
+        public void Reset(ref PoolAllocator<TOptions> allocator)
         {
             throw new NotImplementedException();
         }
 
-        public void OnAllocate(ref PoolBlockAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnAllocate(ref PoolAllocator<TOptions> allocator, Pointer ptr)
         {
             throw new NotImplementedException();
         }
 
-        public void OnRelease(ref PoolBlockAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnRelease(ref PoolAllocator<TOptions> allocator, Pointer ptr)
         {
             throw new NotImplementedException();
         }
@@ -104,12 +138,12 @@ namespace Sparrow
             throw new NotImplementedException();
         }
 
-        public void NotifyLowMemory(ref PoolBlockAllocator<TOptions> allocator)
+        public void NotifyLowMemory(ref PoolAllocator<TOptions> allocator)
         {
             throw new NotImplementedException();
         }
 
-        public void NotifyLowMemoryOver(ref PoolBlockAllocator<TOptions> allocator)
+        public void NotifyLowMemoryOver(ref PoolAllocator<TOptions> allocator)
         {
             throw new NotImplementedException();
         }

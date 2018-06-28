@@ -21,6 +21,12 @@ namespace Sparrow
             this.Size = size;
         }
 
+        public bool IsValid
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Ptr != null; }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan()
         {
@@ -90,7 +96,7 @@ namespace Sparrow
             Mask = 0xF000,
         }
 
-        // The header is aligned to ensure that at least we are going to be aligned if the blockAllocator is actually requesting aligned blocks.
+        // The header is aligned to ensure that at least we are going to be aligned if the allocator is actually requesting aligned blocks.
         // and also its size is 8 bytes to ensure that only a single cache miss happens when accessing the first primitive element or any of the pointer support data. 
         [StructLayout(LayoutKind.Explicit, Size = 16)]
         public struct Header
@@ -165,6 +171,12 @@ namespace Sparrow
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _header->Ptr; }
+        }
+
+        public Pointer NakedPtr
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return new Pointer((byte*)_header->Ptr - sizeof(Header), _header->Size + sizeof(Header)); }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -259,10 +271,22 @@ namespace Sparrow
             Marshal.SizeOf<T>();
         }
 
+        public Pointer(Pointer ptr)
+        {
+            this.Ptr = ptr.Ptr;
+            this._size = ptr.Size / Unsafe.SizeOf<T>();
+        }
+
         public Pointer(void* ptr, int size)
         {
             this.Ptr = ptr;
             this._size = size;
+        }
+
+        public bool IsValid
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Ptr != null; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -385,6 +409,12 @@ namespace Sparrow
             {
                 return _ptr.Ptr;
             }
+        }
+
+        public Pointer NakedPtr
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _ptr.NakedPtr; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

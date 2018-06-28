@@ -13,10 +13,13 @@ namespace Sparrow
         Absurd = 128
     }
 
-    public interface IThreadAffineBlockOptions : INativeBlockOptions
+    public interface IThreadAffineBlockOptions : INativeOptions, IBlockAllocatorOptions
     {
         int BlockSize { get; }
+        bool AcceptOnlyBlocks { get; }
+
         int ItemsPerLane { get; }
+        
         ThreadAffineWorkload Workload { get; }
     }
 
@@ -30,15 +33,16 @@ namespace Sparrow
 
             public int ItemsPerLane => 4;
             public int BlockSize => 4 * Constants.Size.Kilobyte;
+            public bool AcceptOnlyBlocks => true;
             public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
         }
     }
 
-    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
+    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
             where TOptions : struct, IThreadAffineBlockOptions
     {
         private TOptions _options;
-        private NativeBlockAllocator<TOptions> _nativeAllocator;
+        private NativeAllocator<TOptions> _nativeAllocator;
         private Container[] _container;
 
         private struct Container
@@ -71,63 +75,71 @@ namespace Sparrow
                 throw new ArgumentOutOfRangeException($"{nameof(allocator._options.ItemsPerLane)} cannot be bigger than 4.");
         }
 
-        public BlockPointer Allocate(ref ThreadAffineBlockAllocator<TOptions> allocator, int size)
+        public Pointer Allocate(ref ThreadAffineBlockAllocator<TOptions> allocator, int size)
         {
-            if (size < allocator._options.BlockSize)
+            if (allocator._options.AcceptOnlyBlocks && size != allocator._options.BlockSize)
+                throw new InvalidOperationException(
+                    $"This instances of {nameof(ThreadAffineBlockAllocator<TOptions>)} only accepts block size request. Configure the {nameof(TOptions)} to support uncacheable sizes.");
+
+            IntPtr nakedPtr;
+            if (size == allocator._options.BlockSize)
             {
                 // PERF: Bitwise add should emit a 'and' instruction followed by a constant.
                 int threadId = Thread.CurrentThread.ManagedThreadId & ((int)allocator._options.Workload - 1);
 
                 ref Container container = ref allocator._container[threadId];
 
-                BlockPointer.Header* header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
-                if (header != null)
-                    return new BlockPointer(header);
+                nakedPtr = Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
+                if (nakedPtr != IntPtr.Zero)
+                    goto SUCCESS;
 
                 if (allocator._options.ItemsPerLane > 1) // PERF: This check will get evicted
                 {
-                    header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block2, IntPtr.Zero, container.Block2);
-                    if (header != null)
-                        return new BlockPointer(header);
+                    nakedPtr = Interlocked.CompareExchange(ref container.Block2, IntPtr.Zero, container.Block2);
+                    if (nakedPtr != IntPtr.Zero)
+                        goto SUCCESS;
                 }
 
                 if (allocator._options.ItemsPerLane > 2) // PERF: This check will get evicted
                 {
-                    header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
-                    if (header != null)
-                        return new BlockPointer(header);
+                    nakedPtr = Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
+                    if (nakedPtr != IntPtr.Zero)
+                        goto SUCCESS;
                 }
 
                 if (allocator._options.ItemsPerLane > 3) // PERF: This check will get evicted
                 {
-                    header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block4, IntPtr.Zero, container.Block4);
-                    if (header != null)
-                        return new BlockPointer(header);
+                    nakedPtr = Interlocked.CompareExchange(ref container.Block4, IntPtr.Zero, container.Block4);
+                    if (nakedPtr != IntPtr.Zero)
+                        goto SUCCESS;
                 }
             }
 
             return allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, size);
+
+            SUCCESS:
+            return new Pointer(nakedPtr.ToPointer(), allocator._options.BlockSize);
         }
 
-        public void Release(ref ThreadAffineBlockAllocator<TOptions> allocator, ref BlockPointer ptr)
+        public void Release(ref ThreadAffineBlockAllocator<TOptions> allocator, ref Pointer ptr)
         {
-            BlockPointer.Header* header = ptr._header;
-            if (header->Size < allocator._options.BlockSize)
+            void* nakedPtr = ptr.Ptr;
+            if (ptr.Size == allocator._options.BlockSize)
             {
                 // PERF: Bitwise add should emit a and instruction followed by a constant.
                 int threadId = Thread.CurrentThread.ManagedThreadId & ((int)allocator._options.Workload - 1);
 
                 ref Container container = ref allocator._container[threadId];
 
-                if (Interlocked.CompareExchange(ref container.Block1, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
+                if (Interlocked.CompareExchange(ref container.Block1, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
                     return;
 
                 // PERF: The items per lane check will get evicted because of constant elimination and therefore the complete code when items is higher. 
-                if (allocator._options.ItemsPerLane > 1 && Interlocked.CompareExchange(ref container.Block2, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
+                if (allocator._options.ItemsPerLane > 1 && Interlocked.CompareExchange(ref container.Block2, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
                     return;
-                if (allocator._options.ItemsPerLane > 2 && Interlocked.CompareExchange(ref container.Block3, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
+                if (allocator._options.ItemsPerLane > 2 && Interlocked.CompareExchange(ref container.Block3, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
                     return;
-                if (allocator._options.ItemsPerLane > 3 && Interlocked.CompareExchange(ref container.Block4, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
+                if (allocator._options.ItemsPerLane > 3 && Interlocked.CompareExchange(ref container.Block4, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
                     return;
             }
 
@@ -139,8 +151,8 @@ namespace Sparrow
             throw new NotSupportedException($"{nameof(ThreadAffineBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
         }
 
-        public void OnAllocate(ref ThreadAffineBlockAllocator<TOptions> allocator, BlockPointer ptr) { }
-        public void OnRelease(ref ThreadAffineBlockAllocator<TOptions> allocator, BlockPointer ptr) { }
+        public void OnAllocate(ref ThreadAffineBlockAllocator<TOptions> allocator, Pointer ptr) { }
+        public void OnRelease(ref ThreadAffineBlockAllocator<TOptions> allocator, Pointer ptr) { }
 
         public void Dispose()
         {
@@ -159,33 +171,32 @@ namespace Sparrow
             {
                 ref Container container = ref allocator._container[i];
 
-                BlockPointer ptr;
-                BlockPointer.Header* header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
-                if (header != null)
+                IntPtr ptr = Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
+                if (ptr != IntPtr.Zero)
                 {
-                    ptr = new BlockPointer(header);
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                    var localPtr = new Pointer(ptr.ToPointer(), allocator._options.BlockSize);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref localPtr);
                 }
 
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block2, IntPtr.Zero, container.Block2);
-                if (header != null)
+                ptr = Interlocked.CompareExchange(ref container.Block2, IntPtr.Zero, container.Block2);
+                if (ptr != IntPtr.Zero)
                 {
-                    ptr = new BlockPointer(header);
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                    var localPtr = new Pointer(ptr.ToPointer(), allocator._options.BlockSize);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref localPtr);
                 }
 
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
-                if (header != null)
+                ptr = Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
+                if (ptr != IntPtr.Zero)
                 {
-                    ptr = new BlockPointer(header);
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                    var localPtr = new Pointer(ptr.ToPointer(), allocator._options.BlockSize);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref localPtr);
                 }
 
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block4, IntPtr.Zero, container.Block4);
-                if (header != null)
+                ptr = Interlocked.CompareExchange(ref container.Block4, IntPtr.Zero, container.Block4);
+                if (ptr != IntPtr.Zero)
                 {
-                    ptr = new BlockPointer(header);
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                    var localPtr = new Pointer(ptr.ToPointer(), allocator._options.BlockSize);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref localPtr);
                 }
             }
         }

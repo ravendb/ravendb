@@ -6,37 +6,37 @@ using Sparrow.Utils;
 
 namespace Sparrow
 {
-    public interface INativeBlockOptions : IAllocatorOptions
+    public interface INativeOptions : IAllocatorOptions
     {
         bool UseSecureMemory { get; }
         bool ElectricFenceEnabled { get; }
         bool Zeroed { get; }
     }
 
-    public static class NativeBlockAllocator
+    public static class NativeAllocator
     {
-        public struct Default : INativeBlockOptions
+        public struct Default : INativeOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
         }
 
-        public struct DefaultZero : INativeBlockOptions
+        public struct DefaultZero : INativeOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => true;
         }
 
-        public struct Secure : INativeBlockOptions
+        public struct Secure : INativeOptions
         {
             public bool UseSecureMemory => true;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
         }
 
-        public struct ElectricFence : INativeBlockOptions
+        public struct ElectricFence : INativeOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => true;
@@ -44,12 +44,12 @@ namespace Sparrow
         }
     }
 
-    public unsafe struct NativeBlockAllocator<TOptions> : IAllocator<NativeBlockAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<NativeBlockAllocator<TOptions>>
-        where TOptions : struct, INativeBlockOptions
+    public unsafe struct NativeAllocator<TOptions> : IAllocator<NativeAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<NativeAllocator<TOptions>>
+        where TOptions : struct, INativeOptions
     {
         private TOptions _options;
 
-        public void Configure<TConfig>(ref NativeBlockAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+        public void Configure<TConfig>(ref NativeAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
             if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
                 throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TOptions)}");
@@ -70,74 +70,69 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Initialize(ref NativeBlockAllocator<TOptions> allocator)
+        public void Initialize(ref NativeAllocator<TOptions> allocator)
         {
             allocator.Allocated = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BlockPointer Allocate(ref NativeBlockAllocator<TOptions> allocator, int size)
+        public Pointer Allocate(ref NativeAllocator<TOptions> allocator, int size)
         {
             byte* memory;
-            int allocatedSize = size + sizeof(BlockPointer.Header);
 
-            // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
+            // PERF: Given that for the normal use case the INativeOptions we will use returns constants the
             //       JIT will be able to fold all this if sequence into a branchless single call.
             if (allocator._options.ElectricFenceEnabled)
-                memory = ElectricFencedMemory.Allocate(allocatedSize);
+                memory = ElectricFencedMemory.Allocate(size);
             else if (allocator._options.UseSecureMemory)
                 throw new NotImplementedException();
             else
-                memory = NativeMemory.AllocateMemory(allocatedSize);
+                memory = NativeMemory.AllocateMemory(size);
 
             if (allocator._options.Zeroed)
-                Memory.Set(memory, 0, allocatedSize);
+                Memory.Set(memory, 0, size);
 
-            BlockPointer.Header* header = (BlockPointer.Header*)memory;
-            *header = new BlockPointer.Header(memory + sizeof(BlockPointer.Header), size);
+            allocator.Allocated += size;
 
-            allocator.Allocated += allocatedSize;
-
-            return new BlockPointer(header);
+            return new Pointer(memory, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Release(ref NativeBlockAllocator<TOptions> allocator, ref BlockPointer ptr)
-        {
-            BlockPointer.Header* header = ptr._header;
-            allocator.Allocated -= header->Size + sizeof(BlockPointer.Header);
+        public void Release(ref NativeAllocator<TOptions> allocator, ref Pointer ptr)
+        {            
+            allocator.Allocated -= ptr.Size;
 
-            // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
+            // PERF: Given that for the normal use case the INativeOptions we will use returns constants the
             //       JIT will be able to fold all this if sequence into a branchless single call.
             if (allocator._options.ElectricFenceEnabled)
-                ElectricFencedMemory.Free((byte*)header);
+                ElectricFencedMemory.Free((byte*)ptr.Ptr);
             else if (allocator._options.UseSecureMemory)
                 throw new NotImplementedException();
             else
-                NativeMemory.Free((byte*)header, header->Size + sizeof(BlockPointer.Header));
+                NativeMemory.Free((byte*)ptr.Ptr, ptr.Size);
         }
 
-        public void Reset(ref NativeBlockAllocator<TOptions> blockAllocator)
+        public void Reset(ref NativeAllocator<TOptions> allocator)
         {
-            throw new NotSupportedException($"{nameof(NativeBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+            throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
         }
 
-        public void OnAllocate(ref NativeBlockAllocator<TOptions> allocator, BlockPointer ptr)
-        {
-            // This allocator does not keep track of anything.
-        }
-
-        public void OnRelease(ref NativeBlockAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnAllocate(ref NativeAllocator<TOptions> allocator, Pointer ptr)
         {
             // This allocator does not keep track of anything.
         }
 
-        public void NotifyLowMemory(ref NativeBlockAllocator<TOptions> blockAllocator)
+        public void OnRelease(ref NativeAllocator<TOptions> allocator, Pointer ptr)
+        {
+            // This allocator does not keep track of anything.
+        }
+
+        public void NotifyLowMemory(ref NativeAllocator<TOptions> allocator)
         {
             // This allocator cannot do anything with this signal.
         }
 
-        public void NotifyLowMemoryOver(ref NativeBlockAllocator<TOptions> blockAllocator)
+        public void NotifyLowMemoryOver(ref NativeAllocator<TOptions> allocator)
         {
             // This allocator cannot do anything with this signal.
         }
