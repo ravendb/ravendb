@@ -1,9 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
 
 namespace Raven.Client.Documents.Session
@@ -11,8 +11,11 @@ namespace Raven.Client.Documents.Session
     public partial class AsyncDocumentSession
     {
         /// <inheritdoc />
-        public async Task<T> LoadAsync<T>(string id, CancellationToken token = default(CancellationToken))
+        public async Task<T> LoadAsync<T>(string id, CancellationToken token = default)
         {
+            if (id == null)
+                return default;
+
             var loadOperation = new LoadOperation(this);
             loadOperation.ById(id);
 
@@ -26,18 +29,24 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocument<T>();
         }
 
-        public async Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids,
-            CancellationToken token = default(CancellationToken))
+        /// <inheritdoc />
+        public async Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default)
         {
+            if (ids == null)
+                throw new ArgumentNullException(nameof(ids));
+
             var loadOperation = new LoadOperation(this);
             await LoadAsyncInternal(ids.ToArray(), null, loadOperation, token).ConfigureAwait(false);
 
             return loadOperation.GetDocuments<T>();
         }
 
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes,
-            CancellationToken token = new CancellationToken())
+        /// <inheritdoc />
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, CancellationToken token = new CancellationToken())
         {
+            if (ids == null)
+                throw new ArgumentNullException(nameof(ids));
+
             var loadOperation = new LoadOperation(this);
             loadOperation.ByIds(ids);
             loadOperation.WithIncludes(includes?.ToArray());
@@ -52,9 +61,15 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocuments<T>();
         }
 
-        public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(string idPrefix, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null,
-            string startAfter = null, CancellationToken token = default(CancellationToken))
+        /// <inheritdoc />
+        public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(
+            string idPrefix,
+            string matches = null,
+            int start = 0,
+            int pageSize = 25,
+            string exclude = null,
+            string startAfter = null,
+            CancellationToken token = default)
         {
             var operation = new LoadStartingWithOperation(this);
             await LoadStartingWithInternal(idPrefix, operation, null, matches, start,
@@ -63,18 +78,48 @@ namespace Raven.Client.Documents.Session
             return operation.GetDocuments<T>();
         }
 
-        public async Task LoadStartingWithIntoStreamAsync(string idPrefix, Stream output, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken))
+        /// <inheritdoc />
+        public async Task LoadStartingWithIntoStreamAsync(
+            string idPrefix,
+            Stream output,
+            string matches = null,
+            int start = 0,
+            int pageSize = 25,
+            string exclude = null,
+            string startAfter = null,
+            CancellationToken token = default)
         {
-            await LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start,
-                pageSize, exclude,  startAfter, token).ConfigureAwait(false);
+            if (output == null)
+                throw new ArgumentNullException(nameof(output));
+
+            await LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, startAfter, token).ConfigureAwait(false);
         }
 
-
-        private async Task<GetDocumentsCommand> LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
-            int start = 0, int pageSize = 25, string exclude = null, 
-            string startAfter = null, CancellationToken token = default(CancellationToken))
+        /// <inheritdoc />
+        public async Task LoadIntoStreamAsync(IEnumerable<string> ids, Stream output, CancellationToken token = default)
         {
+            if (ids == null)
+                throw new ArgumentNullException(nameof(ids));
+            if (output == null)
+                throw new ArgumentNullException(nameof(output));
+
+            await LoadAsyncInternal(ids.ToArray(), output, new LoadOperation(this), token).ConfigureAwait(false);
+        }
+
+        private async Task LoadStartingWithInternal(
+            string idPrefix,
+            LoadStartingWithOperation operation,
+            Stream stream = null,
+            string matches = null,
+            int start = 0,
+            int pageSize = 25,
+            string exclude = null,
+            string startAfter = null,
+            CancellationToken token = default)
+        {
+            if (idPrefix == null)
+                throw new ArgumentNullException(nameof(idPrefix));
+
             operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, startAfter);
 
             var command = operation.CreateRequest();
@@ -87,13 +132,13 @@ namespace Raven.Client.Documents.Session
                 else
                     operation.SetResult(command.Result);
             }
-
-            return command;
         }
 
-        private async Task LoadAsyncInternal(string[] ids, Stream stream, LoadOperation operation,
-            CancellationToken token = default(CancellationToken))
+        private async Task LoadAsyncInternal(string[] ids, Stream stream, LoadOperation operation, CancellationToken token = default)
         {
+            if (ids == null)
+                throw new ArgumentNullException(nameof(ids));
+
             operation.ByIds(ids);
 
             var command = operation.CreateRequest();
@@ -106,11 +151,6 @@ namespace Raven.Client.Documents.Session
                 else
                     operation.SetResult(command.Result);
             }
-        }
-
-        public async Task LoadIntoStreamAsync(IEnumerable<string> ids, Stream output ,CancellationToken token = default(CancellationToken))
-        {
-            await LoadAsyncInternal(ids.ToArray(), output, new LoadOperation(this), token).ConfigureAwait(false);
         }
     }
 }
