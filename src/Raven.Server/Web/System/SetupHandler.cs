@@ -508,7 +508,7 @@ namespace Raven.Server.Web.System
                     "Setting up RavenDB in secured mode.",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.SetupSecuredTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                    operationId.Value, token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -570,7 +570,7 @@ namespace Raven.Server.Web.System
                     null, "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.SetupLetsEncryptTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                    operationId.Value, token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -676,7 +676,7 @@ namespace Raven.Server.Web.System
                     null, "Continue Cluster Setup.",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                    operationId.Value, token: operationCancelToken);
             }
             
             NoContentStatus();

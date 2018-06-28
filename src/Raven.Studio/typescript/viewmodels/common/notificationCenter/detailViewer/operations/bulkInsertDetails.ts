@@ -32,13 +32,17 @@ class bulkInsertDetails extends abstractOperationDetails {
 
         this.processingSpeed = ko.pureComputed(() => {
             const progress = this.progress();
+            if (!progress) {
+                return "N/A";
+            }
+            
             const processingSpeed = this.calculateProcessingSpeed(progress.Processed);
             if (processingSpeed === 0) {
                 return "N/A";
             }
 
             return `${processingSpeed.toLocaleString()} docs / sec`;
-        });
+        }).extend({ rateLimit : 2000 });
     }
     
     static tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,

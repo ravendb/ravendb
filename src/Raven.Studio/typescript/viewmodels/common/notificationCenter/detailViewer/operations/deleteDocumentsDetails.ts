@@ -12,6 +12,8 @@ class deleteDocumentsDetails extends abstractOperationDetails {
     processingSpeed: KnockoutComputed<string>;
     estimatedTimeLeft: KnockoutComputed<string>;
 
+    query: string;
+
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
 
@@ -20,6 +22,8 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
     initObservables() {
         super.initObservables();
+
+        this.query = (this.op.detailedDescription() as Raven.Client.Documents.Operations.BulkOperationResult.OperationDetails).Query;
 
         this.progress = ko.pureComputed(() => {
             return this.op.progress() as Raven.Client.Documents.Operations.DeterminateProgress;
@@ -31,22 +35,25 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
         this.processingSpeed = ko.pureComputed(() => {
             const progress = this.progress();
+            if (!progress) {
+                return "N/A";
+            }
             const processingSpeed = this.calculateProcessingSpeed(progress.Processed);
             if (processingSpeed === 0) {
                 return "N/A";
             }
 
             return `${processingSpeed.toLocaleString()} docs / sec`;
-        });
+        }).extend({ rateLimit : 2000 });
 
         this.estimatedTimeLeft = ko.pureComputed(() => {
             const progress = this.progress();
             return this.getEstimatedTimeLeftFormatted(progress.Processed, progress.Total);
-        });
+        }).extend({ rateLimit : 2000 });
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof operation) && (notification.taskType() === "DeleteByCollection" || notification.taskType() === "DeleteByIndex");
+        return (notification instanceof operation) && (notification.taskType() === "DeleteByCollection" || notification.taskType() === "DeleteByQuery");
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {

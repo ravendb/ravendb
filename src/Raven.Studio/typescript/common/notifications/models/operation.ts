@@ -13,6 +13,7 @@ class operation extends abstractNotification {
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
     taskType = ko.observable<Raven.Server.Documents.Operations.Operations.OperationType>();
+    detailedDescription = ko.observable<Raven.Client.Documents.Operations.IOperationDetailedDescription>();
     
     startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();
@@ -47,6 +48,7 @@ class operation extends abstractNotification {
         this.result(stateDto.Result);
         this.status(stateDto.Status);
         this.taskType(incomingChanges.TaskType);
+        this.detailedDescription(incomingChanges.DetailedDescription);
                 
         this.startTime(incomingChanges.StartTime ? moment.utc(incomingChanges.StartTime) : null);  
         this.endTime(incomingChanges.EndTime ? moment.utc(incomingChanges.EndTime) : null);

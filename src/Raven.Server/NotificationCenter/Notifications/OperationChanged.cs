@@ -17,6 +17,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         public long OperationId { get; private set; }
 
         public OperationState State { get; private set; }
+        
+        public IOperationDetailedDescription DetailedDescription { get; private set; }
 
         public bool Killable { get; private set; }
 
@@ -36,6 +38,7 @@ namespace Raven.Server.NotificationCenter.Notifications
             result[nameof(TaskType)] = TaskType.ToString();
             result[nameof(StartTime)] = StartTime;
             result[nameof(EndTime)] = EndTime;
+            result[nameof(DetailedDescription)] = DetailedDescription?.ToJson();
 
             return result;
         }
@@ -73,7 +76,8 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Severity = severity,
                 TaskType = description.TaskType,
                 StartTime = description.StartTime,
-                EndTime = description.EndTime
+                EndTime = description.EndTime,
+                DetailedDescription = description.DetailedDescription
             };
         }
     }

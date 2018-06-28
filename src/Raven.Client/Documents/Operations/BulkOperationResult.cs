@@ -11,6 +11,8 @@ namespace Raven.Client.Documents.Operations
         }
 
         public long Total { get; set; }
+        
+        public string Query { get; set; }
 
         public string Message => $"Processed {Total:#,#0} items.";
 
@@ -29,7 +31,8 @@ namespace Raven.Client.Documents.Operations
             {
                 [nameof(Total)] = Total,
                 [nameof(Message)] = Message,
-                [nameof(Details)] = details
+                [nameof(Details)] = details,
+                [nameof(Query)] = Query
             };
         }
 
@@ -63,6 +66,19 @@ namespace Raven.Client.Documents.Operations
                 {
                     [nameof(Id)] = Id,
                     [nameof(Etag)] = Etag
+                };
+            }
+        }
+
+        public class OperationDetails : IOperationDetailedDescription
+        {
+            public string Query { get; set; }
+
+            DynamicJsonValue IOperationDetailedDescription.ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Query)] = Query
                 };
             }
         }

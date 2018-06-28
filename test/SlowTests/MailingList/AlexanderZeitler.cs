@@ -44,7 +44,7 @@ namespace SlowTests.MailingList
                 //    Url = "http://localhost:8080/databases/ravensubdocs"
                 //}.Initialize();
 
-                //documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery());
+                //documentStore.DatabaseCommands.DeleteByQyery("Raven/DocumentsByEntityName", new IndexQuery());
 
 
                 using (var session = store.OpenSession())

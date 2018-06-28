@@ -121,7 +121,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             Database,
                             "Export database: " + Database.Name,
                             Operations.OperationType.DatabaseExport,
-                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId, token);
+                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId, token: token);
                 }
                 catch (Exception)
                 {
@@ -465,7 +465,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                             return (IOperationResult)result;
                         });
-                    }, operationId, token).ConfigureAwait(false);
+                    }, operationId, token: token).ConfigureAwait(false);
 
                 WriteImportResult(context, result, ResponseBodyStream());
             }
@@ -545,7 +545,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             return (IOperationResult)result;
                         });
-                    }, operationId, token);
+                    }, operationId, token: token);
                 
                 WriteImportResult(context, result, ResponseBodyStream());
             }

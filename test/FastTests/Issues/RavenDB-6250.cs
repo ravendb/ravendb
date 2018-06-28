@@ -25,8 +25,8 @@ namespace FastTests.Issues
         {
             var alreadyHandledInStudio = new HashSet<Operations.OperationType>
             {
-                Operations.OperationType.UpdateByIndex,
-                Operations.OperationType.DeleteByIndex,
+                Operations.OperationType.UpdateByQuery,
+                Operations.OperationType.DeleteByQuery,
                 Operations.OperationType.DeleteByCollection,
                 Operations.OperationType.DatabaseExport,
                 Operations.OperationType.DatabaseImport,
