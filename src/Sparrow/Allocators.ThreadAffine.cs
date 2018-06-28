@@ -34,7 +34,7 @@ namespace Sparrow
         }
     }
 
-    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
+    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
             where TOptions : struct, IThreadAffineBlockOptions
     {
         private TOptions _options;
@@ -71,7 +71,7 @@ namespace Sparrow
                 throw new ArgumentOutOfRangeException($"{nameof(allocator._options.ItemsPerLane)} cannot be bigger than 4.");
         }
 
-        public void Allocate(ref ThreadAffineBlockAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
+        public BlockPointer Allocate(ref ThreadAffineBlockAllocator<TOptions> allocator, int size)
         {
             if (size < allocator._options.BlockSize)
             {
@@ -80,37 +80,38 @@ namespace Sparrow
 
                 ref Container container = ref allocator._container[threadId];
 
-                header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
+                BlockPointer.Header* header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
                 if (header != null)
-                    return;
+                    return new BlockPointer(header);
 
                 if (allocator._options.ItemsPerLane > 1) // PERF: This check will get evicted
                 {
                     header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block2, IntPtr.Zero, container.Block2);
                     if (header != null)
-                        return;
+                        return new BlockPointer(header);
                 }
 
                 if (allocator._options.ItemsPerLane > 2) // PERF: This check will get evicted
                 {
                     header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
                     if (header != null)
-                        return;
+                        return new BlockPointer(header);
                 }
 
                 if (allocator._options.ItemsPerLane > 3) // PERF: This check will get evicted
                 {
                     header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block4, IntPtr.Zero, container.Block4);
                     if (header != null)
-                        return;
+                        return new BlockPointer(header);
                 }
             }
 
-            allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, size, out header);
+            return allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, size);
         }
 
-        public void Release(ref ThreadAffineBlockAllocator<TOptions> allocator, in BlockPointer.Header* header)
+        public void Release(ref ThreadAffineBlockAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
+            BlockPointer.Header* header = ptr._header;
             if (header->Size < allocator._options.BlockSize)
             {
                 // PERF: Bitwise add should emit a and instruction followed by a constant.
@@ -120,7 +121,7 @@ namespace Sparrow
 
                 if (Interlocked.CompareExchange(ref container.Block1, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
                     return;
-                
+
                 // PERF: The items per lane check will get evicted because of constant elimination and therefore the complete code when items is higher. 
                 if (allocator._options.ItemsPerLane > 1 && Interlocked.CompareExchange(ref container.Block2, (IntPtr)header, IntPtr.Zero) == IntPtr.Zero)
                     return;
@@ -130,7 +131,7 @@ namespace Sparrow
                     return;
             }
 
-            allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
+            allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
         }
 
         public void Reset(ref ThreadAffineBlockAllocator<TOptions> allocator)
@@ -158,21 +159,34 @@ namespace Sparrow
             {
                 ref Container container = ref allocator._container[i];
 
+                BlockPointer ptr;
                 BlockPointer.Header* header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block1, IntPtr.Zero, container.Block1);
                 if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
+                {
+                    ptr = new BlockPointer(header);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                }
 
                 header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block2, IntPtr.Zero, container.Block2);
                 if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
+                {
+                    ptr = new BlockPointer(header);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                }
 
                 header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
                 if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
+                {
+                    ptr = new BlockPointer(header);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                }
 
                 header = (BlockPointer.Header*)Interlocked.CompareExchange(ref container.Block4, IntPtr.Zero, container.Block4);
                 if (header != null)
-                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, in header);
+                {
+                    ptr = new BlockPointer(header);
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                }
             }
         }
 

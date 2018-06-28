@@ -44,7 +44,7 @@ namespace Sparrow
         }
     }
 
-    public struct NativeBlockAllocator<TOptions> : IAllocator<NativeBlockAllocator<TOptions>>, IAllocator, IDisposable, ILowMemoryHandler<NativeBlockAllocator<TOptions>>
+    public unsafe struct NativeBlockAllocator<TOptions> : IAllocator<NativeBlockAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<NativeBlockAllocator<TOptions>>
         where TOptions : struct, INativeBlockOptions
     {
         private TOptions _options;
@@ -76,7 +76,7 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Allocate(ref NativeBlockAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
+        public BlockPointer Allocate(ref NativeBlockAllocator<TOptions> allocator, int size)
         {
             byte* memory;
             int allocatedSize = size + sizeof(BlockPointer.Header);
@@ -93,22 +93,25 @@ namespace Sparrow
             if (allocator._options.Zeroed)
                 Memory.Set(memory, 0, allocatedSize);
 
-            header = (BlockPointer.Header*)memory;
+            BlockPointer.Header* header = (BlockPointer.Header*)memory;
             *header = new BlockPointer.Header(memory + sizeof(BlockPointer.Header), size);
 
-            allocator.Allocated += size + sizeof(BlockPointer.Header);
+            allocator.Allocated += allocatedSize;
+
+            return new BlockPointer(header);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Release(ref NativeBlockAllocator<TOptions> blockAllocator, in BlockPointer.Header* header)
+        public void Release(ref NativeBlockAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
-            blockAllocator.Allocated -= header->Size + sizeof(BlockPointer.Header);
+            BlockPointer.Header* header = ptr._header;
+            allocator.Allocated -= header->Size + sizeof(BlockPointer.Header);
 
             // PERF: Given that for the normal use case the INativeBlockOptions we will use returns constants the
             //       JIT will be able to fold all this if sequence into a branchless single call.
-            if (blockAllocator._options.ElectricFenceEnabled)
+            if (allocator._options.ElectricFenceEnabled)
                 ElectricFencedMemory.Free((byte*)header);
-            else if (blockAllocator._options.UseSecureMemory)
+            else if (allocator._options.UseSecureMemory)
                 throw new NotImplementedException();
             else
                 NativeMemory.Free((byte*)header, header->Size + sizeof(BlockPointer.Header));
