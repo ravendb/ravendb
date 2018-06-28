@@ -99,7 +99,7 @@ namespace Raven.Database.FileSystem
 
                 search = new IndexStorage(name, configuration);
 
-                conflictArtifactManager = new ConflictArtifactManager(storage, search);
+                conflictArtifactManager = new ConflictArtifactManager(storage, search, this);
 
                 TimerManager = new ResourceTimerManager();
 
