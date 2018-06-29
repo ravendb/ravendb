@@ -18,7 +18,7 @@ class registrationInfoCommand extends commandBase {
         this.post(url, JSON.stringify(payload), null)
             .done(result => task.resolve(result))
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to load registration information", response.responseText, response.statusText);
+                this.reportError("Failed to complete domain registration", response.responseText, response.statusText);
                 task.reject();
             });
         
