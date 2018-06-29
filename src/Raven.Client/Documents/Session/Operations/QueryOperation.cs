@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Session.Operations
             _indexName = indexName;
             _indexQuery = indexQuery;
             _fieldsToFetch = fieldsToFetch;
-            DisableEntitiesTracking = disableEntitiesTracking;
+            NoTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session.Operations
             var queryResult = _currentQueryResults.CreateSnapshot();
             queryResult.Results.BlittableValidation();
 
-            if (DisableEntitiesTracking == false)
+            if (NoTracking == false)
                 _session.RegisterIncludes(queryResult.Includes);
 
             var list = new List<T>();
@@ -108,10 +108,10 @@ namespace Raven.Client.Documents.Session.Operations
 
                 metadata.TryGetId(out var id);
 
-                list.Add(Deserialize<T>(id, document, metadata, _fieldsToFetch, DisableEntitiesTracking, _session));
+                list.Add(Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session));
             }
 
-            if (DisableEntitiesTracking == false)
+            if (NoTracking == false)
                 _session.RegisterMissingIncludes(queryResult.Results, queryResult.Includes, queryResult.IncludedPaths);
 
             return list;
@@ -129,7 +129,6 @@ namespace Raven.Client.Documents.Session.Operations
                 if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
                 {
                     var projectionField = fieldsToFetch.Projections[0];
-                    T value;
 
                     if (fieldsToFetch.SourceAlias != null)
                     {
@@ -137,13 +136,13 @@ namespace Raven.Client.Documents.Session.Operations
                         projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
                     }
 
-                    return document.TryGet(projectionField, out value) == false
-                        ? default(T)
+                    return document.TryGet(projectionField, out T value) == false
+                        ? default
                         : value;
                 }
 
                 if (document.TryGetMember(fieldsToFetch.Projections[0], out object inner) == false)
-                    return default(T);
+                    return default;
 
                 if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                 {
@@ -158,16 +157,22 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 // we need to make an additional check, since it is possible that a value was explicitly stated
                 // for the identity property, in which case we don't want to override it.
-                object value;
                 var identityProperty = session.Conventions.GetIdentityProperty(typeof(T));
-                if (identityProperty != null && (document.TryGetMember(identityProperty.Name, out value) == false || value == null))
+                if (identityProperty != null && (document.TryGetMember(identityProperty.Name, out object value) == false || value == null))
                     session.GenerateEntityIdOnTheClient.TrySetIdentity(result, id);
             }
 
             return result;
         }
 
-        public bool DisableEntitiesTracking { get; set; }
+        [Obsolete("Use NoTracking instead")]
+        public bool DisableEntitiesTracking
+        {
+            get => NoTracking;
+            set => NoTracking = value;
+        }
+
+        public bool NoTracking { get; set; }
 
         public void EnsureIsAcceptableAndSaveResult(QueryResult result)
         {
@@ -187,9 +192,9 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_indexQuery.QueryParameters != null && _indexQuery.QueryParameters.Count > 0)
                 {
                     parameters = new StringBuilder();
-                    
+
                     parameters.Append("(parameters: ");
-                    
+
                     var first = true;
 
                     foreach (var parameter in _indexQuery.QueryParameters)
