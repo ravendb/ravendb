@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
@@ -135,6 +136,29 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 WaitForIndexing(store);
 
                 await store.ExecuteIndexAsync(new Replacement.DailyInvoicesIndex());
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(120, await session.Query<Invoice>().CountAsync());
+                    Assert.Equal(93, await session.Query<DailyInvoice>().CountAsync());
+                    Assert.Equal(31, await session.Query<MonthlyInvoice>().CountAsync());
+                    Assert.Equal(4, await session.Query<YearlyInvoice>().CountAsync());
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanResetIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await CreateDataAndIndexes(store);
+
+                await store.Maintenance.SendAsync(new ResetIndexOperation(new DailyInvoicesIndex().IndexName));
+                await store.Maintenance.SendAsync(new ResetIndexOperation(new MonthlyInvoicesIndex().IndexName));
+                await store.Maintenance.SendAsync(new ResetIndexOperation(new YearlyInvoicesIndex().IndexName));
+
                 WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())

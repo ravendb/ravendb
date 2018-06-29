@@ -822,7 +822,7 @@ namespace Raven.Server.Documents.Indexes
                             index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                             break;
                         case IndexType.MapReduce:
-                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase, isIndexReset: true);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
@@ -835,13 +835,11 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, the cluster is probably down. " +
-                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                throw new IndexCreationException($"Failed to reset index: {index.Name}", toe);
             }
             catch (Exception e)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation. " +
-                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
+                throw new IndexCreationException($"Failed to reset index: {index.Name}", e);
             }
         }
 
