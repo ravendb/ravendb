@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.NoTracking)
             {
                 if (_currentLoadResults == null)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");
 
                 finalResults = new T[_currentLoadResults.Results.Length];
                 foreach (var document in GetDocumentsFromResult(_currentLoadResults))

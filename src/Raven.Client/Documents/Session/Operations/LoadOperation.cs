@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.NoTracking)
             {
                 if (_currentLoadResults == null)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Cannot execute '{nameof(GetDocument)}' before operation execution.");
 
                 var document = _currentLoadResults.Results[0] as BlittableJsonReaderObject;
                 if (document == null)
@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.NoTracking)
             {
                 if (_currentLoadResults == null)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");
 
                 foreach (var id in _ids)
                 {
