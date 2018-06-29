@@ -617,8 +617,9 @@ namespace Raven.Client.Http
             CancellationToken token = default)
         {
             var request = CreateRequest(context, chosenNode, command, out string url);
+            var noCaching = sessionInfo?.NoCaching ?? false;
 
-            using (var cachedItem = GetFromCache(context, command, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
+            using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedChangeVector != null)
                 {
@@ -968,9 +969,9 @@ namespace Raven.Client.Http
             throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
         }
 
-        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, bool useCache, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
+            if (useCache && command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
