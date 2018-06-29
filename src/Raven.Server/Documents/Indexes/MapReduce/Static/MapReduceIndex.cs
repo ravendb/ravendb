@@ -66,10 +66,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _mre.Set();
         }
 
-        public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
         {            
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
-            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase);
+            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase, isIndexReset);
 
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
 
-        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database)
+        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database, bool isIndexReset = false)
         {
             var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
@@ -149,16 +149,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 }
             }
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            if (isIndexReset == false)
             {
-                var stats = database.DocumentsStorage.GetCollection(outputReduceToCollection, context);
-                if (stats.Count > 0)
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    throw new IndexInvalidException($"In order to create the '{definition.Name}' index " +
-                                                    $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
-                                                    $"you firstly need to delete all of the documents in the '{stats.Name}' collection " +
-                                                    $"(currently have {stats.Count} document{(stats.Count == 1 ? "" : "s")}).");
+                    var stats = database.DocumentsStorage.GetCollection(outputReduceToCollection, context);
+                    if (stats.Count > 0)
+                    {
+                        throw new IndexInvalidException($"In order to create the '{definition.Name}' index " +
+                                                        $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
+                                                        $"you firstly need to delete all of the documents in the '{stats.Name}' collection " +
+                                                        $"(currently have {stats.Count} document{(stats.Count == 1 ? "" : "s")}).");
+                    }
                 }
             }
         }
