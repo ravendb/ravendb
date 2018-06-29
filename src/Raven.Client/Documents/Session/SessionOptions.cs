@@ -11,6 +11,11 @@ namespace Raven.Client.Documents.Session
     public class SessionOptions
     {
         public string Database { get; set; }
+
+        public bool NoTracking { get; set; }
+
+        public bool NoCaching { get; set; }
+
         public RequestExecutor RequestExecutor { get; set; }
 
         /// <summary>

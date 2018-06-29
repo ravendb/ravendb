@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _counters;
         private bool _includeAllCounters;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
+        private GetDocumentsResult _currentLoadResults;
+
         public LoadOperation(InMemoryDocumentSessionOperations session)
         {
             _session = session;
@@ -37,8 +39,8 @@ namespace Raven.Client.Documents.Session.Operations
             if (_includeAllCounters)
                 return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, includeAllCounters: true, metadataOnly: false);
 
-            return _counters != null 
-                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _counters, metadataOnly: false) 
+            return _counters != null
+                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _counters, metadataOnly: false)
                 : new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
         }
 
@@ -65,7 +67,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation WithCounters(string[] counters)
         {
-            if (counters != null)   
+            if (counters != null)
                 _counters = counters;
             return this;
         }
@@ -89,16 +91,30 @@ namespace Raven.Client.Documents.Session.Operations
 
         public T GetDocument<T>()
         {
+            if (_session.NoTracking)
+            {
+                if (_currentLoadResults == null)
+                    throw new InvalidOperationException();
+
+                var document = _currentLoadResults.Results[0] as BlittableJsonReaderObject;
+                if (document == null)
+                    return default;
+
+                var documentInfo = DocumentInfo.GetNewDocumentInfo(document);
+
+                return _session.TrackEntity<T>(documentInfo);
+            }
+
             return GetDocument<T>(_ids[0]);
         }
 
         private T GetDocument<T>(string id)
         {
             if (id == null)
-                return default(T);
+                return default;
 
             if (_session.IsDeleted(id))
-                return default(T);
+                return default;
 
             if (_session.DocumentsById.TryGetValue(id, out var doc))
                 return _session.TrackEntity<T>(doc);
@@ -106,15 +122,33 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.IncludedDocumentsById.TryGetValue(id, out doc))
                 return _session.TrackEntity<T>(doc);
 
-            return default(T);
+            return default;
         }
 
         public Dictionary<string, T> GetDocuments<T>()
         {
             var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < _ids.Length; i++)
+            if (_session.NoTracking)
             {
-                var id = _ids[i];
+                if (_currentLoadResults == null)
+                    throw new InvalidOperationException();
+
+                foreach (var id in _ids)
+                {
+                    if (id == null)
+                        continue;
+
+                    finalResults[id] = default;
+                }
+
+                foreach (var document in GetDocumentsFromResult(_currentLoadResults))
+                    finalResults[document.Id] = _session.TrackEntity<T>(document);
+
+                return finalResults;
+            }
+
+            foreach (var id in _ids)
+            {
                 if (id == null)
                     continue;
                 finalResults[id] = GetDocument<T>(id);
@@ -127,22 +161,32 @@ namespace Raven.Client.Documents.Session.Operations
             if (result == null)
                 return;
 
+            if (_session.NoTracking)
+            {
+                _currentLoadResults = result;
+                return;
+            }
+
             _session.RegisterIncludes(result.Includes);
-            
+
             _session.RegisterCounters(result.Counters, _counters, _includeAllCounters, _ids);
 
+            foreach (var document in GetDocumentsFromResult(result))
+                _session.DocumentsById.Add(document);
+
+            _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
+
+        }
+
+        private static IEnumerable<DocumentInfo> GetDocumentsFromResult(GetDocumentsResult result)
+        {
             foreach (BlittableJsonReaderObject document in result.Results)
             {
                 if (document == null)
                     continue;
 
-                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
-                _session.DocumentsById.Add(newDocumentInfo);
-
+                yield return DocumentInfo.GetNewDocumentInfo(document);
             }
-
-            _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
-
         }
     }
 }

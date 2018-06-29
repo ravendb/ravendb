@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
@@ -18,6 +19,7 @@ namespace Raven.Client.Documents.Session.Operations
         private string _startAfter;
 
         private readonly List<string> _returnedIds = new List<string>();
+        private GetDocumentsResult _currentLoadResults;
 
         public LoadStartingWithOperation(InMemoryDocumentSessionOperations session)
         {
@@ -46,37 +48,66 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void SetResult(GetDocumentsResult result)
         {
-            foreach (BlittableJsonReaderObject document in result.Results)
+            if (_session.NoTracking)
             {
-                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
-                _session.DocumentsById.Add(newDocumentInfo);
-                _returnedIds.Add(newDocumentInfo.Id);
+                _currentLoadResults = result;
+                return;
+            }
+
+            foreach (var document in GetDocumentsFromResult(result))
+            {
+                _session.DocumentsById.Add(document);
+                _returnedIds.Add(document.Id);
             }
         }
 
         public T[] GetDocuments<T>()
         {
             var i = 0;
-            var finalResults = new T[_returnedIds.Count];
-            foreach (var id in _returnedIds)
+            T[] finalResults;
+
+            if (_session.NoTracking)
             {
-                finalResults[i++] = GetDocument<T>(id);
+                if (_currentLoadResults == null)
+                    throw new InvalidOperationException();
+
+                finalResults = new T[_currentLoadResults.Results.Length];
+                foreach (var document in GetDocumentsFromResult(_currentLoadResults))
+                    finalResults[i++] = _session.TrackEntity<T>(document);
             }
+            else
+            {
+                finalResults = new T[_returnedIds.Count];
+                foreach (var id in _returnedIds)
+                    finalResults[i++] = GetDocument<T>(id);
+            }
+
             return finalResults;
         }
 
         private T GetDocument<T>(string id)
         {
             if (id == null)
-                return default(T);
+                return default;
 
             if (_session.IsDeleted(id))
-                return default(T);
+                return default;
 
             if (_session.DocumentsById.TryGetValue(id, out var doc))
                 return _session.TrackEntity<T>(doc);
 
-            return default(T);
+            return default;
+        }
+
+        private static IEnumerable<DocumentInfo> GetDocumentsFromResult(GetDocumentsResult result)
+        {
+            foreach (BlittableJsonReaderObject document in result.Results)
+            {
+                if (document == null)
+                    continue;
+
+                yield return DocumentInfo.GetNewDocumentInfo(document);
+            }
         }
     }
 }
