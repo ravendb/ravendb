@@ -16,13 +16,11 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            LoggingSource.Instance.SetupLogMode(LogMode.Information, "C:\\testlogs");
-
             try
             {
-                using (var test = new SlowTests.Authentication.AuthenticationLetsEncryptTests())
+                using (var test = new RavenDB_11166())
                 {
-                    await test.CanGetLetsEncryptCertificateAndRenewIt();
+                    await test.CanUseSubscriptionWithIncludes();
                 }
             }
             catch (Exception e)

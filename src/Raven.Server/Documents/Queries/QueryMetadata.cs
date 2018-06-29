@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.Queries
 
             void AddInclude(QueryExpression include, string path)
             {
-                var expressionPath = ParseExpressionPath(include, path, parameters);
+                var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
                 if (includes == null)
                     includes = new List<string>();
@@ -504,17 +504,17 @@ namespace Raven.Server.Documents.Queries
                 parameters);
         }
 
-        private (string Path, string LoadFromAlias) ParseExpressionPath(QueryExpression expr, string path, BlittableJsonReaderObject parameters)
+        public static (string Path, string LoadFromAlias) ParseExpressionPath(QueryExpression expr, string path, StringSegment? alias)
         {
             var indexOf = path.IndexOf('.');
-            if (indexOf == -1 || Query.From.Alias == null)
+            if (indexOf == -1 || alias == null)
                 return (path, null);
 
-            Debug.Assert(Query.From.Alias != null);
+            Debug.Assert(alias != null);
 
             var compare = string.Compare(
-                Query.From.Alias.Value.Buffer,
-                Query.From.Alias.Value.Offset,
+                alias.Value.Buffer,
+                alias.Value.Offset,
                 path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
 
             return compare != 0 ? (path.Substring(indexOf + 1), path.Substring(0, indexOf)) : (path.Substring(indexOf + 1), null);
@@ -560,7 +560,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 string loadFromAlias;
-                (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, parameters);
+                (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
 
                 if (RootAliasPaths.TryAdd(alias, (path, array, parameter, quoted, loadFromAlias)) == false)
                 {

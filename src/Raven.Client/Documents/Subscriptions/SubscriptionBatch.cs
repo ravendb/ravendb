@@ -54,23 +54,53 @@ namespace Raven.Client.Documents.Subscriptions
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public List<Item> Items { get; } = new List<Item>();
+        private List<BlittableJsonReaderObject> _includes;
 
         public IDocumentSession OpenSession()
         {
-            return _store.OpenSession(new SessionOptions
+            var s = _store.OpenSession(new SessionOptions
             {
                 Database = _dbName,
                 RequestExecutor = _requestExecutor
             });
+
+            LoadDataToSession((InMemoryDocumentSessionOperations)s);
+
+            return s;
         }
 
         public IAsyncDocumentSession OpenAsyncSession()
         {
-            return _store.OpenAsyncSession(new SessionOptions
+            var s = _store.OpenAsyncSession(new SessionOptions
             {
                 Database = _dbName,
                 RequestExecutor = _requestExecutor
             });
+            LoadDataToSession((InMemoryDocumentSessionOperations)s);
+            return s;
+        }
+
+        private void LoadDataToSession(InMemoryDocumentSessionOperations s)
+        {
+            if (_includes == null)
+                return;
+
+            foreach (var item in _includes)
+            {
+                s.RegisterIncludes(item);
+            }
+            foreach (var item in Items)
+            {
+                s.RegisterExternalLoadedIntoTheSession(new DocumentInfo
+                {
+                    Id = item.Id,
+                    Document = item.RawResult,
+                    Metadata = item.RawMetadata,
+                    ChangeVector = item.ChangeVector,
+                    Entity = item.Result,
+                    IsNewDocument = false
+                });
+            }
         }
 
         public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, Logger logger)
@@ -84,13 +114,14 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
 
-        internal string Initialize(List<SubscriptionConnectionServerMessage> batch)
+        internal string Initialize(BatchFromServer batch)
         {
-            Items.Capacity = Math.Max(Items.Capacity, batch.Count);
+            _includes = batch.Includes;
+            Items.Capacity = Math.Max(Items.Capacity, batch.Messages.Count);
             Items.Clear();
             string lastReceivedChangeVector = null;
 
-            foreach (var item in batch)
+            foreach (var item in batch.Messages)
             {
 
                 BlittableJsonReaderObject metadata;
