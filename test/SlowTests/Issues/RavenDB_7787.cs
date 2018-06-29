@@ -9,7 +9,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_7787 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "testing purposes")]
         public void TestEmbedded()
         {
             var paths = CopyServer();
