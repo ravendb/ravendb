@@ -155,6 +155,39 @@ namespace SlowTests.Issues
 
                     Assert.NotEqual(product1, product2);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    session.CountersFor("products/1-A").Increment("c1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    NoTracking = true
+                }))
+                {
+                    var product1 = session.Load<Product>("products/1-A");
+                    var counters = session.CountersFor(product1.Id);
+
+                    counters.Get("c1");
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    counters.Get("c1");
+
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    var val1 = counters.GetAll();
+
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+
+                    var val2 = counters.GetAll();
+
+                    Assert.Equal(5, session.Advanced.NumberOfRequests);
+                    Assert.False(ReferenceEquals(val1, val2));
+                }
             }
         }
 
