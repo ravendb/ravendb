@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -99,7 +98,7 @@ namespace Raven.Client.Documents.Session
             var result = streamOperation.SetResultAsync(command.Result);
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
-            queryOperation.DisableEntitiesTracking = true;
+            queryOperation.NoTracking = true;
             return new YieldStream<T>(this, query, fieldsToFetch, result, token);
         }
 
