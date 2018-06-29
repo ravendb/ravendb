@@ -13,11 +13,11 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentsStorage _storage;
         private readonly DocumentsOperationContext _context;
-        private readonly StringValues _includes;
+        private readonly string[] _includes;
 
         private HashSet<string> _includedIds;
 
-        public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, StringValues includes)
+        public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes)
         {
             _storage = storage;
             _context = context;
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Includes
             if (document == null)
                 return;
 
-            if (_includes.Count == 0)
+            if (_includes == null || _includes.Length == 0)
                 return;
 
             if (_includedIds == null)
