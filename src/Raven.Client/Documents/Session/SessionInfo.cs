@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Raven.Client.Documents.Session
+﻿namespace Raven.Client.Documents.Session
 {
     public class SessionInfo
     {
@@ -10,11 +8,14 @@ namespace Raven.Client.Documents.Session
 
         public bool AsyncCommandRunning { get; set; }
 
-        public SessionInfo(int sessionId, bool asyncCommandRunning, long? lastClusterTransactionIndex = null)
+        public bool NoCaching { get; set; }
+
+        public SessionInfo(int sessionId, bool asyncCommandRunning, long? lastClusterTransactionIndex = null, bool noCaching = false)
         {
             LastClusterTransactionIndex = lastClusterTransactionIndex;
             SessionId = sessionId;
             AsyncCommandRunning = asyncCommandRunning;
+            NoCaching = noCaching;
         }
     }
 }

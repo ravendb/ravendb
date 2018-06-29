@@ -190,7 +190,6 @@ namespace Raven.Client.Documents.Session
             new Dictionary<(string, CommandType, string), ICommandData>();
 
         public readonly bool NoTracking;
-        private readonly bool _noCaching;
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 
@@ -213,12 +212,11 @@ namespace Raven.Client.Documents.Session
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             NoTracking = options.NoTracking;
-            _noCaching = options.NoCaching;
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName));
+            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions

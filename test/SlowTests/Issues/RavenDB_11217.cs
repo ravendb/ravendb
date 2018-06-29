@@ -157,5 +157,49 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public void SessionWideNoCachingShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Query<Product>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Name == "HR")
+                        .ToList();
+
+                    Assert.True(stats.DurationInMs >= 0, $"Was {stats.DurationInMs}");
+
+                    session.Query<Product>()
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "HR")
+                        .ToList();
+
+                    Assert.Equal(-1, stats.DurationInMs); // from cache
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    NoCaching = true
+                }))
+                {
+                    session.Query<Order>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Company == "HR")
+                        .ToList();
+
+                    Assert.True(stats.DurationInMs >= 0, $"Was {stats.DurationInMs}");
+
+                    session.Query<Order>()
+                        .Statistics(out stats)
+                        .Where(x => x.Company == "HR")
+                        .ToList();
+
+                    Assert.True(stats.DurationInMs >= 0, $"Was {stats.DurationInMs}");
+                }
+            }
+        }
     }
 }
