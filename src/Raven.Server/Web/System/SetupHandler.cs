@@ -59,6 +59,7 @@ namespace Raven.Server.Web.System
                     string error = null;
                     object result = null;
                     string responseString = null;
+                    string errorMessage = null;
                     
                     try
                     {
@@ -70,12 +71,16 @@ namespace Raven.Server.Web.System
                         if (response.StatusCode == HttpStatusCode.InternalServerError)
                         {
                             error = responseString;
+                            errorMessage = GeneralDomainRegistrationError;
                         }
                         else
                         {
                             result = JsonConvert.DeserializeObject<JObject>(responseString);
-                            if (((JObject)result).TryGetValue("Error", out var err))
-                                error = err.ToString();
+                            if (result != null)
+                            {
+                                if (((JObject)result).TryGetValue("Error", out var err))
+                                    error = err.ToString();
+                            }
                         }
                     }
                     catch (Exception e)
@@ -83,6 +88,7 @@ namespace Raven.Server.Web.System
                         result = responseString;
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                         error = e.ToString();
+                        errorMessage = DomainRegistrationServiceUnreachableError;
                     }
                     
                     using (var streamWriter = new StreamWriter(ResponseBodyStream()))
@@ -91,7 +97,7 @@ namespace Raven.Server.Web.System
                         {
                             new JsonSerializer().Serialize(streamWriter, new
                             {
-                                Message = GeneralDomainRegistrationServiceError,
+                                Message = errorMessage,
                                 Response = result,
                                 Error = error,
                                 Type = typeof(RavenException).FullName
@@ -109,7 +115,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException(GeneralDomainRegistrationServiceError, e);
+                    throw new InvalidOperationException(GeneralDomainRegistrationError, e);
                 }
             }
         }
@@ -130,6 +136,7 @@ namespace Raven.Server.Web.System
                     string error = null;
                     object result = null;
                     string responseString = null;
+                    string errorMessage = null;
 
                     try
                     {
@@ -141,6 +148,7 @@ namespace Raven.Server.Web.System
                         if (response.IsSuccessStatusCode == false)
                         {
                             error = responseString;
+                            errorMessage = GeneralDomainRegistrationError;
                         }
                         else
                         {
@@ -152,17 +160,22 @@ namespace Raven.Server.Web.System
                         result = responseString;
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                         error = e.ToString();
+                        errorMessage = DomainRegistrationServiceUnreachableError;
                     }
 
                     if (error != null)
-                    {
-                        JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out var errorJToken);
-
+                    {   
+                        JToken errorJToken = null;
+                        if (responseString != null)
+                        {
+                            JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken); 
+                        }
+                        
                         using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
                             new JsonSerializer().Serialize(streamWriter, new
                             {
-                                Message = GeneralDomainRegistrationServiceError,
+                                Message = errorMessage,
                                 Response = result,
                                 Error = errorJToken ?? error
                             });
@@ -225,7 +238,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException(GeneralDomainRegistrationServiceError, e);
+                    throw new InvalidOperationException(GeneralDomainRegistrationError, e);
                 }
             }
         }
@@ -715,7 +728,8 @@ namespace Raven.Server.Web.System
             return url;
         }
 
-        private static string GeneralDomainRegistrationServiceError = "The domain registration service (" + ApiHttpClient.ApiRavenDbNet + ") is currently not available. Please try again later.";
+        private static string GeneralDomainRegistrationError = "Registration error.";
+        private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later."; 
     }
 
     public class LicenseInfo
