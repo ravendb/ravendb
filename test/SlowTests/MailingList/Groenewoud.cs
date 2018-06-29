@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -105,7 +106,7 @@ namespace SlowTests.MailingList
         {
             for (int i = 0; i < list1.Count - 1; i++)
             {
-                Assert.True((list1[i].City).CompareTo(list1[i + 1].City) < 0);
+                Assert.True(string.Compare(list1[i].City, list1[i + 1].City, false, CultureInfo.GetCultureInfo("de-DE")) < 0);
             }
         }
     }
