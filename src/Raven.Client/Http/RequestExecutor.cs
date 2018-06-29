@@ -1367,8 +1367,7 @@ namespace Raven.Client.Http
         private static bool OnRemoteCertificateValidationCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
-            if (onServerCertificateCustomValidationCallback == null ||
-                onServerCertificateCustomValidationCallback.Length == 0)
+            if (onServerCertificateCustomValidationCallback == null)
                 return errors == SslPolicyErrors.None;
 
             return true;
