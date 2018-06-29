@@ -55,9 +55,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private bool _isDisposed;
         public SubscriptionState SubscriptionState;
 
-        public string Collection, Script;
-        public string[] Functions;
-        public bool Revisions;
+        public ParsedSubscription Subscription;
 
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
@@ -148,7 +146,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (waitedAnyTime)
                 SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
 
-            (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
+            Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             try
             {
@@ -381,7 +379,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (notification.CollectionName == Collection)
+                if (notification.CollectionName == Subscription.Collection)
                 {
                     try
                     {
@@ -470,7 +468,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 _startEtag = GetStartEtagForSubscription(SubscriptionState);
                 _filterAndProjectionScript = SetupFilterAndProjectionScript();
-                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Collection, Revisions, SubscriptionState, _filterAndProjectionScript);
+                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Subscription.Collection, Subscription.Revisions, SubscriptionState, _filterAndProjectionScript);
 
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -506,7 +504,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             using (docsContext.OpenReadTransaction())
                             {
-                                long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Collection);
+                                long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
 
                                 if (globalEtag > _startEtag)
                                     continue;
@@ -793,9 +791,9 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             SubscriptionPatchDocument patch = null;
 
-            if (string.IsNullOrWhiteSpace(Script) == false)
+            if (string.IsNullOrWhiteSpace(Subscription.Script) == false)
             {
-                patch = new SubscriptionPatchDocument(Script, Functions);
+                patch = new SubscriptionPatchDocument(Subscription.Script, Subscription.Functions);
             }
             return patch;
         }
@@ -829,7 +827,15 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        public static (string Collection, (string Script, string[] Functions), bool Revisions) ParseSubscriptionQuery(string query)
+        public struct ParsedSubscription
+        {
+            public string Collection;
+            public string Script;
+            public string[] Functions;
+            public bool Revisions;
+        }
+
+        public static ParsedSubscription ParseSubscriptionQuery(string query)
         {
             var queryParser = new QueryParser();
             queryParser.Init(query);
@@ -843,8 +849,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw new NotSupportedException("Subscription cannot specify a group by clause");
             if (q.OrderBy != null)
                 throw new NotSupportedException("Subscription cannot specify an order by clause");
-            if (q.Include != null)
-                throw new NotSupportedException("Subscription cannot specify an include clause");
             if (q.UpdateBody != null)
                 throw new NotSupportedException("Subscription cannot specify an update clause");
 
@@ -881,7 +885,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
             var collectionName = q.From.From.FieldValue;
             if (q.Where == null && q.Select == null && q.SelectFunctionBody.FunctionText == null)
-                return (collectionName, (null, null), revisions);
+                return new ParsedSubscription
+                {
+                    Collection = collectionName,
+                    Revisions = revisions
+                };
 
             var writer = new StringWriter();
 
@@ -949,8 +957,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
             // verify that the JS code parses
             new Esprima.JavaScriptParser(script).ParseProgram();
-
-            return (collectionName, (script, q.DeclaredFunctions?.Values?.Select(x => x.FunctionText).ToArray() ?? Array.Empty<string>()), revisions);
+            return new ParsedSubscription
+            {
+                Collection = collectionName,
+                Revisions = revisions,
+                Script = script,
+                Functions = q.DeclaredFunctions?.Values?.Select(x => x.FunctionText).ToArray() ?? Array.Empty<string>()
+            };
         }
     }
 
