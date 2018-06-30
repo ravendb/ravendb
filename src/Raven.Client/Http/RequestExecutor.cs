@@ -1215,16 +1215,6 @@ namespace Raven.Client.Http
 
         public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
-            if (AppContext.TryGetSwitch("System.Net.Http.UseSocketsHttpHandler", out _) == false 
-                && Environment.GetEnvironmentVariable("DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER") == null)
-            {
-                // We got a problem with SocketsHttpHandler, so we need to turn this off
-                // but given that we are a client library, we don't want to be rude, so if the user
-                // explicitly asked to set it, we'll respect whatever they want until the issue is resolved.
-
-                AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
-            }
-
             var httpMessageHandler = new HttpClientHandler();
             if (httpMessageHandler.SupportsAutomaticDecompression)
             {
