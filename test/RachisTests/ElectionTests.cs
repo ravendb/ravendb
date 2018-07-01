@@ -51,7 +51,7 @@ namespace RachisTests
         public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
-            var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 4 * numberOfNodes); // was 'TotalMilliseconds * 4', changed to *8 for low end machines RavenDB-7263
+            var timeToWait = TimeSpan.FromMilliseconds(1000 * numberOfNodes);
             await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
 
             DisconnectFromNode(firstLeader);
@@ -91,18 +91,37 @@ namespace RachisTests
             ReconnectToNode(firstLeader);
             Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
             var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
-            Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), "Old leader didn't rollback his log to the new leader log");
+            Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), $"Old leader didn't rollback his log to the new leader log, waited for index {newLeaderLastIndex}, while current is {firstLeader}");
             Assert.Equal(numberOfNodes, RachisConsensuses.Count);
-            var leaderUrl = new HashSet<string>();
-            foreach (var consensus in RachisConsensuses)
+
+            var tasks = new List<Task>();
+            using (var cts = new CancellationTokenSource())
             {
-                if (consensus.Tag != consensus.LeaderTag)
+                foreach (var consensus in RachisConsensuses)
                 {
-                    Assert.True(await consensus.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(1000));
+                    if (consensus.Tag != consensus.LeaderTag)
+                    {
+                        tasks.Add(consensus.WaitForState(RachisState.Follower, cts.Token));
+                    }
                 }
-                leaderUrl.Add(consensus.LeaderTag);
+                try
+                {
+                    if (await Task.WhenAll(tasks).WaitAsync(timeToWait))
+                    {
+                        var leaderUrl = new HashSet<string>();
+                        foreach (var consensus in RachisConsensuses)
+                        {
+                            leaderUrl.Add(consensus.LeaderTag);
+                        }
+                        Assert.True(leaderUrl.Count == 1, "Not all nodes agree on the leader");
+                    }
+                }
+                finally
+                {
+                    cts.Cancel();
+                }
             }
-            Assert.True(leaderUrl.Count == 1, "Not all nodes agree on the leader");
+            
             foreach (var invalidCommand in invalidCommands)
             {
                 Assert.True(invalidCommand.IsCompleted);
