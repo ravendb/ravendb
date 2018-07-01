@@ -39,6 +39,7 @@ namespace RachisTests
 
                 var firstNodeUrl = re.Url;
                 var firstNode = Servers.Single(s => s.WebUrl == firstNodeUrl);
+                var tag = firstNode.ServerStore.NodeTag;
                 var nodePath = firstNode.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
                 await DisposeServerAndWaitForFinishOfDisposalAsync(firstNode);
 
@@ -59,8 +60,8 @@ namespace RachisTests
                     {RavenConfiguration.GetKey(x => x.Core.ServerUrls), firstNodeUrl},
                 };
                 Servers.Add(GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: nodePath));
-
-                Assert.True(WaitForValue(() => firstNodeUrl == leaderStore.GetRequestExecutor().Url, true));
+                await re.CheckNodeStatusNow(tag);
+                Assert.True(WaitForValue(() => firstNodeUrl == re.Url, true));
             }
         }
     }
