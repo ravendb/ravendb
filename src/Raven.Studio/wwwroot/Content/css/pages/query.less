@@ -179,7 +179,54 @@
     
     .from-cache {
         position: absolute;
-        top: 10px;
+        bottom: 10px;
         left: 10px;
+    }
+    
+    .legend {
+        position: absolute;
+        
+        top: 40px;
+        left: 0;
+        
+        .item-rect {
+            width: 12px;
+            height: 12px;
+            margin-right: 10px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        .legend-item {
+            padding-left: 20px;
+            
+            .name {
+                display: inline-block;
+                width: 200px;
+            }
+            .duration {
+                display: inline-block;
+                text-align: right;
+                width: 85px;
+            }
+            
+            .legend-item {
+                .name {
+                    width: 180px;
+                }
+                
+                .legend-item {
+                    .name {
+                        width: 160px;
+                    }
+                    
+                    .legend-item {
+                        .name {
+                            width: 140px;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -5,14 +5,36 @@ import d3 = require("d3");
 interface graphNode extends d3.layout.partition.Node {
     name: string;
     duration: number;
+    visible: boolean;
 } 
 
 class timingsChart {
 
+    // used for solve issue: https://github.com/d3/d3-hierarchy/issues/50
+    static readonly fakeFill = "FAKE FILL";
+    
     useLogScale = ko.observable<boolean>(false);
+
+    colors = {
+        "Optimizer": "#689f39",
+        "Query": "#1482c8",
+        "Retriever": "#34b3e4",
+        "Projection": "#046293",
+        "JavaScript": "#0077b5",
+        "Storage": "#008cc9",
+        "Lucene": "#a487ba",
+        "Includes": "#98041b",
+        "Fill": "#ff7000",
+        "Gather": "#fe8f01",
+        "Highlightings": "#890e4f",
+        "Setup": "#ad1457",
+        "Explanations": "#ec407a",
+        "Staleness": "#fed101",
+    } as dictionary<string>;
     
     private totalSize = 0;
     private data: Raven.Client.Documents.Queries.Timings.QueryTimings;
+    rootNode = ko.observable<graphNode>();
     
     constructor(private selector: string) {
         this.useLogScale.subscribe(() => this.draw(this.data));
@@ -30,22 +52,7 @@ class timingsChart {
         const height = container.height();
         const radius = Math.min(width, height) - topPadding;
         
-        const colors = {
-            "Optimizer": "#689f39",
-            "Query": "#1482c8",
-            "Retriever": "#34b3e4",
-            "Projection": "#046293",
-            "JavaScript": "#0077b5",
-            "Storage": "#008cc9",
-            "Lucene": "#a487ba",
-            "Includes": "#98041b",
-            "Fill": "#ff7000",
-            "Gather": "#fe8f01",
-            "Highlightings": "#890e4f",
-            "Setup": "#ad1457",
-            "Explanations": "#ec407a",
-            "Staleness": "#fed101",
-        } as dictionary<string>;
+        const legendWidth = 270;
         
         const vis = d3.select(this.selector)
             .append("svg:svg")
@@ -53,14 +60,14 @@ class timingsChart {
             .attr("height", height)
             .append("svg:g")
             .attr("id", "container")
-            .attr("transform", "translate(" + width / 2 + "," + (height - 20) + ")");
+            .attr("transform", "translate(" + (width / 2 + legendWidth / 2) + "," + (height - 20) + ")");
         
         const useLogScale = this.useLogScale();
         
         const partition = d3.layout.partition<graphNode>()
             .sort(null)
             .size([Math.PI, radius * radius])
-            .value(x => useLogScale ? Math.log1p(x.duration) : x.duration);
+            .value(x => (useLogScale ? Math.log1p(x.duration) : x.duration) || 0.01);
         
         const arc = d3.svg.arc<graphNode>()
             .startAngle(d => -0.5 * Math.PI + d.x)
@@ -68,7 +75,8 @@ class timingsChart {
             .innerRadius(d => Math.sqrt(d.y))
             .outerRadius(d => Math.sqrt(d.y + d.dy));
         
-        const json = this.convertHierarchy("root", data);
+        const json = this.convertHierarchy("Total", data);
+        this.rootNode(json);
 
         this.totalSize = data.DurationInMs;
         
@@ -80,7 +88,8 @@ class timingsChart {
             .style("opacity", 0);
 
         const nodes = partition
-            .nodes(json);
+            .nodes(json)
+            .filter(x => x.name !== timingsChart.fakeFill);
 
         const levelName = vis
             .append("svg:text")
@@ -101,7 +110,7 @@ class timingsChart {
             .attr("display", d => d.depth ? null : "none")
             .attr("d", arc)
             .attr("fill-rule", "evenodd")
-            .style("fill", d => colors[d.name] ||  "#cccccc")
+            .style("fill", d => this.getColor(d.name))
             .style("opacity", 1)
             .on("mouseover", d => this.mouseover(vis, d, levelName, levelDuration));
 
@@ -111,6 +120,10 @@ class timingsChart {
         
         levelDuration
             .text(this.totalSize.toLocaleString() + " ms");
+    }
+    
+    getColor(item: string) {
+        return this.colors[item] ||  "#cccccc";
     }
     
     private mouseover(vis: d3.Selection<any>, d: graphNode, levelName: d3.Selection<any>, levelDuration: d3.Selection<any>) {
@@ -166,10 +179,27 @@ class timingsChart {
     }
     
     private convertHierarchy(name: string, data: Raven.Client.Documents.Queries.Timings.QueryTimings): graphNode {
+        const mappedTimings = _.map(data.Timings, (value, key) => this.convertHierarchy(key, value));
+        const remainingTime = data.DurationInMs - _.sumBy(mappedTimings, x => x.duration);
+        
+        let children: Array<graphNode> = null;
+        if (data.Timings) {
+            children = mappedTimings;
+            if (remainingTime > 0) {
+                children.push({
+                    name: timingsChart.fakeFill,
+                    duration: remainingTime,
+                    children: null as any,
+                    visible: false
+                });
+            }
+        }
+        
         return {
             name: name,
-            duration: data.DurationInMs || 0.1, // use some default tiny value
-            children: _.map(data.Timings, (value, key) => this.convertHierarchy(key, value)) as any
+            duration: data.DurationInMs,
+            children: children as any,
+            visible: true
         }
     }
     
