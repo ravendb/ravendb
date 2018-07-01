@@ -828,6 +828,9 @@ namespace Raven.Server.Rachis
 
                     var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] {nodeTag}).Max();
 
+                    if (nodeTag == _engine.Tag)
+                        RachisTopologyChangeException.Throw("Cannot modify the topology of the leader node.");
+
                     switch (modification)
                     {
                         case TopologyModification.Voter:

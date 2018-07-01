@@ -148,16 +148,18 @@ namespace RachisTests.DatabaseCluster
         public async Task RemovedLeaderCauseReelection(int numberOfNodes)
         {
             var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
-            CancellationTokenSource cts = new CancellationTokenSource();
-            try
+            using (var cts = new CancellationTokenSource())
             {
-                var followerTasks = Servers.Where(s => s != leader).Select(s => s.ServerStore.WaitForState(RachisState.Leader, cts.Token));
-                await leader.ServerStore.RemoveFromClusterAsync(leader.ServerStore.NodeTag);
-                Assert.True(await Task.WhenAny(followerTasks).WaitAsync(TimeSpan.FromSeconds(30)));
-            }
-            finally
-            {
-                cts.Cancel();
+                try
+                {
+                    var followerTasks = Servers.Where(s => s != leader).Select(s => s.ServerStore.WaitForState(RachisState.Leader, cts.Token));
+                    await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(leader.ServerStore.NodeTag));
+                    Assert.True(await Task.WhenAny(followerTasks).WaitAsync(TimeSpan.FromSeconds(30)));
+                }
+                finally
+                {
+                    cts.Cancel();
+                }
             }
         }
 
