@@ -189,6 +189,10 @@ class indexes extends viewModelBase {
                 this.indexesProgressRefreshThrottle();
             });
 
+        if (this.searchText()) {
+            this.filterIndexes();
+        }
+
         this.processReplacements(replacements);
         this.syncIndexingProgress();
     }
