@@ -248,15 +248,18 @@ namespace Sparrow.Json
 
         private static object GetConverterFromCache(Type propertyType)
         {
-            object converter;
-            if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
+            lock (DeserializedTypes)
             {
-                DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
-                    .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
-                    .MakeGenericMethod(propertyType)
-                    .Invoke(null, null);
+                object converter;
+                if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
+                {
+                    DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
+                        .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
+                        .MakeGenericMethod(propertyType)
+                        .Invoke(null, null);
+                }
+                return converter;
             }
-            return converter;
         }
 
         private static ParameterExpression GetParameter(Type type, Dictionary<Type, ParameterExpression> vars)
