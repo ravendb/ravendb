@@ -43,7 +43,7 @@ namespace Raven.Server.Commercial
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
-        private readonly LicenseStatus _licenseStatus = new LicenseStatus();
+        private LicenseStatus _licenseStatus = new LicenseStatus();
         private Timer _leaseLicenseTimer;
         private bool _disableCalculatingLicenseLimits;
         private RSAParameters? _rsaParameters;
@@ -144,9 +144,7 @@ namespace Raven.Server.Commercial
             if (license == null)
             {
                 // license is not active
-                _licenseStatus.Attributes = null;
-                _licenseStatus.ErrorMessage = null;
-                _licenseStatus.Id = null;
+                ResetLicense(error: null);
                 
                 CreateAgplAlert();
                 
@@ -155,17 +153,13 @@ namespace Raven.Server.Commercial
 
             try
             {
-                _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
-                _licenseStatus.ErrorMessage = null;
-                _licenseStatus.Id = license.Id;
+                SetLicense(license.Id, LicenseValidator.Validate(license, RSAParameters));
                 
                 RemoveAgplAlert();
             }
             catch (Exception e)
             {
-                _licenseStatus.Attributes = null;
-                _licenseStatus.ErrorMessage = e.Message;
-                _licenseStatus.Id = null;
+                ResetLicense(e.Message);
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Could not validate license", e);
@@ -440,9 +434,7 @@ namespace Raven.Server.Commercial
                 {
                     await _serverStore.PutLicenseAsync(license).ConfigureAwait(false);
 
-                    _licenseStatus.Attributes = newLicenseStatus.Attributes;
-                    _licenseStatus.ErrorMessage = null;
-                    _licenseStatus.Id = license.Id;
+                    SetLicense(license.Id, newLicenseStatus.Attributes);
                 }
                 catch (Exception e)
                 {
@@ -461,12 +453,39 @@ namespace Raven.Server.Commercial
             await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
         }
 
+        private void ResetLicense(string error)
+        {
+            _licenseStatus = new LicenseStatus
+            {
+                FirstServerStartDate = _licenseStatus.FirstServerStartDate,
+                ErrorMessage = error,
+            };
+        }
+
+        private void SetLicense(Guid id, Dictionary<string, object>  attributes)
+        {
+            _licenseStatus = new LicenseStatus
+            {
+                Id = id,
+                ErrorMessage = null,
+                Attributes = attributes,
+                FirstServerStartDate = _licenseStatus.FirstServerStartDate
+            };
+        }
+
         private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, bool ensureNotPassive, LicenseStatus newLicenseStatus)
         {
             if (newLicenseStatus.Expired)
             {
                 if (skipLeaseLicense == false)
                 {
+                    // Here we have an expired license, but it was valid once.
+                    // The user might rely on the license features and we want
+                    // to err on the side of the user in this case, so we'll accept
+                    // the features of the license, even before we check with the 
+                    // server
+                    SetLicense(license.Id, newLicenseStatus.Attributes);
+
                     // license expired, we'll try to update it
                     license = await GetUpdatedLicenseInternal(license);
                     if (license != null)
