@@ -7,6 +7,9 @@ import eventsCollector = require("common/eventsCollector");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
 import appUrl = require("common/appUrl");
+import database = require("models/resources/database");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class createSampleData extends viewModelBase {
 
@@ -28,14 +31,32 @@ class createSampleData extends viewModelBase {
         eventsCollector.default.reportEvent("sample-data", "create");
         this.isBusy(true);
 
-        new createSampleDataCommand(this.activeDatabase())
+        const db = this.activeDatabase();
+        
+        new createSampleDataCommand(db)
             .execute()
             .done(() => {
                 this.canCreateSampleData(false);
                 this.justCreatedSampleData(true);
+                this.checkIfRevisionsWasEnabled(db);
             })
             .always(() => this.isBusy(false));
     }
+    
+    private checkIfRevisionsWasEnabled(db: database) {
+        if (!db.hasRevisionsConfiguration()) {
+                new getDatabaseCommand(db.name)
+                    .execute()
+                    .done(dbInfo => {
+                        if (dbInfo.HasRevisionsConfiguration) {
+                            db.hasRevisionsConfiguration(true);
+
+                            collectionsTracker.default.configureRevisions(db);
+                        }
+                    })
+        }
+    }
+    
 
     activate(args: any) {
         super.activate(args);
