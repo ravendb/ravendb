@@ -431,7 +431,8 @@ namespace Raven.Server.Web.System
         private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-            Debug.Assert(members.Count > 0);
+            if (members.Count == 0)
+                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
 
             var executors = new List<ClusterRequestExecutor>();
             var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
