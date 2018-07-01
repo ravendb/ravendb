@@ -58,11 +58,26 @@ namespace Raven.Client.Documents.Subscriptions
 
         public IDocumentSession OpenSession()
         {
-            var s = _store.OpenSession(new SessionOptions
+            return OpenSessionInternal(new SessionOptions
             {
                 Database = _dbName,
                 RequestExecutor = _requestExecutor
             });
+        }
+
+        public IDocumentSession OpenSession(SessionOptions options)
+        {
+            ValidateSessionOptions(options);
+
+            options.Database = _dbName;
+            options.RequestExecutor = _requestExecutor;
+
+            return OpenSessionInternal(options);
+        }
+
+        private IDocumentSession OpenSessionInternal(SessionOptions options)
+        {
+            var s = _store.OpenSession(options);
 
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
 
@@ -71,17 +86,49 @@ namespace Raven.Client.Documents.Subscriptions
 
         public IAsyncDocumentSession OpenAsyncSession()
         {
-            var s = _store.OpenAsyncSession(new SessionOptions
+            return OpenAsyncSessionInternal(new SessionOptions
             {
                 Database = _dbName,
                 RequestExecutor = _requestExecutor
             });
+        }
+
+        public IAsyncDocumentSession OpenAsyncSession(SessionOptions options)
+        {
+            ValidateSessionOptions(options);
+
+            options.Database = _dbName;
+            options.RequestExecutor = _requestExecutor;
+
+            return OpenAsyncSessionInternal(options);
+        }
+
+        private IAsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
+        {
+            var s = _store.OpenAsyncSession(options);
+
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
+
             return s;
+        }
+
+        private static void ValidateSessionOptions(SessionOptions options)
+        {
+            if (options.Database != null)
+                throw new InvalidOperationException($"Cannot set '{nameof(options.Database)}' when session is opened in subscription.");
+
+            if (options.RequestExecutor != null)
+                throw new InvalidOperationException($"Cannot set '{nameof(options.RequestExecutor)}' when session is opened in subscription.");
+
+            if (options.TransactionMode != TransactionMode.SingleNode)
+                throw new InvalidOperationException($"Cannot set '{nameof(options.TransactionMode)}' when session is opened in subscription. Only '{nameof(TransactionMode.SingleNode)}' mode is supported.");
         }
 
         private void LoadDataToSession(InMemoryDocumentSessionOperations s)
         {
+            if (s.NoTracking)
+                return;
+
             if (_includes == null)
                 return;
 
@@ -89,6 +136,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 s.RegisterIncludes(item);
             }
+
             foreach (var item in Items)
             {
                 s.RegisterExternalLoadedIntoTheSession(new DocumentInfo
@@ -113,7 +161,6 @@ namespace Raven.Client.Documents.Subscriptions
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
         }
 
-
         internal string Initialize(BatchFromServer batch)
         {
             _includes = batch.Includes;
@@ -123,11 +170,9 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var item in batch.Messages)
             {
-
-                BlittableJsonReaderObject metadata;
                 var curDoc = item.Data;
 
-                if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+                if (curDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                     ThrowRequired("@metadata field");
                 if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                     ThrowRequired("@id field");
