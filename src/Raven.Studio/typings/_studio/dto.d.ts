@@ -450,5 +450,7 @@ interface virtualBulkInsertItem {
     date: string;
     duration: number;
     items: number;
-} 
+}
 
+
+type adminLogsHeaderType = "Source" | "Logger";

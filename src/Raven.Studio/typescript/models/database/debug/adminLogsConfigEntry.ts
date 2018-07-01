@@ -2,17 +2,25 @@
 
 type logEntryMode = "include" | "exclude";
 
+
+
 class adminLogsConfigEntry {
-    logSource = ko.observable<string>();
+    headerName = ko.observable<adminLogsHeaderType>("Source");
+    headerValue = ko.observable<string>();
     mode = ko.observable<logEntryMode>();
 
-    constructor(logSource: string, mode: logEntryMode) {
-        this.logSource(logSource);
+    constructor(headerName: adminLogsHeaderType, headerValue: string, mode: logEntryMode) {
+        this.headerName(headerName);
+        this.headerValue(headerValue);
         this.mode(mode);
     }
 
     clone() {
-        return new adminLogsConfigEntry(this.logSource(), this.mode());
+        return new adminLogsConfigEntry(this.headerName(), this.headerValue(), this.mode());
+    }
+    
+    toFilter() {
+        return this.headerName() + ":" + this.headerValue();
     }
 
 }
