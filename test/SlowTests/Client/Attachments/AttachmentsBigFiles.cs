@@ -39,13 +39,14 @@ namespace SlowTests.Client.Attachments
                     using (var bigStream = new BigDummyStream(size))
                     using (var attachment = session.Advanced.Attachments.Get(user, "big-file"))
                     {
-                        attachment.Stream.CopyTo(bigStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal(hash, attachment.Details.Hash);
-                        Assert.Equal(size, bigStream.Position);
                         Assert.Equal(size, attachment.Details.Size);
                         Assert.Equal("", attachment.Details.ContentType);
+
+                        attachment.Stream.CopyTo(bigStream);
+                        Assert.Equal(size, bigStream.Position);
                     }
                 }
             }
@@ -80,8 +81,9 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(size, bigStream.Position);
                     else
                     {
-                        // on Posix the position is set to initial one automatically
-                        // https://github.com/dotnet/corefx/issues/23782
+                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
+                        // Remove this workaround when this line is removed from request executor:
+                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
                         Assert.Equal(0, bigStream.Position);
                     }
                 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Queries.Timings;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -54,5 +55,10 @@ namespace Raven.Client.Documents.Queries
         /// Tag of a cluster node which responded to the query
         /// </summary>
         public string NodeTag { get; set; }
+
+        /// <summary>
+        /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
+        /// </summary>
+        public QueryTimings Timings { get; set; }
     }
 }

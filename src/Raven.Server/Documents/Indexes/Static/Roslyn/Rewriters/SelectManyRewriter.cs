@@ -11,6 +11,37 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public static SelectManyRewriter QuerySyntax => new QuerySyntaxRewriter();
 
+        public static SelectManyRewriter SelectMethodOnProperties = new SelectOnPropertiesRewriter();
+
+        private class SelectOnPropertiesRewriter : SelectManyRewriter
+        {
+            public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+            {
+                var selectMany = node.Expression.ToString();
+                if (!(node.Expression is MemberAccessExpressionSyntax maes) ||
+                    (maes.Name.ToString() != "Select" && maes.Name.ToString() != "SelectMany"))
+                {
+                    return base.VisitInvocationExpression(node);
+                }
+
+                if (maes.Expression is IdentifierNameSyntax ins &&
+                    (ins.ToString() == "docs" || ins.ToString() == "results"))
+                {
+                    return base.VisitInvocationExpression(node);
+                }
+
+                if (!(maes.Expression is MemberAccessExpressionSyntax))
+                {
+                    return base.VisitInvocationExpression(node);
+                }
+
+
+                var result = SyntaxFactory.ParseExpression($"((IEnumerable<dynamic>){maes.Expression})");
+                
+                return base.VisitInvocationExpression(node.ReplaceNode(maes.Expression, result));
+            }
+        }
+
         private class MethodSyntaxRewriter : SelectManyRewriter
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -43,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                 if (fromExpression == "docs" || fromExpression == "results") // from order in docs.Orders or from result in results
                     return base.VisitFromClause(node);
-                
+
                 // 2nd from clause
 
                 var toCast = node.Expression; // order.Lines

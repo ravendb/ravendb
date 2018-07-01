@@ -148,6 +148,7 @@ namespace Tests.Infrastructure
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(500));
                 }
+
                 try
                 {
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
@@ -156,10 +157,24 @@ namespace Tests.Infrastructure
                     await act(leader);
                     return leader;
                 }
+                catch (RachisTopologyChangeException e)
+                {
+                    // The leader cannot remove itself, so we stepdown and try again to remove this node.
+                    err = e;
+                    var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
+                    if (leader == null)
+                        continue;
+                    leader.ServerStore.Engine.CurrentLeader?.StepDown();
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                    {
+                        await leader.ServerStore.Engine.WaitForState(RachisState.Follower, cts.Token);
+                    }
+                }
                 catch (Exception e) when (e is NotLeadingException)
                 {
                     err = e;
                 }
+                
             }
             throw new InvalidOperationException("Failed to get leader after 5 retries.", err);
         }

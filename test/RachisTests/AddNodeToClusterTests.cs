@@ -49,16 +49,19 @@ namespace RachisTests
         [Fact]
         public async Task RemoveNodeWithDb()
         {
+            var dbMain = GetDatabaseName();
+            var dbWatcher = GetDatabaseName();
+
             var fromSeconds = Debugger.IsAttached ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(5);
             var leader = await CreateRaftClusterAndGetLeader(5);
             Assert.True(leader.ServerStore.LicenseManager.HasHighlyAvailableTasks());
 
-            var db = await CreateDatabaseInCluster("MainDB", 5, leader.WebUrl);
-            var watcherDb = await CreateDatabaseInCluster("WatcherDB", 1, leader.WebUrl);
+            var db = await CreateDatabaseInCluster(dbMain, 5, leader.WebUrl);
+            var watcherDb = await CreateDatabaseInCluster(dbWatcher, 1, leader.WebUrl);
             var serverNodes = db.Servers.Select(s => new ServerNode
             {
                 ClusterTag = s.ServerStore.NodeTag,
-                Database = "MainDB",
+                Database = dbMain,
                 Url = s.WebUrl
             }).ToList();
 
@@ -69,18 +72,18 @@ namespace RachisTests
 
             using (var watcherStore = new DocumentStore
             {
-                Database = "WatcherDB",
+                Database = dbWatcher,
                 Urls = new[] { watcherDb.Item2.Single().WebUrl },
                 Conventions = conventions
             }.Initialize())
             using (var leaderStore = new DocumentStore
             {
-                Database = "MainDB",
+                Database = dbMain,
                 Urls = new[] { leader.WebUrl },
                 Conventions = conventions
             }.Initialize())
             {
-                var watcher = new ExternalReplication("WatcherDB", "Connection")
+                var watcher = new ExternalReplication(dbWatcher, "Connection")
                 {
                     MentorNode = Servers.First(s => s.ServerStore.NodeTag != watcherDb.Servers[0].ServerStore.NodeTag).ServerStore.NodeTag
                 };
@@ -99,7 +102,7 @@ namespace RachisTests
                 var responsibleServer = Servers.Single(s => s.ServerStore.NodeTag == watcherRes.ResponsibleNode);
                 using (var responsibleStore = new DocumentStore
                 {
-                    Database = "MainDB",
+                    Database = dbMain,
                     Urls = new[] { responsibleServer.WebUrl },
                     Conventions = conventions
                 }.Initialize())
@@ -121,7 +124,7 @@ namespace RachisTests
                     await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
                     Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(fromSeconds));
 
-                    var dbInstance = await responsibleServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("MainDB");
+                    var dbInstance = await responsibleServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbMain);
                     await WaitForValueAsync(() => dbInstance.ReplicationLoader.OutgoingConnections.Count(), 0);
 
                     // replication from the removed node should be suspended
@@ -141,7 +144,7 @@ namespace RachisTests
                 var nodeInCluster = serverNodes.First(s => s.ClusterTag != responsibleServer.ServerStore.NodeTag);
                 using (var nodeInClusterStore = new DocumentStore
                 {
-                    Database = "MainDB",
+                    Database = dbMain,
                     Urls = new[] { nodeInCluster.Url },
                     Conventions = conventions
                 }.Initialize())
@@ -161,13 +164,12 @@ namespace RachisTests
                 Assert.True(WaitForDocument<User>(watcherStore, "users/3", u => u.Name == "Karmel3", 30_000));
 
                 // rejoin the node
-                var newLeader = Servers.Single(s => s.ServerStore.IsLeader());
-                Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
+                var newLeader = await ActionWithLeader(l => l.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode));
                 Assert.True(await responsibleServer.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(fromSeconds));
 
                 using (var newLeaderStore = new DocumentStore
                 {
-                    Database = "MainDB",
+                    Database = dbMain,
                     Urls = new[] { newLeader.WebUrl },
                 }.Initialize())
                 using (var session = newLeaderStore.OpenAsyncSession())

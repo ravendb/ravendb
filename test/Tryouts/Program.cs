@@ -8,6 +8,7 @@ using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
 using SlowTests.Issues;
 using SlowTests.MailingList;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -15,23 +16,19 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            try
             {
-                try
+                using (var test = new RavenDB_11166())
                 {
-                    Console.WriteLine(i);
-                    using (var test = new RavenDB_6369())
-                    {
-                        test.ShouldTimeout();
-                    }
+                    await test.CanUseSubscriptionWithIncludes();
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    break;
-                }
-
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            
         }
     }
 }

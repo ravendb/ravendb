@@ -34,6 +34,11 @@ namespace Raven.Client.Documents.Operations
         bool ShouldPersist { get; }
     }
 
+    public interface IOperationDetailedDescription
+    {
+        DynamicJsonValue ToJson();
+    }
+
     public enum OperationStatus
     {
         InProgress,

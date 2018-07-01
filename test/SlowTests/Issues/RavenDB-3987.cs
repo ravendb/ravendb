@@ -90,7 +90,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task DeleteByIndexAsync()
+        public async Task DeleteByQueryAsync()
         {
             using (var store = GetDocumentStore())
             {
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void DeleteByIndex()
+        public void DeleteByQuery()
         {
             using (var store = GetDocumentStore())
             {

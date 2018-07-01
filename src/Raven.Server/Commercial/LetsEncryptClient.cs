@@ -95,6 +95,9 @@ namespace Raven.Server.Commercial
             _accountKey = new RSACryptoServiceProvider(4096);
             _client = GetCachedClient(_url);
             (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("directory", UriKind.Relative), null, token);
+            
+            // Use this when testing against pebble
+            //(_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("dir", UriKind.Relative), null, token);
 
             if (File.Exists(_path))
             {
@@ -242,8 +245,8 @@ namespace Raven.Server.Commercial
                 }).ToArray()
             }, token);
 
-            if (order.Status != "pending")
-                throw new InvalidOperationException("Created new order and expected status 'pending', but got: " + order.Status + Environment.NewLine +
+            if (order.Status != "pending" && order.Status != "ready")
+                throw new InvalidOperationException("Created new order and expected status 'pending' or 'ready', but got: " + order.Status + Environment.NewLine +
                     response);
             _currentOrder = order;
             var results = new Dictionary<string, string>();
@@ -277,43 +280,41 @@ namespace Raven.Server.Commercial
             {
                 var challenge = _challenges[index];
 
-                while (true)
+                
+                AuthorizationChallengeResponse result;
+                string responseText;
+                try
                 {
-                    AuthorizationChallengeResponse result;
-                    string responseText;
+                    (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, new AuthorizeChallenge
+                    {
+                        KeyAuthorization = _jws.GetKeyAuthorization(challenge.Token)
+                    }, token);
+
+                    while (result.Status == "pending")
+                    {
+                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, challenge.Url, null, token);
+                        
+                        await Task.Delay(500, token);
+                    }
+                }
+                catch (Exception e)
+                {
+                    AuthorizationChallengeResponse err = null;
+                    string errorText = null;
                     try
                     {
-                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, new AuthorizeChallenge
-                        {
-                            KeyAuthorization = _jws.GetKeyAuthorization(challenge.Token)
-                        }, token);
+                        (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, challenge.Url, null, token);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        AuthorizationChallengeResponse err = null;
-                        string errorText = null;
-                        try
-                        {
-                            (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, challenge.Url, null, token);
-                        }
-                        catch (Exception)
-                        {
-                            // if we failed here, throw the original error
-                            // since err isn't set
-                        }
-                        if (err == null)
-                            throw;
-
-                        throw new InvalidOperationException("Failed to complete challenge because: " + err.Error?.Detail  + 
-                            Environment.NewLine + errorText, e);
+                        // if we failed here, throw the original error
+                        // since err isn't set
                     }
+                    if (err == null)
+                        throw;
 
-                    if (result.Status == "valid")
-                        break;
-                    if (result.Status != "pending")
-                        throw new InvalidOperationException("Failed autorization of " + _currentOrder.Identifiers[index].Value + Environment.NewLine + responseText);
-
-                    await Task.Delay(500);
+                    throw new InvalidOperationException("Failed to complete challenge because: " + err.Error?.Detail  + 
+                        Environment.NewLine + errorText, e);
                 }
             }
         }
@@ -335,9 +336,17 @@ namespace Raven.Server.Commercial
                 CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest())
             }, token);
 
-            while (response.Status != "valid")
+            while (true)
             {
                 (response, responseText) = await SendAsync<Order>(HttpMethod.Get, response.Location, null, token);
+
+                if (response.Status == "valid")
+                {
+                    if (response.Certificate == null)
+                        throw new InvalidOperationException($"Got a valid order status: '{response.Status}' but the certificate field is null! Response: '{responseText}'");
+
+                    break;
+                }
 
                 if (response.Status == "processing")
                 {

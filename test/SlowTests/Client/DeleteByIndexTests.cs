@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Client
 {
-    public class IndexesDeleteByIndexTests : RavenTestBase
+    public class IndexesDeleteByQueryTests : RavenTestBase
     {
         [Fact]
         public void Delete_By_Index()

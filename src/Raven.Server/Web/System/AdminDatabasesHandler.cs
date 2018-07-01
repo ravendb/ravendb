@@ -1225,7 +1225,7 @@ namespace Raven.Server.Web.System
                         }
                         return (IOperationResult)result;
                     });
-                }, operationId, token);
+                }, operationId, token: token);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

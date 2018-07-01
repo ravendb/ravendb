@@ -78,13 +78,15 @@ namespace Raven.Server.ServerWide
 
         static ClusterStateMachine()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
-            Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CompareExchange);
-            Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
-            Slice.From(StorageEnvironment.LabelsContext, "TransactionCommands", out TransactionCommands);
-            Slice.From(StorageEnvironment.LabelsContext, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
-            Slice.From(StorageEnvironment.LabelsContext, "TransactionCommandsIndex", out TransactionCommandsIndex);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Items", out Items);
+                Slice.From(ctx, "CmpXchg", out CompareExchange);
+                Slice.From(ctx, "Identities", out Identities);
+                Slice.From(ctx, "TransactionCommands", out TransactionCommands);
+                Slice.From(ctx, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
+                Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsIndex);
+            }
             ItemsSchema = new TableSchema();
 
             // We use the follow format for the items data
@@ -477,12 +479,6 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    if (_parent.Tag == removed)
-                    {
-                        //If no deletion was issued, then the removed node will keep all his data until either he will be bootstrapped or rejoined with the cluster.
-                        continue;
-                    }
-
                     if (record.Topology.RelevantFor(removed))
                     {
                         record.Topology.RemoveFromTopology(removed);
@@ -856,14 +852,7 @@ namespace Raven.Server.ServerWide
                 RemovedNode = nodeTag
             }.ToJson(context);
 
-            var index = _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-            {
-                if (tx is LowLevelTransaction llt && llt.Committed)
-                {
-                    _parent.CurrentLeader.AddToEntries(index, null);
-                }
-            };
+            _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
         }
 
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)

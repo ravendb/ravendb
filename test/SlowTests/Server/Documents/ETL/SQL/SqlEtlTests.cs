@@ -25,6 +25,7 @@ using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
@@ -542,6 +543,9 @@ loadToOrders(orderData);");
                 }
                 string str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
                 StringBuilder sb = new StringBuilder();
+
+                var mre = new AsyncManualResetEvent();
+
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
                 var task = Task.Run((Func<Task>)(async () =>
                {
@@ -551,6 +555,7 @@ loadToOrders(orderData);");
                        var value = await ReadFromWebSocket(buffer, client);
                        lock (sb)
                        {
+                           mre.Set();
                            sb.AppendLine(value);
                        }
                        const string expectedValue = "skipping document: orders/1";
@@ -559,6 +564,7 @@ loadToOrders(orderData);");
 
                    }
                }));
+                await mre.WaitAsync(TimeSpan.FromSeconds(60));
                 SetupSqlEtl(store, @"output ('Tralala'); 
 
 undefined();

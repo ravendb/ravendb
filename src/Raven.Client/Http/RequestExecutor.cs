@@ -431,7 +431,10 @@ namespace Raven.Client.Http
 
             try
             {
-                var preferredNode = _nodeSelector.GetPreferredNode();
+                var selector = _nodeSelector;
+                if (selector == null)
+                    return;
+                var preferredNode = selector.GetPreferredNode();
                 serverNode = preferredNode.Node;
             }
             catch (Exception e)
@@ -614,8 +617,9 @@ namespace Raven.Client.Http
             CancellationToken token = default)
         {
             var request = CreateRequest(context, chosenNode, command, out string url);
+            var noCaching = sessionInfo?.NoCaching ?? false;
 
-            using (var cachedItem = GetFromCache(context, command, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
+            using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedChangeVector != null)
                 {
@@ -841,7 +845,7 @@ namespace Raven.Client.Http
             if (_topologyTakenFromNode != null)
                 message += $"I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}";
 
-            var nodes = _nodeSelector?.Topology.Nodes;
+            var nodes = _nodeSelector?.Topology?.Nodes;
             if (nodes == null)
             {
                 message += "Topology is empty.";
@@ -965,9 +969,9 @@ namespace Raven.Client.Http
             throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
         }
 
-        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, bool useCache, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
+            if (useCache && command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
@@ -1007,9 +1011,11 @@ namespace Raven.Client.Http
                         command.SetResponseRaw(response, null, context);
                     return true;
                 case HttpStatusCode.Forbidden:
+                    var msg = await TryGetResponseOfError(response).ConfigureAwait(false);
                     throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url + ", " +
-                        (Certificate == null ? "a certificate is required." : Certificate.FriendlyName + " does not have permission to access it or is unknown. ") +
-                        $"Method: {request.Method}, Request: {request.RequestUri}");
+                        (Certificate == null ? "a certificate is required. " : Certificate.FriendlyName + " does not have permission to access it or is unknown. ") +
+                        $"Method: {request.Method}, Request: {request.RequestUri}" + Environment.NewLine + msg
+                        );
                 case HttpStatusCode.Gone: // request not relevant for the chosen node - the database has been moved to a different one
                     if (shouldRetry == false)
                         return false;
@@ -1032,6 +1038,18 @@ namespace Raven.Client.Http
                     break;
             }
             return false;
+        }
+
+        private static async Task<string> TryGetResponseOfError(HttpResponseMessage response)
+        {
+            try
+            {
+                return (await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            }
+            catch (Exception e)
+            {
+                return "Could not read request: " + e.Message;
+            }
         }
 
         private static Task HandleConflict(JsonOperationContext context, HttpResponseMessage response)
@@ -1091,6 +1109,27 @@ namespace Raven.Client.Http
             var nodeStatus = new NodeStatus(this, nodeIndex, chosenNode);
             if (_failedNodesTimers.TryAdd(chosenNode, nodeStatus))
                 nodeStatus.StartTimer();
+        }
+
+        internal Task CheckNodeStatusNow(string tag)
+        {
+            var copy = TopologyNodes;
+            if (copy == null)
+                throw new ArgumentException("There is no cluster topology available.");
+
+            int i;
+            for (i = 0; i < copy.Count; i++)
+            {
+                if (copy[i].ClusterTag == tag)
+                    break;
+            }
+            if (i == copy.Count)
+            {
+                throw new ArgumentException($"Node {tag} was not found in the cluster topology.");
+            }
+
+            var nodeStatus = new NodeStatus(this, i, copy[i]);
+            return CheckNodeStatusCallback(nodeStatus);
         }
 
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
@@ -1198,6 +1237,16 @@ namespace Raven.Client.Http
 
         public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
+            if (AppContext.TryGetSwitch("System.Net.Http.UseSocketsHttpHandler", out _) == false 
+                && Environment.GetEnvironmentVariable("DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER") == null)
+            {
+                // We got a problem with SocketsHttpHandler, so we need to turn this off
+                // but given that we are a client library, we don't want to be rude, so if the user
+                // explicitly asked to set it, we'll respect whatever they want until the issue is resolved.
+
+                AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
+            }
+
             var httpMessageHandler = new HttpClientHandler();
             if (httpMessageHandler.SupportsAutomaticDecompression)
             {
@@ -1286,7 +1335,7 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
         }
 
-        private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> _serverCertificateCustomValidationCallback;
+        private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>[] _serverCertificateCustomValidationCallback = Array.Empty<Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>>();
         private static ConcurrentDictionary<WeakReference<Action>, object> _liveClients = new ConcurrentDictionary<WeakReference<Action>, object>();
         private Action _updateHttpHandlerDelegate;// we need this to hold a reference to the action as long as the executer is alive
         private static readonly ReaderWriterLockSlim _serverCallbackRWLock = new ReaderWriterLockSlim();
@@ -1298,7 +1347,7 @@ namespace Raven.Client.Http
                 _serverCallbackRWLock.EnterWriteLock();
                 try
                 {
-                    _serverCertificateCustomValidationCallback += value;
+                    _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Concat(new[] { value }).ToArray();
                     ForceUpdateOfAllHttpClients();
                 }
                 finally
@@ -1308,8 +1357,16 @@ namespace Raven.Client.Http
             }
             remove
             {
-                _serverCertificateCustomValidationCallback -= value;
-                ForceUpdateOfAllHttpClients();
+                _serverCallbackRWLock.EnterWriteLock();
+                try
+                {
+                    _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Except(new[] { value }).ToArray();
+                    ForceUpdateOfAllHttpClients();
+                }
+                finally
+                {
+                    _serverCallbackRWLock.ExitWriteLock();
+                }
             }
         }
 
@@ -1340,9 +1397,17 @@ namespace Raven.Client.Http
         private static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
-            if (onServerCertificateCustomValidationCallback == null)
+            if (onServerCertificateCustomValidationCallback == null ||
+                onServerCertificateCustomValidationCallback.Length == 0)
                 return errors == SslPolicyErrors.None;
-            return onServerCertificateCustomValidationCallback(msg, cert, chain, errors);
+
+            for (int i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
+            {
+                var result = onServerCertificateCustomValidationCallback[i](msg, cert, chain, errors);
+                if (result)
+                    return true;
+            }
+            return false;
         }
 
         public class NodeStatus : IDisposable

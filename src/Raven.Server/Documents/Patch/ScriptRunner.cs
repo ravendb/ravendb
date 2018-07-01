@@ -417,7 +417,14 @@ namespace Raven.Server.Documents.Patch
                 {
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    var put = _database.DocumentsStorage.Put(_docsCtx, id, _docsCtx.GetLazyString(changeVector), reader);
+                    var put = _database.DocumentsStorage.Put(
+                        _docsCtx, 
+                        id, 
+                        _docsCtx.GetLazyString(changeVector), 
+                        reader,
+                        //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
+                        nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict
+                        );
 
                     if (DebugMode)
                     {

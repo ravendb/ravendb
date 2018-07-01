@@ -30,8 +30,9 @@ import endpoints = require("endpoints");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import explainQueryDialog = require("viewmodels/database/query/explainQueryDialog");
 import explainQueryCommand = require("commands/database/index/explainQueryCommand");
+import timingsChart = require("common/timingsChart");
 
-type queryResultTab = "results" | "explanations";
+type queryResultTab = "results" | "explanations" | "timings";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -99,6 +100,8 @@ class query extends viewModelBase {
     };
 
     previewItem = ko.observable<storedQueryDto>();
+    
+    graph = new timingsChart(".js-timings-container");
 
     previewCode = ko.pureComputed(() => {
         const item = this.previewItem();
@@ -133,6 +136,7 @@ class query extends viewModelBase {
     
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
+    fromCache = ko.observable<boolean>(false);
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
     totalResults: KnockoutComputed<number>;
@@ -142,6 +146,7 @@ class query extends viewModelBase {
     highlightsCache = ko.observableArray<highlightSection>([]);
     explanationsCache = new Map<string, explanationItem>();
     totalExplanations = ko.observable<number>(0);
+    timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
@@ -272,7 +277,7 @@ class query extends viewModelBase {
 
             const indexes = this.indexes() || [];
             const currentIndex = indexes.find(i => i.Name === indexName);
-            return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce");
+            return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce" || currentIndex.Type === "JavaScriptMapReduce");
         });
 
         this.isCollectionQuery = ko.pureComputed(() => {
@@ -291,7 +296,7 @@ class query extends viewModelBase {
         
         this.isDynamicQuery = ko.pureComputed(() => {
             return queryUtil.isDynamicQuery(this.criteria().queryText());
-        })
+        });
         
         this.isAutoIndex = ko.pureComputed(() => {
             const indexName = this.queriedIndex();
@@ -571,7 +576,7 @@ class query extends viewModelBase {
         this.updateUrl(url);
     }
 
-    runQuery() {
+    runQuery(optionalSavedQueryName?: string) {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
@@ -583,6 +588,7 @@ class query extends viewModelBase {
         this.includesCache.removeAll();
         this.highlightsCache.removeAll();
         this.explanationsCache.clear();
+        this.timings(null);
         
         this.isEmptyFieldsResult(false);
         
@@ -650,7 +656,13 @@ class query extends viewModelBase {
                         }
                     
                         const endQueryTime = new Date().getTime();
-                        queryResults.additionalResultInfo.DurationInMs = Math.min(endQueryTime-startQueryTime, queryResults.additionalResultInfo.DurationInMs);
+                        const localQueryTime = endQueryTime - startQueryTime;
+                        if (localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                            queryResults.additionalResultInfo.DurationInMs = localQueryTime;
+                            this.fromCache(true);
+                        } else {
+                            this.fromCache(false);
+                        }
                         
                         const emptyFieldsResult = queryForAllFields 
                             && queryResults.totalResultCount > 0 
@@ -671,9 +683,10 @@ class query extends viewModelBase {
                             this.onIncludesLoaded(queryResults.includes);
                             this.onHighlightingsLoaded(queryResults.highlightings);
                             this.onExplanationsLoaded(queryResults.explanations);
+                            this.onTimingsLoaded(queryResults.timings);
                         }
                         this.saveLastQuery("");
-                        this.saveRecentQuery();
+                        this.saveRecentQuery(optionalSavedQueryName);
 
                         this.setupDisableReasons(); 
                     })
@@ -731,10 +744,10 @@ class query extends viewModelBase {
         messagePublisher.reportSuccess("Query saved successfully");
     }
 
-    private saveRecentQuery() {
-        const name = this.getRecentQueryName();
+    private saveRecentQuery(optionalSavedQueryName?: string) {
+        const name = optionalSavedQueryName || this.getRecentQueryName();
         this.criteria().name(name);
-        this.saveQueryInStorage(true);
+        this.saveQueryInStorage(!optionalSavedQueryName);
     }
 
     private saveQueryInStorage(isRecent: boolean) {
@@ -763,11 +776,12 @@ class query extends viewModelBase {
             }
         } else {
             const existing = this.savedQueries().find(x => x.name === doc.name);
+            
             if (existing) {
-                this.savedQueries.replace(existing, doc);
-            } else {
-                this.savedQueries.unshift(doc);
+                this.savedQueries.remove(existing);                    
             }
+
+            this.savedQueries.unshift(doc);
         }
     }
 
@@ -779,7 +793,6 @@ class query extends viewModelBase {
     }
 
     private getRecentQueryName(): string {
-
         const collectionIndexName = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
 
         return query.recentKeyword + " (" + collectionIndexName + ")";
@@ -796,14 +809,15 @@ class query extends viewModelBase {
 
     useQuery() {
         const queryDoc = this.criteria();
-        queryDoc.copyFrom(this.previewItem());
+        const previewItem  = this.previewItem();
+        queryDoc.copyFrom(previewItem);
         
         // Reset settings
         this.cacheEnabled(true);
         this.criteria().indexEntries(false);
         this.criteria().showFields(false);
         
-        this.runQuery();
+        this.runQuery(previewItem.recentQuery ? null : previewItem.name);
     }
 
     removeQuery(item: storedQueryDto) {
@@ -830,6 +844,10 @@ class query extends viewModelBase {
         });
         
         this.totalExplanations(this.explanationsCache.size);
+    }
+    
+    private onTimingsLoaded(timings: Raven.Client.Documents.Queries.Timings.QueryTimings) {
+        this.timings(timings);
     }
     
     private onIncludesLoaded(includes: dictionary<any>) {
@@ -1012,6 +1030,12 @@ class query extends viewModelBase {
         });
         this.columnsSelector.reset();
         this.refresh();
+    }
+
+    goToTimingsTab() {
+        this.currentTab("timings");
+        
+        this.graph.draw(this.timings());
     }
 
     exportCsv() {

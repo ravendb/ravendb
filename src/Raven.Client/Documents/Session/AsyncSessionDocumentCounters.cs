@@ -38,10 +38,10 @@ namespace Raven.Client.Documents.Session
             }
 
             if ((Session.DocumentsById.TryGetValue(DocId, out var document) == false && cache.GotAll == false) ||
-                (document != null && document.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+                (document != null && document.Metadata.TryGet(Constants.Documents.Metadata.Counters,
                     out BlittableJsonReaderArray metadataCounters) &&
                 metadataCounters.BinarySearch(counter, StringComparison.OrdinalIgnoreCase) >= 0))
-                
+
             {
                 // we either don't have the document in session and GotAll = false,
                 // or we do and it's metadata contains the counter name
@@ -60,7 +60,9 @@ namespace Raven.Client.Documents.Session
             }
 
             cache.Values[counter] = value;
-            Session.CountersByDocId[DocId] = cache;
+
+            if (Session.NoTracking == false)
+                Session.CountersByDocId[DocId] = cache;
 
             return value;
         }
@@ -110,7 +112,9 @@ namespace Raven.Client.Documents.Session
                 break;
             }
 
-            Session.CountersByDocId[DocId] = cache;
+            if (Session.NoTracking == false)
+                Session.CountersByDocId[DocId] = cache;
+
             return result;
         }
 
@@ -125,7 +129,7 @@ namespace Raven.Client.Documents.Session
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document))
             {
-                if (document.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+                if (document.Metadata.TryGet(Constants.Documents.Metadata.Counters,
                     out BlittableJsonReaderArray metadataCounters) == false)
                 {
                     missingCounters = false;
@@ -164,7 +168,10 @@ namespace Raven.Client.Documents.Session
             }
 
             cache.GotAll = true;
-            Session.CountersByDocId[DocId] = cache;
+
+            if (Session.NoTracking == false)
+                Session.CountersByDocId[DocId] = cache;
+
             return cache.Values;
         }
     }

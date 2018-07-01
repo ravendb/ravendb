@@ -18,8 +18,11 @@ namespace Raven.Server.Documents.Indexes
 
         static CollectionOfBloomFilters()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Count64", ByteStringType.Immutable, out Count64Slice);
-            Slice.From(StorageEnvironment.LabelsContext, "Count32", ByteStringType.Immutable, out Count32Slice);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Count64", ByteStringType.Immutable, out Count64Slice);
+                Slice.From(ctx, "Count32", ByteStringType.Immutable, out Count32Slice);
+            }
         }
 
         public enum Mode

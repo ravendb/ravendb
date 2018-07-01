@@ -38,11 +38,11 @@ namespace Raven.Server.Documents
             return ExecuteOperation(collectionName, options, Context, onProgress, key => new DeleteDocumentCommand(key, null, Database), token);
         }
 
-        public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, 
+        public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, Context, onProgress,
-                key => new PatchDocumentCommand(Context, key, null, false,(patch, patchArgs),(null,null),
+                key => new PatchDocumentCommand(Context, key, null, false, (patch, patchArgs), (null, null),
                     Database, false, false, false), token);
         }
 
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents
                 totalCount = GetTotalCountForCollection(context, collectionName, isAllDocs);
             }
             progress.Total = totalCount;
-            
+
             // send initial progress with total count set, and 0 as processed count
             onProgress(progress);
 
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents
 
                         if (ids.Count == 0)
                             break;
-                        
+
                         do
                         {
                             var command = new ExecuteRateLimitedOperations<LazyStringValue>(ids, action, rateGate, token,
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents
                                 rateGate?.WaitToProceed();
 
                         } while (ids.Count > 0);
-                        
+
                         if (end)
                             break;
                     }
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_collectionQuery, null),
-                    collectionName, _collectionQuery, context, null, new Reference<int>());
+                    collectionName, _collectionQuery, null, context, null, new Reference<int>());
             }
 
             if (isAllDocs)

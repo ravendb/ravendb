@@ -20,6 +20,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
@@ -121,7 +122,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             Database,
                             "Export database: " + Database.Name,
                             Operations.OperationType.DatabaseExport,
-                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId, token);
+                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId, token: token);
                 }
                 catch (Exception)
                 {
@@ -465,7 +466,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                             return (IOperationResult)result;
                         });
-                    }, operationId, token).ConfigureAwait(false);
+                    }, operationId, token: token).ConfigureAwait(false);
 
                 WriteImportResult(context, result, ResponseBodyStream());
             }
@@ -545,7 +546,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             return (IOperationResult)result;
                         });
-                    }, operationId, token);
+                    }, operationId, token: token);
                 
                 WriteImportResult(context, result, ResponseBodyStream());
             }
@@ -584,7 +585,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             if (string.IsNullOrEmpty(file) == false)
             {
                 if(IsOperator() == false)
-                    throw new UnauthorizedAccessException("The use of the 'file' query string parameters is limited operators and above");
+                    throw new AuthorizationException("The use of the 'file' query string parameters is limited operators and above");
                 return File.OpenRead(file);
             }
 
@@ -592,7 +593,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             if (string.IsNullOrEmpty(url) == false)
             {
                 if(IsOperator() == false)
-                    throw new UnauthorizedAccessException("The use of the 'url' query string parameters is limited operators and above");
+                    throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
                 
                 if (HttpContext.Request.Method == "POST")
                 {

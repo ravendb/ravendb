@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -22,6 +23,12 @@ namespace Raven.Client.Documents.Subscriptions
         public string ChangeVector { get; set; }
     }
 
+    internal class BatchFromServer
+    {
+        public List<SubscriptionConnectionServerMessage> Messages;
+        public IDisposable ReturnContext;
+        public List<BlittableJsonReaderObject> Includes;
+    }
     internal class SubscriptionConnectionServerMessage
     {
         internal enum MessageType
@@ -30,6 +37,7 @@ namespace Raven.Client.Documents.Subscriptions
             ConnectionStatus,
             EndOfBatch,
             Data,
+            Includes,
             Confirm,
             Error
         }
@@ -57,6 +65,8 @@ namespace Raven.Client.Documents.Subscriptions
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }
+
+        public BlittableJsonReaderObject Includes { get; set; }
         public string Exception { get; set; }
         public string Message { get; set; }
     }

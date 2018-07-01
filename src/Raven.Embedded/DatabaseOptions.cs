@@ -4,10 +4,17 @@ namespace Raven.Embedded
 {
     public class DatabaseOptions
     {
-        public string DatabaseName { get; set; }
-
         public bool SkipCreatingDatabase { get; set; }
 
-        public DatabaseRecord DatabaseRecord { get; set; }
+        public DatabaseRecord DatabaseRecord { get; private set; }
+
+        public DatabaseOptions(string databaseName) : this(new DatabaseRecord(databaseName))
+        {
+        }
+
+        public DatabaseOptions(DatabaseRecord databaseRecord)
+        {
+            DatabaseRecord = databaseRecord;
+        }
     }
 }

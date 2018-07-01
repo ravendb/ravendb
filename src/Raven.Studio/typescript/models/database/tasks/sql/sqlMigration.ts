@@ -108,9 +108,9 @@ class sqlMigration {
     labelForProvider(type: Raven.Server.SqlMigration.MigrationProvider) {
         switch (type) {
             case "MsSQL":
-                return "Microsoft SQL Server";
+                return "Microsoft SQL Server (System.Data.SqlClient)";
             case "MySQL":
-                return "MySQL Server";
+                return "MySQL Server (MySql.Data.MySqlClient)";
             default:
                 return type;
         }

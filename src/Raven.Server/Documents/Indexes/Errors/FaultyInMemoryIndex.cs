@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }

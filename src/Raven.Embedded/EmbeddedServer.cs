@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Http;
@@ -22,9 +22,9 @@ namespace Raven.Embedded
 
         internal EmbeddedServer()
         {
-            
+
         }
-        
+
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
         private Lazy<Task<(Uri ServerUrl, Process ServerProcess)>> _serverTask;
 
@@ -58,9 +58,7 @@ namespace Raven.Embedded
                 {
                     // not supported on MacOSX
                 }
-
             }
-
 
             // this forces the server to start running in an async manner.
             GC.KeepAlive(startServer.Value);
@@ -78,17 +76,14 @@ namespace Raven.Embedded
 
         public Task<IDocumentStore> GetDocumentStoreAsync(string database, CancellationToken token = default)
         {
-            return GetDocumentStoreAsync(new DatabaseOptions
-            {
-                DatabaseName = database
-            }, token);
+            return GetDocumentStoreAsync(new DatabaseOptions(database), token);
         }
 
         public async Task<IDocumentStore> GetDocumentStoreAsync(DatabaseOptions options, CancellationToken token = default)
         {
-            var databaseName = options.DatabaseName;
+            var databaseName = options.DatabaseRecord.DatabaseName;
             if (string.IsNullOrWhiteSpace(databaseName))
-                throw new ArgumentNullException(nameof(options.DatabaseName), "The database name is mandatory");
+                throw new ArgumentNullException(nameof(options.DatabaseRecord.DatabaseName), "The database name is mandatory");
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Creating document store for '{databaseName}'.");
@@ -115,22 +110,20 @@ namespace Raven.Embedded
             });
 
             return await _documentStores.GetOrAdd(databaseName, lazy).Value.WithCancellation(token).ConfigureAwait(false);
-
         }
 
         private async Task TryCreateDatabase(DatabaseOptions options, IDocumentStore store, CancellationToken token)
         {
             try
             {
-                var databaseRecord = options.DatabaseRecord ?? new DatabaseRecord(options.DatabaseName);
-                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(databaseRecord), token).ConfigureAwait(false);
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(options.DatabaseRecord), token).ConfigureAwait(false);
             }
             catch (ConcurrencyException)
             {
                 // Expected behaviour when the database is already exists
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{options.DatabaseName} already exists.");
+                    _logger.Info($"{options.DatabaseRecord.DatabaseName} already exists.");
             }
         }
 
@@ -222,6 +215,24 @@ namespace Raven.Embedded
             }
 
             return (new Uri(url), process);
+        }
+
+        public void OpenStudioInBrowser()
+        {
+            var serverUrl = AsyncHelpers.RunSync(() => GetServerUriAsync());
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{serverUrl.AbsoluteUri}\"")); // Works ok on windows
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", serverUrl.AbsoluteUri); // Works ok on linux
+            }
+            else
+            {
+                throw new PlatformNotSupportedException("Cannot open browser with Studio on your current platform");
+            }
         }
 
         public void Dispose()

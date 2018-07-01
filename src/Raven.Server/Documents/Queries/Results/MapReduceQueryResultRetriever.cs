@@ -1,6 +1,7 @@
 ﻿using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -10,9 +11,10 @@ namespace Raven.Server.Documents.Queries.Results
     public class MapReduceQueryResultRetriever : QueryResultRetrieverBase
     {
         private readonly JsonOperationContext _context;
+        private QueryTimingsScope _storageScope;
 
-        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
-            : base(database, query, fieldsToFetch, documentsStorage, context, true, includeDocumentsCommand)
+        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+            : base(database, query, queryTimings, fieldsToFetch, documentsStorage, context, true, includeDocumentsCommand)
         {
             _context = context;
         }
@@ -36,7 +38,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override DynamicJsonValue GetCounterRaw(string docId, string name)
         {
-            if (DocumentsStorage == null || !(_context is DocumentsOperationContext ctx))            
+            if (DocumentsStorage == null || !(_context is DocumentsOperationContext ctx))
                 return null;
 
             var djv = new DynamicJsonValue();
@@ -71,7 +73,8 @@ namespace Raven.Server.Documents.Queries.Results
             if (FieldsToFetch.IsProjection)
                 return GetProjection(input, score, null, state);
 
-            return DirectGet(input, null, state);
+            using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
+                return DirectGet(input, null, state);
         }
 
         public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)

@@ -404,11 +404,11 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
-
+            
+            ValidateIndexName(definition.Name, isStatic: false); 
+            
             try
             {
-                ValidateIndexName(definition.Name, isStatic: false);
-
                 var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -553,7 +553,24 @@ namespace Raven.Server.Documents.Indexes
             return IndexCreationOptions.Update;
         }
 
-        private void ValidateIndexName(string name, bool isStatic)
+        public static bool IsValidIndexName(string name, bool isStatic, out string errorMessage)
+        {
+            errorMessage = null;
+            
+            try
+            {
+               ValidateIndexName(name, isStatic);
+            }
+            catch (Exception e)
+            {
+                errorMessage = e.Message.Split('\n')[0];
+                return false;
+            }
+
+            return true;
+        }
+        
+        public static void ValidateIndexName(string name, bool isStatic)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Index name cannot be empty!");
@@ -565,7 +582,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
 
             if (isStatic && NameUtils.IsValidIndexName(name) == false)
-                throw new ArgumentException($"Index name '{name}' not permitted. Index name must match '{NameUtils.ValidIndexNameCharacters}' regular expression", nameof(name));
+                throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters that match regex '{NameUtils.ValidIndexNameCharacters}' are allowed.", nameof(name));
         }
 
         public Index ResetIndex(string name)
@@ -836,7 +853,7 @@ namespace Raven.Server.Documents.Indexes
                             break;
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
-                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase, isIndexReset: true);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
@@ -849,13 +866,11 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, the cluster is probably down. " +
-                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                throw new IndexCreationException($"Failed to reset index: {index.Name}", toe);
             }
             catch (Exception e)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation. " +
-                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
+                throw new IndexCreationException($"Failed to reset index: {index.Name}", e);
             }
         }
 

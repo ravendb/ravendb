@@ -1,5 +1,4 @@
 /// <reference path="../../typings/tsd.d.ts"/>
-
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import listView = require("widgets/listView/listView");
 import genUtils = require("common/generalUtils");
@@ -75,37 +74,7 @@ class extensions {
         
         return null;
     }
-    
-    public static validateDatabaseName(databaseName: string): string {
-        if (!databaseName) {
-            return null;
-        }
-
-        const allowedCharacters =  /^([A-Za-z0-9_\-\.]+)$/;
-        if (!allowedCharacters.test(databaseName)) {
-            return `Database name can only contain any of the following characters: a-z A-Z 0-9 _ - .`;
-        }
-
-        const regex = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        if (regex.test(databaseName)) {
-            return "`The name is forbidden for use!";
-        }
-
-        if (databaseName.startsWith(".")) {
-            return "Database name can't start with a dot!";
-        }
-
-        if (databaseName.endsWith(".")) {
-            return "Database name can't end with a dot!";
-        }
-
-        if (databaseName.length > 230) {
-            return "Database name can't exceed 230 characters";
-        }
-
-        return null;
-    }
-
+     
     private static configureValidation() {
 
         // Validate that url is in the following format: http(s)://hostName (e.g. http://localhost)
@@ -113,13 +82,6 @@ class extensions {
             validator: (val: string) => !extensions.validateUrl(val),
             message: (params: any, url: KnockoutObservable<string>) => {
                 return extensions.validateUrl(url());
-            }
-        };
-
-        (ko.validation.rules as any)['validDatabaseName'] = {
-            validator: (val: string) => !extensions.validateDatabaseName(val),
-            message: (params: any, databaseName: KnockoutObservable<string>) => {
-                return extensions.validateDatabaseName(databaseName());
             }
         };
 

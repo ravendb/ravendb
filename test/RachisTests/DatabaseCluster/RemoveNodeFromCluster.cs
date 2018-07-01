@@ -148,16 +148,18 @@ namespace RachisTests.DatabaseCluster
         public async Task RemovedLeaderCauseReelection(int numberOfNodes)
         {
             var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
-            CancellationTokenSource cts = new CancellationTokenSource();
-            try
+            using (var cts = new CancellationTokenSource())
             {
-                var followerTasks = Servers.Where(s => s != leader).Select(s => s.ServerStore.WaitForState(RachisState.Leader, cts.Token));
-                await leader.ServerStore.RemoveFromClusterAsync(leader.ServerStore.NodeTag);
-                Assert.True(await Task.WhenAny(followerTasks).WaitAsync(TimeSpan.FromSeconds(30)));
-            }
-            finally
-            {
-                cts.Cancel();
+                try
+                {
+                    var followerTasks = Servers.Where(s => s != leader).Select(s => s.ServerStore.WaitForState(RachisState.Leader, cts.Token));
+                    await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(leader.ServerStore.NodeTag));
+                    Assert.True(await Task.WhenAny(followerTasks).WaitAsync(TimeSpan.FromSeconds(30)));
+                }
+                finally
+                {
+                    cts.Cancel();
+                }
             }
         }
 
@@ -184,16 +186,26 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                await firstLeader.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag);
+                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag));
                 Assert.True(await removed.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
                     "Removed node wasn't move to passive state.");
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
-                if (replicationFactor == 1 && removed.WebUrl != firstLeader.WebUrl)
+
+                if (removed.WebUrl == firstLeader.WebUrl)
                 {
+                    Assert.Equal(replicationFactor, record.Topology.Count);
+                    Assert.Equal(replicationFactor, record.Topology.ReplicationFactor);
+                    return removed;
+                }
+
+                if (replicationFactor == 1)
+                {
+                    // if we remove the only node that have the database, it should delete the record in the cluster.
                     Assert.Null(record);
                     return removed;
                 }
+
                 Assert.Equal(replicationFactor - 1, record.Topology.Count);
                 Assert.Equal(replicationFactor - 1, record.Topology.ReplicationFactor);
             }

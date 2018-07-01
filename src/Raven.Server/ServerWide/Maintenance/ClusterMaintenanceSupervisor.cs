@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -140,7 +141,29 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public void Start()
             {
-                _maintenanceTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ListenToMaintenanceWorker(), null, _name);
+                _maintenanceTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+                {
+                    try
+                    {
+                        ListenToMaintenanceWorker();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // expected
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // expected
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Exception occurred while collecting info from {ClusterTag}. Task is closed.", e);
+                        }
+                        // we don't want to crash the process so we don't propagate this exception.
+                    }
+                }, null, _name);
             }
 
             private void ListenToMaintenanceWorker()
@@ -310,7 +333,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             case TcpConnectionStatus.Ok:
                                 break;
                             case TcpConnectionStatus.AuthorizationFailed:
-                                throw new UnauthorizedAccessException(
+                                throw new AuthorizationException(
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 //Kindly request the server to drop the connection

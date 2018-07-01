@@ -179,7 +179,7 @@ class patchTester extends viewModelBase {
     runTest(): void {
         eventsCollector.default.reportEvent("patch", "test");
 
-        this.afterAsyncValidationCompleted(this.validationGroup, () => {
+        viewHelpers.asyncValidationCompleted(this.validationGroup, () => {
             if (this.isValid(this.validationGroup)) {
                 this.spinners.testing(true);
                 this.resetForm();

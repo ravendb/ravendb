@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog modal-lg delete-documents-details" role="document">
     <div class="modal-content" tabindex="-1">
         <div class="modal-header">
             <div class="flex-horizontal">
@@ -16,47 +16,95 @@
             </div>
         </div>
         <div class="modal-body">
-            <div class="modal-details" data-bind="with: progress">
+            <div class="modal-details" data-bind="visible: progress">
                 <div class="details-item">
                     <div class="row">
-                        <div class="col-sm-6 text-right">
+                        <div class="col-sm-3 text-right">
+                            Index:
+                        </div>
+                        <div class="col-sm-9 details-value">
+                            <span data-bind="text: $root.op.message"></span>
+                        </div>
+                    </div>
+                    <div class="row" data-bind="with: progress">
+                        <div class="col-sm-3 text-right">
                             Processed:
                         </div>
-                        <div class="col-sm-6 details-value">
+                        <div class="col-sm-9 details-value">
                             <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-6 text-right">
+                        <div class="col-sm-3 text-right">
                             Processing Speed:
                         </div>
-                        <div class="col-sm-6 details-value">
+                        <div class="col-sm-9 details-value">
                             <span data-bind="text: $root.processingSpeed"></span>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-6 text-right">
+                        <div class="col-sm-3 text-right">
                             Estimated Time Left:
                         </div>
-                        <div class="col-sm-6 details-value">
+                        <div class="col-sm-9 details-value">
                             <span data-bind="text: $root.estimatedTimeLeft"></span>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-sm-3 text-right">
+                            Query:
+                        </div>
+                        <div class="col-sm-9 details-value">
+                                <pre class="bg-info max-height">
+<code data-bind="text: $root.query"></code>
+</pre>
+                        </div>
+                    </div>
                 </div>
-                <div class="progress">
+                <div class="progress" data-bind="with: progress">
                     <div class="progress-bar" role="progressbar" data-bind="style: {'width': Processed/Total*100 + '%'}">
                     </div>
                 </div>
             </div>
-            <div data-bind="with: result">
-                <h3 class="text-center" data-bind="text: Message"></h3>
-            </div>
             <div data-bind="if: operationFailed">
                 <h3 class="text-danger">Operation failed!</h3>
-                <pre class="margin-top error-messages">
-                    <code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span></code>
-                </pre>
+                <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
+</code></pre>
             </div>
+            <div data-bind="with: result">
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Index:
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <span data-bind="text: $root.op.message"></span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Processed:
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <span data-bind="text: Total.toLocaleString()"></span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Query:
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <pre class="bg-info max-height">
+<code data-bind="text: $root.query"></code>
+</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>

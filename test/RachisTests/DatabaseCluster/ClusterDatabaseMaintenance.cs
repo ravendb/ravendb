@@ -609,7 +609,7 @@ namespace RachisTests.DatabaseCluster
         {
             var fromSeconds = TimeSpan.FromSeconds(8);
 
-            var databaseName = "ChangeUrlOfMultiNodeCluster" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var groupSize = 3;
             var newUrl = "http://" + Environment.MachineName + ":8080";
             string nodeTag;
@@ -658,8 +658,10 @@ namespace RachisTests.DatabaseCluster
             Assert.True(await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag).WaitAsync(fromSeconds));
             Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(fromSeconds));
 
-            // create a new database and verify that it resids on the server with the new url
-            var (_, dbGroupNodes) = await CreateDatabaseInCluster("new" + databaseName, groupSize, leader.WebUrl);
+            Assert.Equal(3, WaitForValue(() => leader.ServerStore.GetClusterTopology().Members.Count, 3));
+
+            // create a new database and verify that it resides on the server with the new url
+            var (_, dbGroupNodes) = await CreateDatabaseInCluster(GetDatabaseName(), groupSize, leader.WebUrl);
             Assert.True(dbGroupNodes.Select(s => s.WebUrl).Contains(newUrl));
             
         }

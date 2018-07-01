@@ -24,6 +24,7 @@ using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Json;
@@ -80,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -102,31 +103,55 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 yield break;
             }
 
+            QueryTimingsScope luceneScope = null;
+            QueryTimingsScope highlightingScope = null;
+            QueryTimingsScope explanationsScope = null;
+
+            if (queryTimings != null)
+            {
+                luceneScope = queryTimings.For(nameof(QueryTimingsScope.Names.Lucene), start: false);
+                highlightingScope = query.Metadata.HasHighlightings
+                    ? queryTimings.For(nameof(QueryTimingsScope.Names.Highlightings), start: false)
+                    : null;
+                explanationsScope = query.Metadata.HasExplanations
+                    ? queryTimings.For(nameof(QueryTimingsScope.Names.Explanations), start: false)
+                    : null;
+            }
+
             var returnedResults = 0;
+
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
+                if (query.Metadata.HasHighlightings)
+                {
+                    using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
+                        SetupHighlighter(query, luceneQuery, documentsContext);
+                }
+
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
+                    TopDocs search;
+                    using (luceneScope?.Start())
+                        search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
 
                     totalResults.Value = search.TotalHits;
 
                     scope.RecordAlreadyPagedItemsInPreviousPage(search);
-
-                    if (query.Metadata.HasHighlightings)
-                        SetupHighlighter(query, luceneQuery, documentsContext);
 
                     for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
                     {
                         token.ThrowIfCancellationRequested();
 
                         var scoreDoc = search.ScoreDocs[position];
-                        var document = _searcher.Doc(scoreDoc.Doc, _state);
+
+                        global::Lucene.Net.Documents.Document document;
+                        using (luceneScope?.Start())
+                            document = _searcher.Doc(scoreDoc.Doc, _state);
 
                         if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                         {
@@ -147,15 +172,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             Dictionary<string, Dictionary<string, string[]>> highlightings = null;
                             if (query.Metadata.HasHighlightings)
-                                highlightings = GetHighlighterResults(query, _searcher, scoreDoc, result, document, documentsContext);
+                            {
+                                using (highlightingScope?.Start())
+                                    highlightings = GetHighlighterResults(query, _searcher, scoreDoc, result, document, documentsContext);
+                            }
 
                             ExplanationResult explanation = null;
                             if (query.Metadata.HasExplanations)
                             {
-                                if (explanationOptions == null)
-                                    explanationOptions = query.Metadata.Explanation.GetOptions(documentsContext, query.QueryParameters);
+                                using (explanationsScope?.Start())
+                                {
+                                    if (explanationOptions == null)
+                                        explanationOptions = query.Metadata.Explanation.GetOptions(documentsContext, query.QueryParameters);
 
-                                explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, result, document);
+                                    explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, result, document);
+                                }
                             }
 
                             yield return (result, highlightings, explanation);

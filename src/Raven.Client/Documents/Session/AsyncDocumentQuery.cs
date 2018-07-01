@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Util;
@@ -704,21 +705,19 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-#if FEATURE_SHOW_TIMINGS
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.ShowTimings()
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Timings(out QueryTimings timings)
         {
-            ShowTimings();
+            IncludeTimings(out timings);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.ShowTimings()
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Timings(out QueryTimings timings)
         {
-            ShowTimings();
+            IncludeTimings(out timings);
             return this;
         }
-#endif
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
@@ -907,9 +906,7 @@ namespace Raven.Client.Documents.Session
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
-#if FEATURE_SHOW_TIMINGS
-                ShowQueryTimings = ShowQueryTimings,
-#endif
+                QueryTimings = QueryTimings,
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,

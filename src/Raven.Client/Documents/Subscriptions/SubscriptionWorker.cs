@@ -337,7 +337,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                             _processingCts.Token.ThrowIfCancellationRequested();
 
-                            var lastReceivedChangeVector = batch.Initialize(incomingBatch.Messages);
+                            var lastReceivedChangeVector = batch.Initialize(incomingBatch);
 
 
                             notifiedSubscriber = Task.Run(async () =>
@@ -394,22 +394,28 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<(List<SubscriptionConnectionServerMessage> Messages, IDisposable ReturnContext)> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer, SubscriptionBatch<T> batch)
+
+        private async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer, SubscriptionBatch<T> batch)
         {
-            JsonOperationContext context;
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
-            var returnContext = contextPool.AllocateOperationContext(out context);
+            var includes = new List<BlittableJsonReaderObject>();
+            IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
             bool endOfBatch = false;
             while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
             {
-                var receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
+                SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
                 if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                {
                     break;
+                }
 
                 switch (receivedMessage.Type)
                 {
                     case SubscriptionConnectionServerMessage.MessageType.Data:
                         incomingBatch.Add(receivedMessage);
+                        break;
+                    case SubscriptionConnectionServerMessage.MessageType.Includes:
+                        includes.Add(receivedMessage.Includes);
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
                         endOfBatch = true;
@@ -432,7 +438,12 @@ namespace Raven.Client.Documents.Subscriptions
                         break;
                 }
             }
-            return (incomingBatch, returnContext);
+            return new BatchFromServer
+            {
+                Messages = incomingBatch,
+                ReturnContext = returnContext,
+                Includes = includes
+            };
         }
 
         private static void ThrowInvalidServerResponse(SubscriptionConnectionServerMessage receivedMessage)

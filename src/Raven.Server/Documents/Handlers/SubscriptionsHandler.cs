@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Server.Json;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json.Parsing;
-using Sparrow.Json;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Json;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -23,17 +24,17 @@ namespace Raven.Server.Documents.Handlers
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                var tryout = JsonDeserializationServer.SubscriptionTryout(json);
+                BlittableJsonReaderObject json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                SubscriptionTryout tryout = JsonDeserializationServer.SubscriptionTryout(json);
 
-                var (collection, (script, functions), revisions) = SubscriptionConnection.ParseSubscriptionQuery(tryout.Query);
+                SubscriptionConnection.ParsedSubscription sub = SubscriptionConnection.ParseSubscriptionQuery(tryout.Query);
                 SubscriptionPatchDocument patch = null;
-                if (string.IsNullOrEmpty(script) == false)
+                if (string.IsNullOrEmpty(sub.Script) == false)
                 {
-                    patch = new SubscriptionPatchDocument(script, functions);
+                    patch = new SubscriptionPatchDocument(sub.Script, sub.Functions);
                 }
 
-                if (collection == null)
+                if (sub.Collection == null)
                     throw new ArgumentException("Collection must be specified");
 
                 var pageSize = GetIntValueQueryString("pageSize") ?? 1;
@@ -45,7 +46,9 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
-                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), collection, revisions, state, patch);
+                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch);
+
+                var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes);
 
                 if (Enum.TryParse(
                     tryout.ChangeVector,
@@ -58,7 +61,7 @@ namespace Raven.Server.Documents.Handlers
                             state.ChangeVectorForNextBatchStartingPoint = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                            state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
+                            state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context, sub.Collection);
                             break;
                     }
                 }
@@ -77,6 +80,8 @@ namespace Raven.Server.Documents.Handlers
                         {
                             if (itemDetails.Doc.Data == null)
                                 continue;
+
+                            includeCmd.Gather(itemDetails.Doc);
 
                             if (first == false)
                                 writer.WriteComma();
@@ -99,10 +104,17 @@ namespace Raven.Server.Documents.Handlers
 
                             first = false;
                         }
-                    }
 
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
+                        writer.WriteEndArray();
+                        writer.WriteComma();
+                        writer.WritePropertyName("Includes");
+                        writer.WriteStartArray();
+                        var includes = new List<Document>();
+                        includeCmd.Fill(includes);
+                        writer.WriteDocuments(context, includes, false, out _);
+                        writer.WriteEndArray();
+                        writer.WriteEndObject();
+                    }
                 }
             }
         }
@@ -116,7 +128,7 @@ namespace Raven.Server.Documents.Handlers
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
 
-                var (collection, _, _) = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
+                var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
 
                 if (Enum.TryParse(
                     options.ChangeVector,
@@ -125,11 +137,11 @@ namespace Raven.Server.Documents.Handlers
                     switch (changeVectorSpecialValue)
                     {
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
-                        
+
                             options.ChangeVector = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                            options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
+                            options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, sub.Collection);
                             break;
                     }
                 }
@@ -276,14 +288,14 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
                         ["Connection"] = GetSubscriptionConnectionDJV(x.Connection),
                         ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
-                                {
-                                    ["State"] = new DynamicJsonValue()
-                                    {
-                                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                        ["Query"] = r.SubscriptionState.Query
-                                    },
-                                    ["Connection"] = GetSubscriptionConnectionDJV(r)
-                            }),
+                        {
+                            ["State"] = new DynamicJsonValue()
+                            {
+                                ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                                ["Query"] = r.SubscriptionState.Query
+                            },
+                            ["Connection"] = GetSubscriptionConnectionDJV(r)
+                        }),
                         ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
                         {
                             ["State"] = new DynamicJsonValue()
@@ -314,7 +326,7 @@ namespace Raven.Server.Documents.Handlers
 
             return new DynamicJsonValue()
             {
-                [nameof(SubscriptionConnection.ClientUri)] =x.ClientUri,
+                [nameof(SubscriptionConnection.ClientUri)] = x.ClientUri,
                 [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
                 [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsDJV(x.Stats),
                 [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message
@@ -339,7 +351,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionId = GetLongQueryString("id", required: false);
             var subscripitonName = GetStringQueryString("name", required: false);
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -357,7 +369,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
-            
+
 
             return NoContent();
         }

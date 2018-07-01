@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -58,13 +59,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         TSelf NoTracking();
 
-#if FEATURE_SHOW_TIMINGS
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
         ///     results). Default: false
         /// </summary>
-        TSelf ShowTimings();
-#endif
+        TSelf Timings(out QueryTimings timings);
 
         /// <summary>
         ///     Skips the specified count.

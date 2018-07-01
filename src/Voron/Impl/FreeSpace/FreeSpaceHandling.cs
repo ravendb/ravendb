@@ -14,7 +14,10 @@ namespace Voron.Impl.FreeSpace
 
         static FreeSpaceHandling()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "$free-space", Sparrow.ByteStringType.Immutable, out FreeSpaceKey);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "$free-space", Sparrow.ByteStringType.Immutable, out FreeSpaceKey);
+            }
         }
 
         public FreeSpaceHandling()

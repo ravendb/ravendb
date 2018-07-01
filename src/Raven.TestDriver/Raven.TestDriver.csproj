@@ -5,11 +5,17 @@
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <AssemblyName>Raven.TestDriver</AssemblyName>
     <PackageId>RavenDB.TestDriver</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">

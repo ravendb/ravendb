@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
@@ -464,10 +465,51 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.NodeTag));
             writer.WriteString(result.NodeTag);
 
+            if (result.Timings != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.Timings));
+                writer.WriteQueryTimings(context, result.Timings);
+            }
+
             if (partial == false)
                 writer.WriteEndObject();
 
             return numberOfResults;
+        }
+
+        public static void WriteQueryTimings(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryTimings queryTimings)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(QueryTimings.DurationInMs));
+            writer.WriteInteger(queryTimings.DurationInMs);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(QueryTimings.Timings));
+            if (queryTimings.Timings != null)
+            {
+                writer.WriteStartObject();
+                var first = true;
+
+                foreach (var kvp in queryTimings.Timings)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+
+                    writer.WritePropertyName(kvp.Key);
+                    writer.WriteQueryTimings(context, kvp.Value);
+                }
+
+                writer.WriteEndObject();
+            }
+            else
+                writer.WriteNull();
+
+
+            writer.WriteEndObject();
         }
 
         public static void WriteTermsQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, TermsQueryResultServerSide queryResult)

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -40,6 +39,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 foreach (var indexToAdd in indexes)
                 {
                     var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
+                    indexDefinition.Name = indexDefinition.Name?.Trim();
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {

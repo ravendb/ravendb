@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -121,6 +122,7 @@ namespace Raven.Server.Documents.Handlers
             int numberOfResults;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
+                result.Timings = indexQuery.Timings?.ToTimings();
                 numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
                 await writer.OuterFlushAsync();
             }
@@ -201,7 +203,7 @@ namespace Raven.Server.Documents.Handlers
                     
                     ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
-                        context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
+                        context, returnContextToPool, Operations.Operations.OperationType.DeleteByQuery);
 
                     return Task.CompletedTask;
                 }
@@ -321,7 +323,7 @@ namespace Raven.Server.Documents.Handlers
                 ExecuteQueryOperation(query,
                     (runner, options, onProgress, token) => runner.ExecutePatchQuery(
                         query, options, patch, query.QueryParameters, context, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
+                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByQuery);
 
                 return Task.CompletedTask;
             }
@@ -346,8 +348,17 @@ namespace Raven.Server.Documents.Handlers
 
             var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.Operations.AddOperation(Database, query.Metadata.IndexName, operationType,
-                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, token);
+            var indexName = query.Metadata.IsDynamic
+                ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/" ) + query.Metadata.CollectionName
+                : query.Metadata.IndexName;
+
+            var details = new BulkOperationResult.OperationDetails
+            {
+                Query = query.Query
+            };
+            
+            var task = Database.Operations.AddOperation(Database, indexName, operationType,
+                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

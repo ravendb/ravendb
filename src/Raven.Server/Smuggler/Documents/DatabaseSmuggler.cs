@@ -600,6 +600,11 @@ namespace Raven.Server.Smuggler.Documents
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
+                    if (_options.SkipRevisionCreation)
+                    {
+                        item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+                    }
+
                     actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;

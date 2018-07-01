@@ -25,7 +25,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         static MapReduceIndexingContext()
         {
-             Slice.From(StorageEnvironment.LabelsContext, "__raven/map-reduce/#next-map-result-id", ByteStringType.Immutable, out LastMapResultIdKey);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "__raven/map-reduce/#next-map-result-id", ByteStringType.Immutable, out LastMapResultIdKey);
+            }
         }
 
         public void Dispose()

@@ -149,8 +149,23 @@
                 </div>
             </div>
             <div class="scroll-stretch">
-                <div class="panel-body">
+                <div class="panel-body" data-bind="visible: currentTab() !== 'timings'">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
+                </div>
+                <div class="panel-body js-timings-container absolute-fill" data-bind="visible: currentTab() === 'timings'">
+                    <div class="toggle toggle-right">
+                        <input id="log-scale" class="styled" type="checkbox" data-bind="checked: graph.useLogScale">
+                        <label for="log-scale" class="properties-label">
+                            Use logarithmic scale
+                        </label>
+                    </div>
+                    <div class="from-cache bg-info padding padding-sm" data-bind="visible: $root.fromCache">
+                        <i class="icon-info"></i> <span>Using cached timinigs</span>
+                    </div>
+                    <div class="legend" data-bind="with: graph.rootNode">
+                        <div class="legend-item" data-bind="template: { name: 'timing-item-template' }">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -172,6 +187,9 @@
                     <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>
                 </button>
             <!-- /ko -->
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
+                Timings
+            </button> 
         </div>
     </div>
     <div class="hidden">
@@ -180,6 +198,16 @@
         </form>
     </div>
 </div>
+
+<script type="text/html" id="timing-item-template">
+    <i class="item-rect" data-bind="style: { 'background-color': $root.graph.getColor(name) }"></i>
+    <span class="name" data-bind="text: name"></span>
+    <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+    <div data-bind="foreach: children">
+        <div class="legend-item" data-bind="template: { name: 'timing-item-template' }, visible: visible">
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="empty-query-template">
     <div data-bind="visible: !$root.isEmptyFieldsResult()">

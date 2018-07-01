@@ -23,6 +23,7 @@ namespace Raven.Server.Config.Categories
         [Description("How far back we should retain audit log entries")]
         [DefaultValue(365 * 24)]
         [TimeUnit(TimeUnit.Hours)]
+        [ConfigurationEntry("Security.AuditLog.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting AuditLogRetention { get; set; }
 

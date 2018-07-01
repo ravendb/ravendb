@@ -289,6 +289,7 @@ interface pagedResultExtended<T> extends pagedResult<T> {
     includes: dictionary<any>;
     highlightings?: dictionary<dictionary<Array<string>>>;
     explanations?: dictionary<Array<string>>;
+    timings?: Raven.Client.Documents.Queries.Timings.QueryTimings;
 }
 
 interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {

@@ -39,6 +39,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
@@ -56,6 +57,7 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
+        private DisposeOnce<SingleAttempt> _disposeOnce;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
@@ -90,9 +92,11 @@ namespace Raven.Server.Documents
             LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
-
+            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
+                TryAcquireWriteLock();
+
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -151,7 +155,8 @@ namespace Raven.Server.Documents
         public readonly SystemTime Time = new SystemTime();
 
         public ScriptRunnerCache Scripts;
-
+        private FileStream _writeLockFile;
+        private string _lockFile;
         public readonly TransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
@@ -286,6 +291,31 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void TryAcquireWriteLock()
+        {
+            if (Configuration.Core.RunInMemory)
+                return; // no lock required;
+
+            _addToInitLog("Creating db.lock file");
+
+            _lockFile = Configuration.Core.DataDirectory.Combine("db.lock").FullPath;
+
+            try
+            {
+                if (Directory.Exists(Configuration.Core.DataDirectory.FullPath) == false)
+                    Directory.CreateDirectory(Configuration.Core.DataDirectory.FullPath);
+
+                _writeLockFile = new FileStream(_lockFile, FileMode.Create,
+                    FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+                _writeLockFile.SetLength(1);
+                _writeLockFile.Lock(0, 1);
+            }
+            catch (Exception e)
+            {
+                 throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e); 
+            }
+        }
+
         public IDisposable PreventFromUnloading()
         {
             Interlocked.Increment(ref _preventUnloadCounter);
@@ -335,141 +365,156 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe void Dispose()
+        public void Dispose()
         {
-            if (_databaseShutdown.IsCancellationRequested)
-                return; // double dispose?
+            _disposeOnce.Dispose();
+        }
 
-            lock (this)
+        private unsafe void DisposeInternal()
+        {
+
+            //before we dispose of the database we take its latest info to be displayed in the studio
+            try
             {
-                if (_databaseShutdown.IsCancellationRequested)
-                    return; // double dispose?
-
-                //before we dispose of the database we take its latest info to be displayed in the studio
-                try
-                {
-                    var databaseInfo = GenerateDatabaseInfo();
-                    if (databaseInfo != null)
-                        DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
-                }
-                catch (Exception e)
-                {
-                    // if we encountered a catastrophic failure we might not be able to retrieve database info
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failed to generate and store database info", e);
-                }
-
-                _databaseShutdown.Cancel();
-
-                // we'll wait for 1 minute to drain all the requests
-                // from the database
-
-                var sp = Stopwatch.StartNew();
-                while (sp.ElapsedMilliseconds < 60 * 1000)
-                {
-                    if (Interlocked.Read(ref _usages) == 0)
-                        break;
-
-                    if (_waitForUsagesOnDisposal.Wait(1000))
-                        _waitForUsagesOnDisposal.Reset();
-                }
-
-                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
-
-                foreach (var connection in RunningTcpConnections)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        connection.Dispose();
-                    });
-                }
-
-                exceptionAggregator.Execute(() =>
-                {
-                    TxMerger?.Dispose();
-                });
-
-                if (_indexStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _indexStoreTask.Wait(DatabaseShutdown);
-                    });
-                }
-
-                exceptionAggregator.Execute(() =>
-                {
-                    IndexStore?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    ExpiredDocumentsCleaner?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    PeriodicBackupRunner?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    TombstoneCleaner?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    ReplicationLoader?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    EtlLoader?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    Operations?.Dispose(exceptionAggregator);
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    NotificationCenter?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    SubscriptionStorage?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    ConfigurationStorage?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    DocumentsStorage?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    _databaseShutdown.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    if (MasterKey == null)
-                        return;
-                    fixed (byte* pKey = MasterKey)
-                    {
-                        Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
-                    }
-                });
-
-                exceptionAggregator.ThrowIfNeeded();
+                var databaseInfo = GenerateDatabaseInfo();
+                if (databaseInfo != null)
+                    DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
             }
+            catch (Exception e)
+            {
+                // if we encountered a catastrophic failure we might not be able to retrieve database info
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failed to generate and store database info", e);
+            }
+
+            _databaseShutdown.Cancel();
+
+            // we'll wait for 1 minute to drain all the requests
+            // from the database
+
+            var sp = Stopwatch.StartNew();
+            while (sp.ElapsedMilliseconds < 60 * 1000)
+            {
+                if (Interlocked.Read(ref _usages) == 0)
+                    break;
+
+                if (_waitForUsagesOnDisposal.Wait(1000))
+                    _waitForUsagesOnDisposal.Reset();
+            }
+
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+
+            foreach (var connection in RunningTcpConnections)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    connection.Dispose();
+                });
+            }
+
+            exceptionAggregator.Execute(() =>
+            {
+                TxMerger?.Dispose();
+            });
+
+            if (_indexStoreTask != null)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    _indexStoreTask.Wait(DatabaseShutdown);
+                });
+            }
+
+            exceptionAggregator.Execute(() =>
+            {
+                IndexStore?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ExpiredDocumentsCleaner?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                PeriodicBackupRunner?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                TombstoneCleaner?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ReplicationLoader?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                EtlLoader?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                Operations?.Dispose(exceptionAggregator);
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                NotificationCenter?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                SubscriptionStorage?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ConfigurationStorage?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentsStorage?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                _databaseShutdown.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                if (MasterKey == null)
+                    return;
+                fixed (byte* pKey = MasterKey)
+                {
+                    Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
+                }
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                if (_writeLockFile != null)
+                {
+                    _writeLockFile.Unlock(0, 1);
+                    _writeLockFile.Dispose();
+                    try
+                    {
+                        if (File.Exists(_lockFile))
+                            File.Delete(_lockFile);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+            });
+
+            exceptionAggregator.ThrowIfNeeded();
+
         }
 
         public DynamicJsonValue GenerateDatabaseInfo()
@@ -966,7 +1011,7 @@ namespace Raven.Server.Documents
                     var diskSpaceResult = DiskSpaceChecker.GetFreeDiskSpace(fullPath, drives);
                     if (diskSpaceResult == null)
                         continue;
-                    
+
                     var sizeOnDisk = GetSizeOnDisk(environment, tx);
                     if (sizeOnDisk.DataInBytes == 0)
                         continue;

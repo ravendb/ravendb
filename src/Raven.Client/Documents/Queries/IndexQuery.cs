@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
@@ -26,9 +27,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(Query);
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(SkipDuplicateChecking);
-#if FEATURE_SHOW_TIMINGS
-                hasher.Write(ShowTimings);
-#endif
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
                 hasher.Write(Start);
                 hasher.Write(PageSize);
@@ -67,13 +65,6 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool SkipDuplicateChecking { get; set; }
 
-#if FEATURE_SHOW_TIMINGS
-        /// <summary>
-        /// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
-        /// </summary>
-        public bool ShowTimings { get; set; }
-#endif
-
         public virtual bool Equals(IndexQuery<T> other)
         {
             if (ReferenceEquals(null, other))
@@ -82,9 +73,6 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return base.Equals(other) &&
-#if FEATURE_SHOW_TIMINGS
-                   ShowTimings == other.ShowTimings &&
-#endif
                    SkipDuplicateChecking == other.SkipDuplicateChecking;
         }
 
@@ -102,9 +90,6 @@ namespace Raven.Client.Documents.Queries
             unchecked
             {
                 var hashCode = base.GetHashCode();
-#if FEATURE_SHOW_TIMINGS
-                hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
-#endif
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 return hashCode;
             }

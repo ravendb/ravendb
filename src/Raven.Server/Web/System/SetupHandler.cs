@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -508,7 +509,7 @@ namespace Raven.Server.Web.System
                     "Setting up RavenDB in secured mode.",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.SetupSecuredTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                    operationId.Value, token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -570,7 +571,7 @@ namespace Raven.Server.Web.System
                     null, "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.SetupLetsEncryptTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                    operationId.Value, token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -676,7 +677,7 @@ namespace Raven.Server.Web.System
                     null, "Continue Cluster Setup.",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                    operationId.Value, token: operationCancelToken);
             }
             
             NoContentStatus();
@@ -704,7 +705,7 @@ namespace Raven.Server.Web.System
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
                 return;
 
-            throw new UnauthorizedAccessException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
+            throw new AuthorizationException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
         }
 
         private static string IpAddressToUrl(string address, int port, string scheme = "http")

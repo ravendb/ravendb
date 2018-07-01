@@ -305,14 +305,25 @@ class genUtils {
 
     /***  Other Methods ***/
 
-    static debounceAndFunnel<T>(func: (val: T, params: any, callback: (currentValue: T, result: boolean) => void) => void) {
-        return _.debounce((val: T, params: any, callback: (result: boolean) => void) => {
-            func(val, params, (currentValue, result) => {
-                if (currentValue === val) {
-                    callback(result);
-                }
-            });
-        }, 500);
+    static debounceAndFunnel<T>(func: (val: T, 
+                                       params: any, 
+                                       callback: (currentValue: T, errorMessageOrValidationResult: string | boolean) => void) => void) {
+        
+        return _.debounce((val: T, 
+                           params: any,
+                           internalCallback: (result: { isValid: boolean, message: string } | boolean) => void) => {
+                                            func(val, params, (currentValue, result) => {
+                                                   if (currentValue === val) {
+                                                       if (_.isBoolean(result)) {
+                                                           internalCallback(result);
+                                                       } else if (result) {
+                                                           internalCallback({ isValid: false, message: result});
+                                                       } else {
+                                                           internalCallback(true);
+                                                       }
+                                                   }
+                                      });
+                           }, 500);
     }
 
     static hashCode(input: string) {

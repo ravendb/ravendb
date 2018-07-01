@@ -8,11 +8,11 @@ import jsonUtil = require("common/jsonUtil");
 class connectionStringSqlEtlModel extends connectionStringModel {
 
     static sqlProviders = [
-        "System.Data.SqlClient",
-        "Npgsql",
-        "Oracle.ManagedDataAccess.Client",
-        "MySql.Data.MySqlClient"
-    ] as Array<string>;
+        { value: "System.Data.SqlClient", label: "Microsoft SQL Server (System.Data.SqlClient)" },
+        { value: "MySql.Data.MySqlClient", label: "MySQL Server (MySql.Data.MySqlClient)" },
+        { value: "Npgsql",label: "PostgreSQL (Npgsql)" },
+        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle (Oracle.ManagedDataAccess.Client)" },
+    ] as Array<valueAndLabelItem<string, string>>;
     
     connectionString = ko.observable<string>();
     factoryName = ko.observable<string>();
@@ -68,11 +68,16 @@ class connectionStringSqlEtlModel extends connectionStringModel {
             factoryName: this.factoryName
         })
     }
+    
+    labelFor(input: string) {
+        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === input);
+        return provider ? provider.label : null;
+    }
 
     static empty(): connectionStringSqlEtlModel {
         return new connectionStringSqlEtlModel({
             Type: "Sql",
-            FactoryName: connectionStringSqlEtlModel.sqlProviders[0],
+            FactoryName: connectionStringSqlEtlModel.sqlProviders[0].value,
             Name: "",
             ConnectionString: ""
         } as Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString, true, []);

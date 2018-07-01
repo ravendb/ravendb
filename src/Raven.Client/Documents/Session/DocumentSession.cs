@@ -83,10 +83,11 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
+                if (NoTracking)
+                    throw new InvalidOperationException($"Cannot execute '{nameof(SaveChanges)}' when entity tracking is disabled in session.");
+
                 RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-                var returnedTransactionIndex = command.Result.TransactionIndex;
-                _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
-                SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
+                UpdateSessionAfterSaveChanges(command.Result);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

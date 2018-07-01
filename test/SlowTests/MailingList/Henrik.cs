@@ -8,8 +8,7 @@ namespace SlowTests.MailingList
 {
     public class Henrik : RavenTestBase
     {
-
-        public class Company
+        private class Company
         {
             public string Id { get; set; }
             public string ExternalId { get; set; }

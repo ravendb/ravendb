@@ -14,8 +14,11 @@ namespace Raven.Server.Documents.Operations
 
         static OperationsStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Operations", ByteStringType.Immutable, out OperationsTree);
-            Slice.From(StorageEnvironment.LabelsContext, "NextOperationId", ByteStringType.Immutable, out NextOperationId);
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Operations", ByteStringType.Immutable, out OperationsTree);
+                Slice.From(ctx, "NextOperationId", ByteStringType.Immutable, out NextOperationId);
+            }
         }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)

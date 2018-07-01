@@ -1,11 +1,11 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import configuration = require("configuration");
 import restorePoint = require("models/resources/creation/restorePoint");
 import clusterNode = require("models/database/cluster/clusterNode");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
+import validateNameCommand = require("commands/resources/validateNameCommand");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -287,16 +287,31 @@ class databaseCreationModel {
     setupValidation(databaseDoesntExist: (name: string) => boolean, maxReplicationFactor: number) {
         this.setupPathValidation(this.path.dataPath, "Data");
 
+        const checkDatabaseName = (val: string,
+                                   params: any,
+                                   callback: (currentValue: string, result: string | boolean) => void) => {
+            new validateNameCommand('Database', val)
+                .execute()
+                .done((result) => {
+                    if (result.IsValid) {
+                        callback(this.name(), true);
+                    } else {
+                        callback(this.name(), result.ErrorMessage);
+                    }
+                })
+        };
+        
         this.name.extend({
             required: true,
-            validDatabaseName: true,
-
             validation: [
                 {
                     validator: (name: string) => databaseDoesntExist(name),
                     message: "Database already exists"
-                }
-            ]
+                },
+                {
+                    async: true,
+                    validator: generalUtils.debounceAndFunnel(checkDatabaseName)
+                }]
         });
         
         this.setupReplicationValidation(maxReplicationFactor);
@@ -451,7 +466,6 @@ class databaseCreationModel {
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
         } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
     }
-    
     
     toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {
         const migration = this.legacyMigration;

@@ -529,6 +529,15 @@ namespace Raven.Server.Documents.Handlers.Admin
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
+                if (nodeTag == ServerStore.Engine.Tag)
+                {
+                    // cannot remove the leader, let's change the leader
+                    ServerStore.Engine.CurrentLeader?.StepDown();
+                    await ServerStore.Engine.WaitForState(RachisState.Follower, HttpContext.RequestAborted);
+                    RedirectToLeader();
+                    return;
+                }
+
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
                 await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
                 NoContentStatus();

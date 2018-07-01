@@ -24,6 +24,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
 import index = require("models/database/index/index");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class editIndex extends viewModelBase {
 
@@ -244,7 +245,8 @@ class editIndex extends viewModelBase {
             indexDef.numberOfFields,
             indexDef.numberOfConfigurationFields,
             indexDef.outputReduceToCollection,
-            indexDef.numberOfAdditionalSources,           
+            indexDef.reduceToCollectionName,
+            indexDef.numberOfAdditionalSources,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
             hasDefaultFieldOptions,
@@ -453,32 +455,32 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        const editedIndex = this.editedIndex();
-
-        if (!this.validate()) {
-            return;
-        }
-
-        this.saveInProgress(true);
-
-        //if index name has changed it isn't the same index
-        /* TODO
-        if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
-            messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
-                                            "Any changes to the index will be ignored.");
-            return;
-        }*/
+        const editedIndex = this.editedIndex();      
         
-        const indexDto = editedIndex.toDto();
+        viewHelpers.asyncValidationCompleted(editedIndex.validationGroup, () => {
+            if (!this.validate()) {
+                return;
+            }
 
-        this.saveIndex(indexDto)
-            .always(() => this.saveInProgress(false));
+            this.saveInProgress(true);
+
+            //if index name has changed it isn't the same index
+            /* TODO
+            if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
+                messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
+                                                "Any changes to the index will be ignored.");
+                return;
+            }*/
+
+            const indexDto = editedIndex.toDto();
+
+            this.saveIndex(indexDto)
+                .always(() => this.saveInProgress(false));
+        });
     }
 
-    private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
+    private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<string> {
         eventsCollector.default.reportEvent("index", "save");
-
-        const originalIndexName = indexDto.Name;
 
         if (indexDto.Name.startsWith(index.SideBySideIndexPrefix)) {
             // trim side by side prefix
@@ -487,7 +489,7 @@ class editIndex extends viewModelBase {
 
         return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
             .execute()
-            .done(() => {
+            .done((savedIndexName) => {
                 this.resetDirtyFlag();
                 
                 this.editedIndex().name.valueHasMutated();
@@ -495,7 +497,7 @@ class editIndex extends viewModelBase {
 
                 if (!this.isEditingExistingIndex()) {
                     this.isEditingExistingIndex(true);
-                    this.editExistingIndex(originalIndexName);
+                    this.editExistingIndex(savedIndexName); 
                 }
                 /* TODO merge suggestion
                 if (isSavingMergedIndex) {
@@ -504,7 +506,7 @@ class editIndex extends viewModelBase {
                     this.mergeSuggestion(null);
                 }*/
 
-                this.updateUrl(originalIndexName, false /* TODO isSavingMergedIndex */);
+                this.updateUrl(savedIndexName, false /* TODO isSavingMergedIndex */);
             });
     }
     

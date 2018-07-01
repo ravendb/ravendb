@@ -103,7 +103,14 @@ namespace Raven.Client.Documents.Commands
             Result = JsonDeserializationClient.QueryResult(response);
 
             if (fromCache)
+            {
                 Result.DurationInMs = -1;
+                if (Result.Timings != null)
+                {
+                    Result.Timings.DurationInMs = -1;
+                    Result.Timings = null;
+                }
+            }
         }
 
         public override bool IsReadRequest => true;

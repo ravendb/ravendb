@@ -87,7 +87,7 @@ namespace Raven.Server.Web.Studio
 
                             return (IOperationResult) result;
                         });
-                    }, operationId, token);
+                    }, operationId, token: token);
                     
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {

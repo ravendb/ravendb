@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands
 
             foreach (var o in obj)
             {
-                rc.Add((string)o);
+                rc.Add(o.ToString());
             }
             return rc;
         }

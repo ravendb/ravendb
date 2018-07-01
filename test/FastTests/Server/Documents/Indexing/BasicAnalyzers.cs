@@ -17,6 +17,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -141,7 +142,7 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch,
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch,
             IncludeDocumentsCommand includeDocumentsCommand)
         {
             throw new NotImplementedException();

@@ -189,6 +189,8 @@ namespace Raven.Client.Documents.Session
         protected internal readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary =
             new Dictionary<(string, CommandType, string), ICommandData>();
 
+        public readonly bool NoTracking;
+
         public int DeferredCommandsCount => DeferredCommands.Count;
 
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
@@ -209,11 +211,12 @@ namespace Raven.Client.Documents.Session
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
+            NoTracking = options.NoTracking;
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName));
+            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions
@@ -262,7 +265,7 @@ namespace Raven.Client.Documents.Session
 
             var documentInfo = GetDocumentInfo(instance);
 
-            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters, 
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Counters,
                 out BlittableJsonReaderArray counters) == false)
                 return null;
             return counters.Select(x => x.ToString()).ToList();
@@ -412,7 +415,29 @@ more responsive application.
         /// <returns></returns>
         private object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
-            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: false);
+            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: NoTracking);
+        }
+
+        internal void RegisterExternalLoadedIntoTheSession(DocumentInfo info)
+        {
+            if (NoTracking)
+                return;
+
+            if (DocumentsById.TryGetValue(info.Id, out var existing))
+            {
+                if (ReferenceEquals(existing.Entity, info.Entity))
+                    return;
+                throw new InvalidOperationException("The document " + info.Id + " is already in the session with a different entity instance");
+            }
+            if (DocumentsByEntity.TryGetValue(info.Entity, out existing))
+            {
+                if (string.Equals(info.Id, existing.Id, StringComparison.OrdinalIgnoreCase))
+                    return;
+                throw new InvalidOperationException("Attempted to loade an entity with id " + info.Id + ", but the entity instance already exists in the session with id: " + existing.Id);
+            }
+            DocumentsByEntity.Add(info.Entity, info);
+            DocumentsById.Add(info);
+            IncludedDocumentsById.Remove(info.Id);
         }
 
         /// <summary>
@@ -426,6 +451,8 @@ more responsive application.
         /// <returns></returns>
         private object TrackEntity(Type entityType, string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
         {
+            noTracking = NoTracking || noTracking; // if noTracking is session-wide then we want to override the passed argument
+
             if (string.IsNullOrEmpty(id))
             {
                 return DeserializeFromTransformer(entityType, null, document);
@@ -583,7 +610,10 @@ more responsive application.
 
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
-            if (null == entity)
+            if (NoTracking)
+                throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
+
+            if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
             DocumentInfo value;
@@ -770,7 +800,7 @@ more responsive application.
                 DeferredCommands.Clear();
                 DeferredCommandsDictionary.Clear();
             }
-            
+
             return result;
         }
 
@@ -1156,7 +1186,7 @@ more responsive application.
         {
             DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
             DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
-            if (command.Type != CommandType.AttachmentPUT && 
+            if (command.Type != CommandType.AttachmentPUT &&
                 command.Type != CommandType.AttachmentDELETE &&
                 command.Type != CommandType.Counters)
                 DeferredCommandsDictionary[(command.Id, CommandType.ClientModifyDocumentCommand, null)] = command;
@@ -1215,16 +1245,17 @@ more responsive application.
 
         public void RegisterMissing(string id)
         {
-            _knownMissingIds.Add(id);
-        }
+            if (NoTracking)
+                return;
 
-        public void UnregisterMissing(string id)
-        {
-            _knownMissingIds.Remove(id);
+            _knownMissingIds.Add(id);
         }
 
         internal void RegisterIncludes(BlittableJsonReaderObject includes)
         {
+            if (NoTracking)
+                return;
+
             if (includes == null)
                 return;
 
@@ -1248,6 +1279,9 @@ more responsive application.
 
         public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
         {
+            if (NoTracking)
+                return;
+
             if (includePaths == null || includePaths.Count == 0)
                 return;
 
@@ -1281,11 +1315,14 @@ more responsive application.
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] countersToInclude, bool gotAll, string[] documentIds)
         {
+            if (NoTracking)
+                return;
+
             if (resultCounters == null || resultCounters.Count == 0)
             {
                 if (gotAll)
                 {
-                    // Set 'GotAl' to true in counters-cache for all documents
+                    // Set 'GotAll' to true in counters-cache for all documents
 
                     if (CountersByDocId == null)
                     {
@@ -1356,6 +1393,9 @@ more responsive application.
 
         private void RegisterMissingCounters(string[] ids, string[] counters)
         {
+            if (NoTracking)
+                return;
+
             if (counters == null)
                 return;
 
@@ -1561,6 +1601,13 @@ more responsive application.
                 DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>(session.DeferredCommandsDictionary);
                 Options = session._saveChangesOptions;
             }
+        }
+
+        protected void UpdateSessionAfterSaveChanges(BatchCommandResult result)
+        {
+            var returnedTransactionIndex = result.TransactionIndex;
+            _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
+            SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
         }
 
         public void OnAfterSaveChangesInvoke(AfterSaveChangesEventArgs afterSaveChangesEventArgs)

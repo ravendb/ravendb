@@ -8,9 +8,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackup
     {
-        private Timer _backupTimer;
         private readonly SemaphoreSlim _updateTimerSemaphore = new SemaphoreSlim(1);
         public readonly SemaphoreSlim UpdateBackupTaskSemaphore = new SemaphoreSlim(1);
+
+        public Timer BackupTimer { get; private set; }
 
         public Task RunningTask { get; set; }
 
@@ -32,8 +33,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                _backupTimer?.Dispose();
-                _backupTimer = null;
+                BackupTimer?.Dispose();
+                BackupTimer = null;
 
                 try
                 {
@@ -53,11 +54,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                if (discardIfDisabled && _backupTimer == null)
+                if (discardIfDisabled && BackupTimer == null)
                     return;
 
-                _backupTimer?.Dispose();
-                _backupTimer = newBackupTimer;
+                BackupTimer?.Dispose();
+                BackupTimer = newBackupTimer;
             }
             finally
             {
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public bool HasScheduledBackup()
         {
-            return _backupTimer != null;
+            return BackupTimer != null;
         }
     }
 }

@@ -283,18 +283,17 @@ namespace Raven.Server.Rachis
 
         static RachisConsensus()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "GlobalState", out GlobalStateSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Tag", out TagSlice);
-
-            Slice.From(StorageEnvironment.LabelsContext, "CurrentTerm", out CurrentTermSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "VotedFor", out VotedForSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastCommit", out LastCommitSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Topology", out TopologySlice);
-            Slice.From(StorageEnvironment.LabelsContext, "LastTruncated", out LastTruncatedSlice);
-
-
-            Slice.From(StorageEnvironment.LabelsContext, "Entries", out EntriesSlice);
-
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "GlobalState", out GlobalStateSlice);
+                Slice.From(ctx, "Tag", out TagSlice);
+                Slice.From(ctx, "CurrentTerm", out CurrentTermSlice);
+                Slice.From(ctx, "VotedFor", out VotedForSlice);
+                Slice.From(ctx, "LastCommit", out LastCommitSlice);
+                Slice.From(ctx, "Topology", out TopologySlice);
+                Slice.From(ctx, "LastTruncated", out LastTruncatedSlice);
+                Slice.From(ctx, "Entries", out EntriesSlice);
+            }
             /*
              
             index - int64 big endian
@@ -1166,7 +1165,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe BlittableJsonReaderObject AppendToLog(TransactionOperationContext context,
+        public unsafe (BlittableJsonReaderObject LastTopology, long LastTopologyIndex) AppendToLog(TransactionOperationContext context,
             List<RachisEntry> entries)
         {
             Debug.Assert(entries.Count > 0);
@@ -1174,7 +1173,7 @@ namespace Raven.Server.Rachis
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
             long reversedEntryIndex = -1;
-
+            long lastTopologyIndex = -1;
             BlittableJsonReaderObject lastTopology = null;
 
             using (
@@ -1203,8 +1202,9 @@ namespace Raven.Server.Rachis
 
                     firstIndexInEntriesThatWeHaveNotSeen++;
                 }
+
                 if (firstIndexInEntriesThatWeHaveNotSeen >= entries.Count)
-                    return null; // we have all of those entries in our log, so we can safely ignore them
+                    return (null, lastTopologyIndex); // we have all of those entries in our log, so we can safely ignore them
 
                 var firstEntry = entries[firstIndexInEntriesThatWeHaveNotSeen];
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
@@ -1258,6 +1258,7 @@ namespace Raven.Server.Rachis
                     {
                         lastTopology?.Dispose();
                         lastTopology = nested;
+                        lastTopologyIndex = entry.Index;
                     }
                     else
                     {
@@ -1265,7 +1266,7 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
-            return lastTopology;
+            return (lastTopology, lastTopologyIndex);
         }
 
         private void ThrowFatalError(RachisEntry firstEntry, long lastCommitIndex, long lastCommitTerm)
@@ -1852,6 +1853,16 @@ namespace Raven.Server.Rachis
         public void LeaderElectToLeaderChanged()
         {
             LeaderElected?.Invoke(null, null);
+        }
+
+        public unsafe void ClearAppendedEntriesAfter(TransactionOperationContext context, long index)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            var reversedEntryIndex = Bits.SwapBytes(index);
+            using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out Slice key))
+            {
+                table.DeleteByPrimaryKey(key, _ => true);
+            }
         }
     }
 

@@ -20,12 +20,15 @@ namespace Raven.Embedded
             if (File.Exists(serverDllPath) == false)
                 throw new FileNotFoundException("Server file was not found", serverDllPath);
 
+            if (string.IsNullOrWhiteSpace(options.DotNetPath))
+                throw new ArgumentNullException(nameof(options.DotNetPath));
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 options.CommandLineArgs.Add("--Embedded.ParentProcessId=" + currentProcess.Id);
             }
 
-            options.CommandLineArgs.Add("--License.Eula.Accepted=true");
+            options.CommandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
             options.CommandLineArgs.Add("--Setup.Mode=None");
             options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
 
@@ -36,7 +39,7 @@ namespace Raven.Embedded
                 if (options.Security.CertificatePath != null)
                 {
                     options.CommandLineArgs.Add("--Security.Certificate.Path=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePath));
-                    if(options.Security.CertificatePassword != null)
+                    if (options.Security.CertificatePassword != null)
                         options.CommandLineArgs.Add("--Security.Certificate.Password=" + CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePassword));
                 }
                 else
@@ -60,7 +63,7 @@ namespace Raven.Embedded
 
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = "dotnet",
+                FileName = options.DotNetPath,
                 Arguments = argumentsString,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,

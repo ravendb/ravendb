@@ -264,6 +264,8 @@ namespace Raven.Server.Routing
                 if (string.IsNullOrWhiteSpace(name))
                     name = feature.Certificate.ToString(false);
 
+                name += "(Thumbprint: " + feature.Certificate.Thumbprint + ")";
+
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
                     message = "The supplied client certificate '" + name + "' is unknown to the server. In order to register your certificate please contact your system administrator.";

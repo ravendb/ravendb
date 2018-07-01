@@ -127,7 +127,7 @@ namespace Raven.Server.Rachis
                                 {
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                                        _engine.Log.Info("Was notified that I was removed from the node topology, will be moving to passive mode now.");
                                     }
 
                                     _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
@@ -251,7 +251,8 @@ namespace Raven.Server.Rachis
 
                 if (entries.Count > 0)
                 {
-                    using (var lastTopology = _engine.AppendToLog(context, entries))
+                    var (lastTopology, lastTopologyIndex) = _engine.AppendToLog(context, entries);
+                    using (lastTopology)
                     {
                         if (lastTopology != null)
                         {
@@ -270,17 +271,17 @@ namespace Raven.Server.Rachis
                             else
                             {
                                 removedFromTopology = true;
+                                _engine.ClearAppendedEntriesAfter(context, lastTopologyIndex);
                             }
                         }
                     }
                 }
 
                 lastLogIndex = _engine.GetLastEntryIndex(context);
-
+               
                 var lastEntryIndexToCommit = Math.Min(
                     lastLogIndex,
                     appendEntries.LeaderCommit);
-
 
                 var lastAppliedIndex = _engine.GetLastCommitIndex(context);
 
@@ -291,6 +292,7 @@ namespace Raven.Server.Rachis
 
                 lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
                 _engine.TruncateLogBefore(context, lastTruncate);
+
                 lastCommit = lastEntryIndexToCommit;
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -394,7 +396,7 @@ namespace Raven.Server.Rachis
                     LastLogIndex = negotiation.PrevLogIndex
                 });
             }
-            _debugRecorder.Record("Matching Negotiation is over, wating for snapshot");
+            _debugRecorder.Record("Matching Negotiation is over, waiting for snapshot");
             _engine.Timeout.Defer(_connection.Source);
 
             // at this point, the leader will send us a snapshot message
@@ -413,7 +415,7 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info(
                             $"{ToString()}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
                     }
-                    //This is okay to ignore because we will just get the commited entries again and skip them
+                    //This is okay to ignore because we will just get the committed entries again and skip them
                     ReadInstallSnapshotAndIgnoreContent(context);
                 }
                 else if (InstallSnapshot(context))

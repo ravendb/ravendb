@@ -25,6 +25,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -97,6 +98,8 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ConcurrentQueue<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
+                .WithTypeMapping(new TsInterface(new TsName("dictionary<Raven.Client.Documents.Queries.Timings.QueryTimings>")),
+                    typeof(IDictionary<string, QueryTimings>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(TsPrimitive.String, typeof(LazyStringValue))
@@ -128,17 +131,25 @@ namespace TypingsGenerator
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
+            
             scripter.AddType(typeof(CollectionStatistics));
-
             scripter.AddType(typeof(BatchRequestParser.CommandData));
+            
+            // name validation
+            scripter.AddType(typeof(StudioTasksHandler.ItemType));
+            scripter.AddType(typeof(NameValidation));
 
+            // database
             scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
+            
+            // footer
             scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
             scripter.AddType(typeof(IndexQuery));
+            scripter.AddType(typeof(QueryTimings));
             scripter.AddType(typeof(DynamicQueryToIndexMatcher.Explanation));
 
             // attachments
@@ -149,6 +160,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AlertRaised));
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
+            scripter.AddType(typeof(BulkOperationResult.OperationDetails));
             scripter.AddType(typeof(DatabaseChanged));
             scripter.AddType(typeof(ClusterTopologyChanged));
             scripter.AddType(typeof(DatabaseStatsChanged));
@@ -181,6 +193,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SlowWritesDetails));
 
             // indexes
+            scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(PutIndexResult));
             scripter.AddType(typeof(IndexStats));
             scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
@@ -386,7 +400,7 @@ namespace TypingsGenerator
             
             // document size details
             scripter.AddType(typeof(DocumentSizeDetails));
-
+            
             return scripter;
         }
     }

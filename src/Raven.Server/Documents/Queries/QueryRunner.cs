@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -49,11 +50,18 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var sw = Stopwatch.StartNew();
+            Stopwatch sw = null;
+            QueryTimingsScope scope;
+            DocumentQueryResult result;
+            using (scope = query.Timings?.Start())
+            {
+                if (scope == null)
+                    sw = Stopwatch.StartNew();
 
-            var result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
+                result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
+            }
 
-            result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
+            result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
 
             return result;
         }
