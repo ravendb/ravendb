@@ -162,6 +162,10 @@
                     <div class="from-cache bg-info padding padding-sm" data-bind="visible: $root.fromCache">
                         <i class="icon-info"></i> <span>Using cached timinigs</span>
                     </div>
+                    <div class="legend" data-bind="with: graph.rootNode">
+                        <div class="legend-item" data-bind="template: { name: 'timing-item-template' }">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -194,6 +198,16 @@
         </form>
     </div>
 </div>
+
+<script type="text/html" id="timing-item-template">
+    <i class="item-rect" data-bind="style: { 'background-color': $root.graph.getColor(name) }"></i>
+    <span class="name" data-bind="text: name"></span>
+    <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+    <div data-bind="foreach: children">
+        <div class="legend-item" data-bind="template: { name: 'timing-item-template' }, visible: visible">
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="empty-query-template">
     <div data-bind="visible: !$root.isEmptyFieldsResult()">
