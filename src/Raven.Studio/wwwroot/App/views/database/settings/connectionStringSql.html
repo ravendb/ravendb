@@ -9,10 +9,10 @@
     <label class="control-label">Factory</label>
     <div class="flex-grow">
         <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
-            <span data-bind="text: factoryName()"></span> <span class="caret"></span>
+            <span data-bind="text: labelFor(factoryName())"></span> <span class="caret"></span>
         </button>
         <ul class="dropdown-menu" data-bind="foreach: $data.constructor.sqlProviders">
-            <li><a href="#" data-bind="text: $data, click: _.partial($parent.factoryName, $data)"></a></li>
+            <li><a href="#" data-bind="text: label, click: _.partial($parent.factoryName, value)"></a></li>
         </ul>
     </div>
 </div>
