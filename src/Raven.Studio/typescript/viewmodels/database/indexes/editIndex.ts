@@ -14,6 +14,7 @@ import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteB
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
+import detectIndexTypeCommand = require("commands/database/index/detectIndexTypeCommand");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
 import configurationItem = require("models/database/index/configurationItem");
@@ -487,26 +488,25 @@ class editIndex extends viewModelBase {
             indexDto.Name = indexDto.Name.substr(index.SideBySideIndexPrefix.length);
         }
 
-        return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
+        const db = this.activeDatabase();
+        
+        return new detectIndexTypeCommand(indexDto, db)
             .execute()
-            .done((savedIndexName) => {
-                this.resetDirtyFlag();
-                
-                this.editedIndex().name.valueHasMutated();
-                //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
+            .then((indexType) => {
+                return new saveIndexDefinitionCommand(indexDto, indexType === "JavaScriptMap" || indexType === "JavaScriptMapReduce", db)
+                    .execute()
+                    .done((savedIndexName) => {
+                        this.resetDirtyFlag();
 
-                if (!this.isEditingExistingIndex()) {
-                    this.isEditingExistingIndex(true);
-                    this.editExistingIndex(savedIndexName); 
-                }
-                /* TODO merge suggestion
-                if (isSavingMergedIndex) {
-                    var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                    this.deleteMergedIndexes(indexesToDelete);
-                    this.mergeSuggestion(null);
-                }*/
+                        this.editedIndex().name.valueHasMutated();
 
-                this.updateUrl(savedIndexName, false /* TODO isSavingMergedIndex */);
+                        if (!this.isEditingExistingIndex()) {
+                            this.isEditingExistingIndex(true);
+                            this.editExistingIndex(savedIndexName);
+                        }
+
+                        this.updateUrl(savedIndexName);
+                    });
             });
     }
     
@@ -533,13 +533,9 @@ class editIndex extends viewModelBase {
         this.dirtyFlag().reset();
     }
     
-    updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
+    updateUrl(indexName: string) {
         const url = appUrl.forEditIndex(indexName, this.activeDatabase());
         this.navigate(url);
-        /* TODO:merged index
-        else if (isSavingMergedIndex) {
-            super.updateUrl(url);
-        }*/
     }
 
     deleteIndex() {
