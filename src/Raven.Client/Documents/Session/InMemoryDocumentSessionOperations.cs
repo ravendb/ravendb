@@ -420,15 +420,18 @@ more responsive application.
 
         internal void RegisterExternalLoadedIntoTheSession(DocumentInfo info)
         {
-            if(DocumentsById.TryGetValue(info.Id, out var existing))
+            if (NoTracking)
+                return;
+
+            if (DocumentsById.TryGetValue(info.Id, out var existing))
             {
                 if (ReferenceEquals(existing.Entity, info.Entity))
                     return;
                 throw new InvalidOperationException("The document " + info.Id + " is already in the session with a different entity instance");
             }
-            if(DocumentsByEntity.TryGetValue(info.Entity, out existing))
+            if (DocumentsByEntity.TryGetValue(info.Entity, out existing))
             {
-                if (string.Equals(info.Id ,existing.Id, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(info.Id, existing.Id, StringComparison.OrdinalIgnoreCase))
                     return;
                 throw new InvalidOperationException("Attempted to loade an entity with id " + info.Id + ", but the entity instance already exists in the session with id: " + existing.Id);
             }
