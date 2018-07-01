@@ -62,9 +62,9 @@
                 </div>
                 <div class="pull-right-sm" data-bind="visible: !isDeleteRevision()">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" data-bind="click: toClipboard">
+                        <button type="button" class="btn btn-default" data-bind="click: toClipboard" title="Copy document content to clipboard">
                             <i class="icon-copy-to-clipboard"></i>
-                            <span>Copy to the clipboard</span>
+                            <span>Copy to Clipboard</span>
                         </button>
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="caret"></span>
@@ -72,7 +72,7 @@
                         </button>
                         <ul class="dropdown-menu">
                             <li>
-                                <a href="#" data-bind="click: generateClass, enable: !isSaveEnabled()">Copy as a C# class</a>
+                                <a href="#" data-bind="click: generateClass, enable: !isSaveEnabled()">View the C# Class </a>
                             </li>
                         </ul>
                     </div>
