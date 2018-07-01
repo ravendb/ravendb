@@ -91,10 +91,10 @@
                     </button>
                 </div>
                 <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().hasReduce">
-                    <div class="checkbox checkbox-inline flex-start">
+                    <div class="checkbox checkbox-inline flex-start" title="Output the reduce results to documents in the specified collection">
                         <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
                         <label for="outputToCollection">
-                            Output reduce to the collection
+                            Output Reduce Results to Collection
                         </label>
                     </div>
                     <div data-bind="validationElement: editedIndex().reduceToCollectionName">
@@ -119,7 +119,7 @@
                 <li role="presentation" id="additionalSourcesTab">
                     <a href="#additionalSources" aria-controls="additionalSources" role="tab" data-toggle="tab">
                         <i class="icon-chash"></i>
-                        <span>Additional sources</span> 
+                        <span>Additional Sources</span> 
                         <span class="label label-primary margin-left margin-left-sm" data-bind="text: editedIndex().additionalSources().length || undefined"></span>
                     </a>
                 </li>
