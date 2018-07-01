@@ -37,6 +37,26 @@ namespace Raven.Server.Rachis
         }
     }
 
+    public class RachisTopologyChangeException : RachisException
+    {
+        protected RachisTopologyChangeException()
+        {
+        }
+
+        protected RachisTopologyChangeException(string message) : base(message)
+        {
+        }
+
+        protected RachisTopologyChangeException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        public static void Throw(string msg)
+        {
+            throw new RachisTopologyChangeException(msg);
+        }
+    }
+
     public class RachisConcurrencyException : RachisException
     {
         public RachisConcurrencyException()

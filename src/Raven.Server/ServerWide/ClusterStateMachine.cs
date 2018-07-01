@@ -793,14 +793,7 @@ namespace Raven.Server.ServerWide
                 RemovedNode = nodeTag
             }.ToJson(context);
 
-            var index = _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-            {
-                if (tx is LowLevelTransaction llt && llt.Committed)
-                {
-                    _parent.CurrentLeader.AddToEntries(index, null);
-                }
-            };
+            _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
         }
 
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
