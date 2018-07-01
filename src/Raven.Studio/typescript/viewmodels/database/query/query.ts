@@ -576,7 +576,7 @@ class query extends viewModelBase {
         this.updateUrl(url);
     }
 
-    runQuery() {
+    runQuery(optionalSavedQueryName?: string) {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
@@ -686,7 +686,7 @@ class query extends viewModelBase {
                             this.onTimingsLoaded(queryResults.timings);
                         }
                         this.saveLastQuery("");
-                        this.saveRecentQuery();
+                        this.saveRecentQuery(optionalSavedQueryName);
 
                         this.setupDisableReasons(); 
                     })
@@ -744,10 +744,10 @@ class query extends viewModelBase {
         messagePublisher.reportSuccess("Query saved successfully");
     }
 
-    private saveRecentQuery() {
-        const name = this.getRecentQueryName();
+    private saveRecentQuery(optionalSavedQueryName?: string) {
+        const name = optionalSavedQueryName || this.getRecentQueryName();
         this.criteria().name(name);
-        this.saveQueryInStorage(true);
+        this.saveQueryInStorage(!optionalSavedQueryName);
     }
 
     private saveQueryInStorage(isRecent: boolean) {
@@ -776,11 +776,12 @@ class query extends viewModelBase {
             }
         } else {
             const existing = this.savedQueries().find(x => x.name === doc.name);
+            
             if (existing) {
-                this.savedQueries.replace(existing, doc);
-            } else {
-                this.savedQueries.unshift(doc);
+                this.savedQueries.remove(existing);                    
             }
+
+            this.savedQueries.unshift(doc);
         }
     }
 
@@ -792,7 +793,6 @@ class query extends viewModelBase {
     }
 
     private getRecentQueryName(): string {
-
         const collectionIndexName = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
 
         return query.recentKeyword + " (" + collectionIndexName + ")";
@@ -809,14 +809,15 @@ class query extends viewModelBase {
 
     useQuery() {
         const queryDoc = this.criteria();
-        queryDoc.copyFrom(this.previewItem());
+        const previewItem  = this.previewItem();
+        queryDoc.copyFrom(previewItem);
         
         // Reset settings
         this.cacheEnabled(true);
         this.criteria().indexEntries(false);
         this.criteria().showFields(false);
         
-        this.runQuery();
+        this.runQuery(previewItem.recentQuery ? null : previewItem.name);
     }
 
     removeQuery(item: storedQueryDto) {
