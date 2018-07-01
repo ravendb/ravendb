@@ -1111,6 +1111,27 @@ namespace Raven.Client.Http
                 nodeStatus.StartTimer();
         }
 
+        internal Task CheckNodeStatusNow(string tag)
+        {
+            var copy = TopologyNodes;
+            if (copy == null)
+                throw new ArgumentException("There is no cluster topology available.");
+
+            int i;
+            for (i = 0; i < copy.Count; i++)
+            {
+                if (copy[i].ClusterTag == tag)
+                    break;
+            }
+            if (i == copy.Count)
+            {
+                throw new ArgumentException($"Node {tag} was not found in the cluster topology.");
+            }
+
+            var nodeStatus = new NodeStatus(this, i, copy[i]);
+            return CheckNodeStatusCallback(nodeStatus);
+        }
+
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
         {
             var copy = TopologyNodes;
