@@ -92,6 +92,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "timings", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Timings;
 
+            if (string.Equals(methodName, "counters", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Counters;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

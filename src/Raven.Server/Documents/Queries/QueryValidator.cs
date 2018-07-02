@@ -92,5 +92,32 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException($"Method 'point()' expects value token as an argument at index {i}, got {arguments[i]} type", queryText, parameters);
             }
         }
+
+        public static void ValidateIncludeCounter(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
+        {
+            if (arguments.Count == 0)
+                return;
+
+            switch (arguments[0])
+            {
+                case ValueExpression _:
+                case FieldExpression _:
+                    break;
+                default:
+                    throw new InvalidQueryException("Method 'counters()' expects value token (counter name) or field token (source alias) " +
+                                                    $"as an argument at index 0, got {arguments[0]} type", queryText, parameters);
+            }
+
+            for (var i = 1; i < arguments.Count; i++)
+            {
+                switch (arguments[i])
+                {
+                    case ValueExpression _:
+                        break;
+                    default:
+                        throw new InvalidQueryException($"Method 'counters()' expects value token as an argument at index {i}, got {arguments[0]} type", queryText, parameters);
+                }
+            }
+        }
     }
 }

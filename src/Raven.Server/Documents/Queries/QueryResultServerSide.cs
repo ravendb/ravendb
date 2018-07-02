@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.Explanation;
 
@@ -30,6 +31,10 @@ namespace Raven.Server.Documents.Queries
         public abstract bool SupportsExplanations { get; }
 
         public bool NotModified { get; protected set; }
+
+        public abstract void AddCounterIncludes(Dictionary<string, List<CounterDetail>> dictionary);
+
+        public abstract Dictionary<string, List<CounterDetail>> GetCounterIncludes();
     }
 
     public abstract class QueryResultServerSide : QueryResultServerSide<Document>

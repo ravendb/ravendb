@@ -2108,12 +2108,20 @@ namespace Raven.Server.Documents.Indexes
 
                                 var totalResults = new Reference<int>();
                                 var skippedResults = new Reference<int>();
+                                IncludeCountersCommand includeCountersCommand = null;
 
                                 var fieldsToFetch = new FieldsToFetch(query, Definition);
 
                                 var includeDocumentsCommand = new IncludeDocumentsCommand(
                                     DocumentDatabase.DocumentsStorage, documentsContext,
                                     query.Metadata.Includes);
+	                            if (query.Metadata.HasCounters)
+	                            {
+                                    includeCountersCommand = new IncludeCountersCommand(
+	                                    DocumentDatabase, 
+	                                    documentsContext,
+	                                    query.Metadata.CounterIncludes.Counters);
+	                            }
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
@@ -2168,6 +2176,8 @@ namespace Raven.Server.Documents.Indexes
 
                                         using (gatherScope?.Start())
                                             includeDocumentsCommand.Gather(document.Result);
+
+                                    	includeCountersCommand?.Fill(document.Result);
                                     }
                                 }
                                 catch (Exception e)
@@ -2184,6 +2194,8 @@ namespace Raven.Server.Documents.Indexes
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                                 resultToFill.SkippedResults = skippedResults.Value;
                                 resultToFill.IncludedPaths = query.Metadata.Includes;
+                            	resultToFill.AddCounterIncludes(includeCountersCommand?.Results);
+                                resultToFill.IncludedCounterNames = includeCountersCommand?.CountersToGetByDocId;
                             }
                         }
 

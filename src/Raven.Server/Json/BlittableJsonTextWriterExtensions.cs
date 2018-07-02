@@ -296,9 +296,39 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
 
+            var counters = result.GetCounterIncludes();
+            if (counters != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.CounterIncludes));
+                await writer.WriteCountersAsync(context, counters);
+
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.IncludedCounterNames));
+                WriteIncludedCounterNames(writer, result);
+            }
+
             writer.WriteEndObject();
             return numberOfResults;
 
+        }
+
+        private static void WriteIncludedCounterNames(AsyncBlittableJsonTextWriter writer, DocumentQueryResult result)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in result.IncludedCounterNames)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WriteArray(kvp.Key, kvp.Value);
+            }
+
+            writer.WriteEndObject();
         }
 
         public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, bool partial = false)

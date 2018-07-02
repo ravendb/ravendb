@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
 
@@ -38,6 +39,16 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override void AddExplanation(ExplanationResult explanationResult)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void AddCounterIncludes(Dictionary<string, List<CounterDetail>> dictionary)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
         {
             throw new NotSupportedException();
         }
