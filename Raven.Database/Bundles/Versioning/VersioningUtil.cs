@@ -19,7 +19,7 @@ namespace Raven.Bundles.Versioning
         public static VersioningConfiguration GetDocumentVersioningConfiguration(this DocumentDatabase database, RavenJObject metadata)
         {
             ConfigurationDocument<VersioningConfiguration> config = null;
-            var entityName = metadata.Value<string>("Raven-Entity-Name");
+            var entityName = metadata?.Value<string>("Raven-Entity-Name");
             if (entityName != null)
                 config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/" + entityName);
 
