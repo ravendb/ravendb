@@ -221,6 +221,15 @@ class genUtils {
         return _.floor(count / 1000000, 2).toLocaleString();
     }
 
+    static getSelectedText() {
+        if (window.getSelection) {
+            return window.getSelection().toString();
+        } else if ((document as any).selection) {
+            return (document as any).selection.createRange().text;
+        }
+        return '';
+    }​
+    
     /***  String Methods ***/
 
     static trimMessage(message: any) {

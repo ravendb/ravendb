@@ -6,6 +6,8 @@ import eventsCollector = require("common/eventsCollector");
 import listViewController = require("widgets/listView/listViewController");
 import fileDownloader = require("common/fileDownloader");
 import virtualListRow = require("widgets/listView/virtualListRow");
+import copyToClipboard = require("common/copyToClipboard");
+import generalUtils = require("common/generalUtils");
 
 class heightCalculator {
     
@@ -65,6 +67,7 @@ class adminLogs extends viewModelBase {
     
     filter = ko.observable<string>("");
     onlyErrors = ko.observable<boolean>(false);
+    mouseDown = ko.observable<boolean>(false);
 
     headerValuePlaceholder: KnockoutComputed<string>;
     
@@ -102,7 +105,15 @@ class adminLogs extends viewModelBase {
                 case "Logger":
                     return "Logger name (ex. Raven.Server.Documents.)"
             }
-        })
+        });
+        this.mouseDown.subscribe(pressed => {
+            if (!pressed) {
+                const selected = generalUtils.getSelectedText();
+                if (selected) {
+                    copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");    
+                }
+            }
+        });
     }
     
     private initValidation() {
@@ -231,7 +242,6 @@ class adminLogs extends viewModelBase {
         data = data.trim();
         
         if (!this.headerSeen) {
-            
             this.headerSeen = true;
             return;
         }
@@ -245,6 +255,12 @@ class adminLogs extends viewModelBase {
     }
     
     private onAppendPendingMessages() {
+        if (this.mouseDown()) {
+            // looks like user wants to select something - wait with updates 
+            this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 700);
+            return;
+        }
+        
         this.appendElementsTask = null;
 
         this.filterLogEntries(false);
@@ -329,6 +345,11 @@ class adminLogs extends viewModelBase {
 
     onOpenOptions() {
         this.editedConfiguration().maxEntries(this.configuration().maxEntries());
+    }
+    
+    updateMouseStatus(pressed: boolean) {
+        this.mouseDown(pressed);
+        return true;  // we want bubble and execute default action (selection)
     }
 }
 
