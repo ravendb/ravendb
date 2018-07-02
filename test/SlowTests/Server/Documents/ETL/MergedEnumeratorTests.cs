@@ -11,7 +11,7 @@ namespace SlowTests.Server.Documents.ETL
         [Fact]
         public void Returns_items_in_order()
         {
-            using (var merged = new ExtractedItemsEnumerator<Item>(new EtlStatsScope(new EtlRunStats())))
+            using (var merged = new ExtractedItemsEnumerator<Item>(new EtlStatsScope(new EtlRunStats()), EtlItemType.Document))
             {
                 var items1 = new List<Item>
                 {

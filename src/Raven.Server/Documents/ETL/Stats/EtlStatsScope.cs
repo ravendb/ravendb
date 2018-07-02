@@ -21,9 +21,9 @@ namespace Raven.Server.Documents.ETL.Stats
             return new EtlStatsScope(stats, start);
         }
 
-        public int NumberOfExtractedItems => _stats.NumberOfExtractedItems;
+        public Dictionary<EtlItemType, int> NumberOfExtractedItems => _stats.NumberOfExtractedItems;
 
-        public int NumberOfTransformedItems => _stats.NumberOfTransformedItems;
+        public Dictionary<EtlItemType, int> NumberOfTransformedItems => _stats.NumberOfTransformedItems;
 
         public Dictionary<EtlItemType, long> LastTransformedEtags => _stats.LastTransformedEtags;
 
@@ -35,14 +35,14 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public string BatchCompleteReason => _stats.BatchCompleteReason;
 
-        public void RecordExtractedItem()
+        public void RecordExtractedItem(EtlItemType itemType)
         {
-            _stats.NumberOfExtractedItems++;
+            _stats.NumberOfExtractedItems[itemType]++;
         }
 
-        public void RecordTransformedItem()
+        public void RecordTransformedItem(EtlItemType itemType)
         {
-            _stats.NumberOfTransformedItems++;
+            _stats.NumberOfTransformedItems[itemType]++;
         }
 
         public void RecordLastTransformedEtag(long etag, EtlItemType type)

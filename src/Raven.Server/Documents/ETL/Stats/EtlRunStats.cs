@@ -4,9 +4,17 @@ namespace Raven.Server.Documents.ETL.Stats
 {
     public class EtlRunStats
     {
-        public int NumberOfExtractedItems;
+        public Dictionary<EtlItemType, int> NumberOfExtractedItems = new Dictionary<EtlItemType, int>()
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
-        public int NumberOfTransformedItems;
+        public Dictionary<EtlItemType, int> NumberOfTransformedItems = new Dictionary<EtlItemType, int>()
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
         public Dictionary<EtlItemType, long> LastTransformedEtags = new Dictionary<EtlItemType, long>
         {

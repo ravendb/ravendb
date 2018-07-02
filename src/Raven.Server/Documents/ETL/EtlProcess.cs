@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.ETL
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
             using (var scope = new DisposableScope())
-            using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
+            using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats, type))
             {
                 switch (type)
                 {
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.ETL
 
                             Statistics.TransformationSuccess();
 
-                            stats.RecordTransformedItem();
+                            stats.RecordTransformedItem(item.Type);
                             stats.RecordLastTransformedEtag(item.Etag, item.Type);
                             stats.RecordChangeVector(item.ChangeVector);
                         }
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents.ETL
 
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
-                    Statistics.LoadSuccess(stats.NumberOfTransformedItems);
+                    Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value));
                 }
                 catch (Exception e)
                 {
@@ -328,7 +328,7 @@ namespace Raven.Server.Documents.ETL
 
                     EnterFallbackMode();
 
-                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems);
+                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems.Sum(x => x.Value));
                 }
             }
         }
@@ -367,10 +367,11 @@ namespace Raven.Server.Documents.ETL
                 // although need to respect below criteria
             }
 
-            if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedItems ||
-                (currentItem.Type == EtlItemType.Document && stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments))
+            if (currentItem.Type == EtlItemType.Document &&
+                stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
+                stats.NumberOfExtractedItems.Sum(x => x.Value) >= Database.Configuration.Etl.MaxNumberOfExtractedItems)
             {
-                var reason = $"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items";
+                var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value}"))})";
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info(reason);
@@ -417,7 +418,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
-            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
+            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems.Sum(x => x.Value));
         }
 
         public override void Reset()
@@ -706,21 +707,20 @@ namespace Raven.Server.Documents.ETL
             var message = new StringBuilder();
 
             message.Append(
-                $"{Tag} process '{Name}' extracted {stats.NumberOfExtractedItems} docs, transformed and loaded {stats.NumberOfTransformedItems} docs in {stats.Duration}. ");
+                $"{Tag} process '{Name}' processed the following number of items: ");
 
-            foreach (var transformed in stats.LastTransformedEtags)
+            foreach (var extracted in stats.NumberOfExtractedItems)
             {
-                if (transformed.Value > 0)
-                    message.Append($"{nameof(stats.LastTransformedEtags)}[{transformed.Key}]: {transformed.Value}. ");
+                if (extracted.Value > 0)
+                    message.Append($"{extracted.Key} - {extracted.Value} (last transformed etag: {stats.LastTransformedEtags[extracted.Key]}");
+
+                if (stats.LastFilteredOutEtags[extracted.Key] > 0)
+                    message.Append($", last filtered etag: {stats.LastFilteredOutEtags[extracted.Key]}");
+
+                message.Append("), ");
             }
 
-            message.Append($"{nameof(stats.LastLoadedEtag)}: {stats.LastLoadedEtag}. ");
-
-            foreach (var filtered in stats.LastFilteredOutEtags)
-            {
-                if (filtered.Value > 0)
-                    message.Append($"{nameof(stats.LastFilteredOutEtags)}[{filtered.Key}]: {filtered.Value}. ");
-            }
+            message.Append($" in {stats.Duration} (last loaded etag: {stats.LastLoadedEtag})");
 
             if (stats.BatchCompleteReason != null)
                 message.Append($"Batch completion reason: {stats.BatchCompleteReason}");

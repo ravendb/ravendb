@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public Dictionary<EtlItemType, long> LastTransformedEtag { get; set; }
 
-        public int NumberOfExtractedItems { get; set; }
+        public Dictionary<EtlItemType, int> NumberOfExtractedItems { get; set; }
 
         public string BatchCompleteReason { get; set; }
     }
