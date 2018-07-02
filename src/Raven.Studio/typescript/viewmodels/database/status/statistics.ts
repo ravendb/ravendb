@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getDatabaseDetailedStatsCommand = require("commands/resources/getDatabaseDetailedStatsCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
@@ -62,7 +62,7 @@ class statistics extends viewModelBase {
     fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         const db = this.activeDatabase();
 
-        const dbStatsTask = new getDatabaseStatsCommand(db)
+        const dbStatsTask = new getDatabaseDetailedStatsCommand(db)
             .execute();
 
         const indexesStatsTask = new getIndexesStatsCommand(db)
@@ -70,9 +70,9 @@ class statistics extends viewModelBase {
  
         const dbDataLocationTask = new getStorageReportCommand(db)
             .execute();
-
+        
         return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask)
-            .done(([dbStats]: [Raven.Client.Documents.Operations.DatabaseStatistics],
+            .done(([dbStats]: [Raven.Client.Documents.Operations.DetailedDatabaseStatistics],
                    [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]],
                    [dbLocation]: [storageReportDto]) => {
                 this.processStatsResults(dbStats, indexesStats);
@@ -86,7 +86,7 @@ class statistics extends viewModelBase {
         this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
     }
 
-    processStatsResults(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexesStats: Raven.Client.Documents.Indexes.IndexStats[]) {
+    processStatsResults(dbStats: Raven.Client.Documents.Operations.DetailedDatabaseStatistics, indexesStats: Raven.Client.Documents.Indexes.IndexStats[]) {
         this.stats(new statsModel(dbStats, indexesStats));
     }
     
