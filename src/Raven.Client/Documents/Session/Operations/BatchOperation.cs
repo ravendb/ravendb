@@ -122,11 +122,6 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void UpdateCounterValuesInCache(BlittableJsonReaderArray counters, string docId)
         {
-            if (_session.CountersByDocId == null)
-            {
-                _session.CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
-            }
-
             if (_session.CountersByDocId.TryGetValue(docId, out var cache) == false)
             {
                 cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);

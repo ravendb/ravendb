@@ -23,6 +23,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -78,6 +79,28 @@ namespace Raven.Client.Documents
             var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path)));
+            return (IRavenQueryable<TResult>)queryable;
+        }
+
+        /// <summary>
+        /// Includes the specified documents and/or counters in the query
+        /// </summary>
+        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+        /// <param name="source">The source for querying</param>
+        /// <param name="includes">Specifies the documents and/or counters to include </param>
+        /// <returns></returns>
+        public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Action<IIncludeBuilder<TResult>> includes)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, 
+                Expression.Constant(includes)));
+
             return (IRavenQueryable<TResult>)queryable;
         }
 

@@ -112,7 +112,15 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             if (NoTracking == false)
+            {
                 _session.RegisterMissingIncludes(queryResult.Results, queryResult.Includes, queryResult.IncludedPaths);
+                if (queryResult.CounterIncludes != null)
+                {
+                    _session.RegisterCounters(
+                        queryResult.CounterIncludes,
+                        queryResult.IncludedCounterNames);
+                }
+            }
 
             return list;
         }

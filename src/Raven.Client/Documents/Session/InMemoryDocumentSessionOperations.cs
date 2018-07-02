@@ -124,8 +124,10 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
         /// </summary>
-        protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId;
+        protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId =>
+            _countersByDocId ?? (_countersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase));
 
+        private Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> _countersByDocId;
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -539,7 +541,7 @@ more responsive application.
 
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
-            CountersByDocId?.Remove(value.Id);
+            _countersByDocId?.Remove(value.Id);
             _knownMissingIds.Add(value.Id);
         }
 
@@ -579,7 +581,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
-            CountersByDocId?.Remove(id);
+            _countersByDocId?.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
@@ -1132,7 +1134,7 @@ more responsive application.
             {
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
-                CountersByDocId?.Remove(documentInfo.Id);
+                _countersByDocId?.Remove(documentInfo.Id);
             }
 
             DeletedEntities.Remove(entity);
@@ -1148,8 +1150,7 @@ more responsive application.
             DeletedEntities.Clear();
             DocumentsById.Clear();
             _knownMissingIds.Clear();
-            IncludedDocumentsById.Clear();
-            CountersByDocId?.Clear();
+            _countersByDocId?.Clear();
         }
 
         /// <summary>
@@ -1313,71 +1314,47 @@ more responsive application.
             }
         }
 
-        internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] countersToInclude, bool gotAll, string[] documentIds)
+
+        internal void RegisterCounters(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude)
         {
             if (NoTracking)
                 return;
 
             if (resultCounters == null || resultCounters.Count == 0)
             {
-                if (gotAll)
+                SetGotAllInCacheIfNeeded(countersToInclude);
+            }
+            else
+            {
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                foreach (var propertyIndex in resultCounters.GetPropertiesByInsertionOrder())
                 {
-                    // Set 'GotAll' to true in counters-cache for all documents
+                    resultCounters.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                    if (propertyDetails.Value == null)
+                        continue;
+                    var gotAll = countersToInclude.TryGetValue(propertyDetails.Name, out var counters) &&
+                                 counters.Length == 0;
+                    var bjra = (BlittableJsonReaderArray)propertyDetails.Value;
+                    if (bjra.Length == 0 && gotAll == false)
+                        continue;
 
-                    if (CountersByDocId == null)
-                    {
-                        CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    foreach (var id in documentIds)
-                    {
-                        if (CountersByDocId.TryGetValue(id, out var cache) == false)
-                        {
-                            cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-                            CountersByDocId.Add(id, cache);
-                        }
-                        cache.GotAll = true;
-                    }
-
-                    return;
+                    RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra);
                 }
 
-                RegisterMissingCounters(documentIds, countersToInclude);
-                return;
             }
 
-            if (CountersByDocId == null)
-            {
-                CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
-            }
+            RegisterMissingCounters(countersToInclude);
 
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var propertyIndex in resultCounters.GetPropertiesByInsertionOrder())
-            {
-                resultCounters.GetPropertyByIndex(propertyIndex, ref propertyDetails);
-
-                if (propertyDetails.Value == null)
-                    continue;
-                var bjra = (BlittableJsonReaderArray)propertyDetails.Value;
-                if (bjra.Length == 0)
-                    continue;
-
-                RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra);
-            }
-
-
-            RegisterMissingCounters(documentIds, countersToInclude);
         }
 
-        private void RegisterCountersForDocument(LazyStringValue id, bool gotAll, BlittableJsonReaderArray bjra)
+        private void RegisterCountersForDocument(string id, bool gotAll, BlittableJsonReaderArray counters)
         {
             if (CountersByDocId.TryGetValue(id, out var cache) == false)
             {
                 cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-                CountersByDocId.Add(id, cache);
             }
 
-            foreach (BlittableJsonReaderObject counterBlittable in bjra)
+            foreach (BlittableJsonReaderObject counterBlittable in counters)
             {
                 if (counterBlittable.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
                     counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
@@ -1385,35 +1362,43 @@ more responsive application.
                 cache.Values[name] = value;
             }
 
-            if (gotAll)
+            cache.GotAll = gotAll;
+            CountersByDocId[id] = cache;
+        }
+
+        private void SetGotAllInCacheIfNeeded(Dictionary<string, string[]> countersToInclude)
+        {
+            foreach (var kvp in countersToInclude)
             {
+                if (kvp.Value.Length != 0)
+                    continue;
+
+                if (CountersByDocId.TryGetValue(kvp.Key, out var cache) == false)
+                {
+                    cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                }
+
                 cache.GotAll = true;
+                CountersByDocId[kvp.Key] = cache;
             }
         }
 
-        private void RegisterMissingCounters(string[] ids, string[] counters)
+        private void RegisterMissingCounters(Dictionary<string, string[]> countersToInclude)
         {
-            if (NoTracking)
+            if (NoTracking ||
+                countersToInclude == null)
                 return;
 
-            if (counters == null)
-                return;
-
-            if (CountersByDocId == null)
+            foreach (var kvp in countersToInclude)
             {
-                CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
-            }
-
-            foreach (var id in ids)
-            {
-                foreach (var counter in counters)
+                if (CountersByDocId.TryGetValue(kvp.Key, out var cache) == false)
                 {
-                    if (CountersByDocId.TryGetValue(id, out var cache) == false)
-                    {
-                        cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-                        CountersByDocId.Add(id, cache);
-                    }
+                    cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                    CountersByDocId.Add(kvp.Key, cache);
+                }
 
+                foreach (var counter in kvp.Value)
+                {
                     if (cache.Values.ContainsKey(counter))
                         continue;
 

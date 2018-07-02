@@ -24,6 +24,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -1083,9 +1084,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Include):
                     VisitExpression(expression.Arguments[0]);
 
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includePath);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includeArg);
 
-                    _documentQuery.Include((string)includePath);
+                    if (includeArg is Action<IIncludeBuilder<T>> includeBuilder)
+                    {
+                        _documentQuery.Include(includeBuilder);
+                    }
+                    else if (includeArg is string str)
+                    {
+                        _documentQuery.Include(str);
+                    }
                     break;
                 case nameof(LinqExtensions.OrderBy):
                 case nameof(LinqExtensions.ThenBy):

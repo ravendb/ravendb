@@ -73,7 +73,9 @@ namespace Raven.Client.Documents.Queries
                 LastQueryTime = LastQueryTime,
                 DurationInMs = DurationInMs,
                 ResultEtag = ResultEtag,
-                NodeTag = NodeTag
+                NodeTag = NodeTag,
+                CounterIncludes = CounterIncludes,
+                IncludedCounterNames = IncludedCounterNames
             };
         }
     }
