@@ -285,6 +285,10 @@ interface pagedResult<T> {
     additionalResultInfo?: any; 
 }
 
+interface testSubscriptionPagedResult<T> extends pagedResult<T> {
+    includes: dictionary<any>;
+}
+
 interface pagedResultExtended<T> extends pagedResult<T> {
     includes: dictionary<any>;
     highlightings?: dictionary<dictionary<Array<string>>>;
