@@ -514,7 +514,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (globalEtag > _startEtag)
                                     continue;
                             }
-                            
+
                             AssertCloseWhenNoDocsLeft();
 
                             if (await WaitForChangedDocuments(replyFromClientTask))
@@ -705,19 +705,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                             writer.WriteComma();
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                            var includedDocs = new List<Document>();
-                            includeCmd.Fill(includedDocs);
-                            writer.WriteStartObject();
-                            bool first = true;
-                            foreach (var include in includedDocs)
-                            {
-                                if (first == false)
-                                    writer.WriteComma();
-                                first = false;
-                                writer.WritePropertyName(include.Id);
-                                writer.WriteDocument(docsContext, include, metadataOnly: false);
-                            }
-                            writer.WriteEndObject();
+                            var includes = new List<Document>();
+                            includeCmd.Fill(includes);
+                            writer.WriteIncludes(docsContext, includes);
                             writer.WriteEndObject();
                         }
 
@@ -899,14 +889,14 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     case OperatorType.Equal:
                     case OperatorType.NotEqual:
-                        if(!(filter.Left is FieldExpression fe) || fe.Compound.Count != 1)
+                        if (!(filter.Left is FieldExpression fe) || fe.Compound.Count != 1)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         if (string.Equals(fe.Compound[0], "Revisions", StringComparison.OrdinalIgnoreCase) == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         if (filter.Right is ValueExpression ve)
                         {
                             revisions = filter.Operator == OperatorType.Equal && ve.Value == ValueTokenType.True;
-                            if(ve.Value != ValueTokenType.True && ve.Value != ValueTokenType.False)
+                            if (ve.Value != ValueTokenType.True && ve.Value != ValueTokenType.False)
                                 throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         }
                         else
@@ -974,7 +964,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.Load != null)
             {
                 Debug.Assert(q.From.Alias != null);
-                
+
                 var fromAlias = q.From.Alias.Value;
                 foreach (var tuple in q.Load)
                 {

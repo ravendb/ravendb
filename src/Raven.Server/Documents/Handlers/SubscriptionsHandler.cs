@@ -108,11 +108,9 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteEndArray();
                         writer.WriteComma();
                         writer.WritePropertyName("Includes");
-                        writer.WriteStartArray();
                         var includes = new List<Document>();
                         includeCmd.Fill(includes);
-                        writer.WriteDocuments(context, includes, false, out _);
-                        writer.WriteEndArray();
+                        writer.WriteIncludes(context, includes);
                         writer.WriteEndObject();
                     }
                 }
