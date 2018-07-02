@@ -103,10 +103,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }
 
                 var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await CreateDataAndIndexes(store));
-                Assert.Contains("In order to create the 'DailyInvoicesIndex' index " +
-                                "which would output reduce results to documents in the 'DailyInvoices' collection, " +
-                                "you firstly need to delete all of the documents in the 'DailyInvoices' collection" +
-                                " (currently have 1 document).", exception.Message);
+                Assert.Contains("Index 'DailyInvoicesIndex' is defined to output the Reduce results to documents in Collection 'DailyInvoices'." +
+                                " This collection currently has 1 document . All documents in Collection 'DailyInvoices' must be deleted first.", exception.Message);
             }
         }
 
