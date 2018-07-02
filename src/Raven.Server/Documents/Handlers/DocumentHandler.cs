@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Handlers
 
                 documents.Add(document);
                 includeDocs.Gather(document);
-                includeCounters?.Fill(id);
+                includeCounters?.Fill(document);
             }
 
             includeDocs.Fill(includes);

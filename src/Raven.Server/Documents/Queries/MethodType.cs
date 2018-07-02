@@ -39,6 +39,8 @@
 
         Timings,
 
+        Counters,
+
         Unknown,
     }
 }

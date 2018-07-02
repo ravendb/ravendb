@@ -13,6 +13,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
@@ -99,6 +100,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasTimings { get; private set; }
 
+        public bool HasCounters { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
@@ -126,6 +129,8 @@ namespace Raven.Server.Documents.Queries
         public HighlightingField[] Highlightings;
 
         public ExplanationField Explanation;
+
+        public CounterIncludesField CounterIncludes;
 
         public readonly ulong CacheKey;
 
@@ -381,6 +386,17 @@ namespace Raven.Server.Documents.Queries
                                 QueryValidator.ValidateTimings(me.Arguments, QueryText, parameters);
                                 HasTimings = true;
                                 break;
+                            case MethodType.Counters:
+                                QueryValidator.ValidateIncludeCounter(me.Arguments, QueryText, parameters);
+
+                                if (CounterIncludes == null)
+                                {
+                                    CounterIncludes = new CounterIncludesField();
+                                    HasCounters = true;
+                                }
+
+                                AddToCounterIncludes(CounterIncludes, me, parameters);
+                                break;
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
                         }
@@ -484,6 +500,55 @@ namespace Raven.Server.Documents.Queries
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
             SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
+        }
+
+        private void AddToCounterIncludes(CounterIncludesField counterIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
+        {
+            string sourcePath = null;
+            var start = 0;
+            if (expression.Arguments.Count > 0 &&
+                expression.Arguments[0] is FieldExpression fe)
+            {
+                start = 1;
+
+                if (Query.From.Alias?.Value != fe.FieldValue &&
+                    RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
+                {
+                    sourcePath = value.PropertyPath;
+                }
+            }
+
+            if (start == expression.Arguments.Count)
+            {
+                counterIncludes.Counters[sourcePath ?? string.Empty] = new HashSet<string>();
+                return;
+            }
+
+            for (var index = start; index < expression.Arguments.Count; index++)
+            {
+                if (!(expression.Arguments[index] is ValueExpression vt))
+                    continue;
+
+                if (vt.Value == ValueTokenType.Parameter)
+                {
+                    if (parameters == null)
+                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", QueryText, null);
+
+                    if (parameters.TryGetMember(vt.Token.Value, out var counter) == false)
+                        throw new InvalidQueryException($"Value of parameter '{vt.Token.Value}' was not provided", QueryText, parameters);
+
+                    if (counter is BlittableJsonReaderArray bjra)
+                    {
+                        counterIncludes.AddCounters(bjra, sourcePath);
+                        continue;
+                    }
+
+                    counterIncludes.AddCounter(counter.ToString(), sourcePath);
+                    continue;
+                }
+
+                counterIncludes.AddCounter(vt.Token.Value, sourcePath);
+            }
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
