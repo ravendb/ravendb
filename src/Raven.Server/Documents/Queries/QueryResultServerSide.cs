@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 
 namespace Raven.Server.Documents.Queries
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Queries
 
         public bool NotModified { get; protected set; }
 
-        public abstract void AddCounterIncludes(Dictionary<string, List<CounterDetail>> dictionary);
+        public abstract void AddCounterIncludes(IncludeCountersCommand includeCountersCommand);
 
         public abstract Dictionary<string, List<CounterDetail>> GetCounterIncludes();
     }
