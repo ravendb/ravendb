@@ -359,6 +359,8 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
+            Configuration.CheckDirectoryPermissions();
+
             LowMemoryNotification.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.MinimumFreeCommittedMemory, ServerShutdown);
 
             PoolOfThreads.GlobalRavenThreadPool.SetMinimumFreeCommittedMemory(Configuration.Memory.MinimumFreeCommittedMemory);
@@ -1481,6 +1483,12 @@ namespace Raven.Server.ServerWide
 
             Debug.Assert(topology != null);
 
+            if(clusterTopology.AllNodes.Count == 0)
+                throw new InvalidOperationException($"Database {record.DatabaseName} cannot be created, because the cluster topology is empty (shouldn't happen)!");
+
+            if (record.Topology.ReplicationFactor == 0)
+                throw new InvalidOperationException($"Database {record.DatabaseName} cannot be created with replication factor of 0.");
+
             var clusterNodes = clusterTopology.Members.Keys
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
@@ -1492,6 +1500,13 @@ namespace Raven.Server.ServerWide
                     throw new InvalidOperationException(
                         $"Database {record.DatabaseName} is encrypted and requires {topology.ReplicationFactor} node(s) which supports SSL. There are {clusterNodes.Count} such node(s) available in the cluster.");
             }
+
+            if (clusterNodes.Count < topology.ReplicationFactor)
+            {
+                throw new InvalidOperationException(
+                    $"Database {record.DatabaseName} requires {topology.ReplicationFactor} node(s) but there are {clusterNodes.Count} nodes available in the cluster.");
+            }
+
 
             var disconnectedNodes = new List<string>();
             foreach (var kvp in GetNodesStatuses())

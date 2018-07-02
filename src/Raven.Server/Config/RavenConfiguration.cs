@@ -184,8 +184,6 @@ namespace Raven.Server.Config
 
         public void PostInit()
         {
-            CheckDirectoryPermissions();
-
             if (ResourceType != ResourceType.Server)
                 return;
 
@@ -299,7 +297,7 @@ namespace Raven.Server.Config
         
         private static int _pathCounter = 0;
 
-        private void CheckDirectoryPermissions()
+        public void CheckDirectoryPermissions()
         {
             if (Core.RunInMemory)
                 return;
@@ -351,7 +349,7 @@ namespace Raven.Server.Config
                             var curPathCounterVal = Interlocked.Increment(ref _pathCounter);
                             // test that we can create the directory, but
                             // not actually create it
-                            createdDirectory = path + curPathCounterVal.ToString();
+                            createdDirectory = path + "$" + curPathCounterVal.ToString();
                             Directory.CreateDirectory(createdDirectory);
                             var createdFile = Path.Combine(createdDirectory, "test.file");
                             File.WriteAllText(createdFile, string.Empty);
