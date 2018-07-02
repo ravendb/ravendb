@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         }
                         else
                         {
-                            _currentRun.PutDocumentAndAttachments(item.DocumentId, item.Document.Data, GetAttachmentsFor(item));
+                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, GetAttachmentsFor(item), GetCountersFor(item));
                         }
 
                         break;
@@ -294,6 +294,34 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                     results.Add(attachmentData);
                 }
+            }
+
+            return results;
+        }
+
+        private List<(string Name, long Value)> GetCountersFor(RavenEtlItem item)
+        {
+            if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
+                return null;
+
+            if (item.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
+            {
+                return null;
+            }
+
+            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+
+            var results = new List<(string Name, long Value)>();
+
+            foreach (var counter in counters)
+            {
+                string counterName = (LazyStringValue)counter;
+
+                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, item.DocumentId, counterName);
+
+                results.Add((counterName, value.Value));
             }
 
             return results;
