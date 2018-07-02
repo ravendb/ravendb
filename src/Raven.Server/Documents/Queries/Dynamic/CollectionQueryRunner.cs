@@ -144,8 +144,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 using (fillScope?.Start())
                     includeDocumentsCommand.Fill(resultToFill.Includes);
 
-                resultToFill.AddCounterIncludes(includeCountersCommand?.Results);
-                resultToFill.IncludedCounterNames = includeCountersCommand?.CountersToGetByDocId;
+                if (includeCountersCommand != null)
+                    resultToFill.AddCounterIncludes(includeCountersCommand);
+
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
             }
         }

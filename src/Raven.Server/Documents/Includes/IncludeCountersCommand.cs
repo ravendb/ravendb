@@ -12,10 +12,9 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
-        private readonly Dictionary<string, StringValues> _countersBySourcePath;
+        private readonly Dictionary<string, string[]> _countersBySourcePath;
 
         public Dictionary<string, string[]> CountersToGetByDocId { get; }
-
         public Dictionary<string, List<CounterDetail>> Results { get; }
 
         public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context)
@@ -27,19 +26,19 @@ namespace Raven.Server.Documents.Includes
             Results = new Dictionary<string, List<CounterDetail>>(StringComparer.OrdinalIgnoreCase);
         }
 
-        public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context, StringValues counters, string sourcePath = null) 
+        public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context, string[] counters) 
             : this(database, context)
         {
-            _countersBySourcePath = new Dictionary<string, StringValues>(StringComparer.OrdinalIgnoreCase)
+            _countersBySourcePath = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                [sourcePath ?? string.Empty] = counters
+                [string.Empty] = counters
             };
         }
 
         public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context, Dictionary<string, HashSet<string>> countersBySourcePath)
             : this(database, context)
         {
-            _countersBySourcePath = countersBySourcePath.ToDictionary(kvp => kvp.Key, kvp => new StringValues(kvp.Value.ToArray()));
+            _countersBySourcePath = countersBySourcePath.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
         }
 
         public void Fill(Document document)

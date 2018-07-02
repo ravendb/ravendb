@@ -2191,11 +2191,12 @@ namespace Raven.Server.Documents.Indexes
                                 using (fillScope?.Start())
                                     includeDocumentsCommand.Fill(resultToFill.Includes);
 
+                                if (includeCountersCommand != null)
+                                    resultToFill.AddCounterIncludes(includeCountersCommand);
+
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                                 resultToFill.SkippedResults = skippedResults.Value;
                                 resultToFill.IncludedPaths = query.Metadata.Includes;
-                            	resultToFill.AddCounterIncludes(includeCountersCommand?.Results);
-                                resultToFill.IncludedCounterNames = includeCountersCommand?.CountersToGetByDocId;
                             }
                         }
 

@@ -172,9 +172,10 @@ namespace Raven.Client.Documents.Session.Operations
             if (_includeAllCounters || _counters != null)
             {
                 var counterToInclude = new Dictionary<string, string[]>();
+                var counters = _counters ?? new string[0];
                 foreach (var id in _ids)
                 {
-                    counterToInclude[id] = _counters ?? new string[0];
+                    counterToInclude[id] = counters;
                 }
 
                 _session.RegisterCounters(result.Counters, counterToInclude);
