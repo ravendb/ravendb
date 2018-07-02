@@ -32,9 +32,11 @@ namespace Raven.Embedded
             options.CommandLineArgs.Add("--Setup.Mode=None");
             options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
 
+            var url = $"127.{(int)'R'}.{(int)'V'}.{(int)'N'}:0";
+
             if (options.Security != null)
             {
-                options.CommandLineArgs.Add("--ServerUrl=https://127.0.0.1:0");
+                options.CommandLineArgs.Add("--ServerUrl=https://" + url);
 
                 if (options.Security.CertificatePath != null)
                 {
@@ -51,7 +53,7 @@ namespace Raven.Embedded
             }
             else
             {
-                options.CommandLineArgs.Add("--ServerUrl=http://127.0.0.1:0");
+                options.CommandLineArgs.Add("--ServerUrl=http://" + url);
             }
 
             options.CommandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));

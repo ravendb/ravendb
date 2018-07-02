@@ -24,6 +24,8 @@ namespace SlowTests.Issues
 
                 using (var store = embedded.GetDocumentStore("Test"))
                 {
+                    Console.WriteLine("Embedded URL: " + store.Urls[0]);
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new Person
@@ -46,6 +48,8 @@ namespace SlowTests.Issues
 
                 using (var store = embedded.GetDocumentStore("Test"))
                 {
+                    Console.WriteLine("Embedded URL: " + store.Urls[0]);
+
                     using (var session = store.OpenSession())
                     {
                         var person = session.Load<Person>("people/1");
