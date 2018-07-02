@@ -183,6 +183,8 @@ namespace Raven.Server.Documents.ETL
                             var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(counters);
 
+                            counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+
                             var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
                                 .GetEnumerator();
                             scope.EnsureDispose(counterTombstones);
@@ -200,6 +202,8 @@ namespace Raven.Server.Documents.ETL
                             {
                                 var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
                                 scope.EnsureDispose(counters);
+
+                                counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
 
                                 merged.AddEnumerator(new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, collection),
                                     lastDocEtag));
@@ -368,8 +372,8 @@ namespace Raven.Server.Documents.ETL
             }
 
             if (currentItem.Type == EtlItemType.Document &&
-                stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
-                stats.NumberOfExtractedItems.Sum(x => x.Value) >= Database.Configuration.Etl.MaxNumberOfExtractedItems)
+                stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
+                stats.NumberOfExtractedItems.Sum(x => x.Value) > Database.Configuration.Etl.MaxNumberOfExtractedItems)
             {
                 var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value}"))})";
 

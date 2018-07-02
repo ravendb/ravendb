@@ -1,7 +1,13 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Raven
@@ -566,6 +572,144 @@ if (hasCounter('down')) {
                     }
 
                     etlDone.Reset();
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_skip_counter_if_has_lower_etag_than_document()
+        {
+            using (var src = GetDocumentStore(new Options()
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
+            }))
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.Store(new User(), "users/2");
+
+                    session.CountersFor("users/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+                
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Advanced.Defer(
+                        new CountersBatchCommandData("users/1", new CounterOperation()
+                        {
+                            Delta = 1,
+                            Type = CounterOperationType.Increment,
+                            CounterName = "likes"
+                        }),
+                        new PutCommandData("users/3", null, new DynamicJsonValue()
+                        {
+                            ["@metadata"] = new DynamicJsonValue
+                            {
+                                ["@collection"] = "Users"
+                            },
+                        }),
+                        new PutCommandData("users/4", null, new DynamicJsonValue()
+                        {
+                            ["@metadata"] = new DynamicJsonValue
+                            {
+                                ["@collection"] = "Users"
+                            },
+                        }),
+                        new PutCommandData("users/1", null, new DynamicJsonValue()
+                        {
+                            ["Name"] = "James",
+                            ["@metadata"] = new DynamicJsonValue
+                            {
+                                ["@collection"] = "Users"
+                            }
+                        }));
+
+                    session.SaveChanges();
+                }
+
+                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1", includes: i => i.IncludeAllCounters());
+
+                    var value = session.CountersFor("users/1").Get("likes");
+
+                    if (user.Name == "James")
+                    {
+                        // already managed to etl the document and its counter after doc modification
+
+                        Assert.Equal(2, value);
+                    }
+                    else
+                    {
+                        // didn't etl the modified doc yet
+
+                        Assert.Equal(1, value);
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("Users")]
+        [InlineData(null)]
+        public void Should_send_all_counters_on_doc_update(string collection = null)
+        {
+            using (var src = GetDocumentStore( new Options()
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
+            }))
+            using (var dest = GetDocumentStore())
+            {
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.Store(new User(), "users/2");
+
+                    session.CountersFor("users/1").Increment("likes");
+                    session.CountersFor("users/2").Increment("likes");
+
+                    session.Store(new User(), "users/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                if (collection == null)
+                    AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+                else
+                    AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 8);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+
+                    long? value = session.CountersFor("users/1").Get("likes");
+
+                    Assert.Equal(1, value);
                 }
             }
         }
