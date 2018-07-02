@@ -154,14 +154,14 @@ this.Name = 'James';
 var doc = loadToUsers(this);
 
 for (var i = 0; i < counters.length; i++) {
-    doc.addCounter(counters[i] + '-etl', loadCounter(counters[i]));
+    doc.addCounter(loadCounter(counters[i]));
 }
 
 // case 2 : doc id will be generated on the destination side
 
 var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 
-person.addCounter('down-etl', loadCounter('down'));
+person.addCounter(loadCounter('down'));
 "
 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
@@ -184,9 +184,9 @@ person.addCounter('down-etl', loadCounter('down'));
 
                 AssertCounters(dest, new[]
                 {
-                    ("users/1", "up-etl", 20L, false),
-                    ("users/1", "down-etl", 10, false),
-                    ("users/1/people/", "down-etl", 10, true)
+                    ("users/1", "up", 20L, false),
+                    ("users/1", "down", 10, false),
+                    ("users/1/people/", "down", 10, true)
                 });
 
                 string personId;
@@ -221,8 +221,8 @@ person.addCounter('down-etl', loadCounter('down'));
 
                 AssertCounters(dest, new[]
                 {
-                    ("users/1", "down-etl", 10L, false),
-                    ("users/1/people/", "down-etl", 10, true)
+                    ("users/1", "down", 10L, false),
+                    ("users/1/people/", "down", 10, true)
                 });
 
                 etlDone.Reset();
@@ -240,8 +240,8 @@ person.addCounter('down-etl', loadCounter('down'));
                 {
                     Assert.Null(session.Load<User>("users/1"));
 
-                    Assert.Null(session.CountersFor("users/1").Get("up-etl"));
-                    Assert.Null(session.CountersFor("users/1").Get("up-etl"));
+                    Assert.Null(session.CountersFor("users/1").Get("up"));
+                    Assert.Null(session.CountersFor("users/1").Get("up"));
 
                     Assert.Empty(session.Advanced.LoadStartingWith<Person>("users/1/people/"));
 
@@ -335,7 +335,7 @@ for (var i = 0; i < counters.length; i++) {
                     @"
 
 var doc = loadToUsers(this);
-doc.addCounter('likes', loadCounter('likes'));
+doc.addCounter(loadCounter('likes'));
 "
                 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);

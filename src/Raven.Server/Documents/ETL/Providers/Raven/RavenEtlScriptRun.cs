@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             attachments.Add((name ?? attachment.Name, attachment));
         }
 
-        public void AddCounter(JsValue instance, string name, JsValue counterReference)
+        public void AddCounter(JsValue instance, JsValue counterReference)
         {
             var counter = _loadedCounters[counterReference];
 
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 _addCounters.Add(instance, counters);
             }
 
-            counters.Add((name ?? counter.Name, counter.Value));
+            counters.Add((counter.Name, counter.Value));
         }
 
         public void AddCounter(LazyStringValue documentId, string counterName, long value)
