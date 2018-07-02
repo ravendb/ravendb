@@ -13,6 +13,11 @@ interface virtualColumn {
     header: string;
 
     /**
+     * The textual representation of header - used i.e. in columns selector
+     */
+    headerAsText: string;
+
+    /**
      * Renders a cell for this column. Returns a string, either text or HTML, containing the content.
      */
     renderCell(item: Object, isSelected: boolean): string;

@@ -3,8 +3,6 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import document = require("models/database/documents/document");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import utils = require("widgets/virtualGrid/virtualGridUtils");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
 
 class flagsColumn implements virtualColumn {
     constructor(protected gridController: virtualGridController<any>) {
@@ -13,6 +11,10 @@ class flagsColumn implements virtualColumn {
     width = "65px";
     
     header = `<div style="padding-left: 8px;">🏳️</div>`; //TODO: change to icon-flags
+
+    get headerAsText() {
+        return "Document Flags (🏳️)";
+    }
 
     renderCell(item: document, isSelected: boolean): string {
         const metadata = item.__metadata;
