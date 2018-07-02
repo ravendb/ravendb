@@ -1,7 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Basic.Entities;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Client.Counters
@@ -1378,6 +1382,905 @@ from Users as user select output(user)", query.ToString());
                     Assert.Equal("Pigpen", queryResult[2].Name);
                     Assert.Null(queryResult[2].Downloads);
                     Assert.Equal(100, queryResult[2].FriendsDownloads);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQueryIncludeSingleCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Order>()
+                        .Include(i => i.IncludeCounter("Downloads"));
+
+                    Assert.Equal("from Orders include counters('Downloads')" 
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(100, val);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(200, val);
+
+                    order = queryResult[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQueryIncludeMultipleCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.CountersFor("orders/1-A").Increment("Likes", 1000);
+                    session.CountersFor("orders/2-A").Increment("Likes", 2000);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Order>()
+                        .Include(i => i.IncludeCounters(new []{ "Downloads" , "Likes"}));
+
+                    Assert.Equal("from Orders include counters('Downloads','Likes')"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(100, val);
+                    val = session.CountersFor(order).Get("Likes");
+                    Assert.Equal(1000, val);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(200, val);
+                    val = session.CountersFor(order).Get("Likes");
+                    Assert.Equal(2000, val);
+
+                    order = queryResult[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(300, val);
+
+                    // should register missing counters
+                    val = session.CountersFor(order).Get("Likes"); 
+                    Assert.Null(val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQueryIncludeAllCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.CountersFor("orders/1-A").Increment("Likes", 1000);
+                    session.CountersFor("orders/2-A").Increment("Likes", 2000);
+
+                    session.CountersFor("orders/1-A").Increment("Votes", 10000);
+                    session.CountersFor("orders/3-A").Increment("Cats", 5);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Order>()
+                        .Include(i => i.IncludeAllCounters());
+
+                    Assert.Equal("from Orders include counters()"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var dic = session.CountersFor(order).GetAll();
+                    Assert.Equal(3, dic.Count);
+                    Assert.Equal(100, dic["Downloads"]);
+                    Assert.Equal(1000, dic["Likes"]);
+                    Assert.Equal(10000, dic["Votes"]);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    dic = session.CountersFor(order).GetAll();
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(200, dic["Downloads"]);
+                    Assert.Equal(2000, dic["Likes"]);
+
+                    order = queryResult[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    dic = session.CountersFor(order).GetAll();
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(300, dic["Downloads"]);
+                    Assert.Equal(5, dic["Cats"]);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQueryIncludeCounterAndDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1-A");
+                    session.Store(new Company
+                    {
+                        Name = "HP"
+                    }, "companies/2-A");
+                    session.Store(new Company
+                    {
+                        Name = "Google"
+                    }, "companies/3-A");
+
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Order>()
+                        .Include(i => i.IncludeCounter("Downloads")
+                            .IncludeDocuments(x => x.Company));
+
+                    Assert.Equal("from Orders include " +
+                                 "Company,counters('Downloads')"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included documents should be in cache
+                    session.Load<User>(new[] { "companies/1-A", "companies/2-A", "companies/3-A" });
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(100, val);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(200, val);
+
+                    order = queryResult[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionQueryIncludeCounterAndDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1-A");
+                    session.Store(new Company
+                    {
+                        Name = "HP"
+                    }, "companies/2-A");
+                    session.Store(new Company
+                    {
+                        Name = "Google"
+                    }, "companies/3-A");
+
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<Order>()
+                        .Include(i => i.IncludeCounter("Downloads")
+                            .IncludeDocuments(x => x.Company));
+
+                    Assert.Equal("from Orders include " +
+                                 "Company,counters('Downloads')"
+                                , query.ToString());
+
+                    var queryResult = await query.ToListAsync();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included documents should be in cache
+                    await session.LoadAsync<User>(new[] { "companies/1-A", "companies/2-A", "companies/3-A" });
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = await session.CountersFor(order).GetAsync("Downloads");
+                    Assert.Equal(100, val);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    val = await session.CountersFor(order).GetAsync("Downloads");
+                    Assert.Equal(200, val);
+
+                    order = queryResult[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = await session.CountersFor(order).GetAsync("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void SessionQueryIncludeCounterAndDocumentWithWhere()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A",
+                        ShipTo = new Address
+                        {
+                            Country = "Brazil"
+                        }
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A",
+                        ShipTo = new Address
+                        {
+                            Country = "Russia"
+                        }
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A",
+                        ShipTo = new Address
+                        {
+                            Country = "Brazil"
+                        }
+                    }, "orders/3-A");
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1-A");
+                    session.Store(new Company
+                    {
+                        Name = "HP"
+                    }, "companies/2-A");
+                    session.Store(new Company
+                    {
+                        Name = "Google"
+                    }, "companies/3-A");
+
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Order>()
+                            .Include(i => i.IncludeCounter("Downloads")
+                                           .IncludeDocuments(x => x.Company))
+
+                            .Where(x => x.ShipTo.Country == "Brazil");
+
+                    Assert.Equal("from Orders where ShipTo.Country = $p0 " +
+                                 "include Company,counters('Downloads')"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included documents should be in cache
+                    session.Load<User>(new []{ "companies/1-A", "companies/3-A" });
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(100, val);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // this should not be in cache
+                    session.Load<User>("companies/2-A");
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    // this should not be in cache
+                    val = session.CountersFor("orders/2-A").Get("Downloads");
+                    Assert.Equal(200, val);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionQueryIncludeCounterAndDocumentWithWhere()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A",
+                        ShipTo = new Address
+                        {
+                            Country = "Brazil"
+                        }
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A",
+                        ShipTo = new Address
+                        {
+                            Country = "Russia"
+                        }
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A",
+                        ShipTo = new Address
+                        {
+                            Country = "Brazil"
+                        }
+                    }, "orders/3-A");
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1-A");
+                    session.Store(new Company
+                    {
+                        Name = "HP"
+                    }, "companies/2-A");
+                    session.Store(new Company
+                    {
+                        Name = "Google"
+                    }, "companies/3-A");
+
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<Order>()
+                            .Include(i => i.IncludeCounter("Downloads")
+                                           .IncludeDocuments(x => x.Company))
+
+                            .Where(x => x.ShipTo.Country == "Brazil");
+
+                    Assert.Equal("from Orders where ShipTo.Country = $p0 " +
+                                 "include Company,counters('Downloads')"
+                                , query.ToString());
+
+                    var queryResult = await query.ToListAsync();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included documents should be in cache
+                    await session.LoadAsync<User>(new[] { "companies/1-A", "companies/3-A" });
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = queryResult[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = await session.CountersFor(order).GetAsync("Downloads");
+                    Assert.Equal(100, val);
+
+                    order = queryResult[1];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = await session.CountersFor(order).GetAsync("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // this should not be in cache
+                    await session.LoadAsync<User>("companies/2-A");
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    // this should not be in cache
+                    val = await session.CountersFor("orders/2-A").GetAsync("Downloads");
+                    Assert.Equal(200, val);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQueryIncludeCounterWithParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .RawQuery<Order>("from orders include counters($p0)")
+                        .AddParameter("p0", "Downloads")
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = query[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(100, val);
+
+                    order = query[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(200, val);
+
+                    order = query[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = session.CountersFor(order).Get("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQueryIncludeCounterWithArrayParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "companies/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Company = "companies/3-A"
+                    }, "orders/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                    session.CountersFor("orders/3-A").Increment("Downloads", 300);
+                    session.CountersFor("orders/1-A").Increment("Likes", 1000);
+                    session.CountersFor("orders/2-A").Increment("Likes", 2000);
+                    session.CountersFor("orders/3-A").Increment("Likes", 3000);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .RawQuery<Order>("from orders include counters($p0)")
+                        .AddParameter("p0", new [] {"Downloads", "Likes"})
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var order = query[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var dic = session.CountersFor(order).Get(new[] { "Downloads", "Likes" });
+                    Assert.Equal(100, dic["Downloads"]);
+                    Assert.Equal(1000, dic["Likes"]);
+
+                    order = query[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    dic = session.CountersFor(order).Get(new[] { "Downloads", "Likes" });
+                    Assert.Equal(200, dic["Downloads"]);
+                    Assert.Equal(2000, dic["Likes"]);
+
+                    order = query[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    dic = session.CountersFor(order).Get(new[] { "Downloads", "Likes" });
+                    Assert.Equal(300, dic["Downloads"]);
+                    Assert.Equal(3000, dic["Likes"]);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQueryIncludeCounterOfLoadedDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/3-A"
+                    }, "orders/3-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Aviv"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/2-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Bob"
+                    }, "employees/3-A");
+
+                    session.CountersFor("employees/1-A").Increment("Downloads", 100);
+                    session.CountersFor("employees/2-A").Increment("Downloads", 200);
+                    session.CountersFor("employees/3-A").Increment("Downloads", 300);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .RawQuery<Order>("from orders as o load o.Employee as e " +
+                                         "include counters(e, 'Downloads')")
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var val = session.CountersFor("employees/1-A").Get("Downloads");
+                    Assert.Equal(100, val);
+
+                    val = session.CountersFor("employees/2-A").Get("Downloads");
+                    Assert.Equal(200, val);
+
+                    val = session.CountersFor("employees/3-A").Get("Downloads");
+                    Assert.Equal(300, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQueryIncludeAllCountersOfLoadedDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/3-A"
+                    }, "orders/3-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Aviv"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/2-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Bob"
+                    }, "employees/3-A");
+
+                    session.CountersFor("employees/1-A").Increment("Downloads", 100);
+                    session.CountersFor("employees/2-A").Increment("Downloads", 200);
+                    session.CountersFor("employees/3-A").Increment("Downloads", 300);
+                    session.CountersFor("employees/1-A").Increment("Likes", 1000);
+                    session.CountersFor("employees/2-A").Increment("Likes", 2000);
+                    session.CountersFor("employees/3-A").Increment("Cats", 5);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .RawQuery<Order>("from orders as o load o.Employee as e " +
+                                         "include counters(e)")
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    var dic = session.CountersFor("employees/1-A").GetAll();
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(100, dic["Downloads"]);
+                    Assert.Equal(1000, dic["Likes"]);
+
+                    dic = session.CountersFor("employees/2-A").GetAll();
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(200, dic["Downloads"]);
+                    Assert.Equal(2000, dic["Likes"]);
+
+                    dic = session.CountersFor("employees/3-A").GetAll();
+                    Assert.Equal(2, dic.Count);
+                    Assert.Equal(300, dic["Downloads"]);
+                    Assert.Equal(5, dic["Cats"]);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQueryIncludeCountersOfDocumentAndOfLoadedDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/3-A"
+                    }, "orders/3-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Aviv"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/2-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Bob"
+                    }, "employees/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Likes", 100);
+                    session.CountersFor("orders/2-A").Increment("Likes", 200);
+                    session.CountersFor("orders/3-A").Increment("Likes", 300);
+                    session.CountersFor("employees/1-A").Increment("Downloads", 1000);
+                    session.CountersFor("employees/2-A").Increment("Downloads", 2000);
+                    session.CountersFor("employees/3-A").Increment("Downloads", 3000);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .RawQuery<Order>("from orders as o load o.Employee as e " +
+                                         "include counters(o, 'Likes'), counters(e, 'Downloads')")
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+
+                    var order = query[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    var val = session.CountersFor(order).Get("Likes");
+                    Assert.Equal(100, val);
+
+                    order = query[1];
+                    Assert.Equal("orders/2-A", order.Id);
+                    val = session.CountersFor(order).Get("Likes");
+                    Assert.Equal(200, val);
+
+                    order = query[2];
+                    Assert.Equal("orders/3-A", order.Id);
+                    val = session.CountersFor(order).Get("Likes");
+                    Assert.Equal(300, val);
+
+                    val = session.CountersFor("employees/1-A").Get("Downloads");
+                    Assert.Equal(1000, val);
+
+                    val = session.CountersFor("employees/2-A").Get("Downloads");
+                    Assert.Equal(2000, val);
+
+                    val = session.CountersFor("employees/3-A").Get("Downloads");
+                    Assert.Equal(3000, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                 }
             }
