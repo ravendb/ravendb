@@ -576,7 +576,10 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                 {
                     var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
                     var tempFileName = Path.GetTempFileName();
-                    File.WriteAllText(tempFileName, sb.ToString());
+                    lock (sb)
+                    {
+                        File.WriteAllText(tempFileName, sb.ToString());
+                    }
                     throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
                 }
             }

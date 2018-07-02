@@ -225,6 +225,8 @@ namespace Raven.Server.Documents
         {
             try
             {
+                Configuration.CheckDirectoryPermissions();
+
                 _addToInitLog("Initializing NotificationCenter");
                 NotificationCenter.Initialize(this);
 
