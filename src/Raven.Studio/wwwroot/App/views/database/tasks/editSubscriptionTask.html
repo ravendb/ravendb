@@ -159,6 +159,16 @@
                             <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-results-template'"></virtual-grid>
                         </div>
                     </div>
+                    <div class="flex-window-head">
+                        <button type="button" class="btn btn-sm" data-bind="css: { active: currentTab() === 'results' }, click: _.partial(goToTab, 'results')">
+                            Results &nbsp; <span class="label label-primary" data-bind="text: resultsCount().toLocaleString()"></span>
+                        </button>
+                        <!-- ko foreach: includesCache -->
+                        <button type="button" class="btn btn-sm" data-bind="click: _.partial($root.goToTab, $data), css: { active: $parent.currentTab() === $data }">
+                            <span data-bind="text: 'Includes (' + name + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: total().toLocaleString()"></span>
+                        </button>
+                        <!-- /ko -->
+                    </div>
                 </div>
             </div>
         </div>

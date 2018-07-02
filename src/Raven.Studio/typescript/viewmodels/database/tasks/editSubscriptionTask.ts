@@ -20,7 +20,19 @@ import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRq
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 
+type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
+
+
+class perCollectionIncludes {
+    name: string;
+    total = ko.observable<number>(0);
+    items = new Map<string, documentObject>();
+
+    constructor(name: string) {
+        this.name = name;
+    }
+}
 
 class editSubscriptionTask extends viewModelBase {
 
@@ -35,11 +47,18 @@ class editSubscriptionTask extends viewModelBase {
 
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
-    fetcher = ko.observable<fetcherType>();
+    resultsFetcher = ko.observable<fetcherType>();
+    effectiveFetcher = ko.observable<fetcherType>();
     private columnPreview = new columnPreviewPlugin<documentObject>();
 
     dirtyResult = ko.observable<boolean>(false);
     isFirstRun = true;
+    
+    resultsCount = ko.observable<number>(0);
+    includesCache = ko.observableArray<perCollectionIncludes>([]);
+    
+    
+    currentTab = ko.observable<testTabName>("results");
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
@@ -47,7 +66,7 @@ class editSubscriptionTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("setStartingPointType");
+        this.bindToCurrentInstance("setStartingPointType", "goToTab");
         aceEditorBindingHandler.install();
     }
 
@@ -80,8 +99,7 @@ class editSubscriptionTask extends viewModelBase {
                     deferred.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-        }
-        else {
+        } else {
             // 2. Creating a new task
             this.isAddingNewSubscriptionTask(true);
             this.editedSubscription(ongoingTaskSubscriptionEdit.empty());
@@ -126,6 +144,21 @@ class editSubscriptionTask extends viewModelBase {
                 this.goToOngoingTasksView();
             });
     }
+    
+    goToTab(tabToUse: testTabName) {
+        this.currentTab(tabToUse);
+        
+        if (tabToUse === "results") {
+            this.effectiveFetcher(this.resultsFetcher());
+        } else {
+            this.effectiveFetcher(() => {
+                return $.when({
+                    items: Array.from(tabToUse.items.values()).map(x => new documentObject(x)),
+                    totalResultCount: tabToUse.total()
+                });
+            });
+        }
+    }
 
     cloneSubscription() {
         this.isAddingNewSubscriptionTask(true);
@@ -159,13 +192,15 @@ class editSubscriptionTask extends viewModelBase {
         if (!this.isValid(this.editedSubscription().validationGroup) || this.testResultsLimit() < 1) {
             return;
         }
+        
+        this.includesCache.removeAll();
 
         eventsCollector.default.reportEvent("subscription-task", "test");
         
         this.columnsSelector.reset();
 
         const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
-        this.fetcher(fetcherMethod);
+        this.effectiveFetcher(fetcherMethod);
 
         if (this.isFirstRun) {
             const extraClassProvider = (item: documentObject | Raven.Server.Documents.Handlers.DocumentWithException) => {
@@ -183,7 +218,7 @@ class editSubscriptionTask extends viewModelBase {
             });
          
             this.columnsSelector.init(this.gridController(),
-                fetcherMethod,
+                (s, t, c) => this.effectiveFetcher()(s, t),
                 (w, r) => documentsProvider.findColumns(w, r, ["Exception", "__metadata"]),
                 (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
@@ -204,7 +239,10 @@ class editSubscriptionTask extends viewModelBase {
                 }
             });
 
-            this.fetcher.subscribe(() => grid.reset());
+            this.effectiveFetcher.subscribe(() => {
+                this.columnsSelector.reset();
+                grid.reset();
+            });
         }
 
         this.isFirstRun = false;
@@ -218,7 +256,22 @@ class editSubscriptionTask extends viewModelBase {
 
         return new testSubscriptionTaskCommand(this.activeDatabase(), dto, resultsLimit)
             .execute()
+            .done(result => {
+                this.resultsCount(result.items.length);
+                this.cacheResults(result.items);
+                this.onIncludesLoaded(result.includes);
+            })
             .always(() => this.spinners.globalToggleDisable(false));
+    }
+    
+    private cacheResults(items: Array<documentObject>) {
+        // precompute value
+        const mappedResult = {
+            items: Array.from(items.values()).map(x => new documentObject(x)),
+            totalResultCount: items.length
+        };
+        
+        this.resultsFetcher((s, t) => $.when(mappedResult));
     }
 
     toggleTestArea() {
@@ -235,6 +288,24 @@ class editSubscriptionTask extends viewModelBase {
             this.enableTestArea(false);
             this.columnsSelector.reset();
         }
+    }
+
+    private onIncludesLoaded(includes: dictionary<any>) {
+        _.forIn(includes, (doc, id) => {
+            const metadata = doc['@metadata'];
+            const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
+
+            let perCollectionCache = this.includesCache().find(x => x.name === collection);
+            if (!perCollectionCache) {
+                perCollectionCache = new perCollectionIncludes(collection);
+                this.includesCache.push(perCollectionCache);
+            }
+            perCollectionCache.items.set(id, doc);
+        });
+
+        this.includesCache().forEach(cache => {
+            cache.total(cache.items.size);
+        });
     }
 
     syntaxHelp() {

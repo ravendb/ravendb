@@ -9,23 +9,23 @@ class testSubscriptionTaskCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResult<document>> {
+    execute(): JQueryPromise<testSubscriptionPagedResult<document>> {
         return this.testSubscription()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to test subscription task", response.responseText, response.statusText);
             });
     }
 
-    private testSubscription(): JQueryPromise<pagedResult<document>> {
+    private testSubscription(): JQueryPromise<testSubscriptionPagedResult<document>> {
         
         const args = { pageSize: this.resultsLimit }; 
 
         const url = endpoints.databases.subscriptions.subscriptionsTry + this.urlEncodeArgs(args);
 
-        const testTask = $.Deferred<pagedResult<document>>();
+        const testTask = $.Deferred<testSubscriptionPagedResult<document>>();
 
         this.post(url, JSON.stringify(this.payload), this.db)
-            .done((dto: resultsDto<documentDto>) => { 
+            .done((dto: queryResultDto<documentDto>) => { 
 
                 const result = {
 
@@ -45,9 +45,10 @@ class testSubscriptionTaskCommand extends commandBase {
                             return doc;
                         }
                     }), 
+                    includes: dto.Includes,
+                    totalResultCount: dto.Results.length,
                     
-                    totalResultCount: dto.Results.length
-                } as pagedResult<document>;
+                } as testSubscriptionPagedResult<document>;
 
                 testTask.resolve(result);
             })
