@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using FastTests;
+using Raven.Client.Http;
 using Raven.Embedded;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -12,6 +13,8 @@ namespace SlowTests.Issues
         [Fact]
         public void TestEmbedded()
         {
+            AppContext.SetSwitch(nameof(RequestExecutor), true);
+
             var paths = CopyServer();
 
             using (var embedded = new EmbeddedServer())
@@ -24,6 +27,8 @@ namespace SlowTests.Issues
 
                 using (var store = embedded.GetDocumentStore("Test"))
                 {
+                    Console.WriteLine("Embedded URL: " + store.Urls[0]);
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new Person
@@ -46,6 +51,8 @@ namespace SlowTests.Issues
 
                 using (var store = embedded.GetDocumentStore("Test"))
                 {
+                    Console.WriteLine("Embedded URL: " + store.Urls[0]);
+
                     using (var session = store.OpenSession())
                     {
                         var person = session.Load<Person>("people/1");
