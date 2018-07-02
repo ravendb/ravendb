@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using FastTests;
+using Raven.Client.Http;
 using Raven.Embedded;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -12,6 +13,8 @@ namespace SlowTests.Issues
         [Fact]
         public void TestEmbedded()
         {
+            AppContext.SetSwitch(nameof(RequestExecutor), true);
+
             var paths = CopyServer();
 
             using (var embedded = new EmbeddedServer())
