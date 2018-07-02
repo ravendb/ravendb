@@ -169,7 +169,17 @@ namespace Raven.Client.Documents.Session.Operations
 
             _session.RegisterIncludes(result.Includes);
 
-            _session.RegisterCounters(result.Counters, _counters, _includeAllCounters, _ids);
+            if (_includeAllCounters || _counters != null)
+            {
+                var counterToInclude = new Dictionary<string, string[]>();
+                foreach (var id in _ids)
+                {
+                    counterToInclude[id] = _counters ?? new string[0];
+                }
+
+                _session.RegisterCounters(result.Counters, counterToInclude);
+
+            }
 
             foreach (var document in GetDocumentsFromResult(result))
                 _session.DocumentsById.Add(document);

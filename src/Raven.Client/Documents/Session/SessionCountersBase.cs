@@ -27,10 +27,6 @@ namespace Raven.Client.Documents.Session
             DocId = documentId;
             Session = session;
 
-            if (Session.CountersByDocId == null)
-            {
-                Session.CountersByDocId = new Dictionary<string, (bool, Dictionary<string, long?>)>(StringComparer.OrdinalIgnoreCase);
-            }
         }
 
         protected SessionCountersBase(InMemoryDocumentSessionOperations session, object entity)
@@ -43,11 +39,6 @@ namespace Raven.Client.Documents.Session
 
             DocId = document.Id;
             Session = session;
-
-            if (Session.CountersByDocId == null)
-            {
-                Session.CountersByDocId = new Dictionary<string, (bool, Dictionary<string, long?>)>(StringComparer.OrdinalIgnoreCase);
-            }
         }
 
         public void Increment(string counter, long delta = 1)

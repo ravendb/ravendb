@@ -18,6 +18,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
@@ -108,7 +109,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The paths to include when loading the query
         /// </summary>
-        protected HashSet<string> Includes = new HashSet<string>();
+        protected HashSet<string> DocumentIncludes = new HashSet<string>();
+
+        /// <summary>
+        /// Counters to include when loading the query
+        /// </summary>
+        protected HashSet<string> CounterIncludes;
 
         /// <summary>
         /// Holds the query stats
@@ -393,7 +399,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "path">The path.</param>
         public void Include(string path)
         {
-            Includes.Add(path);
+            DocumentIncludes.Add(path);
         }
 
         /// <summary>
@@ -490,6 +496,33 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void Include(Expression<Func<T, object>> path)
         {
             Include(path.ToPropertyPath());
+        }
+
+        public void Include(Action<IIncludeBuilder<T>> includes)
+        {
+            if (includes == null)
+                return;
+            
+            var includeBuilder = new IncludeBuilder<T>(Conventions);
+            includes.Invoke(includeBuilder);
+
+            if (includeBuilder.DocumentsToInclude != null)
+            {
+                foreach (var doc in includeBuilder.DocumentsToInclude)
+                {
+                    DocumentIncludes.Add(doc);
+                }
+            }
+
+            if (includeBuilder.AllCounters)
+            {
+                CounterIncludes = new HashSet<string>();
+            }
+
+            else if (includeBuilder.CountersToInclude?.Count > 0)
+            {
+                CounterIncludes = includeBuilder.CountersToInclude;
+            }
         }
 
         /// <summary>
@@ -1113,12 +1146,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildInclude(StringBuilder queryText)
         {
-            if (Includes.Count == 0 && HighlightingTokens.Count == 0 && ExplanationToken == null && QueryTimings == null)
+            if (DocumentIncludes.Count == 0 && 
+				HighlightingTokens.Count == 0 && 
+				ExplanationToken == null && 
+				QueryTimings == null &&
+				CounterIncludes == null)
                 return;
 
             queryText.Append(" include ");
             var first = true;
-            foreach (var include in Includes)
+            foreach (var include in DocumentIncludes)
             {
                 if (first == false)
                     queryText.Append(",");
@@ -1141,6 +1178,30 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 {
                     queryText.Append(include);
                 }
+            }
+
+            if (CounterIncludes != null)
+            {
+                if (first == false)
+                    queryText.Append(",");
+
+                queryText.Append("counters(");
+
+                first = true;
+                foreach (var counter in CounterIncludes)
+                {
+                    if (first == false)
+                        queryText.Append(",");
+                    first = false;
+
+                    queryText.Append("'");
+                    queryText.Append(counter);
+                    queryText.Append("'");
+                }
+                first = false;
+
+                queryText.Append(")");
+
             }
 
             foreach (var token in HighlightingTokens)
