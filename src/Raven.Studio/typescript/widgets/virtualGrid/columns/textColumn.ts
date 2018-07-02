@@ -28,6 +28,10 @@ class textColumn<T> implements virtualColumn {
         return this.header;
     }
 
+    get headerAsText() {
+        return this.header;
+    }
+
     getCellValue(item: T) {
         return _.isFunction(this.valueAccessor)
             ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument

@@ -21,6 +21,10 @@ class checkedColumn implements virtualColumn {
         return this.withSelectAll ? checkedColumn.headerWithCheckbox : checkedColumn.headerWithoutCheckbox;
     }
     
+    get headerAsText() {
+        return this.header;
+    }
+    
     get headerTitle() {
         return this.withSelectAll ? "Toggle selection" : "";
     }
