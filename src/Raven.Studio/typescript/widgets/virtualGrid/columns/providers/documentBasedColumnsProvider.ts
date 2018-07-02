@@ -3,6 +3,7 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
@@ -25,6 +26,7 @@ type documentBasedColumnsProviderOpts = {
     showSelectAllCheckbox?: boolean;
     createHyperlinks?: boolean;
     columnOptions?: columnOptionsDto;
+    showFlags?: boolean; // revisions, counters, attachments
 }
 
 class documentBasedColumnsProvider {
@@ -36,6 +38,7 @@ class documentBasedColumnsProvider {
     private readonly gridController: virtualGridController<document>;
     private readonly enableInlinePreview: boolean;
     private readonly createHyperlinks: boolean;
+    private readonly showFlags: boolean;
     private readonly showSelectAllCheckbox: boolean;
     private readonly columnOptions: columnOptionsDto;
     private readonly customInlinePreview: (doc: document) => void;
@@ -53,6 +56,7 @@ class documentBasedColumnsProvider {
         this.columnOptions = opts.columnOptions;
         this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
         this.collectionTracker = collectionsTracker.default;
+        this.showFlags = !!opts.showFlags;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>, prioritizedColumns?: string[]): virtualColumn[] {
@@ -72,13 +76,20 @@ class documentBasedColumnsProvider {
             });
             initialColumns.push(previewColumn);
         }
+        
+        let flags: flagsColumn = null;
+        
+        if (this.showFlags) {
+            flags = new flagsColumn(this.gridController)
+            initialColumns.push(flags);
+        }
 
         const initialColumnsWidth = _.sumBy(initialColumns, x => virtualGridUtils.widthToPixels(x));
         const rightScrollWidth = 5;
         const remainingSpaceForOtherColumns = viewportWidth - initialColumnsWidth - rightScrollWidth;
         const columnWidth = Math.floor(remainingSpaceForOtherColumns / columnNames.length) + "px";
 
-        return initialColumns.concat(columnNames.map(p => {
+        const finalColumns = initialColumns.concat(columnNames.map(p => {
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
                     return new hyperlinkColumn(this.gridController, (x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
@@ -92,6 +103,14 @@ class documentBasedColumnsProvider {
                 return new textColumn(this.gridController, p, p, columnWidth, this.columnOptions);
             }
         }));
+        
+        if (flags) {
+            // move this column to the end
+            _.pull(finalColumns, flags);
+            finalColumns.push(flags);
+        }
+        
+        return finalColumns;
     }
 
     static showPreview(doc: document) {
