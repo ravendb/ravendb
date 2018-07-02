@@ -165,7 +165,37 @@
     .text-cell {
         text-overflow: ellipsis;
         overflow: hidden;
+        
+        &.flags-cell {
+            i {
+                opacity: 0.2;
+                font-size: 100%;
+            }
+            
+            &.attachments {
+                i[class=icon-attachment] {
+                    opacity: 1;
+                    color: @color-attachments;
+                }
+            }
+            
+            &.revisions {
+                i[class=icon-revisions] {
+                    opacity: 1;
+                    color: @color-revisions;
+                }
+            }
+            
+            &.counters {
+                i[class=icon-new-counter] {
+                    opacity: 1;
+                    color: @color-counters;
+                }
+            }
+        }
     }
+    
+    
 
     .eval-error {
         color: @brand-danger;
