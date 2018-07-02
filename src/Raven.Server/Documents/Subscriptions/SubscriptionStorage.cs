@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Subscriptions
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
-                    throw new SubscriptionDoesNotBelongToNodeException($"Subscripition with id {id} can't be proccessed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
+                    throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
                     {
                         AppropriateNode = whoseTaskIsIt
                     };
@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Subscriptions
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, name));
 
             if (subscriptionBlittable == null)
-                throw new SubscriptionDoesNotExistException($"Subscripiton with name {name} was not found in server store");
+                throw new SubscriptionDoesNotExistException($"Subscription with name {name} was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
             var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
