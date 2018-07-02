@@ -8,6 +8,7 @@ class exportDatabaseModel {
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
+    includeCounters = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     revisionsAreConfigured: KnockoutComputed<boolean>;
 
@@ -50,6 +51,9 @@ class exportDatabaseModel {
         }
         if (this.includeCompareExchange()) {
             operateOnTypes.push("CompareExchange");
+        }
+        if (this.includeCounters()) {
+            operateOnTypes.push("Counters");
         }
 
         return {

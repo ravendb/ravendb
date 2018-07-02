@@ -7,6 +7,7 @@ class importDatabaseModel {
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
+    includeCounters = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
 
@@ -44,6 +45,9 @@ class importDatabaseModel {
         }
         if (this.includeCompareExchange()) {
             operateOnTypes.push("CompareExchange");
+        }
+        if (this.includeCounters()) {
+            operateOnTypes.push("Counters");
         }
         if (this.includeLegacyAttachments()) {
             operateOnTypes.push("LegacyAttachments");
