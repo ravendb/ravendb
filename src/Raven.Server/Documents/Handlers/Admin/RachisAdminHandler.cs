@@ -63,6 +63,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             ServerStore.AssignNodesToDatabase(ServerStore.GetClusterTopology(), addDatabase.Record);
                         }
+                        Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
                         break;
                     case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
                         batchCmpExchange.ContextToWriteResult = context;

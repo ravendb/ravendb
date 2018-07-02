@@ -97,10 +97,17 @@ namespace FastTests.Blittable
 
                     for (var i = 0; i < peepWindow.Length; i++)
                     {
-                        var expectedByte = (byte)(((originalSize - peepWindow.Length + i) % 26) + 'a');
-                        if (expectedByte != peepWindow[i])
+                        try
                         {
-                            Assert.Equal(expectedByte, peepWindow[i]);
+                            var expectedByte = (byte)(((originalSize - peepWindow.Length + i) % 26) + 'a');
+                            if (expectedByte != peepWindow[i])
+                            {
+                                Assert.Equal(expectedByte, peepWindow[i]);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failure at index: " + i, e);
                         }
                     }
                 }
