@@ -602,6 +602,7 @@ namespace Raven.Server.ServerWide
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             try
             {
+                Debug.Assert(addDatabaseCommand.Record.Topology.Count != 0, "Attempt to add database with no nodes");
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
