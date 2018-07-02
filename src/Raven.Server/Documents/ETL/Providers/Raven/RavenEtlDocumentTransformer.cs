@@ -146,25 +146,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private JsValue AddCounter(JsValue self, JsValue[] args)
         {
-            JsValue counterReference = null;
-            string name = null; // will preserve original name
+            if (args.Length != 1)
+                ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one arguments");
 
-            switch (args.Length)
-            {
-                case 2:
-                    if (args[0].IsString() == false)
-                        ThrowInvalidSriptMethodCall($"First argument of {Transformation.AddCounter}(name, counter) must be string");
-
-                    name = args[0].AsString();
-                    counterReference = args[1];
-                    break;
-                case 1:
-                    counterReference = args[0];
-                    break;
-                default:
-                    ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one or two arguments");
-                    break;
-            }
+            var counterReference = args[0];
 
             if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
             {
@@ -177,7 +162,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentRun.AddCounter(self, name, counterReference);
+            _currentRun.AddCounter(self, counterReference);
 
             return self;
         }
