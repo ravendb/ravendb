@@ -25,60 +25,72 @@ namespace Raven.Bundles.Versioning.Triggers
 
         public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
         {
-            var document = Database.Documents.Get(key, transactionInformation);
-            if (document == null)
-                return VetoResult.Allowed;
-
-            versionInformer.Value[key] = document.Metadata;
-            if (document.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) != "Historical")
-                return VetoResult.Allowed;
-
-            if (Database.ChangesToRevisionsAllowed() == false &&
-                Database.IsVersioningActive(document.Metadata))
+            using (Database.DisableAllTriggersForCurrentThread())
             {
-                var revisionPos = key.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
-                if (revisionPos != -1)
+                var document = Database.Documents.Get(key, transactionInformation);
+                if (document == null)
+                    return VetoResult.Allowed;
+
+                versionInformer.Value[key] = document.Metadata;
+                if (document.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) != "Historical")
+                    return VetoResult.Allowed;
+
+                if (Database.ChangesToRevisionsAllowed() == false &&
+                    Database.IsVersioningActive(document.Metadata))
                 {
-                    var parentKey = key.Remove(revisionPos);
-                    var parentDoc = Database.Documents.Get(parentKey, transactionInformation);
-                    if (parentDoc == null)
-                        return VetoResult.Allowed;
+                    var revisionPos = key.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
+                    if (revisionPos != -1)
+                    {
+                        var parentKey = key.Remove(revisionPos);
+                        var parentDoc = Database.Documents.Get(parentKey, transactionInformation);
+                        if (parentDoc == null)
+                            return VetoResult.Allowed;
+                    }
+
+                    return VetoResult.Deny("Deleting a historical revision is not allowed");
                 }
 
-                return VetoResult.Deny("Deleting a historical revision is not allowed");
+                return VetoResult.Allowed;
             }
-
-            return VetoResult.Allowed;
         }
 
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
         {
-            var versioningConfig = Database.GetDocumentVersioningConfiguration(versionInformer.Value[key]);
-    
-            
-            using (Database.DisableAllTriggersForCurrentThread())
-            using (Database.DocumentLock.Lock())
+            try
             {
-                Database.TransactionalStorage.Batch(accessor =>
+                RavenJObject jObject = null;
+                versionInformer.Value.TryGetValue(key, out jObject);
+
+                var versioningConfig = Database.GetDocumentVersioningConfiguration(jObject);
+    
+                using (Database.DisableAllTriggersForCurrentThread())
+                using (Database.DocumentLock.Lock())
                 {
-                    using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+                    Database.TransactionalStorage.Batch(accessor =>
                     {
-                        foreach (var jsonDocument in accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue, null))
+                        using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                         {
-                            if (jsonDocument == null)
-                                continue;
-                            if (versioningConfig != null && versioningConfig.PurgeOnDelete)
+                            foreach (var jsonDocument in accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue, null))
                             {
-                                Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
-                            }
-                            else
-                            {
-                                jsonDocument.Metadata.Remove(Constants.RavenReadOnly);
-                                accessor.Documents.AddDocument(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata);
+                                if (jsonDocument == null)
+                                    continue;
+                                if (versioningConfig != null && versioningConfig.PurgeOnDelete)
+                                {
+                                    Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
+                                }
+                                else
+                                {
+                                    jsonDocument.Metadata.Remove(Constants.RavenReadOnly);
+                                    accessor.Documents.AddDocument(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata);
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
+            }
+            finally
+            {
+                versionInformer.Value.Remove(key);
             }
         }
 
