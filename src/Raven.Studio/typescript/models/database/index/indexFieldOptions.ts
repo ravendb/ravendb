@@ -81,6 +81,7 @@ class indexFieldOptions {
 
     highlighting = ko.observable<boolean>();
     effectiveHighlighting = this.effectiveComputed(x => x.highlighting(), yesNoLabelProvider);
+    defaultHighlighting = this.defaultComputed(x => x.highlighting(), yesNoLabelProvider);
 
     spatial = ko.observable<spatialOptions>();
 
@@ -155,10 +156,10 @@ class indexFieldOptions {
                     this.termVector("WithPositionsAndOffsets");
                 }
                 else if (newValue === null) {
-                    this.analyzer(this.parent().analyzer());
-                    this.storage(this.parent().storage());
-                    this.indexing(this.parent().indexing());
-                    this.termVector(this.parent().termVector());
+                    this.analyzer(null); 
+                    this.storage(null);
+                    this.indexing(null);
+                    this.termVector(null);
                 } else {
                     this.analyzer(null);
                     this.storage("No");
