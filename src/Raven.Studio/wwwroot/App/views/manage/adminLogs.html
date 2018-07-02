@@ -88,7 +88,7 @@
             <i class="icon-cancel"></i><span>Clear</span>
         </button>
     </div>
-    <div class="log-list flex-grow scroll">
+    <div class="log-list flex-grow scroll" data-bind="event: { mousedown: _.partial(updateMouseStatus, true), mouseup: _.partial(updateMouseStatus, false) }">
         <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>
         <div class="has-error results-error" data-bind="visible: isBufferFull">
             <div class="help-block">
