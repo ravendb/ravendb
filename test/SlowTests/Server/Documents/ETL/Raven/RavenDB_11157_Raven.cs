@@ -4,8 +4,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -536,7 +534,7 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact(Skip = "it fails occasionally - TODO arek")]
+        [Fact]
         public void Should_send_updated_counter_values()
         {
             using (var src = GetDocumentStore())
