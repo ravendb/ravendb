@@ -191,9 +191,10 @@ class replicationStats extends viewModelBase {
             "Network/TombstoneRead": "#34b3e4",
             "Storage/DocumentRead": "#0077b5",
             "Storage/TombstoneRead": "#34b3e4",
-            "Storage/AttachmentRead": "#008cc9"
+            "Storage/AttachmentRead": "#008cc9",
+            "Storage/CounterRead": "#27b5c9"
         }
-    }
+    };
 
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionReplicationWorkHeight = 22;
