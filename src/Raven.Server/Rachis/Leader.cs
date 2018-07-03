@@ -608,6 +608,8 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase cmd, TimeSpan timeout)
         {
+            _engine.InvokeBeforeAppendToRaftLog(cmd);
+
             Task<(long Index, object Result)> task;
             long index;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
