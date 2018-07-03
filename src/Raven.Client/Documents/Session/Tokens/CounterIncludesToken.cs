@@ -1,23 +1,27 @@
 ﻿using System.Collections.Generic;
 using System.Text;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
     public class CounterIncludesToken : QueryToken
     {
-        private readonly Parameters _queryParameters;
-        private readonly HashSet<string> _counters;
+        private readonly string _parameterName;
+        private readonly bool _all;
 
-        private CounterIncludesToken(HashSet<string> countres, Parameters queryParameters)
+        private CounterIncludesToken(string parameterName, bool all = false)
         {
-            _counters = countres;
-            _queryParameters = queryParameters;
+            _parameterName = parameterName;
+            _all = all;
         }
 
-        public static CounterIncludesToken Create(HashSet<string> countres, Parameters queryParameters)
+        public static CounterIncludesToken Create(string parameterName)
         {
-            return new CounterIncludesToken(countres, queryParameters);
+            return new CounterIncludesToken(parameterName);
+        }
+
+        public static CounterIncludesToken All()
+        {
+            return new CounterIncludesToken(null, true);
         }
 
         public override void WriteTo(StringBuilder writer)
@@ -25,16 +29,12 @@ namespace Raven.Client.Documents.Session.Tokens
             writer
                 .Append("counters(");
 
-            if (_queryParameters != null)
+            if (_all == false)
             {
-                var parameterName = $"p{_queryParameters.Count.ToInvariantString()}";
-                _queryParameters.Add(parameterName, _counters);
-
                 writer
                     .Append("$")
-                    .Append(parameterName);
+                    .Append(_parameterName);
             }
-
 
             writer
                 .Append(")");

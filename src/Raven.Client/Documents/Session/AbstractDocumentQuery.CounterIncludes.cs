@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
@@ -8,17 +9,21 @@ namespace Raven.Client.Documents.Session
         protected CounterIncludesToken CounterIncludesToken;
 
         protected void IncludeCounters(bool includeAll, HashSet<string> counters)
-        {           
-            if (includeAll == false)
+        {
+            if (includeAll)
             {
-                if (counters?.Count > 0 == false)
-                    return;
-
-                CounterIncludesToken = CounterIncludesToken.Create(counters, QueryParameters);
+                CounterIncludesToken = CounterIncludesToken.All();
                 return;
             }
 
-            CounterIncludesToken = CounterIncludesToken.Create(null, null);
+
+            if (counters?.Count > 0 == false)
+                return;
+
+            CounterIncludesToken = CounterIncludesToken.Create(
+                counters.Count == 1
+                    ? AddQueryParameter(counters.First())
+                    : AddQueryParameter(counters));
         }
     }
 }
