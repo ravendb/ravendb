@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Handlers
         private async Task Explain(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method);
-            
+
             tracker.Query = indexQuery.Query;
 
             var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, context, out string indexName);
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     w.WriteExplanation(context, explanation);
                 });
-                
+
                 writer.WriteEndObject();
                 await writer.OuterFlushAsync();
             }
@@ -191,23 +191,23 @@ namespace Raven.Server.Documents.Handlers
         public Task Delete()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
-            
+
             try
             {
                 using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "DeleteByQuery"))
                 {
                     var reader = context.Read(RequestBodyStream(), "queries/delete");
                     var query = IndexQueryServerSide.Create(reader, Database.QueryMetadataCache);
-                    
+
                     tracker.Query = query.Query;
-                    
+
                     ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
                         context, returnContextToPool, Operations.Operations.OperationType.DeleteByQuery);
 
                     return Task.CompletedTask;
                 }
-            } 
+            }
             catch
             {
                 returnContextToPool.Dispose();
@@ -349,14 +349,14 @@ namespace Raven.Server.Documents.Handlers
             var operationId = Database.Operations.GetNextOperationId();
 
             var indexName = query.Metadata.IsDynamic
-                ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/" ) + query.Metadata.CollectionName
+                ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/") + query.Metadata.CollectionName
                 : query.Metadata.IndexName;
 
             var details = new BulkOperationResult.OperationDetails
             {
                 Query = query.Query
             };
-            
+
             var task = Database.Operations.AddOperation(Database, indexName, operationType,
                 onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
 
