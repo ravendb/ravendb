@@ -41,7 +41,7 @@ namespace SlowTests.Cluster
             {
                 Servers.Add(server);
 
-                var databaseName = "ProxyServer_should_work" + Guid.NewGuid();
+                var databaseName = GetDatabaseName();
                 using (var documentStore = new DocumentStore
                 {
                     Database = databaseName,
@@ -81,7 +81,7 @@ namespace SlowTests.Cluster
         public async Task Fastst_node_should_choose_the_node_without_delay()
         {
             NoTimeouts();
-            var databaseName = "Fastst_node_should_choose_the_node_without_delay" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
 
             var (leader, serversToProxies) = await CreateRaftClusterWithProxiesAndGetLeader(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
@@ -189,10 +189,10 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task Round_robin_load_balancing_should_work()
         {
-            var databaseName = "Round_robin_load_balancing_should_work" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
-
+            Console.WriteLine(leader.WebUrl);
             var conventionsForLoadBalancing = new DocumentConventions
             {
                 ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin
@@ -232,7 +232,7 @@ namespace SlowTests.Cluster
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
                     Url = leader.WebUrl
-                },  5000);
+                },  5000, forceUpdate: true);
 
                 //wait until all nodes in database cluster are members (and not promotables)
                 //GetDatabaseTopologyCommand -> does not retrieve promotables
@@ -281,7 +281,7 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task Round_robin_load_balancing_with_failing_node_should_work()
         {
-            var databaseName = "Round_robin_load_balancing_should_work" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
 
@@ -289,7 +289,6 @@ namespace SlowTests.Cluster
             {
                 ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin
             };
-
             using (var leaderStore = new DocumentStore
             {
                 Urls = new[] {leader.WebUrl},
@@ -345,26 +344,28 @@ namespace SlowTests.Cluster
                         leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
-                var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions);
-                do //make sure there are three nodes in the topology
+                using (var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions))
                 {
-                    await Task.Delay(100);
-                } while (requestExecutor.TopologyNodes == null);
-
-                DisposeServerAndWaitForFinishOfDisposal(leader);
-            
-                var failedRequests = new HashSet<(string, Exception)>();
-
-                requestExecutor.FailedRequest += (url, e) => failedRequests.Add((url, e));
-
-
-
-                using (var tmpContext = JsonOperationContext.ShortTermSingleUse())
-                {
-                    for (var sessionId = 0; sessionId < 5; sessionId++)
+                    do //make sure there are three nodes in the topology
                     {
-                        requestExecutor.Cache.Clear(); //make sure we do not use request cache
-                        await requestExecutor.ExecuteAsync(new GetStatisticsOperation().GetCommand(DocumentConventions.Default, tmpContext), tmpContext, new SessionInfo(sessionId, false));
+                        await Task.Delay(100);
+                    } while (requestExecutor.TopologyNodes == null);
+
+                    Console.WriteLine(requestExecutor.TopologyNodes.Count);
+
+                    DisposeServerAndWaitForFinishOfDisposal(leader);
+
+                    var failedRequests = new HashSet<(string, Exception)>();
+
+                    requestExecutor.FailedRequest += (url, e) => failedRequests.Add((url, e));
+
+                    using (var tmpContext = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        for (var sessionId = 0; sessionId < 5; sessionId++)
+                        {
+                            requestExecutor.Cache.Clear(); //make sure we do not use request cache
+                            await requestExecutor.ExecuteAsync(new GetStatisticsOperation().GetCommand(DocumentConventions.Default, tmpContext), tmpContext, new SessionInfo(sessionId, false));
+                        }
                     }
                 }
             }
@@ -376,7 +377,7 @@ namespace SlowTests.Cluster
             //here we test that when choosing Fastest-Node as the ReadBalanceBehavior, 
             //we can execute commands that use a context, without it leading to a race condition 
 
-            var databaseName = "RavenDB_7992" + Guid.NewGuid();
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);
 
             var conventionsForLoadBalancing = new DocumentConventions
