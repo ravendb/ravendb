@@ -112,11 +112,6 @@ namespace Raven.Client.Documents.Session
         protected HashSet<string> DocumentIncludes = new HashSet<string>();
 
         /// <summary>
-        /// Counters to include when loading the query
-        /// </summary>
-        protected HashSet<string> CounterIncludes;
-
-        /// <summary>
         /// Holds the query stats
         /// </summary>
         protected QueryStatistics QueryStats = new QueryStatistics();
@@ -514,15 +509,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 }
             }
 
-            if (includeBuilder.AllCounters)
-            {
-                CounterIncludes = new HashSet<string>();
-            }
-
-            else if (includeBuilder.CountersToInclude?.Count > 0)
-            {
-                CounterIncludes = includeBuilder.CountersToInclude;
-            }
+            IncludeCounters(includeBuilder.AllCounters, includeBuilder.CountersToInclude);
         }
 
         /// <summary>
@@ -1150,7 +1137,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 				HighlightingTokens.Count == 0 && 
 				ExplanationToken == null && 
 				QueryTimings == null &&
-				CounterIncludes == null)
+				CounterIncludesToken == null)
                 return;
 
             queryText.Append(" include ");
@@ -1180,28 +1167,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 }
             }
 
-            if (CounterIncludes != null)
+            if (CounterIncludesToken != null)
             {
                 if (first == false)
                     queryText.Append(",");
-
-                queryText.Append("counters(");
-
-                first = true;
-                foreach (var counter in CounterIncludes)
-                {
-                    if (first == false)
-                        queryText.Append(",");
-                    first = false;
-
-                    queryText.Append("'");
-                    queryText.Append(counter);
-                    queryText.Append("'");
-                }
                 first = false;
 
-                queryText.Append(")");
-
+                CounterIncludesToken.WriteTo(queryText);
             }
 
             foreach (var token in HighlightingTokens)

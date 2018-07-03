@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counters = null, bool includeAllCounters = false, CancellationToken token = new CancellationToken())
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, CancellationToken token = new CancellationToken())
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Session
             }
             else
             {
-                loadOperation.WithCounters(counters);
+                loadOperation.WithCounters(counterIncludes);
             }
 
             var command = loadOperation.CreateRequest();
