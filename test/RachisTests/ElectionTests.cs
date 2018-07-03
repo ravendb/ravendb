@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -52,76 +53,60 @@ namespace RachisTests
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
             var timeToWait = TimeSpan.FromMilliseconds(1000 * numberOfNodes);
-            await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
-
+            await IssueCommandsAndWaitForCommit(3, "test", 1);
+            var currentTerm = firstLeader.CurrentTerm;
             DisconnectFromNode(firstLeader);
             List<Task> invalidCommands = IssueCommandsWithoutWaitingForCommits(firstLeader, 3, "test", 1);
             var followers = GetFollowers();
             List<Task> waitingList = new List<Task>();
-            var currentTerm = 1L;
             while (true)
             {
-                foreach (var follower in followers)
+                using (var cts = new CancellationTokenSource())
                 {
-                    waitingList.Add(follower.WaitForState(RachisState.Leader, CancellationToken.None));
+                    foreach (var follower in followers)
+                    {
+                        waitingList.Add(follower.WaitForState(RachisState.Leader, cts.Token));
+                    }
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Started waiting for new leader");
+                    }
+                    var done = await Task.WhenAny(waitingList).WaitAsync(timeToWait);
+                    if (done)
+                    {
+                        break;
+                    }
+                    var maxTerm = followers.Max(f => f.CurrentTerm);
+                    Assert.True(currentTerm + 1 < maxTerm, $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})");
+                    Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
+                    currentTerm = maxTerm;
+                    waitingList.Clear();
                 }
-                if (Log.IsInfoEnabled)
-                {
-                    Log.Info("Started waiting for new leader");
-                }
-                var done = await Task.WhenAny(waitingList).WaitAsync(timeToWait);
-                if (done)
-                {
-                    break;
-                }
-                var maxTerm = followers.Max(f => f.CurrentTerm);
-                Assert.True(currentTerm + 1 < maxTerm, "Followers didn't become leaders although old leader can't communicate with the cluster");
-                Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
-                currentTerm = maxTerm;
-                waitingList.Clear();
             }
 
+            Assert.True(await firstLeader.WaitForLeaveState(RachisState.Leader,CancellationToken.None).WaitAsync(timeToWait));
 
-            var newLeader = followers.First(f => f.CurrentState == RachisState.Leader);
-            var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 5, "test", 1);
+            var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(5, "test", 1);
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Reconnect old leader");
             }
             ReconnectToNode(firstLeader);
-            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
-            var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
-            Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), $"Old leader didn't rollback his log to the new leader log, waited for index {newLeaderLastIndex}, while current is {firstLeader}");
+
+            var retries = numberOfNodes;
+            do
+            {
+                var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
+                if (await waitForCommitIndexChange.WaitAsync(timeToWait))
+                {
+                    break;
+                }
+            } while (retries-- > 0);
+
+            Assert.True(retries > 0,
+                $"Old leader is in {firstLeader.CurrentState} state and didn't rollback his log to the new leader log (last index: {GetLastIndex(firstLeader)}, expected: {newLeaderLastIndex})");
             Assert.Equal(numberOfNodes, RachisConsensuses.Count);
 
-            var tasks = new List<Task>();
-            using (var cts = new CancellationTokenSource())
-            {
-                foreach (var consensus in RachisConsensuses)
-                {
-                    if (consensus.Tag != consensus.LeaderTag)
-                    {
-                        tasks.Add(consensus.WaitForState(RachisState.Follower, cts.Token));
-                    }
-                }
-                try
-                {
-                    if (await Task.WhenAll(tasks).WaitAsync(timeToWait))
-                    {
-                        var leaderUrl = new HashSet<string>();
-                        foreach (var consensus in RachisConsensuses)
-                        {
-                            leaderUrl.Add(consensus.LeaderTag);
-                        }
-                        Assert.True(leaderUrl.Count == 1, "Not all nodes agree on the leader");
-                    }
-                }
-                finally
-                {
-                    cts.Cancel();
-                }
-            }
-            
             foreach (var invalidCommand in invalidCommands)
             {
                 Assert.True(invalidCommand.IsCompleted);
@@ -129,5 +114,13 @@ namespace RachisTests
             }
         }
 
+        private long GetLastIndex(RachisConsensus<CountingStateMachine> rachis)
+        {
+            using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return rachis.GetLastCommitIndex(context);
+            }
+        }
     }
 }
