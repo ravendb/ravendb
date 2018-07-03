@@ -1,8 +1,4 @@
-﻿#if NETSTANDARD2_0
-#define CURRENT
-#endif
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Session;
 
 namespace System.Linq
@@ -1281,7 +1277,6 @@ namespace System.Linq
             return Enumerable.All<TSource>(source, predicate);
         }
 
-#if CURRENT
         [Obsolete("This method is one of the 'System.Linq.Enumerable' extensions and the query will be materialized before execution of this method. It will be applied to in-memory results. If you want to get rid of this message please use '.ToList()' before execution of this method.")]
         public static IEnumerable<TSource> Append<TSource>(this IDocumentQuery<TSource> source, TSource element)
         {
@@ -1305,7 +1300,6 @@ namespace System.Linq
         {
             return Enumerable.Prepend<TSource>(source, element);
         }
-#endif
 
         [Obsolete("This method is one of the 'System.Linq.Enumerable' extensions and the query will be materialized before execution of this method. It will be applied to in-memory results. If you want to get rid of this message please use '.ToList()' before execution of this method.")]
         public static System.Double Average(this IDocumentQuery<int> source)
