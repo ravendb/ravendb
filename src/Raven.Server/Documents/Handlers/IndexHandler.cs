@@ -502,13 +502,13 @@ namespace Raven.Server.Documents.Handlers
 
                 if (parameters.IndexNames == null || parameters.IndexNames.Length == 0)
                     throw new ArgumentNullException(nameof(parameters.IndexNames));
-                
+
                 // Check for auto-indexes - we do not set lock for auto-indexes
                 if (parameters.IndexNames.Any(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase)))
                 {
                     throw new InvalidOperationException("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.");
                 }
-                
+
                 foreach (var name in parameters.IndexNames)
                 {
                     await Database.IndexStore.SetLock(name, parameters.Mode);
@@ -605,9 +605,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-                var index = Database.QueryRunner.GetIndex(name);
-
-                var result = Database.QueryRunner.ExecuteGetTermsQuery(index, field, fromValue, existingResultEtag, GetPageSize(), context, token);
+                var result = Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token, out var index);
 
                 if (result.NotModified)
                 {
@@ -619,7 +617,7 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    if(field.EndsWith("__minX") ||
+                    if (field.EndsWith("__minX") ||
                         field.EndsWith("__minY") ||
                         field.EndsWith("__maxX") ||
                         field.EndsWith("__maxY"))
@@ -641,7 +639,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
                     }
-                    
+
                     writer.WriteTermsQueryResult(context, result);
                 }
 
