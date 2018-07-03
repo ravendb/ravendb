@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron.Backups;
@@ -523,20 +524,25 @@ namespace SlowTests.Voron.Backups
                 }
             }
 
-            // Verify that journal files are consecutive 
+            // Verify that journal files numbering does not contain any gaps
 
             var journalsPath = Path.Combine(DataDir, "Journals");
             var files = Directory.GetFiles(journalsPath, "*.journal*", SearchOption.AllDirectories);
 
             Assert.True(files.Length >= 10);
-
-            for (var index = 0; index < files.Length; index++)
+            var list = new List<int>();
+            foreach (var file in files)
             {
-                var fileName = Path.GetFileNameWithoutExtension(files[index]);
+                var fileName = Path.GetFileNameWithoutExtension(file);
                 int.TryParse(fileName, out var num);
-
-                Assert.Equal(index, num);
+                list.Add(num);
             }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Assert.Contains(i, list);
+            }
+
         }
 
         public override void Dispose()
