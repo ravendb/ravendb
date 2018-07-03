@@ -36,7 +36,7 @@ namespace Tests.Infrastructure
                 Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {currentProcess.Id}.");
         }
 
-        private const int ElectionTimeoutInMs = 300;
+        private int _electionTimeoutInMs = 300;
 
         protected readonly ConcurrentBag<IDisposable> _toDispose = new ConcurrentBag<IDisposable>();
 
@@ -418,7 +418,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
+            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs),
                 "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.LastStateChangeReason());
             return leader;
         }
@@ -429,11 +429,13 @@ namespace Tests.Infrastructure
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
             var clustersServers = new List<RavenServer>();
+            _electionTimeoutInMs = Math.Max(300, numberOfNodes * 80);
             for (var i = 0; i < numberOfNodes; i++)
             {
                 customSettings = customSettings ?? new Dictionary<string, string>()
                 {
                     [RavenConfiguration.GetKey(x=>x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x=>x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
                 };
                 string serverUrl;
 
@@ -474,7 +476,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {
@@ -524,7 +526,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {
