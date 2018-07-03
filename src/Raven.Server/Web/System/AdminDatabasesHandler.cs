@@ -368,11 +368,6 @@ namespace Raven.Server.Web.System
                     databaseRecord.Topology = new DatabaseTopology();
 
                 databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
-
-                if (ServerStore.IsLeader())
-                {
-                    ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord);
-                }
             }
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
@@ -659,6 +654,13 @@ namespace Raven.Server.Web.System
                             if (record.Topology.Count == 0)
                                 waitOnRecordDeletion.Add(databaseName);
                         }
+                    }
+                }
+                else
+                {
+                    foreach (var databaseName in parameters.DatabaseNames)
+                    {
+                        waitOnRecordDeletion.Add(databaseName);
                     }
                 }
 

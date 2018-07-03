@@ -528,6 +528,7 @@ namespace Raven.Server.ServerWide
             }
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
+            _engine.BeforeAppendToRaftLog += BeforeAppendToRaftLog;
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrls[0];
             _engine.Initialize(_env, Configuration, myUrl);
 
@@ -535,6 +536,21 @@ namespace Raven.Server.ServerWide
             LatestVersionCheck.Check(this);
 
             ConfigureAuditLog();
+        }
+
+
+        private void BeforeAppendToRaftLog(object sender, CommandBase cmd)
+        {
+            switch (cmd)
+            {
+                case AddDatabaseCommand addDatabase:
+                    if (addDatabase.Record.Topology.Count == 0)
+                    {
+                        AssignNodesToDatabase(GetClusterTopology(), addDatabase.Record);
+                    }
+                    Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
+                    break;
+            }
         }
 
         private void ConfigureAuditLog()

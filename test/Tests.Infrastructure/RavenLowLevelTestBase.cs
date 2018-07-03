@@ -101,7 +101,7 @@ namespace FastTests
             {
                 store.Initialize();
 
-                store.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
             }
         }
 
