@@ -226,7 +226,7 @@ namespace Raven.Server.Rachis
     }
     
     public abstract class RachisConsensus : IDisposable
-    {        
+    {
         internal abstract RachisStateMachine GetStateMachine();
 
         internal abstract RachisVersionValidation Validator { get; }
@@ -252,6 +252,8 @@ namespace Raven.Server.Rachis
         public event EventHandler<ClusterTopology> TopologyChanged;
 
         public event EventHandler<StateTransition> StateChanged;
+
+        public event EventHandler<CommandBase> BeforeAppendToRaftLog;
 
         public event EventHandler LeaderElected;
 
@@ -1777,6 +1779,11 @@ namespace Raven.Server.Rachis
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
+
+        public void InvokeBeforeAppendToRaftLog(CommandBase cmd)
+        {
+            BeforeAppendToRaftLog?.Invoke(this, cmd);
+        }
 
         public async Task WaitForHeartbeat()
         {
