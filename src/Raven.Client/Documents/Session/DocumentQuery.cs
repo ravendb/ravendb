@@ -894,7 +894,7 @@ namespace Raven.Client.Documents.Session
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 Negate = Negate,
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),
-                CounterIncludes = CounterIncludes,
+                CounterIncludesToken = CounterIncludesToken,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,

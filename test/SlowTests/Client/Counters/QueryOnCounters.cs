@@ -1419,7 +1419,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter("Downloads"));
 
-                    Assert.Equal("from Orders include counters('Downloads')" 
+                    Assert.Equal("from Orders include counters($p0)" 
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1483,7 +1483,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounters(new []{ "Downloads" , "Likes"}));
 
-                    Assert.Equal("from Orders include counters('Downloads','Likes')"
+                    Assert.Equal("from Orders include counters($p0)"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1640,7 +1640,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeDocuments(x => x.Company));
 
                     Assert.Equal("from Orders include " +
-                                 "Company,counters('Downloads')"
+                                 "Company,counters($p0)"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1718,7 +1718,7 @@ from Users as user select output(user)", query.ToString());
                             .IncludeDocuments(x => x.Company));
 
                     Assert.Equal("from Orders include " +
-                                 "Company,counters('Downloads')"
+                                 "Company,counters($p0)"
                                 , query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -1810,7 +1810,7 @@ from Users as user select output(user)", query.ToString());
                             .Where(x => x.ShipTo.Country == "Brazil");
 
                     Assert.Equal("from Orders where ShipTo.Country = $p0 " +
-                                 "include Company,counters('Downloads')"
+                                 "include Company,counters($p1)"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1907,7 +1907,7 @@ from Users as user select output(user)", query.ToString());
                             .Where(x => x.ShipTo.Country == "Brazil");
 
                     Assert.Equal("from Orders where ShipTo.Country = $p0 " +
-                                 "include Company,counters('Downloads')"
+                                 "include Company,counters($p1)"
                                 , query.ToString());
 
                     var queryResult = await query.ToListAsync();
