@@ -49,7 +49,7 @@ namespace Raven.TestDriver
         {
             if (File.Exists(locator.ServerPath) == false)
             {
-                throw new FileNotFoundException("Server file was not found", locator.ServerPath);
+                throw new FileNotFoundException($"Server file was not found at '{locator.ServerPath}'.", locator.ServerPath);
             }
 
             using (var currentProcess = Process.GetCurrentProcess())
