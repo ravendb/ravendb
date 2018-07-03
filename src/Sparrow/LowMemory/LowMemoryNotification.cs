@@ -84,6 +84,8 @@ namespace Sparrow.LowMemory
                 }
                 foreach (var x in _inactiveHandlers)
                 {
+                    if (x == null)
+                        continue;
                     _lowMemoryHandlers.TryRemove(x);
                 }
             }
