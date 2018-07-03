@@ -49,18 +49,38 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var sw = Stopwatch.StartNew();
+            try
+            {
+                var sw = Stopwatch.StartNew();
 
-            var result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
+                var result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
 
-            result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
+                result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
 
-            return result;
+                return result;
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                return await ExecuteQuery(query, documentsContext, existingResultEtag, token);
+            }
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
         {
-            return GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
+            try
+            {
+                await GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                await ExecuteStreamQuery(query, documentsContext, response, writer, token);
+            }
         }
 
         public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
@@ -68,22 +88,44 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            var sw = Stopwatch.StartNew();
+            try
+            {
+                var sw = Stopwatch.StartNew();
 
-            var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
+                var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
 
-            result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
+                result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
 
-            return result;
+                return result;
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                return await ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
+            }
         }
 
-        public TermsQueryResultServerSide ExecuteGetTermsQuery(Index index, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
+        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token, out Index index)
         {
+            index = GetIndex(indexName);
+
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
                 return TermsQueryResultServerSide.NotModifiedResult;
 
-            return index.GetTerms(field, fromValue, pageSize, context, token);
+            try
+            {
+                return index.GetTerms(field, fromValue, pageSize, context, token);
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                return ExecuteGetTermsQuery(indexName, field, fromValue, existingResultEtag, pageSize, context, token, out index);
+            }
         }
 
         public async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
@@ -91,51 +133,91 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Suggestion query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            var sw = Stopwatch.StartNew();
-
-            if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
-                throw new InvalidQueryException("Suggestion query must have one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
-
-            var selectField = (SuggestionField)query.Metadata.SelectFields[0];
-
-            var index = GetIndex(query.Metadata.IndexName);
-
-            var indexDefinition = index.GetIndexDefinition();
-
-            if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
-                throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
-
-            if (field.Suggestions == null)
-                throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
-
-            if (field.Suggestions.Value == false)
-                throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
-
-            if (existingResultEtag.HasValue)
+            try
             {
-                var etag = index.GetIndexEtag();
-                if (etag == existingResultEtag.Value)
-                    return SuggestionQueryResult.NotModifiedResult;
+                var sw = Stopwatch.StartNew();
+
+                if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
+                    throw new InvalidQueryException("Suggestion query must have one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
+
+                var selectField = (SuggestionField)query.Metadata.SelectFields[0];
+
+                var index = GetIndex(query.Metadata.IndexName);
+
+                var indexDefinition = index.GetIndexDefinition();
+
+                if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
+                    throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
+
+                if (field.Suggestions == null)
+                    throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
+
+                if (field.Suggestions.Value == false)
+                    throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
+
+                if (existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag();
+                    if (etag == existingResultEtag.Value)
+                        return SuggestionQueryResult.NotModifiedResult;
+                }
+
+                var result = await index.SuggestionQuery(query, context, token);
+                result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
+                return result;
             }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
 
-            var result = await index.SuggestionQuery(query, context, token);
-            result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
-            return result;
+                return await ExecuteSuggestionQuery(query, context, existingResultEtag, token);
+            }
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            return GetRunner(query).ExecuteIndexEntriesQuery(query, context, existingResultEtag, token);
+            try
+            {
+                return await GetRunner(query).ExecuteIndexEntriesQuery(query, context, existingResultEtag, token);
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                return await ExecuteIndexEntriesQuery(query, context, existingResultEtag, token);
+            }
         }
 
-        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return GetRunner(query).ExecuteDeleteQuery(query, options, context, onProgress, token);
+            try
+            {
+                return await GetRunner(query).ExecuteDeleteQuery(query, options, context, onProgress, token);
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                return await ExecuteDeleteQuery(query, options, context, onProgress, token);
+            }
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
+            try
+            {
+                return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
+            }
+            catch (ObjectDisposedException)
+            {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    throw;
+
+                return await ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
+            }
         }
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query, DocumentsOperationContext context)

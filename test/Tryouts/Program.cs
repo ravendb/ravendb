@@ -18,12 +18,12 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentFailover())
+                using (var a = new RavenDB_8288())
                 {
-                    await a.PutAttachmentsWithFailover_LowLevel();
+                    await a.Queries_will_work_during_index_replacements();
                 }
             }
         }
