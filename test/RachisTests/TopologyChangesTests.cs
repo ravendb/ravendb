@@ -57,7 +57,7 @@ namespace RachisTests
             var leader = await CreateNetworkAndGetLeader(3);
             Assert.True(await leader.AddToClusterAsync(node4.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
             Assert.True(await leader.AddToClusterAsync(node5.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
-            var t = IssueCommandsAndWaitForCommit(leader, 3, "test", 1);
+            var t = IssueCommandsAndWaitForCommit(3, "test", 1);
             Assert.True(await t.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "Commands were not committed in time although there is a majority of active nodes in the cluster");
 
             ReconnectToNode(node4);
