@@ -329,14 +329,11 @@ namespace Raven.Client.Http
 
         protected void DisposeAllFailedNodesTimers()
         {
-            var oldFailedNodesTimers = _failedNodesTimers;
-            _failedNodesTimers.Clear();
-
-            foreach (var failedNodesTimers in oldFailedNodesTimers)
+            foreach (var failedNodesTimers in _failedNodesTimers)
             {
-                failedNodesTimers.Value.Dispose();
+                if (_failedNodesTimers.TryRemove(failedNodesTimers.Key, out var status))
+                    status.Dispose();
             }
-
         }
 
         public void Execute<TResult>(
@@ -1091,8 +1088,13 @@ namespace Raven.Client.Http
         private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
         {
             var nodeStatus = new NodeStatus(this, nodeIndex, chosenNode);
-            if (_failedNodesTimers.TryAdd(chosenNode, nodeStatus))
-                nodeStatus.StartTimer();
+
+            if (_failedNodesTimers.TryAdd(chosenNode, nodeStatus) == false)
+            {
+                nodeStatus.Dispose();
+            }
+
+            nodeStatus.StartTimer();
         }
 
         internal Task CheckNodeStatusNow(string tag)
@@ -1113,7 +1115,7 @@ namespace Raven.Client.Http
             }
 
             var nodeStatus = new NodeStatus(this, i, copy[i]);
-            return CheckNodeStatusCallback(nodeStatus);
+            return CheckNodeStatusCallback(nodeStatus).ContinueWith(t => nodeStatus.Dispose());
         }
 
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
@@ -1129,7 +1131,6 @@ namespace Raven.Client.Http
             {
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    NodeStatus status;
                     try
                     {
                         await PerformHealthCheck(serverNode, nodeStatus.NodeIndex, context).ConfigureAwait(false);
@@ -1139,13 +1140,13 @@ namespace Raven.Client.Http
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"{serverNode.ClusterTag} is still down", e);
 
-                        if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out status))
+                        if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out _))
                             nodeStatus.UpdateTimer();
 
                         return;// will wait for the next timer call
                     }
 
-                    if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
+                    if (_failedNodesTimers.TryRemove(nodeStatus.Node, out var status))
                     {
                         status.Dispose();
                     }
