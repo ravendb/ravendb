@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private Dictionary<string, Queue<Attachment>> _loadedAttachments;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
         {
             _transformation = transformation;
             _config = config;
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             LoadToDestinations = tables;
 
-            if (_transformation.IsHandlingAttachments)
+            if (_transformation.IsAddingAttachments)
                _loadedAttachments = new Dictionary<string, Queue<Attachment>>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -46,11 +46,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             base.Initalize();
             
-            SingleRun.ScriptEngine.SetValue("varchar",
-                new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
+            DocumentScript.ScriptEngine.SetValue("varchar",
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
 
-            SingleRun.ScriptEngine.SetValue("nvarchar",
-                new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
+            DocumentScript.ScriptEngine.SetValue("nvarchar",
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_transformation.IsHandlingAttachments && 
+                if (_transformation.IsAddingAttachments && 
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     var attachment = _loadedAttachments[attachmentName].Dequeue();
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
+                DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (sizeSpecified && args[1].IsNumber() == false)
                 throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
 
-            var item = SingleRun.ScriptEngine.Object.Construct(Arguments.Empty);
+            var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
 
             item.Put(nameof(VarcharFunctionCall.Type), type, true);
             item.Put(nameof(VarcharFunctionCall.Value), args[0], true);
