@@ -350,7 +350,7 @@ namespace Raven.Server.Documents.Replication
 
                 DynamicJsonValue returnValue;
 
-                if (e is AggregateException ag && ag.InnerExceptions.Count == 1 && ag.InnerExceptions[0] is MissingAttachmentException mae)
+                if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
                 {
                     if (_cts.IsCancellationRequested)
                         return;
@@ -556,7 +556,7 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                 {
                     //This is the case where we had a missing attachment, it is rare but expected.
-                    if (e is AggregateException ag && ag.InnerExceptions.Count == 1 && ag.InnerExceptions[0] is MissingAttachmentException mae)
+                    if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
                     {
                         _log.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
                     }

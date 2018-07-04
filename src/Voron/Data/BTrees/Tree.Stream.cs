@@ -262,7 +262,7 @@ namespace Voron.Data.BTrees
         /// </summary>
         /// <param name="key"> The key of the stream</param>
         /// <returns>'true' if there is a stream under the given 'key' and 'false' otherwise</returns>
-        public bool SeekStream(Slice key)
+        public bool StreamExist(Slice key)
         {
             var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
             var numberOfChunks = tree.NumberOfEntries;
