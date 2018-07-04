@@ -141,6 +141,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int _numberOfQueries;
         private bool _didWork;
+        private bool _isReplacing;
 
         protected readonly bool HandleAllDocs;
 
@@ -1024,14 +1025,22 @@ namespace Raven.Server.Documents.Indexes
                                     if (ShouldReplace())
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.InvariantCultureIgnoreCase);
+                                        _isReplacing = true;
 
-                                        // this can fail if the indexes lock is currently held, so we'll retry
-                                        // however, we might be requested to shutdown, so we want to skip replacing
-                                        // in this case, worst case scenario we'll handle this in the next batch
-                                        while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
+                                        try
                                         {
-                                            if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
-                                                break;
+                                            // this can fail if the indexes lock is currently held, so we'll retry
+                                            // however, we might be requested to shutdown, so we want to skip replacing
+                                            // in this case, worst case scenario we'll handle this in the next batch
+                                            while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
+                                            {
+                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
+                                                    break;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            _isReplacing = false;
                                         }
                                     }
                                 }
@@ -3161,6 +3170,10 @@ namespace Raven.Server.Documents.Indexes
 
         protected struct QueryDoneRunning : IDisposable
         {
+            private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
+
+            private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
+
             readonly Index _parent;
             private readonly ExecutingQueryInfo _queryInfo;
             private bool _hasLock;
@@ -3174,7 +3187,10 @@ namespace Raven.Server.Documents.Indexes
 
             public void HoldLock()
             {
-                var timeout = TimeSpan.FromSeconds(3);
+                var timeout = _parent._isReplacing
+                    ? ExtendedLockTimeout
+                    : DefaultLockTimeout;
+
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
                     ThrowLockTimeoutException();
 
