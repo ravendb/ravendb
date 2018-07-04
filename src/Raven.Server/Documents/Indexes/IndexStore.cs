@@ -1237,23 +1237,26 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
 
-            var needToStop = PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
+            using (newIndex.DrainRunningQueries()) // to ensure nobody will start index meanwhile if we stop it here
+            {
+                var needToStop = newIndex.Status == IndexRunningStatus.Running && PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
 
-            if (needToStop)
-            {
-                // stop the indexing to allow renaming the index 
-                // the write tx required to rename it might be hold by indexing thread
-                ExecuteIndexAction(() => newIndex.Stop());
-            }
-
-            try
-            {
-                newIndex.Rename(oldIndexName);
-            }
-            finally
-            {
                 if (needToStop)
-                    ExecuteIndexAction(newIndex.Start);
+                {
+                    // stop the indexing to allow renaming the index 
+                    // the write tx required to rename it might be hold by indexing thread
+                    ExecuteIndexAction(() => newIndex.Stop());
+                }
+
+                try
+                {
+                    newIndex.Rename(oldIndexName);
+                }
+                finally
+                {
+                    if (needToStop)
+                        ExecuteIndexAction(newIndex.Start);
+                }
             }
 
             newIndex.ResetIsSideBySideAfterReplacement();
