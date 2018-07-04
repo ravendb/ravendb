@@ -54,6 +54,9 @@ namespace Raven.Server.Documents.Includes
                                                         $"document {document.Id} doesn't have a field named '{kvp.Key}'. ");
                 }
 
+                if (Results.ContainsKey(docId))
+                    continue;
+
                 var countersToGet = kvp.Value.ToArray();
                 CountersToGetByDocId[docId] = countersToGet;
 
