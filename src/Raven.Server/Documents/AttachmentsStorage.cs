@@ -10,6 +10,8 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Data.Tables;
@@ -467,6 +469,30 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue lowerDocumentId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (From(context, lowerDocumentId, out Slice lowerDocumentIdSlice))
+            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, Slices.Empty, out Slice prefixSlice))
+            {
+                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
+                {
+                    var attachment = TableValueToAttachment(context, ref sr.Value.Reader);
+                    if (attachment == null)
+                        continue;
+
+                    attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
+
+                    yield return attachment;
+                }
+            }
+        }
+
+        private static ByteStringContext.InternalScope From(DocumentsOperationContext context, LazyStringValue lowerDocumentId, out Slice lowerDocumentIdSlice)
+        {
+            return Slice.From(context.Allocator, lowerDocumentId.Buffer, lowerDocumentId.Size, out lowerDocumentIdSlice);
+        }
+
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
         {
             var attachments = new DynamicJsonArray();
@@ -499,7 +525,7 @@ namespace Raven.Server.Documents
             return (count, streamsCount);
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, bool withoutStream = false)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -522,11 +548,16 @@ namespace Raven.Server.Documents
                         metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
                         exitingDocumentCv == changeVector)
                     {
-                        return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
+                        return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null, withoutStream);
                     }
                 }
 
                 return null;
+            }
+            // We were invoked just for the purpose of checking the existence of the attachment, no need to actually read the stream from disk only to verify its there.
+            if (withoutStream)
+            {
+                return VerifyAttachmentStreamExist(context, attachment.Base64Hash)?attachment:null;
             }
 
             var stream = GetAttachmentStream(context, attachment.Base64Hash);
@@ -558,6 +589,11 @@ namespace Raven.Server.Documents
             return tree.ReadStream(hashSlice);
         }
 
+        public bool VerifyAttachmentStreamExist(DocumentsOperationContext context, Slice hashSlice)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return tree.SeekStream(hashSlice);
+        }
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
@@ -979,6 +1015,7 @@ namespace Raven.Server.Documents
 #if DEBUG
         public static void AssertAttachments(BlittableJsonReaderObject document, DocumentFlags flags)
         {
+            return; //TODO: Remove this before PR
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
@@ -997,5 +1034,26 @@ namespace Raven.Server.Documents
             }
         }
 #endif
+        public void AssertAttachmentsFromReplication(BlittableJsonReaderObject document, AttachmentType type,string id, DocumentsOperationContext context)
+        {
+            var changeVector = type == AttachmentType.Document ? null : document.GetChangeVector();
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+            {
+                foreach (BlittableJsonReaderObject attachment in attachments)
+                {
+                    if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) &&
+                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
+                    {
+                        if (GetAttachment(context, id, name, type, changeVector, withoutStream:true) == null)
+                        {
+                            var msg =
+                                $"Document {id} has attachment {name} listed as one of his attachments but it doesn't exist in the attachment storage";
+                            throw new MissingAttachmentException(msg);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

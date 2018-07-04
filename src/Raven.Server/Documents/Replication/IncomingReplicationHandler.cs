@@ -14,10 +14,13 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
@@ -292,6 +295,7 @@ namespace Raven.Server.Documents.Replication
                                 lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
                                 lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                             }
+
                             var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
                             if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
                             {
@@ -302,7 +306,8 @@ namespace Raven.Server.Documents.Replication
                                         $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                                 }
 
-                                var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
+                                var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId,
+                                    _replicationFromAnotherSource);
                                 if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                                 {
                                     if (_log.IsInfoEnabled)
@@ -318,10 +323,12 @@ namespace Raven.Server.Documents.Replication
                                 }
                             }
                         }
+
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
+
                 SendHeartbeatStatusToSource(documentsContext, writer, _lastDocumentEtag, messageType);
             }
             catch (ObjectDisposedException)
@@ -341,11 +348,31 @@ namespace Raven.Server.Documents.Replication
                 if (_cts.IsCancellationRequested)
                     return;
 
+                DynamicJsonValue returnValue;
+
+                if (e is AggregateException ag && ag.InnerExceptions.Count == 1 && ag.InnerExceptions[0] is MissingAttachmentException mae)
+                {
+                    if (_cts.IsCancellationRequested)
+                        return;
+                    returnValue = new DynamicJsonValue
+                    {
+                        [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.MissingAttachments.ToString(),
+                        [nameof(ReplicationMessageReply.MessageType)] = messageType,
+                        [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
+                        [nameof(ReplicationMessageReply.Exception)] = mae.ToString()
+                    };
+
+                    documentsContext.Write(writer, returnValue);
+                    writer.Flush();
+
+                    return;
+                }
+
                 if (_log.IsInfoEnabled)
                     _log.Info($"Failed replicating documents {FromToString}.", e);
 
                 //return negative ack
-                var returnValue = new DynamicJsonValue
+                returnValue = new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
                     [nameof(ReplicationMessageReply.MessageType)] = messageType,
@@ -505,12 +532,14 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.MessageType)] = "Processing"
                     }, "heartbeat message"))
                     {
-                        while (task.Wait(Math.Min(3000, (int)(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) == false)
+                        while (task.Wait(Math.Min(3000, (int)(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) ==
+                               false)
                         {
                             // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
                             documentsContext.Write(writer, msg);
                             writer.Flush();
                         }
+
                         task = null;
                     }
                 }
@@ -525,7 +554,17 @@ namespace Raven.Server.Documents.Replication
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                {
+                    //This is the case where we had a missing attachment, it is rare but expected.
+                    if (e is AggregateException ag && ag.InnerExceptions.Count == 1 && ag.InnerExceptions[0] is MissingAttachmentException mae)
+                    {
+                        _log.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
+                    }
+                    else
+                    {
+                        _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                    }
+                }                
                 throw;
             }
             finally
@@ -1088,6 +1127,8 @@ namespace Raven.Server.Documents.Replication
                                         //the other side will receive negative ack and will retry sending again.
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
+                                        var attachmentType = item.Flags.Contain(DocumentFlags.Revision) ? AttachmentType.Revision : AttachmentType.Document;                                        
+                                        _incoming._database.DocumentsStorage.AttachmentsStorage.AssertAttachmentsFromReplication(document, attachmentType,item.Id, context);                                        
                                     }
 
                                     if (item.Flags.Contain(DocumentFlags.Revision))
@@ -1205,9 +1246,7 @@ namespace Raven.Server.Documents.Replication
                             }
                         }
                     }
-
-                    _incoming._attachmentStreamsTempFile.Reset();
-
+                   
                     Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
@@ -1222,6 +1261,7 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
+                    _incoming._attachmentStreamsTempFile?.Reset();
                     IsIncomingReplication = false;
                 }
             }
