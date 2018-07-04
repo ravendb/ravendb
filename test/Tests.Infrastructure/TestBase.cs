@@ -138,7 +138,7 @@ namespace FastTests
             lock (typeof(TestBase))
             {
                 if (_selfSignedCertFileName != null)
-                    return ;
+                    return;
 
                 var log = new StringBuilder();
                 byte[] certBytes;
@@ -278,12 +278,12 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer(string customConfigPath = null)
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null)
         {
             _localServer?.Dispose();
-            if (_localServer!= null)
+            if (_localServer != null)
                 Servers.Remove(_localServer);
-            _localServer = GetNewServer(_customServerSettings, customConfigPath: customConfigPath);
+            _localServer = GetNewServer(customSettings: customSettings ?? _customServerSettings, runInMemory: runInMemory, customConfigPath: customConfigPath);
         }
 
         private readonly object _getNewServerSync = new object();
