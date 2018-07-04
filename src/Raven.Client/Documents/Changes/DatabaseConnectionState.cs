@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
-            Set(Task.FromCanceled(CancellationToken.None));
+            Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
             OnDocumentChangeNotification = null;
             OnIndexChangeNotification = null;
             OnOperationStatusChangeNotification = null;
