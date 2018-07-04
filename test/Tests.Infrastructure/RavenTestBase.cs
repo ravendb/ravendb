@@ -507,7 +507,7 @@ namespace FastTests
                 exceptionAggregator.Execute(store.Dispose);
             CreatedStores.Clear();
         }
-        
+
         protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
             X509Certificate2 serverCertificate;
