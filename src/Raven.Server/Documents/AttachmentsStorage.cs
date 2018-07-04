@@ -472,7 +472,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue lowerDocumentId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using (From(context, lowerDocumentId, out Slice lowerDocumentIdSlice))
+            using (GetSliceFromLazyString(context, lowerDocumentId, out Slice lowerDocumentIdSlice))
             using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
@@ -488,7 +488,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static ByteStringContext.InternalScope From(DocumentsOperationContext context, LazyStringValue lowerDocumentId, out Slice lowerDocumentIdSlice)
+        private static ByteStringContext.InternalScope GetSliceFromLazyString(DocumentsOperationContext context, LazyStringValue lowerDocumentId, out Slice lowerDocumentIdSlice)
         {
             return Slice.From(context.Allocator, lowerDocumentId.Buffer, lowerDocumentId.Size, out lowerDocumentIdSlice);
         }
@@ -589,10 +589,10 @@ namespace Raven.Server.Documents
             return tree.ReadStream(hashSlice);
         }
 
-        public bool VerifyAttachmentStreamExist(DocumentsOperationContext context, Slice hashSlice)
+        private bool VerifyAttachmentStreamExist(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
-            return tree.SeekStream(hashSlice);
+            return tree.StreamExist(hashSlice);
         }
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
         {
