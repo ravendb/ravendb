@@ -83,9 +83,9 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                 {
                     var user = session.Load<User>("users/1");
 
-                    var metatata = session.Advanced.GetMetadataFor(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
 
-                    Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Attachments));
+                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
 
                     var attachment = session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl");
 
@@ -132,9 +132,9 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     var doc = item.LoadUsingStartingWith ? session.Advanced.LoadStartingWith<User>(item.DocId)[0] : session.Load<User>(item.DocId);
                     Assert.NotNull(doc);
 
-                    var metatata = session.Advanced.GetMetadataFor(doc);
+                    var metadata = session.Advanced.GetMetadataFor(doc);
 
-                    Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Attachments));
+                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
 
 
                     using (var attachment = session.Advanced.Attachments.Get(doc.Id, item.AttachmentName))

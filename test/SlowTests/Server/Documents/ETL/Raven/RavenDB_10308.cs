@@ -104,9 +104,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.NotNull(user);
                     Assert.Equal("James Doe", user.Name);
 
-                    var metatata = session.Advanced.GetMetadataFor(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
 
-                    Assert.False(metatata.ContainsKey(Constants.Documents.Metadata.Attachments));
+                    Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
                 }
             }
         }

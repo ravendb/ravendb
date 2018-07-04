@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
@@ -13,9 +15,18 @@ namespace SlowTests.Server.Documents.ETL.Raven
     public class RavenDB_11157_Raven : EtlTestBase
     {
         [Theory]
-        [InlineData("Users")]
-        [InlineData(null)]
-        public void Should_load_all_counters_when_no_script_is_defined(string collection)
+        [InlineData("Users", null)]
+        [InlineData(null, null)]
+        [InlineData("Users", @"
+    loadToUsers(this);
+
+function loadCountersOfUsersBehavior(doc, counter)
+{
+    return true;
+}
+")]
+
+        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting(string collection, string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -23,7 +34,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 if (collection == null)
                     AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
                 else
-                    AddEtl(src, dest, "Users", script: null);
+                    AddEtl(src, dest, "Users", script: script);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -129,9 +140,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.NotNull(user);
                     Assert.Equal("James Doe", user.Name);
 
-                    var metatata = session.Advanced.GetMetadataFor(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
 
-                    Assert.False(metatata.ContainsKey(Constants.Documents.Metadata.Counters));
+                    Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
                 }
             }
         }
@@ -210,9 +221,9 @@ person.addCounter(loadCounter('down'));
                 {
                     var user = session.Load<User>("users/1");
 
-                    var metatata = session.Advanced.GetMetadataFor(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
 
-                    Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Counters));
+                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
 
                     var counter = session.CountersFor("users/1").Get("up-etl");
 
@@ -259,9 +270,9 @@ person.addCounter(loadCounter('down'));
                     var doc = item.LoadUsingStartingWith ? session.Advanced.LoadStartingWith<User>(item.DocId)[0] : session.Load<User>(item.DocId);
                     Assert.NotNull(doc);
 
-                    var metatata = session.Advanced.GetMetadataFor(doc);
+                    var metadata = session.Advanced.GetMetadataFor(doc);
 
-                    Assert.True(metatata.ContainsKey(Constants.Documents.Metadata.Counters));
+                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
                     
                     var value = session.CountersFor(doc.Id).Get(item.CounterName);
 
@@ -326,7 +337,7 @@ for (var i = 0; i < counters.length; i++) {
         }
 
         [Fact]
-        public void Should_error_if_attachment_doesnt_exist()
+        public void Should_error_if_counter_doesnt_exist()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -708,6 +719,274 @@ if (hasCounter('down')) {
                     long? value = session.CountersFor("users/1").Get("likes");
 
                     Assert.Equal(1, value);
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_handle_counters_according_to_behavior_defined_in_script()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script:
+                    @"
+if (this.Age > 20)
+{
+    loadToUsers({ Name: this.Name + ' ' + this.LastName });
+}
+
+function loadCountersOfUsersBehavior(docId, counter)
+{
+    var user = load(docId);
+
+    if (user.Age > 20 && counter == 'up')
+    {
+        return true;
+    }
+}");
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe",
+                        LastName = "Doe",
+                        Age = 21
+                    }, "users/1");
+
+                    session.CountersFor("users/1").Increment("up", 20);
+                    session.CountersFor("users/1").Increment("down", 10);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                AssertCounters(dest, new[]
+                {
+                    ("users/1", "up", 20L, false),
+                });
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Increment("up", 20);
+                    session.CountersFor("users/1").Increment("down", 10);
+
+                    session.SaveChanges();
+                }
+                
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                AssertCounters(dest, new[]
+                {
+                    ("users/1", "up", 40L, false),
+                });
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Delete("up");
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+
+                    Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
+
+                    var counter = session.CountersFor("users/1").Get("up");
+
+                    Assert.Null(counter); // this counter was removed
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script:
+                    @"
+loadToUsers(this);");
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    session.CountersFor("users/1").Increment("up", 20);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.Empty(session.CountersFor("users/1").GetAll());
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Increment("up", 20);
+                    session.CountersFor("users/1").Increment("down", 10);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Empty(session.CountersFor("users/1").GetAll());
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set()
+        {
+            using (var src = GetDocumentStore(new Options()
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
+            }))
+            using (var dest = GetDocumentStore())
+            {
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.Store(new User(), "users/2");
+
+                    session.CountersFor("users/1").Increment("likes");
+                    session.CountersFor("users/2").Increment("likes");
+
+                    session.Store(new User(), "users/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                AddEtl(src, dest, "Users", script: @"
+loadToUsers(this);
+
+function loadCountersOfUsersBehavior(docId, counter)
+{
+    return true;
+}");
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 8);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+
+                    long? value = session.CountersFor("users/1").Get("likes");
+
+                    Assert.Equal(1, value);
+                }
+            }
+        }
+
+        [Fact]
+        public void Error_if_load_counter_behavior_func_doesnt_match_any_collection_that_script_applies_to()
+        {
+            var config = new RavenEtlConfiguration
+            {
+                Name = "test",
+                ConnectionStringName = "test",
+                Transforms =
+                {
+                    new Transformation
+                    {
+                        Name = "test",
+                        Collections = {"Users", "Customers"},
+                        Script = @"
+loadToUsers(this);
+
+function loadCountersOfPeopleBehavior(docId, counter) // note People while script defined for Users and Customers
+{
+    return true;
+}
+
+function loadCountersOfCustomersBehavior(docId, counter) // it's ok
+{
+    return true;
+}
+"
+                    }
+                }
+            };
+
+            config.Initialize(new RavenConnectionString() { Database = "Foo", TopologyDiscoveryUrls = new[] { "http://localhost:8080" } });
+
+            List<string> errors;
+            config.Validate(out errors);
+
+            Assert.Equal(1, errors.Count);
+
+            Assert.Equal("There is 'loadCountersOfPeopleBehavior' function defined in 'test' script while the processed collections ('Users', 'Customers') doesn't include 'People'. " +
+                         "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +
+                         "are loaded to the same collection on a destination side", errors[0]);
+        }
+
+        [Fact]
+        public void Load_counters_behavior_function_can_use_other_function_defined_in_script()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script: @"
+loadToUsers(this);
+
+function loadAllCounters(){
+    return true;
+}
+
+function loadCountersOfUsersBehavior(docId, counter)
+{
+    return loadAllCounters();
+}");
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    session.CountersFor("users/1").Increment("up", 20);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.Equal(20, session.CountersFor("users/1").Get("up"));
                 }
             }
         }
