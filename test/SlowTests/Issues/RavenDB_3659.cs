@@ -10,7 +10,6 @@ using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
-using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -39,15 +38,7 @@ namespace SlowTests.Issues
         [Fact]
         public void IfTempPathCannotBeAccessedThenServerShouldThrowDuringStartup()
         {
-            DoNotReuseServer(_invalidCustomSettings);
-
-            var e = Assert.Throws<InvalidOperationException>(() =>
-            {
-                using (var store = GetDocumentStore())
-                {
-
-                }
-            });
+            var e = Assert.Throws<InvalidOperationException>(() => UseNewLocalServer(_invalidCustomSettings, runInMemory: false));
 
             string expectedSubstring = $"Key: '{RavenConfiguration.GetKey(x => x.Storage.TempPath)}' Path: '{_invalidCustomSettings[RavenConfiguration.GetKey(x => x.Storage.TempPath)]}";
             Assert.Contains(expectedSubstring, e.Message);
@@ -57,10 +48,11 @@ namespace SlowTests.Issues
         public async Task TenantDatabasesShouldInheritTempPathIfNoneSpecified()
         {
             var tempPath = NewDataPath();
-            DoNotReuseServer(new Dictionary<string, string>
+
+            UseNewLocalServer(new Dictionary<string, string>
             {
                 { RavenConfiguration.GetKey(x => x.Storage.TempPath), tempPath }
-            });
+            }, runInMemory: false);
 
             using (var store = GetDocumentStore())
             {
@@ -75,10 +67,11 @@ namespace SlowTests.Issues
         {
             var tempPath1 = NewDataPath();
             var tempPath2 = NewDataPath();
-            DoNotReuseServer(new Dictionary<string, string>
+
+            UseNewLocalServer(new Dictionary<string, string>
             {
                 { RavenConfiguration.GetKey(x => x.Storage.TempPath), tempPath1 }
-            });
+            }, runInMemory: false);
 
             using (var store = GetDocumentStore())
             {
