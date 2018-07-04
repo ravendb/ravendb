@@ -1105,12 +1105,15 @@ namespace Raven.Client.Http
         {
             var nodeStatus = new NodeStatus(this, nodeIndex, chosenNode);
 
-            if (_failedNodesTimers.TryAdd(chosenNode, nodeStatus) == false)
+            var status = _failedNodesTimers.GetOrAdd(chosenNode, nodeStatus);
+            if (status != nodeStatus)
             {
                 nodeStatus.Dispose();
+                status.Restart();
+                return;
             }
 
-            nodeStatus.StartTimer();
+            status.StartTimer();
         }
 
         internal Task CheckNodeStatusNow(string tag)
@@ -1147,6 +1150,7 @@ namespace Raven.Client.Http
             {
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
+                    NodeStatus status;
                     try
                     {
                         await PerformHealthCheck(serverNode, nodeStatus.NodeIndex, context).ConfigureAwait(false);
@@ -1156,13 +1160,13 @@ namespace Raven.Client.Http
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"{serverNode.ClusterTag} is still down", e);
 
-                        if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out _))
-                            nodeStatus.UpdateTimer();
+                        if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out status))
+                            status.UpdateTimer();
 
                         return;// will wait for the next timer call
                     }
 
-                    if (_failedNodesTimers.TryRemove(nodeStatus.Node, out var status))
+                    if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
                     {
                         status.Dispose();
                     }
@@ -1436,6 +1440,13 @@ namespace Raven.Client.Http
                 return _timerPeriod;
             }
 
+            public void Restart()
+            {
+                Debug.Assert(_timer != null);
+                _timerPeriod = TimeSpan.Zero;
+                _timer?.Change(NextTimerPeriod(), Timeout.InfiniteTimeSpan);
+            }
+
             public void StartTimer()
             {
                 _timer = new Timer(TimerCallback, null, _timerPeriod, Timeout.InfiniteTimeSpan);
@@ -1448,7 +1459,9 @@ namespace Raven.Client.Http
                     Dispose();
                     return;
                 }
-                GC.KeepAlive(_requestExecutor.CheckNodeStatusCallback(this));
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                _requestExecutor.CheckNodeStatusCallback(this);
+#pragma warning restore CS4014
             }
 
             public void UpdateTimer()
