@@ -30,7 +30,9 @@ namespace Raven.Client.Json
             if (type == typeof(bool))
                 return value;
 
-            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(decimal) || type == typeof(float))
+            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || 
+				type == typeof(decimal) || type == typeof(float) || type == typeof(uint) || 
+				type == typeof(ulong) || type == typeof(short) || type == typeof(byte))
                 return value;
 
             if (type == typeof(LazyNumberValue))
