@@ -121,18 +121,17 @@ namespace Raven.Server.Documents.TcpHandlers
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
             
-            bool shouldRetry;
-            bool waitedAnyTime = false;
+            bool shouldRetry = false;
+            
             do
             {
                 try
                 {
                     DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
-                    shouldRetry = false;
+                    shouldRetry = false;                    
                 }
                 catch (TimeoutException)
-                {
-                    waitedAnyTime = true;
+                {                    
                     if (timeout == TimeSpan.Zero && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
@@ -144,10 +143,11 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
             } while (shouldRetry);
 
-            // if waited, refresh subscription data (change vector may have been updated)
-            if (waitedAnyTime)
-                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+           
 
+            // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)            
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+            
             (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
             try
@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
 
         private async Task ProcessSubscriptionAsync()
-        {
+        {            
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
