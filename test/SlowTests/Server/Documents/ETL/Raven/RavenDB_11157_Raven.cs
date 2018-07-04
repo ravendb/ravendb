@@ -990,5 +990,56 @@ function loadCountersOfUsersBehavior(docId, counter)
                 }
             }
         }
+
+        [Fact]
+        public void Should_override_counter_value()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    session.CountersFor("users/1").Increment("up", 10);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.Equal(10, session.CountersFor("users/1").Get("up"));
+
+                    session.CountersFor("users/1").Increment("up", 1000);
+
+                    session.SaveChanges();
+
+                    Assert.Equal(1010, session.CountersFor("users/1").Get("up"));
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Increment("up", -10);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Equal(0, session.CountersFor("users/1").Get("up"));
+                }
+            }
+        }
     }
 }
