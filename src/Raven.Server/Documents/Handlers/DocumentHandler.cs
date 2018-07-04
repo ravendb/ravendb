@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Handlers
                 if (counters?.Count > 0)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.Counters));
+                    writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
                     await writer.WriteCountersAsync(context, counters);
                 }
 

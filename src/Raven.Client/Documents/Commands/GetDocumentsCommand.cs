@@ -52,10 +52,10 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counters, bool metadataOnly) 
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, bool metadataOnly) 
             : this(ids, includes, metadataOnly)
         {
-            _counters = counters ?? throw new ArgumentNullException(nameof(counters));
+            _counters = counterIncludes ?? throw new ArgumentNullException(nameof(counterIncludes));
         }
 
         public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, bool metadataOnly)
