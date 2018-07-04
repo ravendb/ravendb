@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counters = null, bool includeAllCounters = false)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session
             }
             else
             {
-                loadOperation.WithCounters(counters);
+                loadOperation.WithCounters(counterIncludes);
             }
 
             var command = loadOperation.CreateRequest();
