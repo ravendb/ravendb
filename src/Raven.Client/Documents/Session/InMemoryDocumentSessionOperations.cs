@@ -1325,7 +1325,7 @@ more responsive application.
                 {
                     foreach (var id in ids)
                     {
-                        SetGotAllCountersForDocumet(id);
+                        SetGotAllCountersForDocument(id);
                     }
 
                     return;
@@ -1406,11 +1406,11 @@ more responsive application.
                 if (kvp.Value.Length != 0)
                     continue;
 
-                SetGotAllCountersForDocumet(kvp.Key);
+                SetGotAllCountersForDocument(kvp.Key);
             }
         }
 
-        private void SetGotAllCountersForDocumet(string id)
+        private void SetGotAllCountersForDocument(string id)
         {
             if (CountersByDocId.TryGetValue(id, out var cache) == false)
             {
