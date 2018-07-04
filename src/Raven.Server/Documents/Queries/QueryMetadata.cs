@@ -531,24 +531,29 @@ namespace Raven.Server.Documents.Queries
 
                 if (vt.Value == ValueTokenType.Parameter)
                 {
-                    if (parameters == null)
-                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", QueryText, null);
-
-                    if (parameters.TryGetMember(vt.Token.Value, out var counter) == false)
-                        throw new InvalidQueryException($"Value of parameter '{vt.Token.Value}' was not provided", QueryText, parameters);
-
-                    if (counter is BlittableJsonReaderArray bjra)
+                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
                     {
-                        counterIncludes.AddCounters(bjra, sourcePath);
-                        continue;
+                        AddCounterToInclude(counterIncludes, parameters, v, sourcePath);
                     }
 
-                    counterIncludes.AddCounter(counter.ToString(), sourcePath);
                     continue;
                 }
 
-                counterIncludes.AddCounter(vt.Token.Value, sourcePath);
+                var value = QueryBuilder.GetValue(Query, this, parameters, vt);
+
+                AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
+
             }
+        }
+
+        private void AddCounterToInclude(CounterIncludesField counterIncludes, BlittableJsonReaderObject parameters, 
+            (object Value, ValueTokenType Type) parameterValue, string sourcePath)
+        {
+            if (parameterValue.Type != ValueTokenType.String)
+                throw new InvalidQueryException("Parameters of method `counters` must be of type `string` or `string[]`, " +
+                                                $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
+
+            counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)

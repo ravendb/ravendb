@@ -1314,6 +1314,32 @@ more responsive application.
             }
         }
 
+        internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] ids, string[] countersToInclude, bool gotAll)
+        {
+            if (NoTracking)
+                return;
+
+            if (resultCounters == null || resultCounters.Count == 0)
+            {
+                if (gotAll)
+                {
+                    foreach (var id in ids)
+                    {
+                        SetGotAllCountersForDocumet(id);
+                    }
+
+                    return;
+                }
+
+            }
+            else
+            {
+                RegisterCountersInternal(resultCounters, countersToInclude: null, fromQueryResult : false, gotAll : gotAll);
+            }
+
+            RegisterMissingCounters(ids, countersToInclude);
+
+        }
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude)
         {
@@ -1326,25 +1352,32 @@ more responsive application.
             }
             else
             {
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                foreach (var propertyIndex in resultCounters.GetPropertiesByInsertionOrder())
-                {
-                    resultCounters.GetPropertyByIndex(propertyIndex, ref propertyDetails);
-                    if (propertyDetails.Value == null)
-                        continue;
-                    var gotAll = countersToInclude.TryGetValue(propertyDetails.Name, out var counters) &&
-                                 counters.Length == 0;
-                    var bjra = (BlittableJsonReaderArray)propertyDetails.Value;
-                    if (bjra.Length == 0 && gotAll == false)
-                        continue;
-
-                    RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra);
-                }
-
+                RegisterCountersInternal(resultCounters, countersToInclude);
             }
 
             RegisterMissingCounters(countersToInclude);
 
+        }
+
+        private void RegisterCountersInternal(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude, bool fromQueryResult = true, bool gotAll = false)
+        {
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var propertyIndex in resultCounters.GetPropertiesByInsertionOrder())
+            {
+                resultCounters.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+                if (propertyDetails.Value == null)
+                    continue;
+                if (fromQueryResult)
+                {
+                    gotAll = countersToInclude.TryGetValue(propertyDetails.Name, out var counters) &&
+                             counters.Length == 0;
+                }
+                var bjra = (BlittableJsonReaderArray)propertyDetails.Value;
+                if (bjra.Length == 0 && gotAll == false)
+                    continue;
+
+                RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra);
+            }
         }
 
         private void RegisterCountersForDocument(string id, bool gotAll, BlittableJsonReaderArray counters)
@@ -1373,20 +1406,24 @@ more responsive application.
                 if (kvp.Value.Length != 0)
                     continue;
 
-                if (CountersByDocId.TryGetValue(kvp.Key, out var cache) == false)
-                {
-                    cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-                }
-
-                cache.GotAll = true;
-                CountersByDocId[kvp.Key] = cache;
+                SetGotAllCountersForDocumet(kvp.Key);
             }
+        }
+
+        private void SetGotAllCountersForDocumet(string id)
+        {
+            if (CountersByDocId.TryGetValue(id, out var cache) == false)
+            {
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            cache.GotAll = true;
+            CountersByDocId[id] = cache;
         }
 
         private void RegisterMissingCounters(Dictionary<string, string[]> countersToInclude)
         {
-            if (NoTracking ||
-                countersToInclude == null)
+            if (countersToInclude == null)
                 return;
 
             foreach (var kvp in countersToInclude)
@@ -1405,6 +1442,30 @@ more responsive application.
                     cache.Values[counter] = null;
                 }
             }
+        }
+
+        private void RegisterMissingCounters(string[] ids, string[] countersToInclude)
+        {
+            if (countersToInclude == null)
+                return;
+
+            foreach (var counter in countersToInclude)
+            {
+                foreach (var id in ids)
+                {
+                    if (CountersByDocId.TryGetValue(id, out var cache) == false)
+                    {
+                        cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                        CountersByDocId.Add(id, cache);
+                    }
+
+                    if (cache.Values.ContainsKey(counter))
+                        continue;
+
+                    cache.Values[counter] = null;
+                }
+            }
+
         }
 
         public override int GetHashCode()

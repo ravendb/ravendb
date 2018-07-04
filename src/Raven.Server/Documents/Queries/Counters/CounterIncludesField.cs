@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Counters
 {
@@ -23,14 +22,5 @@ namespace Raven.Server.Documents.Queries.Counters
             }
             hashSet.Add(counter);
         }
-
-        public void AddCounters(BlittableJsonReaderArray counters, string sourcePath = null)
-        {
-            foreach (var counter in counters)
-            {
-                AddCounter(counter.ToString(), sourcePath);
-            }
-        }
-
     }
 }

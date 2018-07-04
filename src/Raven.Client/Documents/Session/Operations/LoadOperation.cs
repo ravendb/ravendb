@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private string[] _ids;
         private string[] _includes;
-        private string[] _counters;
+        private string[] _countersToInclude;
         private bool _includeAllCounters;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
         private GetDocumentsResult _currentLoadResults;
@@ -39,8 +39,8 @@ namespace Raven.Client.Documents.Session.Operations
             if (_includeAllCounters)
                 return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, includeAllCounters: true, metadataOnly: false);
 
-            return _counters != null
-                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _counters, metadataOnly: false)
+            return _countersToInclude != null
+                ? new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, _countersToInclude, metadataOnly: false)
                 : new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
         }
 
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Session.Operations
         public LoadOperation WithCounters(string[] counters)
         {
             if (counters != null)
-                _counters = counters;
+                _countersToInclude = counters;
             return this;
         }
 
@@ -169,17 +169,9 @@ namespace Raven.Client.Documents.Session.Operations
 
             _session.RegisterIncludes(result.Includes);
 
-            if (_includeAllCounters || _counters != null)
+            if (_includeAllCounters || _countersToInclude != null)
             {
-                var counterToInclude = new Dictionary<string, string[]>();
-                var counters = _counters ?? new string[0];
-                foreach (var id in _ids)
-                {
-                    counterToInclude[id] = counters;
-                }
-
-                _session.RegisterCounters(result.Counters, counterToInclude);
-
+                _session.RegisterCounters(result.CounterIncludes, _ids, _countersToInclude, _includeAllCounters);
             }
 
             foreach (var document in GetDocumentsFromResult(result))
