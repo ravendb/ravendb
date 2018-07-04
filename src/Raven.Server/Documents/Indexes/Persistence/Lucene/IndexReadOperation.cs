@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
             var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
-            var sort = GetSort(query, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
+        private static Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
         {
             if (query.PageSize == 0) // no need to sort when counting only
                 return null;
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (orderByFields == null)
             {
-                if (query.Metadata.HasBoost == false)
+                if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
                 return new Sort(SortField.FIELD_SCORE);
@@ -571,7 +571,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
             var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);
