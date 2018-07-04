@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Conventions
 {
@@ -91,7 +92,10 @@ namespace Raven.Client.Documents.Conventions
 
         protected override JsonObjectContract CreateObjectContract(Type objectType)
         {
-            var jsonObjectContract = base.CreateObjectContract(objectType);
+            JsonObjectContract jsonObjectContract = IsPointerType(objectType)
+                ? new JsonObjectContract(objectType)
+                : base.CreateObjectContract(objectType);
+
             jsonObjectContract.ExtensionDataValueType = typeof(JToken);
             jsonObjectContract.ExtensionDataSetter += (o, key, value) =>
             {
@@ -101,6 +105,12 @@ namespace Raven.Client.Documents.Conventions
             };
             jsonObjectContract.ExtensionDataGetter += (o) => _currentExtensionGetter?.Invoke(o);
             return jsonObjectContract;
+        }
+
+        private static bool IsPointerType(Type objectType)
+        {
+            return objectType == typeof(LazyStringValue) ||
+                   objectType == typeof(BlittableJsonReaderObject);
         }
 
         /// <summary>

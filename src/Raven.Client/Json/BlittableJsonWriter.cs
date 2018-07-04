@@ -550,6 +550,15 @@ namespace Raven.Client.Json
 
         public override void WriteValue(object value)
         {
+            switch (value)
+            {
+                case BlittableJsonReaderObject readerObject:
+                    _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(readerObject);
+                    return;
+                case LazyStringValue lazyStringValue:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(lazyStringValue);
+                    return;
+            }
             base.WriteValue(value);
         }
 
