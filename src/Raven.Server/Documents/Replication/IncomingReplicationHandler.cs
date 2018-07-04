@@ -1128,7 +1128,7 @@ namespace Raven.Server.Documents.Replication
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
                                         var attachmentType = item.Flags.Contain(DocumentFlags.Revision) ? AttachmentType.Revision : AttachmentType.Document;                                        
-                                        _incoming._database.DocumentsStorage.AttachmentsStorage.AssertAttachmentsFromReplication(document, attachmentType,item.Id, context);                                        
+                                        _incoming._database.DocumentsStorage.AttachmentsStorage.AssertAttachmentsFromReplication(document, attachmentType,item.Id, item.ChangeVector, context);                                        
                                     }
 
                                     if (item.Flags.Contain(DocumentFlags.Revision))
