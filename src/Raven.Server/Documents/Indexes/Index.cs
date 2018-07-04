@@ -140,6 +140,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int _numberOfQueries;
         private bool _didWork;
+        private bool _isReplacing;
 
         protected readonly bool HandleAllDocs;
 
@@ -305,7 +306,7 @@ namespace Raven.Server.Documents.Indexes
                                 return AutoMapReduceIndex.CreateNew(autoMapReduceDef, documentDatabase);
                         }
                     }
-                    
+
                     throw new IndexOpenException(
                         $"Could not read index type from storage in '{path}'. This indicates index data file corruption.",
                         e);
@@ -897,7 +898,7 @@ namespace Raven.Server.Documents.Indexes
 
                             _mre.Reset();
                         }
-                        
+
                         if (_priorityChanged)
                             ChangeIndexThreadPriority();
 
@@ -906,7 +907,7 @@ namespace Raven.Server.Documents.Indexes
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
-                        
+
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
                         LastIndexingTime = stats.StartTime;
 
@@ -1019,14 +1020,22 @@ namespace Raven.Server.Documents.Indexes
                                     if (ShouldReplace())
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.InvariantCultureIgnoreCase);
+                                        _isReplacing = true;
 
-                                        // this can fail if the indexes lock is currently held, so we'll retry
-                                        // however, we might be requested to shutdown, so we want to skip replacing
-                                        // in this case, worst case scenario we'll handle this in the next batch
-                                        while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
+                                        try
                                         {
-                                            if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
-                                                break;
+                                            // this can fail if the indexes lock is currently held, so we'll retry
+                                            // however, we might be requested to shutdown, so we want to skip replacing
+                                            // in this case, worst case scenario we'll handle this in the next batch
+                                            while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
+                                            {
+                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
+                                                    break;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            _isReplacing = false;
                                         }
                                     }
                                 }
@@ -1055,7 +1064,7 @@ namespace Raven.Server.Documents.Indexes
                                 _didWork = true;
                                 _firstBatchTimeout = null;
                             }
-                            
+
                             var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
                             batchCompletedAction?.Invoke((Name, didWork));
                         }
@@ -1347,7 +1356,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             // we exceeded the number of db unloads due to corruption error, let's error the index
-            
+
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
 
             try
@@ -1559,7 +1568,7 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Info($"Changing priority for '{Name}' from '{Definition.Priority}' to '{priority}'.");
 
                 var oldPriority = Definition.Priority;
-                
+
                 Definition.Priority = priority;
 
                 try
@@ -1654,20 +1663,20 @@ namespace Raven.Server.Documents.Indexes
             {
                 throw new NotSupportedException($"'Lock Mode' can't be set for the Auto-Index '{Name}'.");
             }
-            
+
             using (DrainRunningQueries())
             {
                 AssertIndexState(assertState: false);
 
                 if (Definition.LockMode == mode)
                     return;
-                
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info(
                         $"Changing lock mode for '{Name}' from '{Definition.LockMode}' to '{mode}'.");
 
                 var oldLockMode = Definition.LockMode;
-                
+
                 Definition.LockMode = mode;
 
                 try
@@ -2927,7 +2936,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations("Unable to complete compaction, index is not usable and may require reset of the index to recover", e);
-                    
+
                     throw;
                 }
                 finally
@@ -3100,12 +3109,16 @@ namespace Raven.Server.Documents.Indexes
 
             staticDef = null;
             autoDef = null;
-            
+
             return false;
         }
 
         protected struct QueryDoneRunning : IDisposable
         {
+            private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
+
+            private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
+
             readonly Index _parent;
             private readonly ExecutingQueryInfo _queryInfo;
             private bool _hasLock;
@@ -3119,7 +3132,10 @@ namespace Raven.Server.Documents.Indexes
 
             public void HoldLock()
             {
-                var timeout = TimeSpan.FromSeconds(3);
+                var timeout = _parent._isReplacing
+                    ? ExtendedLockTimeout
+                    : DefaultLockTimeout;
+
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
                     ThrowLockTimeoutException();
 
