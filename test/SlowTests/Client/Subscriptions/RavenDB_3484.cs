@@ -241,9 +241,9 @@ namespace SlowTests.Client.Subscriptions
                     User user;
 
                     Assert.True(items.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/" + (userId - 4), user.Id);
+                    Assert.Equal("users/" + (userId - 2), user.Id);
                     Assert.True(items.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/" + (userId - 3), user.Id);
+                    Assert.Equal("users/" + (userId - 1), user.Id);
 
                     Assert.True(await pendingBatchAcknowledgedMre.WaitAsync(_reasonableWaitTime)); // let it acknowledge the processed batch before we open another subscription
 
