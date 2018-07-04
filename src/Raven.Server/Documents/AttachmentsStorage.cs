@@ -1015,7 +1015,6 @@ namespace Raven.Server.Documents
 #if DEBUG
         public static void AssertAttachments(BlittableJsonReaderObject document, DocumentFlags flags)
         {
-            return; //TODO: Remove this before PR
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
