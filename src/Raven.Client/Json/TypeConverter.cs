@@ -31,8 +31,8 @@ namespace Raven.Client.Json
                 return value;
 
             if (type == typeof(int) || type == typeof(long) || type == typeof(double) || 
-				type == typeof(decimal) || type == typeof(float) || type == typeof(uint) || 
-				type == typeof(ulong) || type == typeof(short) || type == typeof(byte))
+                type == typeof(decimal) || type == typeof(float) || type == typeof(uint) || 
+                type == typeof(ulong) || type == typeof(short) || type == typeof(byte))
                 return value;
 
             if (type == typeof(LazyNumberValue))

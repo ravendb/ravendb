@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -15,6 +16,7 @@ namespace SlowTests.Issues
             public uint Uint { get; set; }
             public long Long { get; set; }
             public ulong Ulong { get; set; }
+            public Guid Guid { get; set; }
             public decimal Decimal { get; set; }
             public float Float { get; set; }
             public double Double { get; set; }
@@ -250,6 +252,52 @@ namespace SlowTests.Issues
                 {
                     var loaded = session.Load<User>(_docId);
                     Assert.Equal((ulong)234, loaded.Ulong);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanPatchWithGuidProperty()
+        {
+            byte[] bytes = {0, 1, 2, 3, 4, 5, 6, 7,8, 9, 10, 11, 12, 13, 14, 15};
+            Guid guid = new Guid(bytes);
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Guid = guid
+                    }, _docId);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    bytes[0] = 123;
+                    guid = new Guid(bytes);
+                    // explicitly specify id & type
+                    session.Advanced.Patch<User, Guid>(_docId, u => u.Guid, guid);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+                    Assert.Equal(guid, loaded.Guid);
+
+                    bytes[1] = 234;
+                    guid = new Guid(bytes);
+                    // infer type & the id from entity
+                    session.Advanced.Patch(loaded, u => u.Guid, guid);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+                    Assert.Equal(guid, loaded.Guid);
                 }
             }
         }
