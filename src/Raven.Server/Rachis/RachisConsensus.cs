@@ -634,7 +634,6 @@ namespace Raven.Server.Rachis
             
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
-            CurrentState = rachisState;
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -651,6 +650,8 @@ namespace Raven.Server.Rachis
                             Log.Info("Before state change invocation function failed.", e);
                         }
                     }
+
+                    CurrentState = rachisState;
 
                     try
                     {

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
@@ -11,14 +9,19 @@ namespace SlowTests.Issues
 {
     public class RavenDB_11166 : RavenTestBase
     {
-        public class Dog
+        private class Dog
         {
+#pragma warning disable 414
             public string Name;
+#pragma warning restore 414
             public string Owner;
         }
-        public class Person
+
+        private class Person
         {
+#pragma warning disable 414
             public string Name;
+#pragma warning restore 414
         }
 
         [Fact]

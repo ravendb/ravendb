@@ -37,25 +37,32 @@
                             <span class="help-block" data-bind="validationMessage: maxEntries"></span>
                         </div>                                                
                     </div>                                   
-                    <h4>Log source filters</h4>
+                    <h4>Log filters</h4>
                     <div class="flex-horizontal margin-bottom margin-bottom-sm">
-                        <div class="btn-group flex-grow">
-                            <input type="text" placeholder="Source name" class="form-control input-sm" data-toggle="dropdown" data-bind="textInput: $root.editedSourceName">
-                            <span class="caret"></span>
+                        <div class="dropdown">
+                            <button class="btn btn-block btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                <span data-bind="text: $root.editedHeaderName()"></span>
+                                <span class="caret"></span>
+                            </button>
                             <ul class="dropdown-menu">
-                                <li><a href="#">Raven/Server</a></li>
+                                <li><a href="#" data-bind="click: _.partial($root.editedHeaderName, 'Source')">Source</a></li>
+                                <li><a href="#" data-bind="click: _.partial($root.editedHeaderName, 'Logger')">Logger</a></li>
                             </ul>
                         </div>
+                        <div class="btn-group flex-grow">
+                            <input type="text" class="form-control input-sm" 
+                                   data-bind="textInput: $root.editedHeaderValue, attr: { 'placeholder': $root.headerValuePlaceholder }" >
+                        </div>
                         <div>
-                            <button class="btn btn-sm btn-default" data-bind="click: $root.includeSource"><i class="icon-plus"></i> <span>Include</span></button>
-                            <button class="btn btn-sm btn-default" data-bind="click: $root.excludeSource"><i class="icon-minus"></i> <span>Exclude</span></button>
+                            <button class="btn btn-sm btn-default" data-bind="click: $root.includeFilter"><i class="icon-plus"></i> <span>Include</span></button>
+                            <button class="btn btn-sm btn-default" data-bind="click: $root.excludeFilter"><i class="icon-minus"></i> <span>Exclude</span></button>
                         </div>
                     </div>
                     <div class="flex-grow">
                         <ul class="column-list scroll" data-bind="foreach: entries">
                             <li>
                                 <div class="column-name flex-center">
-                                    <div class="padding padding-xs" data-bind="text: logSource"></div>
+                                    <div class="padding padding-xs" data-bind="text: headerName() + ': ' + headerValue()"></div>
                                 </div>
                                 <div class="flex-center">
                                     <div class="padding padding-xs" data-bind="css: { 'text-success': mode() === 'include', 'text-warning': mode() === 'exclude' }">
@@ -81,7 +88,7 @@
             <i class="icon-cancel"></i><span>Clear</span>
         </button>
     </div>
-    <div class="log-list flex-grow scroll">
+    <div class="log-list flex-grow scroll" data-bind="event: { mousedown: _.partial(updateMouseStatus, true), mouseup: _.partial(updateMouseStatus, false) }">
         <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>
         <div class="has-error results-error" data-bind="visible: isBufferFull">
             <div class="help-block">

@@ -37,7 +37,7 @@ namespace FastTests
         {
             testName = testName?.Replace("<", "").Replace(">", "");
 
-            var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}_{serverPort}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff}-{Interlocked.Increment(ref _pathCount)}");
+            var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}.{serverPort}-{Interlocked.Increment(ref _pathCount)}");
 
             if (PlatformDetails.RunningOnPosix)
                 newDataDir = PosixHelper.FixLinuxPath(newDataDir);

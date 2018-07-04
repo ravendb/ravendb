@@ -12,7 +12,6 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Config;
-using Raven.Server.ServerWide;
 using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
 

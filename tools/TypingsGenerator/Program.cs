@@ -143,6 +143,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
+            scripter.AddType(typeof(DetailedDatabaseStatistics));
             
             // footer
             scripter.AddType(typeof(FooterStatistics));

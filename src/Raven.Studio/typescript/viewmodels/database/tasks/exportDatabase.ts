@@ -15,7 +15,6 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import generalUtils = require("common/generalUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 
 class exportDatabase extends viewModelBase {

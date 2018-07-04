@@ -6,6 +6,8 @@ import eventsCollector = require("common/eventsCollector");
 import listViewController = require("widgets/listView/listViewController");
 import fileDownloader = require("common/fileDownloader");
 import virtualListRow = require("widgets/listView/virtualListRow");
+import copyToClipboard = require("common/copyToClipboard");
+import generalUtils = require("common/generalUtils");
 
 class heightCalculator {
     
@@ -65,6 +67,9 @@ class adminLogs extends viewModelBase {
     
     filter = ko.observable<string>("");
     onlyErrors = ko.observable<boolean>(false);
+    mouseDown = ko.observable<boolean>(false);
+
+    headerValuePlaceholder: KnockoutComputed<string>;
     
     private appendElementsTask: number;
     private pendingMessages = [] as string[];
@@ -73,7 +78,8 @@ class adminLogs extends viewModelBase {
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
-    editedSourceName = ko.observable<string>();
+    editedHeaderName = ko.observable<adminLogsHeaderType>("Source");
+    editedHeaderValue = ko.observable<string>();
     
     isBufferFull = ko.observable<boolean>();
     
@@ -86,10 +92,28 @@ class adminLogs extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry", "itemHtmlProvider");
+        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", 
+            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider");
         this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
         this.onlyErrors.subscribe(() => this.filterLogEntries(true));
         this.initValidation(); 
+        
+        this.headerValuePlaceholder = ko.pureComputed(() => {
+            switch (this.editedHeaderName()) {
+                case "Source":
+                    return "Source name (ex. Server, Northwind, Orders/ByName)";
+                case "Logger":
+                    return "Logger name (ex. Raven.Server.Documents.)"
+            }
+        });
+        this.mouseDown.subscribe(pressed => {
+            if (!pressed) {
+                const selected = generalUtils.getSelectedText();
+                if (selected) {
+                    copyToClipboard.copy(selected, "Selected logs has been copied to clipboard");    
+                }
+            }
+        });
     }
     
     private initValidation() {
@@ -218,7 +242,6 @@ class adminLogs extends viewModelBase {
         data = data.trim();
         
         if (!this.headerSeen) {
-            
             this.headerSeen = true;
             return;
         }
@@ -232,6 +255,12 @@ class adminLogs extends viewModelBase {
     }
     
     private onAppendPendingMessages() {
+        if (this.mouseDown()) {
+            // looks like user wants to select something - wait with updates 
+            this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 700);
+            return;
+        }
+        
         this.appendElementsTask = null;
 
         this.filterLogEntries(false);
@@ -285,22 +314,29 @@ class adminLogs extends viewModelBase {
         this.listController().scrollDown();
     }
 
-    includeSource() {
-        const source = this.editedSourceName();
-        if (source) {
-            const configItem = new adminLogsConfigEntry(source, "include");
+    includeFilter() {
+        const headerName = this.editedHeaderName();
+        const headerValue = this.editedHeaderValue();
+        if (headerName && headerValue) {
+            const configItem = new adminLogsConfigEntry(headerName, headerValue, "include");
             this.editedConfiguration().entries.unshift(configItem);
-            this.editedSourceName("");
+            this.resetFiltersForm();
         }
     }
     
-    excludeSource() {
-        const source = this.editedSourceName();
-        if (source) {
-            const configItem = new adminLogsConfigEntry(source, "exclude");
+    excludeFilter() {
+        const headerName = this.editedHeaderName();
+        const headerValue = this.editedHeaderValue();
+        if (headerName && headerValue) {
+            const configItem = new adminLogsConfigEntry(headerName, headerValue, "exclude");
             this.editedConfiguration().entries.push(configItem);
-            this.editedSourceName("");
+            this.resetFiltersForm();
         }
+    }
+    
+    private resetFiltersForm() {
+        this.editedHeaderName("Source");
+        this.editedHeaderValue("");
     }
 
     removeConfigurationEntry(entry: adminLogsConfigEntry) {
@@ -309,6 +345,11 @@ class adminLogs extends viewModelBase {
 
     onOpenOptions() {
         this.editedConfiguration().maxEntries(this.configuration().maxEntries());
+    }
+    
+    updateMouseStatus(pressed: boolean) {
+        this.mouseDown(pressed);
+        return true;  // we want bubble and execute default action (selection)
     }
 }
 

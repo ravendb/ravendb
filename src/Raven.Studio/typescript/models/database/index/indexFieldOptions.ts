@@ -81,6 +81,7 @@ class indexFieldOptions {
 
     highlighting = ko.observable<boolean>();
     effectiveHighlighting = this.effectiveComputed(x => x.highlighting(), yesNoLabelProvider);
+    defaultHighlighting = this.defaultComputed(x => x.highlighting(), yesNoLabelProvider);
 
     spatial = ko.observable<spatialOptions>();
 
@@ -118,84 +119,94 @@ class indexFieldOptions {
         this.initValidation();
 
         // used to avoid circular updates
-        let computedFieldChangeInProgress = false;
-        let indexingChangeInProgess = false;
+        let changeInProgess = false;
 
         const onFullTextChanged = () => {
-            if (!indexingChangeInProgess) {
+            if (!changeInProgess) {
                 const newValue = this.fullTextSearch();
-                computedFieldChangeInProgress = true;
+                
+                changeInProgess = true;
+                
                 if (newValue) {
                     this.analyzer(null);
                     this.indexing("Search");
-                    this.highlighting(this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets"); // search value in implied in previous line
+                    
                 } else {
                     this.analyzer(null);
                     this.indexing("Default");
-                    this.highlighting(false);
                 }
-                computedFieldChangeInProgress = false;
+                
+                this.computeHighlighting();
+                changeInProgess = false;
             }
         };
 
         this.fullTextSearch.subscribe(() => onFullTextChanged());
         
         const onHighlightingChanged = () => {
-            if (!indexingChangeInProgess) {
+            if (!changeInProgess) {
                 const newValue = this.highlighting();
 
-                computedFieldChangeInProgress = true;
+                changeInProgess = true;
+                
                 if (newValue) {
                     this.analyzer(null);
-                    this.indexing("Search");
                     this.storage("Yes");
+                    this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
-                    this.fullTextSearch(true);
+                }
+                else if (newValue === null) {
+                    this.analyzer(null); 
+                    this.storage(null);
+                    this.indexing(null);
+                    this.termVector(null);
                 } else {
                     this.analyzer(null);
-                    this.indexing("Default");
                     this.storage("No");
+                    this.indexing("Default");
                     this.termVector("No");
-                    this.fullTextSearch(false);
                 }
-
-                computedFieldChangeInProgress = false;
                 
+                this.computeFullTextSearch();
+                changeInProgess = false;
             }
         };
         
         this.highlighting.subscribe(() => onHighlightingChanged());
         
-        this.indexing.subscribe(newIndexing => {
-            if (!computedFieldChangeInProgress) {
-                indexingChangeInProgess = true;
-                this.fullTextSearch(newIndexing === "Search" && !this.analyzer());
-                this.highlighting(this.storage() === "Yes" && newIndexing === "Search" && this.termVector() === "WithPositionsAndOffsets");
-                indexingChangeInProgess = false;
+        this.indexing.subscribe(() => {
+            if (!changeInProgess) {
+                changeInProgess = true;
+                this.computeFullTextSearch();
+                this.computeHighlighting();
+                changeInProgess = false;
             }
         });
 
-        this.analyzer.subscribe(newAnalyzer => {
-            if (!computedFieldChangeInProgress) {
-                indexingChangeInProgess = true;
-                this.fullTextSearch(!newAnalyzer && this.indexing() == "Search");
-                indexingChangeInProgess = false;
+        this.analyzer.subscribe(() => {
+            if (!changeInProgess) {
+                changeInProgess = true;
+                this.computeFullTextSearch();
+                this.computeHighlighting();
+                changeInProgess = false;
             }
         });
         
-        this.storage.subscribe(newStorage => {
-            if (!computedFieldChangeInProgress) {
-                indexingChangeInProgess = true;
-                this.highlighting(newStorage === "Yes" && this.indexing() === "Search" && this.termVector() === "WithPositionsAndOffsets");
-                indexingChangeInProgess = false;
+        this.storage.subscribe(() => {
+            if (!changeInProgess) {
+                changeInProgess = true;
+                this.computeFullTextSearch();
+                this.computeHighlighting();
+                changeInProgess = false;
             }
         });
 
-        this.termVector.subscribe(newTermVector => {
-            if (!computedFieldChangeInProgress) {
-                indexingChangeInProgess = true;
-                this.highlighting(this.storage() === "Yes" && this.indexing() === "Search" && newTermVector === "WithPositionsAndOffsets");
-                indexingChangeInProgess = false;
+        this.termVector.subscribe(() => {
+            if (!changeInProgess) {
+                changeInProgess = true;
+                this.computeFullTextSearch();
+                this.computeHighlighting();
+                changeInProgess = false;
             }
         });
 
@@ -211,6 +222,27 @@ class indexFieldOptions {
         ], false, jsonUtil.newLineNormalizingHashFunction);       
     }
 
+    private computeFullTextSearch() {
+        this.fullTextSearch(!this.analyzer() && 
+                             this.indexing() === "Search");
+        
+        if (this.indexing() === null) {
+            this.fullTextSearch(null);
+        } 
+    }
+
+    private computeHighlighting() {
+        this.highlighting(!this.analyzer() &&
+                           this.indexing() === 'Search' &&
+                           this.storage() === "Yes" && 
+                           this.termVector() === "WithPositionsAndOffsets");
+       
+        if (this.storage() === null &&
+            this.termVector() === null) {
+            this.highlighting(null);
+        }
+    }
+    
     private effectiveComputed<T>(extractor: (field: indexFieldOptions) => T, labelProvider?: (arg: T) => string): KnockoutComputed<string> {
         return ko.pureComputed(() => this.extractEffectiveValue(x => extractor(x), true, labelProvider));
     }

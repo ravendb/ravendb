@@ -22,6 +22,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
@@ -186,7 +187,7 @@ class documents extends viewModelBase {
         grid.headerVisible(true);
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, 
-            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
+            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true, showFlags: true });
 
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
             if (this.currentCollection().isAllDocuments) {
@@ -195,7 +196,8 @@ class documents extends viewModelBase {
                     new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
                     new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "200px"),
                     new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Last Modified", "300px"),
-                    new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px")
+                    new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px"),
+                    new flagsColumn(grid)
                 ];
             } else {
                 return documentsProvider.findColumns(w, r);

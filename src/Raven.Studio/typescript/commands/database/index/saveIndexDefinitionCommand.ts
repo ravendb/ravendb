@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveIndexDefinitionCommand extends commandBase {
 
-    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private db: database) {
+    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private isJsIndex: boolean, private db: database) {
         super();
     }
 
@@ -19,7 +19,7 @@ class saveIndexDefinitionCommand extends commandBase {
     }
 
     private saveDefinition(): JQueryPromise<string> {
-        const url = endpoints.databases.adminIndex.adminIndexes;
+        const url = this.isJsIndex ? endpoints.databases.index.indexes : endpoints.databases.adminIndex.adminIndexes;
         const saveTask = $.Deferred<string>();
 
         const payload = {

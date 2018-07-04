@@ -102,6 +102,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Indexes", status.Indexes));
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
+                result.push(this.mapToExportListItem("Counters", status.Counters));
             }
             
             let shouldUpdateToPending = false;

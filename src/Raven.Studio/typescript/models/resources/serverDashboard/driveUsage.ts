@@ -21,6 +21,10 @@ class legendColumn<T> implements virtualColumn {
         return this.header;
     }
 
+    get headerAsText() {
+        return this.header;
+    }
+
     renderCell(item: T, isSelected: boolean): string {
         const color = this.colorAccessor(item);
         return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect" style="background-color: ${color}"></div></div>`;

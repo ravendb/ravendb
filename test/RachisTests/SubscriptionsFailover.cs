@@ -261,7 +261,6 @@ namespace RachisTests
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
         {
-
             var uniqueRevisions = new HashSet<string>();
             var uniqueDocs = new HashSet<string>();
 
@@ -288,38 +287,40 @@ namespace RachisTests
 
                 var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>().ConfigureAwait(false);
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
-                {
-                    MaxDocsPerBatch = 1,
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
-                });
-
                 var docsCount = 0;
                 var revisionsCount = 0;
                 var expectedRevisionsCount = 0;
-
-                subscription.AfterAcknowledgment += async b =>
+                SubscriptionWorker<Revision<User>> subscription = null;
+                int i;
+                for (i = 0; i < 10; i++)
                 {
-                    await continueMre.WaitAsync();
-
-                    try
+                    subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
                     {
-                        if (revisionsCount == expectedRevisionsCount)
-                        {
-                            continueMre.Reset();
-                            ackSent.Set();
-                        }
+                        MaxDocsPerBatch = 1,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
+                    });
 
+                    subscription.AfterAcknowledgment += async b =>
+                    {
                         await continueMre.WaitAsync();
-                    }
-                    catch (Exception)
-                    {
 
-                    }
-                };
-                var started = new AsyncManualResetEvent();
-                for (int i = 0; i < 10; i++)
-                {
+                        try
+                        {
+                            if (revisionsCount == expectedRevisionsCount)
+                            {
+                                continueMre.Reset();
+                                ackSent.Set();
+                            }
+
+                            await continueMre.WaitAsync();
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                    };
+                    var started = new AsyncManualResetEvent();
+
                     var task = subscription.Run(b =>
                     {
                         started.Set();
@@ -332,7 +333,11 @@ namespace RachisTests
                         break;
 
                     Assert.IsType<SubscriptionDoesNotExistException>(task.Exception.InnerException);
+
+                    subscription.Dispose();
                 }
+
+                Assert.NotEqual(i, 10);
 
                 expectedRevisionsCount = nodesAmount + 2;
                 continueMre.Set();
@@ -343,7 +348,6 @@ namespace RachisTests
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
                 continueMre.Set();
                 expectedRevisionsCount += 2;
-                
 
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (2nd assert)");
                 ackSent.Reset(true);
@@ -354,7 +358,6 @@ namespace RachisTests
                     await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
-
             }
         }
 
