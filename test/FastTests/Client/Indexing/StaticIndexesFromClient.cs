@@ -143,11 +143,11 @@ namespace FastTests.Client.Indexing
 
                     await store
                         .Maintenance
-                        .SendAsync(new PutIndexesOperation(input2), cts.Token);
+                        .SendAsync(new StopIndexingOperation(), cts.Token);
 
                     await store
                         .Maintenance
-                        .SendAsync(new StopIndexingOperation(), cts.Token);
+                        .SendAsync(new PutIndexesOperation(input2), cts.Token);
 
                     await store
                        .Maintenance
