@@ -1033,9 +1033,9 @@ namespace Raven.Server.Documents
             }
         }
 #endif
-        public void AssertAttachmentsFromReplication(BlittableJsonReaderObject document, AttachmentType type,string id, DocumentsOperationContext context)
+        public void AssertAttachmentsFromReplication(BlittableJsonReaderObject document, AttachmentType type,string id, string cv, DocumentsOperationContext context)
         {
-            var changeVector = type == AttachmentType.Document ? null : document.GetChangeVector();
+            var changeVector = type == AttachmentType.Document ? null : cv;
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
             {
