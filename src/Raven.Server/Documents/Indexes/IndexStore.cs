@@ -380,9 +380,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
-            
-            ValidateIndexName(definition.Name, isStatic: false); 
-            
+
+            ValidateIndexName(definition.Name, isStatic: false);
+
             try
             {
                 var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
@@ -527,10 +527,10 @@ namespace Raven.Server.Documents.Indexes
         public static bool IsValidIndexName(string name, bool isStatic, out string errorMessage)
         {
             errorMessage = null;
-            
+
             try
             {
-               ValidateIndexName(name, isStatic);
+                ValidateIndexName(name, isStatic);
             }
             catch (Exception e)
             {
@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.Indexes
 
             return true;
         }
-        
+
         public static void ValidateIndexName(string name, bool isStatic)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -1288,7 +1288,7 @@ namespace Raven.Server.Documents.Indexes
             if (index.Type == IndexType.Faulty || index.Type.IsAuto())
             {
                 index.SetLock(mode);  // this will throw proper exception
-                return; 
+                return;
             }
 
             var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
