@@ -7,8 +7,6 @@ namespace Sparrow
 {
     public interface IAllocator {}
 
-    public interface IBlockAllocator : IAllocator { }
-
     public interface IAllocatorOptions { }
 
     public interface IBlockAllocatorOptions : IAllocatorOptions
@@ -60,25 +58,6 @@ namespace Sparrow
         void OnAllocate(ref T allocator, TPointerType ptr);
         void OnRelease(ref T allocator, TPointerType ptr);
     }
-
-    public interface IBlockAllocator<T, TPointerType>
-        where T : struct, IBlockAllocator, IDisposable
-        where TPointerType : struct, IPointerType
-    {
-        int Allocated { get; }
-
-        void Initialize(ref T allocator);
-
-        void Configure<TConfig>(ref T allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions;
-
-        TPointerType Allocate(ref T allocator);
-        void Release(ref T allocator, ref TPointerType ptr);
-        void Reset(ref T allocator);
-
-        void OnAllocate(ref T allocator, TPointerType ptr);
-        void OnRelease(ref T allocator, TPointerType ptr);
-    }
-
 
     public sealed class Allocator<TAllocator> : IAllocatorComposer<Pointer>, IDisposable, ILowMemoryHandler
         where TAllocator : struct, IAllocator<TAllocator, Pointer>, IAllocator, IDisposable

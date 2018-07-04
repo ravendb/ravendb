@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using Raven.Client.Documents.Linq;
 using Sparrow;
 using Xunit;
 
@@ -117,6 +113,82 @@ namespace FastTests.Sparrow
 
             Assert.Throws<NotSupportedException>(() => allocator.Reset());
             Assert.Throws<NotSupportedException>(() => allocator.Renew());
+        }
+
+        [Fact]
+        public void Alloc_PoolDefaultByBytes()
+        {
+            var allocator = new Allocator<PoolAllocator<PoolAllocator.Default>>();
+            allocator.Initialize(default(PoolAllocator.Default));
+
+            var ptr = allocator.Allocate(1000);
+            Assert.Equal(1000, ptr.Size);
+            Assert.True(ptr.IsValid);
+
+            allocator.Release(ref ptr);
+            Assert.False(ptr.IsValid);
+        }
+
+        [Fact]
+        public void Alloc_PoolReturnUsedBytes()
+        {
+            var allocator = new Allocator<PoolAllocator<PoolAllocator.Default>>();
+            allocator.Initialize(default(PoolAllocator.Default));
+
+            int size = 1000;
+
+            var ptr = allocator.Allocate(size);
+            Assert.Equal(size, ptr.Size);
+            Assert.True(ptr.IsValid);
+
+            long pointerAddress = (long)ptr.Ptr;
+
+            allocator.Release(ref ptr);
+            Assert.False(ptr.IsValid);
+
+            ptr = allocator.Allocate(size);
+            Assert.Equal(size, ptr.Size);
+            Assert.True(ptr.IsValid);
+
+            Assert.Equal(pointerAddress, (long)ptr.Ptr);
+        }
+
+        [Fact]
+        public void Alloc_PoolReturnBlockBytes()
+        {
+            var allocator = new Allocator<PoolAllocator<PoolAllocator.Default>>();
+            allocator.Initialize(default(PoolAllocator.Default));
+
+            int size = 1000;
+
+            long[] addresses = new long[5];
+            var pointers = new Pointer[5];
+            for (int i = 0; i < 5; i++)
+            {
+                var ptr = allocator.Allocate(size);
+                Assert.Equal(size, ptr.Size);
+                Assert.True(ptr.IsValid);
+
+                pointers[i] = ptr;
+                addresses[i] = (long)ptr.Ptr;
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                allocator.Release(ref pointers[i]);
+                Assert.False(pointers[i].IsValid);
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var ptr = allocator.Allocate(size);
+                Assert.Contains((long)ptr.Ptr, addresses);
+            }
+
+            var nonReusedPtr = allocator.Allocate(size);
+            Assert.Equal(size, nonReusedPtr.Size);
+            Assert.True(nonReusedPtr.IsValid);
+            // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
 
 
