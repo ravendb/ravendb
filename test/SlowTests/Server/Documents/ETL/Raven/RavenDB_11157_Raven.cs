@@ -34,7 +34,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                 if (collection == null)
                     AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
                 else
-                    AddEtl(src, dest, "Users", script: script);
+                    AddEtl(src, dest, collection, script: script);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -101,7 +101,7 @@ function loadCountersOfUsersBehavior(doc, counter)
 
                     Assert.Null(user);
 
-                    var counter = session.CountersFor("users/1").Get( "likes");
+                    var counter = session.CountersFor("users/1").Get("likes");
 
                     Assert.Null(counter);
                 }
@@ -126,7 +126,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                         Name = "Joe Doe"
                     }, "users/1");
 
-                    session.CountersFor("users/1").Increment( "likes");
+                    session.CountersFor("users/1").Increment("likes");
 
                     session.SaveChanges();
                 }
@@ -273,7 +273,7 @@ person.addCounter(loadCounter('down'));
                     var metadata = session.Advanced.GetMetadataFor(doc);
 
                     Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
-                    
+
                     var value = session.CountersFor(doc.Id).Get(item.CounterName);
 
                     Assert.NotNull(value);
@@ -281,7 +281,7 @@ person.addCounter(loadCounter('down'));
                 }
             }
         }
-        
+
         [Fact]
         public void Can_use_get_counters()
         {
@@ -563,7 +563,7 @@ if (hasCounter('down')) {
                 AddEtl(src, dest, "Users", script: null);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 1);
-                
+
                 for (int i = 0; i < 3; i++)
                 {
                     using (var session = src.OpenSession())
@@ -607,7 +607,7 @@ if (hasCounter('down')) {
 
                     session.SaveChanges();
                 }
-                
+
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 etlDone.Reset();
@@ -678,7 +678,7 @@ if (hasCounter('down')) {
         [InlineData(null)]
         public void Should_send_all_counters_on_doc_update(string collection = null)
         {
-            using (var src = GetDocumentStore( new Options()
+            using (var src = GetDocumentStore(new Options()
             {
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
             }))
@@ -778,7 +778,7 @@ function loadCountersOfUsersBehavior(docId, counter)
 
                     session.SaveChanges();
                 }
-                
+
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 AssertCounters(dest, new[]

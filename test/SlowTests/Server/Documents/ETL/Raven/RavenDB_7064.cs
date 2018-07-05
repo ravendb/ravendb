@@ -35,7 +35,7 @@ for (var i = 0; i < attachments.length; i++) {
 var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 
 person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
-"                   
+"
 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -47,15 +47,15 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                         LastName = "Doe",
                     }, "users/1");
 
-                    session.Advanced.Attachments.Store("users/1", "photo1.jpg", new MemoryStream(new byte[] {1}));
-                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] {2}));
+                    session.Advanced.Attachments.Store("users/1", "photo1.jpg", new MemoryStream(new byte[] { 1 }));
+                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] { 2 }));
 
                     session.SaveChanges();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                AssertAttachments(dest, new []
+                AssertAttachments(dest, new[]
                 {
                     ("users/1", "photo1.jpg-etl", new byte[] {1}, false),
                     ("users/1", "photo2.jpg-etl", new byte[] {2}, false),
@@ -92,7 +92,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     Assert.Null(attachment); // this attachment was removed
                 }
 
-                AssertAttachments(dest, new []
+                AssertAttachments(dest, new[]
                 {
                     ("users/1", "photo2.jpg-etl", new byte[] {2}, false),
                     ("users/1/people/", "photo2.jpg-etl", new byte[] {2}, true)
@@ -166,7 +166,7 @@ var doc = loadToUsers(this);
 for (var i = 0; i < attachments.length; i++) {
     doc.addAttachment(loadAttachment(attachments[i].Name));
 }
-"                   
+"
 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -178,15 +178,15 @@ for (var i = 0; i < attachments.length; i++) {
                         LastName = "",
                     }, "users/1");
 
-                    session.Advanced.Attachments.Store("users/1", "photo1.jpg", new MemoryStream(new byte[] {1}));
-                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] {2}));
+                    session.Advanced.Attachments.Store("users/1", "photo1.jpg", new MemoryStream(new byte[] { 1 }));
+                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] { 2 }));
 
                     session.SaveChanges();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                AssertAttachments(dest, new []
+                AssertAttachments(dest, new[]
                 {
                     ("users/1", "photo1.jpg", new byte[] {1}, false),
                     ("users/1", "photo2.jpg", new byte[] {2}, false),
@@ -214,7 +214,7 @@ var doc = loadToUsers(this);
 doc.addAttachment('photo.jpg', loadAttachment('photo.jpg'));
 
 
-"                   
+"
                 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -234,16 +234,16 @@ doc.addAttachment('photo.jpg', loadAttachment('photo.jpg'));
                     {
                         Name = "Foo"
                     }, "users/3");
-                    
-                    session.Advanced.Attachments.Store("users/1", "abc.jpg", new MemoryStream(new byte[] {1}));
-                    session.Advanced.Attachments.Store("users/2", "photo.jpg", new MemoryStream(new byte[] {1}));
+
+                    session.Advanced.Attachments.Store("users/1", "abc.jpg", new MemoryStream(new byte[] { 1 }));
+                    session.Advanced.Attachments.Store("users/2", "photo.jpg", new MemoryStream(new byte[] { 1 }));
 
                     session.SaveChanges();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                AssertAttachments(dest, new []
+                AssertAttachments(dest, new[]
                 {
                     ("users/2", "photo.jpg", new byte[] {1}, false)
                 });
@@ -275,7 +275,7 @@ if (hasAttachment('photo2.jpg')) {
   doc.addAttachment(loadAttachment('photo2.jpg'));
 }
 
-"                   
+"
                 );
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -285,8 +285,8 @@ if (hasAttachment('photo2.jpg')) {
                     {
                         Name = "Joe"
                     }, "users/1");
-                    
-                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] {1}));
+
+                    session.Advanced.Attachments.Store("users/1", "photo2.jpg", new MemoryStream(new byte[] { 1 }));
 
                     session.Store(new User()
                     {
@@ -298,7 +298,7 @@ if (hasAttachment('photo2.jpg')) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                AssertAttachments(dest, new []
+                AssertAttachments(dest, new[]
                 {
                     ("users/1", "photo2.jpg", new byte[] {1}, false)
                 });
