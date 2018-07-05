@@ -260,9 +260,7 @@ namespace Voron.Data.BTrees
         public bool StreamExist(Slice key)
         {
             var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
-            var numberOfChunks = tree.NumberOfEntries;
-
-            return numberOfChunks > 0;
+            return tree.NumberOfEntries > 0;
         }
 
         public int TouchStream(Slice key)

@@ -194,7 +194,6 @@ namespace Raven.Server.Documents.Replication
                     var numberOfItemsSent = 0;
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     short lastTransactionMarker = -1;
-                    var firstBatchEtag = _lastEtag;
 
                     using (_stats.Storage.Start())
                     {                        
@@ -244,16 +243,16 @@ namespace Raven.Server.Documents.Replication
                             _stats.Storage.RecordInputAttempt();
 
                             //Here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundry
-                            if (MissingAttachmentsInLastBatch && item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
+                            if (MissingAttachmentsInLastBatch && 
+                                item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 (item.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                             {
                                 var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
-                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id)
-                                    .Where(a => a.Etag <= firstBatchEtag).Select(a => ReplicationBatchItem.From(a)))
+                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id))
                                 {
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
-                                    AddReplicationItemToBatch(attachment, _stats.Storage, skippedReplicationItemsInfo);
+                                    AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
                                     size += attachment.Stream.Length;
                                 }
                                 

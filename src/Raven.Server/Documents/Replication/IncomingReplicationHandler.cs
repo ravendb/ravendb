@@ -14,7 +14,6 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
@@ -24,6 +23,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
+using Raven.Client.Documents.Operations.Attachments;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -1124,7 +1124,7 @@ namespace Raven.Server.Documents.Replication
                                         //the other side will receive negative ack and will retry sending again.
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
-                                        _incoming._database.DocumentsStorage.AttachmentsStorage.AssertAttachmentsFromReplication(context, item.Id, document);                                        
+                                        AssertAttachmentsFromReplication(context, item.Id, document);                                        
                                     }
 
                                     if (item.Flags.Contain(DocumentFlags.Revision))
@@ -1259,6 +1259,27 @@ namespace Raven.Server.Documents.Replication
                 {
                     _incoming._attachmentStreamsTempFile?.Reset();
                     IsIncomingReplication = false;
+                }
+            }
+
+            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+            {
+                if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                {
+                    foreach (BlittableJsonReaderObject attachment in attachments)
+                    {
+                        if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
+                        {
+                            if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
+                            {
+                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue name);
+                                var msg = $"Document '{id}' has attachment '{name?.ToString() ?? "uknown"}' " +
+                                          $"listed as one of his attachments but it doesn't exist in the attachment storage";
+                                throw new MissingAttachmentException(msg);
+                            }
+                        }
+                    }
                 }
             }
 
