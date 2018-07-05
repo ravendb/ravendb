@@ -1527,7 +1527,8 @@ namespace Raven.Server.Documents
             string tableName;
 
             if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
+                collection == RevisionsStorage.RevisionsTombstones ||
+                collection == CountersStorage.CountersTombstones)
             {
                 tableName = collection;
             }
@@ -1555,6 +1556,7 @@ namespace Raven.Server.Documents
         {
             yield return AttachmentsStorage.AttachmentsTombstones;
             yield return RevisionsStorage.RevisionsTombstones;
+            yield return CountersStorage.CountersTombstones;
 
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {

@@ -666,8 +666,6 @@ namespace Raven.Server.Documents.ETL
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
-            // TODO arek add counters tombstones here
-
             var lastProcessedEtag = GetProcessState(Database, Configuration.Name, Transformation.Name).GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
             if (Transformation.ApplyToAllDocuments)
@@ -684,6 +682,8 @@ namespace Raven.Server.Documents.ETL
             {
                 lastProcessedTombstones[collection] = lastProcessedEtag;
             }
+
+            lastProcessedTombstones[CountersStorage.CountersTombstones] = lastProcessedEtag;
 
             return lastProcessedTombstones;
         }
