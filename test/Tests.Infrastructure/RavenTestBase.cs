@@ -243,9 +243,7 @@ namespace FastTests
                                 {
                                     continue;
                                 }
-
-                                AsyncHelpers.RunSync(async () => await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex));
-                            }
+                             }
                         }
                     };
                     CreatedStores.Add(store);
