@@ -24,6 +24,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
+using Raven.Client;
 
 namespace Raven.Server.Documents
 {
@@ -473,7 +474,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue lowerDocumentId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using (GetSliceFromLazyString(context, lowerDocumentId, out Slice lowerDocumentIdSlice))
+            using (Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
             using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
@@ -487,11 +488,6 @@ namespace Raven.Server.Documents
                     yield return attachment;
                 }
             }
-        }
-
-        private static ByteStringContext.InternalScope GetSliceFromLazyString(DocumentsOperationContext context, LazyStringValue lowerDocumentId, out Slice lowerDocumentIdSlice)
-        {
-            return Slice.From(context.Allocator, lowerDocumentId.Buffer, lowerDocumentId.Size, out lowerDocumentIdSlice);
         }
 
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
@@ -1030,25 +1026,5 @@ namespace Raven.Server.Documents
             }
         }
 #endif
-        public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
-        {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
-            {
-                foreach (BlittableJsonReaderObject attachment in attachments)
-                {
-                    if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
-                    {
-                        if (AttachmentExists(context, hash) == false)
-                        {
-                            attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue name);
-                            var msg = $"Document '{id}' has attachment '{name?.ToString() ?? "uknown"}' " +
-                                      $"listed as one of his attachments but it doesn't exist in the attachment storage";
-                            throw new MissingAttachmentException(msg);
-                        }
-                    }
-                }
-            }
-        }
     }
 }
