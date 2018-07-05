@@ -206,7 +206,7 @@ namespace FastTests
                             }
                             catch (DatabaseDisabledException)
                             {
-                                continue;
+                                // ignoring
                             }
                             catch (DatabaseNotRelevantException)
                             {
