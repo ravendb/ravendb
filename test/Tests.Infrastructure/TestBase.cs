@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
@@ -260,6 +261,39 @@ namespace FastTests
                     _globalServer = null;
                     if (copyGlobalServer == null)
                         return;
+
+                    try
+                    {
+                        using (copyGlobalServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var databases = copyGlobalServer
+                                .ServerStore
+                                .Cluster
+                                .ItemsStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue)
+                                .ToList();
+
+                            if (databases.Count > 0)
+                            {
+                                var sb = new StringBuilder();
+                                sb.AppendLine("List of non-deleted databases:");
+
+                                foreach (var t in databases)
+                                {
+                                    sb
+                                        .Append("- ")
+                                        .AppendLine(t.ItemName.Substring(Constants.Documents.Prefix.Length));
+                                }
+
+                                Console.WriteLine(sb.ToString());
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Could not retrieve list of non-deleted databases. Exception: {e}");
+                    }
+
                     copyGlobalServer.Dispose();
 
                     GC.Collect(2);
