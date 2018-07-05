@@ -525,7 +525,7 @@ namespace Raven.Server.Documents
             return (count, streamsCount);
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, bool withoutStream = false)
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -548,16 +548,11 @@ namespace Raven.Server.Documents
                         metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
                         exitingDocumentCv == changeVector)
                     {
-                        return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null, withoutStream);
+                        return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
                     }
                 }
 
                 return null;
-            }
-            // We were invoked just for the purpose of checking the existence of the attachment, no need to actually read the stream from disk only to verify its there.
-            if (withoutStream)
-            {
-                return VerifyAttachmentStreamExist(context, attachment.Base64Hash)?attachment:null;
             }
 
             var stream = GetAttachmentStream(context, attachment.Base64Hash);
@@ -568,6 +563,39 @@ namespace Raven.Server.Documents
             return attachment;
         }
 
+        public bool AttachmentExists(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                return false;
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+            if (context.Transaction == null)
+                return false;
+            if (type != AttachmentType.Document && string.IsNullOrWhiteSpace(changeVector))
+                return false;
+
+            var attachment = GetAttachmentDirect(context, documentId, name, type, changeVector);
+            if (attachment == null)
+            {
+                if (type == AttachmentType.Revision)
+                {
+                    // Return the attachment of the current document if it has the same change vector
+                    var document = _documentsStorage.Get(context, documentId, throwOnConflict: false);
+                    if (document != null &&
+                        document.TryGetMetadata(out var metadata) &&
+                        metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
+                        exitingDocumentCv == changeVector)
+                    {
+                        return _documentsStorage.AttachmentsStorage.AttachmentExists(context, documentId, name, AttachmentType.Document, null);
+                    }
+                }
+
+                return false;
+            }
+
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return tree.StreamExist(attachment.Base64Hash);
+        }
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
@@ -587,12 +615,6 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             return tree.ReadStream(hashSlice);
-        }
-
-        private bool VerifyAttachmentStreamExist(DocumentsOperationContext context, Slice hashSlice)
-        {
-            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
-            return tree.StreamExist(hashSlice);
         }
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
         {
@@ -1044,7 +1066,7 @@ namespace Raven.Server.Documents
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) &&
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
                     {
-                        if (GetAttachment(context, id, name, type, changeVector, withoutStream:true) == null)
+                        if (AttachmentExists(context, id, name, type, changeVector))
                         {
                             var msg =
                                 $"Document {id} has attachment {name} listed as one of his attachments but it doesn't exist in the attachment storage";

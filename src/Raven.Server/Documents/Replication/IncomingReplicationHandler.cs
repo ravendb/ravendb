@@ -352,8 +352,6 @@ namespace Raven.Server.Documents.Replication
 
                 if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
                 {
-                    if (_cts.IsCancellationRequested)
-                        return;
                     returnValue = new DynamicJsonValue
                     {
                         [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.MissingAttachments.ToString(),
