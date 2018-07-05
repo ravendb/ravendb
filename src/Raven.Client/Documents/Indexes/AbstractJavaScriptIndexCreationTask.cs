@@ -4,9 +4,9 @@ namespace Raven.Client.Documents.Indexes
 {
     public abstract class AbstractJavaScriptIndexCreationTask : AbstractIndexCreationTask
     {
-        private IndexDefinition _definition = new IndexDefinition();
+        private readonly IndexDefinition _definition = new IndexDefinition();
 
-        public AbstractJavaScriptIndexCreationTask()
+        protected AbstractJavaScriptIndexCreationTask()
         {
             _definition.LockMode = IndexLockMode.Unlock;
             _definition.Priority = IndexPriority.Normal;
@@ -39,22 +39,16 @@ namespace Raven.Client.Documents.Indexes
             set => _definition.Configuration = value;
         }
 
-        /// <summary>
-        /// Gets a value indicating whether this instance is map reduce index definition
-        /// </summary>
-        /// <value>
-        /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
-        /// </value>
+        /// <inheritdoc />
         public override bool IsMapReduce => Reduce != null;
 
-
+        /// <inheritdoc />
         public override IndexDefinition CreateIndexDefinition()
         {
             _definition.Type = IsMapReduce ? IndexType.JavaScriptMapReduce : IndexType.JavaScriptMap;
-            _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>()) ;
+            _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>());
             return _definition.Clone();
         }
-
     }
 }
 
