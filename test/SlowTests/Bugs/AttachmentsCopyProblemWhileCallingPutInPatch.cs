@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -19,8 +15,7 @@ namespace SlowTests.Bugs
         [Fact]
         public void PatchByQuery()
         {
-            var expectedAttachmentStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5, 6});
-            AttachmentResult actualAttachment;
+            var expectedAttachmentStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 });
             var employee = new Employee
             {
                 FirstName = "Avi"
@@ -42,7 +37,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var a = session.Advanced.Attachments.Get(employee.Id, attachmentName);
+                    session.Advanced.Attachments.Get(employee.Id, attachmentName);
                 }
 
                 store.Operations.Send(new PatchByQueryOperation(new IndexQuery()
@@ -54,7 +49,7 @@ namespace SlowTests.Bugs
                 {
                     var newEmployee = session.Load<Employee>(newId);
                     var newEmployeeMetadata = session.Advanced.GetMetadataFor(newEmployee);
-                    doHaveAttachments = newEmployeeMetadata.TryGetValue(Constants.Documents.Metadata.Attachments, out object at);
+                    doHaveAttachments = newEmployeeMetadata.TryGetValue(Constants.Documents.Metadata.Attachments, out object _);
                 }
             }
 
@@ -84,7 +79,7 @@ namespace SlowTests.Bugs
                     session.Advanced.Attachments.Store(employee.Id, attachmentName, expectedAttachmentStream);
 
                     session.SaveChanges();
-                    
+
                 }
 
                 using (var session = store.OpenSession())
@@ -108,7 +103,7 @@ namespace SlowTests.Bugs
                 {
                     var newEmployee = session.Load<Employee>(newId);
                     var newEmployeeMetadata = session.Advanced.GetMetadataFor(newEmployee);
-                    doHaveAttachments = newEmployeeMetadata.TryGetValue(Constants.Documents.Metadata.Attachments, out object at);
+                    doHaveAttachments = newEmployeeMetadata.TryGetValue(Constants.Documents.Metadata.Attachments, out object _);
                 }
             }
 
