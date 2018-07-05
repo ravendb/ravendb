@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -13,7 +10,9 @@ namespace SlowTests.Issues
     {
         private class User
         {
+#pragma warning disable 649
             public string Name;
+#pragma warning restore 649
         }
 
         private static bool IsValid(User u) => true;
