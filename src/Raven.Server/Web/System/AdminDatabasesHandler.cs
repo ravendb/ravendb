@@ -670,6 +670,8 @@ namespace Raven.Server.Web.System
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
+                long actualDeletionIndex = index;
+
                 var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
 
                 var sp = Stopwatch.StartNew();
@@ -701,6 +703,7 @@ namespace Raven.Server.Web.System
                         }
 
                         await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                        actualDeletionIndex = index;
                     }
                     catch (TimeoutException)
                     {
@@ -712,7 +715,10 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
+                        // we only send the successful index here, we might fail to delete the index
+                        // because a node is down, and we don't want to cause the client to wait on an
+                        // index that doesn't exists in the Raft log
+                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex,
                         [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(deletedDatabases)
                     });
                 }
