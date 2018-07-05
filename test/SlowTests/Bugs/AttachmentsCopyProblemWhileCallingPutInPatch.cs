@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -20,7 +14,7 @@ namespace SlowTests.Bugs
         public void PatchPut_WhileContainAttachments_TheNewDocumentShouldNotContainThem()
         {
             var expectedAttachmentStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 });
-            var employee = new Employee {FirstName = "Avi"};
+            var employee = new Employee { FirstName = "Avi" };
             const string newId = "second/1-A";
             const string attachmentName = "Profile Picture";
 
@@ -69,7 +63,7 @@ namespace SlowTests.Bugs
         [Fact]
         public void PatchPut_WhileContainCounters_TheNewDocumentShouldNotContainThem()
         {
-            var employee = new Employee {FirstName = "Avi"};
+            var employee = new Employee { FirstName = "Avi" };
             const string newId = "second/1-A";
             const string counterName = "Likes";
 
