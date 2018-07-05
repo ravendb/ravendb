@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -11,7 +10,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3484 : RavenTestBase
     {
-        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromMinutes(4);
+        private readonly TimeSpan _waitForDocTimeout = TimeSpan.FromMinutes(4);
 
         [Fact]
         public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription()
@@ -28,7 +27,7 @@ namespace SlowTests.Issues
                 for (int i = 0; i < numberOfClients; i++)
                 {
                     processed[i] = new ManualResetEvent(false);
-                }                
+                }
 
                 for (int i = 0; i < numberOfClients; i++)
                 {
@@ -39,15 +38,18 @@ namespace SlowTests.Issues
                         Strategy = SubscriptionOpeningStrategy.WaitForFree,
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     });
-                    
-                    subscriptions[clientNumber].AfterAcknowledgment += async x => 
-                        processed[clientNumber].Set();                        
-                    
-                    subscriptions[clientNumber].Run(x =>{ });
+
+                    subscriptions[clientNumber].AfterAcknowledgment += x =>
+                    {
+                        processed[clientNumber].Set();
+                        return Task.CompletedTask;
+                    };
+
+                    subscriptions[clientNumber].Run(x => { });
 
                     Thread.Sleep(200);
                 }
-                
+
                 for (int i = 0; i < numberOfClients; i++)
                 {
                     var curI = i;
@@ -56,12 +58,12 @@ namespace SlowTests.Issues
                         s.Store(new User());
                         s.SaveChanges();
                     }
-                    
-                    var index = WaitHandle.WaitAny(processed, waitForDocTimeout);
-                    
+
+                    var index = WaitHandle.WaitAny(processed, _waitForDocTimeout);
+
                     Assert.NotEqual(WaitHandle.WaitTimeout, index);
 
-                    subscriptions[index].Dispose();                                        
+                    subscriptions[index].Dispose();
 
                     done[index] = true;
 
@@ -75,6 +77,6 @@ namespace SlowTests.Issues
             }
         }
 
-        
+
     }
 }
