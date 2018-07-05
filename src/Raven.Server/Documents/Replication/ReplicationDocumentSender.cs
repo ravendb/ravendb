@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             // destination already has it
-            if (MissingAttachmentsInLastBatch == false && 
+            if ( (MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
                 ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
