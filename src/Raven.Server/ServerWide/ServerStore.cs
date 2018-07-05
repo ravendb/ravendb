@@ -539,14 +539,14 @@ namespace Raven.Server.ServerWide
         }
 
 
-        private void BeforeAppendToRaftLog(object sender, CommandBase cmd)
+        private void BeforeAppendToRaftLog(TransactionOperationContext ctx, CommandBase cmd)
         {
             switch (cmd)
             {
                 case AddDatabaseCommand addDatabase:
                     if (addDatabase.Record.Topology.Count == 0)
                     {
-                        AssignNodesToDatabase(GetClusterTopology(), addDatabase.Record);
+                        AssignNodesToDatabase(GetClusterTopology(ctx), addDatabase.Record);
                     }
                     Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
                     break;
