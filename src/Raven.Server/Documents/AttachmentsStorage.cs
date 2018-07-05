@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client;
@@ -563,39 +564,13 @@ namespace Raven.Server.Documents
             return attachment;
         }
 
-        public bool AttachmentExists(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        public bool AttachmentExists(DocumentsOperationContext context, LazyStringValue hash)
         {
-            if (string.IsNullOrWhiteSpace(documentId))
-                return false;
-            if (string.IsNullOrWhiteSpace(name))
-                return false;
-            if (context.Transaction == null)
-                return false;
-            if (type != AttachmentType.Document && string.IsNullOrWhiteSpace(changeVector))
-                return false;
-
-            var attachment = GetAttachmentDirect(context, documentId, name, type, changeVector);
-            if (attachment == null)
-            {
-                if (type == AttachmentType.Revision)
-                {
-                    // Return the attachment of the current document if it has the same change vector
-                    var document = _documentsStorage.Get(context, documentId, throwOnConflict: false);
-                    if (document != null &&
-                        document.TryGetMetadata(out var metadata) &&
-                        metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
-                        exitingDocumentCv == changeVector)
-                    {
-                        return _documentsStorage.AttachmentsStorage.AttachmentExists(context, documentId, name, AttachmentType.Document, null);
-                    }
-                }
-
-                return false;
-            }
-
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
-            return tree.StreamExist(attachment.Base64Hash);
+            using (Slice.From(context.Allocator, hash.Buffer, hash.Size, out var slice))
+                return tree.StreamExist(slice);
         }
+
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
@@ -1055,21 +1030,20 @@ namespace Raven.Server.Documents
             }
         }
 #endif
-        public void AssertAttachmentsFromReplication(BlittableJsonReaderObject document, AttachmentType type,string id, string cv, DocumentsOperationContext context)
+        public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
         {
-            var changeVector = type == AttachmentType.Document ? null : cv;
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
             {
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
-                    if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) &&
-                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
+                    if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
                     {
-                        if (AttachmentExists(context, id, name, type, changeVector))
+                        if (AttachmentExists(context, hash) == false)
                         {
-                            var msg =
-                                $"Document {id} has attachment {name} listed as one of his attachments but it doesn't exist in the attachment storage";
+                            attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue name);
+                            var msg = $"Document '{id}' has attachment '{name?.ToString() ?? "uknown"}' " +
+                                      $"listed as one of his attachments but it doesn't exist in the attachment storage";
                             throw new MissingAttachmentException(msg);
                         }
                     }

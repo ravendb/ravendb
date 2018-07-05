@@ -1054,7 +1054,6 @@ namespace Raven.Server.Documents.Replication
                     var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector;
 
                     var groupId = _incoming._parent.Database.DatabaseGroupId;
-
                     foreach (var item in _incoming._replicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
@@ -1117,8 +1116,7 @@ namespace Raven.Server.Documents.Replication
                                         //the other side will receive negative ack and will retry sending again.
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
-                                        var attachmentType = item.Flags.Contain(DocumentFlags.Revision) ? AttachmentType.Revision : AttachmentType.Document;                                        
-                                        _incoming._database.DocumentsStorage.AttachmentsStorage.AssertAttachmentsFromReplication(document, attachmentType,item.Id, item.ChangeVector, context);                                        
+                                        _incoming._database.DocumentsStorage.AttachmentsStorage.AssertAttachmentsFromReplication(context, item.Id, document);                                        
                                     }
 
                                     if (item.Flags.Contain(DocumentFlags.Revision))
