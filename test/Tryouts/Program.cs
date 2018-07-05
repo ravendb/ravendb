@@ -6,6 +6,7 @@ using FastTests.Voron.Compaction;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
+using SlowTests.Client.Attachments;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using Sparrow.Logging;
@@ -18,9 +19,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new RavenDB_11166())
+                using (var test = new AttachmentFailover())
                 {
-                    await test.CanUseSubscriptionWithIncludes();
+                    await test.PutAttachmentsWithFailover_Session();
                 }
             }
             catch (Exception e)
