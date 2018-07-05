@@ -257,27 +257,14 @@ namespace Voron.Data.BTrees
             return new VoronStream(tree.Name, chunksDetails, _llt);
         }
 
-        /// <summary>
-        /// This method just verify that a stream exist under the given key
-        /// </summary>
-        /// <param name="key"> The key of the stream</param>
-        /// <returns>'true' if there is a stream under the given 'key' and 'false' otherwise</returns>
         public bool StreamExist(Slice key)
         {
             var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
             var numberOfChunks = tree.NumberOfEntries;
 
-            if (numberOfChunks <= 0)
-                return false;
-
-            using (var it = tree.Iterate())
-            {
-                if (it.Seek(0) == false)
-                    return false;
-            }
-
-            return true;
+            return numberOfChunks > 0;
         }
+
         public int TouchStream(Slice key)
         {
             var info = GetStreamInfo(key, writable: true);

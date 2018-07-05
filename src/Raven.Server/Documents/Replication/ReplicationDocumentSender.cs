@@ -175,7 +175,6 @@ namespace Raven.Server.Documents.Replication
         {
             EnsureValidStats(stats);
             var wasInterrupted = false;
-            var hadMissingAttachment = MissingAttachmentsInLastBatch;
             var delay = GetDelayReplication();
 
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -323,11 +322,8 @@ namespace Raven.Server.Documents.Replication
                         throw;
                     }
 
-                    if (hadMissingAttachment)
-                    {
-                        //This is the case where we ran the last batch again due to missing attchments
-                        MissingAttachmentsInLastBatch = false;
-                    }
+                    MissingAttachmentsInLastBatch = false;
+                    
 
                     return true;
                 }
