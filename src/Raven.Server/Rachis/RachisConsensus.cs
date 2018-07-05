@@ -253,7 +253,7 @@ namespace Raven.Server.Rachis
 
         public event EventHandler<StateTransition> StateChanged;
 
-        public event EventHandler<CommandBase> BeforeAppendToRaftLog;
+        public event Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
 
         public event EventHandler LeaderElected;
 
@@ -1780,9 +1780,9 @@ namespace Raven.Server.Rachis
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
-        public void InvokeBeforeAppendToRaftLog(CommandBase cmd)
+        public void InvokeBeforeAppendToRaftLog(TransactionOperationContext context,CommandBase cmd)
         {
-            BeforeAppendToRaftLog?.Invoke(this, cmd);
+            BeforeAppendToRaftLog?.Invoke(context, cmd);
         }
 
         public async Task WaitForHeartbeat()

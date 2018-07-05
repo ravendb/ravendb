@@ -608,13 +608,14 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase cmd, TimeSpan timeout)
         {
-            _engine.InvokeBeforeAppendToRaftLog(cmd);
 
             Task<(long Index, object Result)> task;
             long index;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
             {
+                _engine.InvokeBeforeAppendToRaftLog(context, cmd);
+
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
