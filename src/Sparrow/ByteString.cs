@@ -381,7 +381,13 @@ namespace Sparrow
 
         public static bool operator ==(ByteString x, ByteString y)
         {
-            return x._pointer == y._pointer;
+            if (x.Length != y.Length)
+                return false;
+
+            if (x._pointer == y._pointer)
+                return true;
+
+            return Memory.Compare(x._pointer->Ptr, y._pointer->Ptr, x.Length) == 0;
         }
         public static bool operator !=(ByteString x, ByteString y)
         {
