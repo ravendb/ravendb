@@ -129,9 +129,9 @@ namespace Raven.Client.Documents.Indexes
 
             string name = null;
             if (_conventions.PropertyNameConverter != null)
-            {   
+            {
                 //do not use convention for types in system namespaces
-                if(member.DeclaringType?.Namespace?.StartsWith("System") == false &&
+                if (member.DeclaringType?.Namespace?.StartsWith("System") == false &&
                    member.DeclaringType?.Namespace?.StartsWith("Microsoft") == false)
                     name = _conventions.PropertyNameConverter(member);
             }
@@ -1531,12 +1531,15 @@ namespace Raven.Client.Documents.Indexes
                     }
 
                     var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
+                    var oldIsSelectMany = _isSelectMany;
+
                     _isSelectMany = node.Method.Name == "SelectMany";
                     if (node.Method.Name == "Select" || _isSelectMany)
-                    {
                         _avoidDuplicatedParameters = true;
-                    }
+
                     Visit(node.Arguments[num2]);
+
+                    _isSelectMany = oldIsSelectMany;
                     _avoidDuplicatedParameters = oldAvoidDuplicateParameters;
                 }
                 finally
