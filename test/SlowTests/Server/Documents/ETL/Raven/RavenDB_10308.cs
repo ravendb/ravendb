@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         Name = "Joe Doe"
                     }, "users/1");
 
-                    session.Advanced.Attachments.Store("users/1", "photo.jpg", new MemoryStream(new byte[] {1}));
+                    session.Advanced.Attachments.Store("users/1", "photo.jpg", new MemoryStream(new byte[] { 1 }));
 
                     session.SaveChanges();
                 }
@@ -90,7 +90,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         Name = "Joe Doe"
                     }, "users/1");
 
-                    session.Advanced.Attachments.Store("users/1", "photo.jpg", new MemoryStream(new byte[] {1}));
+                    session.Advanced.Attachments.Store("users/1", "photo.jpg", new MemoryStream(new byte[] { 1 }));
 
                     session.SaveChanges();
                 }
