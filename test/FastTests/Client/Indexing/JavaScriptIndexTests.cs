@@ -4,9 +4,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Xunit;
 
@@ -110,7 +108,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new User
                     {
                         Name = "Jow",
-                        PhoneNumbers = new [] {"555-234-8765","555-987-3425"}
+                        PhoneNumbers = new[] { "555-234-8765", "555-987-3425" }
                     });
                     session.SaveChanges();
                     WaitForIndexing(store);
@@ -140,7 +138,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new Fanout
                     {
                         Foo = "Foo",
-                        Numbers = new[] {4,6,11,9 }
+                        Numbers = new[] { 4, 6, 11, 9 }
                     });
                     session.Store(new Fanout
                     {
@@ -150,7 +148,7 @@ namespace FastTests.Client.Indexing
                     session.SaveChanges();
                     WaitForIndexing(store);
                     var result = session.Query<FanoutByNumbers.Result>("FanoutByNumbers")
-                        .Where(x => x.Sum == 17 )
+                        .Where(x => x.Sum == 17)
                         .OfType<Fanout>()
                         .Single();
                     Assert.Equal("Bar", result.Foo);
@@ -368,7 +366,7 @@ namespace FastTests.Client.Indexing
                 store.ExecuteIndex(new UsersReducedByName());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = null});
+                    session.Store(new User { Name = null });
                     session.Store(new User { Name = null });
                     session.Store(new User { Name = null });
                     session.Store(new User { Name = "Tal" });
@@ -460,7 +458,7 @@ function Mr(x){
     return 'Mr. ' + x;
 }"
                     }
-                    
+
                 };
             }
         }
@@ -495,7 +493,7 @@ return result;
             internal class Result
             {
                 public string Foo { get; set; }
-                public int Sum { get; set; } 
+                public int Sum { get; set; }
             }
         }
 
@@ -606,7 +604,7 @@ map('Users', function (u){
                 public string AnalyzedName { get; set; }
             }
         }
-        
+
         private class UsersAndProductsByName : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
