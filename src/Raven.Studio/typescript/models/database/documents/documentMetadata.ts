@@ -73,7 +73,7 @@ class documentMetadata {
     }
 
     hasFlag(flag: knownDocumentFlags) {
-        return _.includes(this.flags, flag);
+        return _.includes(this.flags.split(", "), flag);
     }
 
     toDto(): documentMetadataDto {
