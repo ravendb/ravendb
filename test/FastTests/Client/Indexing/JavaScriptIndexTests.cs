@@ -23,7 +23,7 @@ namespace FastTests.Client.Indexing
                 Server.Configuration.Core.FeaturesAvailability = FeaturesAvailability.Stable;
                 var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersByName()));
                 Assert.Contains(
-                    "The experimental 'Javascript' indexes feature is not enabled in your current server configuration. " +
+                    "The experimental 'JavaScript' indexes feature is not enabled in your current server configuration. " +
                     "In order to use, please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
                     e.Message);
             }

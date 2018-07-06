@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentNullException(nameof(definition));
 
             if (_serverStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable && definition.Type.IsJavaScript())
-                throw new IndexCreationException($"Could not create index '{definition.Name}'. The experimental 'Javascript' indexes feature is not enabled in your current server configuration. " +
+                throw new IndexCreationException($"Could not create index '{definition.Name}'. The experimental 'JavaScript' indexes feature is not enabled in your current server configuration. " +
                                                  $"In order to use, please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
 
             ValidateIndexName(definition.Name, isStatic: true);
