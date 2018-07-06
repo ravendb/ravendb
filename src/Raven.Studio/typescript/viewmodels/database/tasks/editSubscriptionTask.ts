@@ -280,10 +280,8 @@ class editSubscriptionTask extends viewModelBase {
             if (this.isValid(this.editedSubscription().validationGroup)) {
                 this.enableTestArea(true);
                 this.runTest();
-            }
-            else return;
-        }
-        else {
+            } else return;
+        } else {
             // 2. Test area is open and we want to close it
             this.enableTestArea(false);
             this.columnsSelector.reset();

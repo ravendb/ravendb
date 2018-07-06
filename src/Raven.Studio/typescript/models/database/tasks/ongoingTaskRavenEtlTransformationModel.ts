@@ -103,8 +103,7 @@ class ongoingTaskEtlTransformationModel {
         if (ongoingTaskEtlTransformationModel.isApplyToAll(collectionName)) {
             this.applyScriptForAllCollections(true);
             this.transformScriptCollections([ongoingTaskEtlTransformationModel.applyToAllCollectionsText]);
-        }
-        else {
+        } else {
             this.applyScriptForAllCollections(false);          
             _.remove(this.transformScriptCollections(), x => x === ongoingTaskEtlTransformationModel.applyToAllCollectionsText);
             this.transformScriptCollections.unshift(collectionName);

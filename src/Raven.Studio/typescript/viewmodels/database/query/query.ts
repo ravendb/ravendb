@@ -726,8 +726,7 @@ class query extends viewModelBase {
                                 this.saveQueryToStorage(this.criteria().toStorageDto());   
                             }
                         });  
-                }    
-                else {
+                } else {
                     this.saveQueryToStorage(this.criteria().toStorageDto());
                 }
             }

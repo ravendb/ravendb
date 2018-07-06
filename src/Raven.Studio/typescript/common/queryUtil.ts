@@ -101,8 +101,7 @@ class queryUtil {
             // 'select' not found. Check for 'include' which can come after 'select'. 
             const includeIdx = tokenIndexes.include.index;
             return query.substring(0, includeIdx) + getStoredFieldsText;
-        }
-        else {
+        } else {
             // Both 'select' & 'include' not found. Append at end of query.
             return query + getStoredFieldsText;
         }

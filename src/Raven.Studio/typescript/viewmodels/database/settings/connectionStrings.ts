@@ -80,8 +80,7 @@ class connectionStrings extends viewModelBase {
                     if (args.name) {
                         if (args.type === 'sql') {                           
                             this.onEditSqlEtl(args.name);
-                        }
-                        else {
+                        } else {
                             this.onEditRavenEtl(args.name);
                         }
                     }
@@ -132,8 +131,7 @@ class connectionStrings extends viewModelBase {
 
             if (this.connectionStringsTasksInfo[stringName]) {
                 this.connectionStringsTasksInfo[stringName].push(taskData);
-            }
-            else {
+            } else {
                 this.connectionStringsTasksInfo[stringName] = [taskData];
             }        
         }    

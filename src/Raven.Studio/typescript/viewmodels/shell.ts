@@ -168,13 +168,11 @@ class shell extends viewModelBase {
                 // "http"
                 if (location.protocol === "http:") {
                     this.accessManager.securityClearance("ClusterAdmin");
-                } 
-                else {
+                } else {
                     // "https"
                     if (certificate) {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
-                    }
-                    else {
+                    } else {
                         this.accessManager.securityClearance("ValidUser");
                     }
                 }

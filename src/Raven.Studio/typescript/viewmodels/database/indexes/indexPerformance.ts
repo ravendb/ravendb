@@ -1243,8 +1243,7 @@ class indexPerformance extends viewModelBase {
             // Data validation
             if (!_.isArray(importedData)) {
                 messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
-            }
-            else {                                
+            } else {                                
                 this.data = importedData;
                 this.fillCache();
                 this.resetGraphData();
