@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
@@ -128,6 +129,8 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
 
+        protected abstract bool NeedsToTrackAttachmentTombstones();
+
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
             using (var scope = new DisposableScope())
@@ -146,7 +149,7 @@ namespace Raven.Server.Documents.ETL
                             var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
                             scope.EnsureDispose(tombstones);
 
-                            tombstones = new FilterTombstonesEnumerator(tombstones, stats, Tombstone.TombstoneType.Document);
+                            tombstones = new FilterTombstonesEnumerator(tombstones, stats, Tombstone.TombstoneType.Document, context);
 
                             enumerators.Add((docs, tombstones, null));
                         }
@@ -170,6 +173,18 @@ namespace Raven.Server.Documents.ETL
                             merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones, en.Collection, EtlItemType.Document));
                         }
 
+                        if (NeedsToTrackAttachmentTombstones())
+                        {
+                            var attachmentTombstones = Database.DocumentsStorage
+                                .GetTombstonesFrom(context, AttachmentsStorage.AttachmentsTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(attachmentTombstones);
+
+                            attachmentTombstones = new FilterTombstonesEnumerator(attachmentTombstones, stats, Tombstone.TombstoneType.Attachment, context,
+                                fromCollections: Transformation.ApplyToAllDocuments ? null : Transformation.Collections);
+
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(attachmentTombstones, null, EtlItemType.Document));
+                        }
+
                         break;
                     case EtlItemType.Counter:
 
@@ -189,7 +204,7 @@ namespace Raven.Server.Documents.ETL
                                 .GetEnumerator();
                             scope.EnsureDispose(counterTombstones);
 
-                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, maxEtag: lastDocEtag);
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context, maxEtag: lastDocEtag);
 
                             merged.AddEnumerator(
                                 new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastDocEtag));
@@ -213,7 +228,7 @@ namespace Raven.Server.Documents.ETL
                                 .GetEnumerator();
                             scope.EnsureDispose(counterTombstones);
 
-                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter,
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context,
                                 fromCollections: Transformation.Collections, maxEtag: lastDocEtag);
 
                             merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
@@ -684,6 +699,11 @@ namespace Raven.Server.Documents.ETL
             }
 
             lastProcessedTombstones[CountersStorage.CountersTombstones] = lastProcessedEtag;
+
+            if (NeedsToTrackAttachmentTombstones())
+            {
+                lastProcessedTombstones[AttachmentsStorage.AttachmentsTombstones] = lastProcessedEtag;
+            }
 
             return lastProcessedTombstones;
         }

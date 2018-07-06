@@ -43,6 +43,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new NotImplementedException("TODO arek");
         }
 
+        protected override bool NeedsToTrackAttachmentTombstones()
+        {
+            return false;
+        }
+
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
         {
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);

@@ -202,61 +202,6 @@ for (var i = 0; i < attachments.length; i++) {
         }
 
         [Fact]
-        public void Should_error_if_attachment_doesnt_exist()
-        {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
-            {
-                AddEtl(src, dest, "Users", script:
-                    @"
-
-var doc = loadToUsers(this);
-doc.addAttachment('photo.jpg', loadAttachment('photo.jpg'));
-
-
-"
-                );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-
-                using (var session = src.OpenSession())
-                {
-                    session.Store(new User()
-                    {
-                        Name = "Joe"
-                    }, "users/1");
-
-                    session.Store(new User()
-                    {
-                        Name = "Doe"
-                    }, "users/2");
-
-                    session.Store(new User()
-                    {
-                        Name = "Foo"
-                    }, "users/3");
-
-                    session.Advanced.Attachments.Store("users/1", "abc.jpg", new MemoryStream(new byte[] { 1 }));
-                    session.Advanced.Attachments.Store("users/2", "photo.jpg", new MemoryStream(new byte[] { 1 }));
-
-                    session.SaveChanges();
-                }
-
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                AssertAttachments(dest, new[]
-                {
-                    ("users/2", "photo.jpg", new byte[] {1}, false)
-                });
-
-                using (var session = dest.OpenSession())
-                {
-                    Assert.Null(session.Load<User>("users/1"));
-                    Assert.Null(session.Load<User>("users/3"));
-                }
-            }
-        }
-
-        [Fact]
         public void Can_use_has_attachment()
         {
             using (var src = GetDocumentStore())

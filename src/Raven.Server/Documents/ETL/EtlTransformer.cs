@@ -116,13 +116,13 @@ namespace Raven.Server.Documents.ETL
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
                 if (attachment == null)
-                    ThrowNoSuchAttachment(Current.DocumentId, attachmentName);
+                    return loadAttachmentReference + Transformation.AttachmentNullMarkerSuffix;
 
                 AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             }
             else
             {
-                ThrowNoAttachments(Current.DocumentId, attachmentName);
+                return loadAttachmentReference + Transformation.AttachmentNullMarkerSuffix;
             }
 
             return loadAttachmentReference;
@@ -286,20 +286,9 @@ namespace Raven.Server.Documents.ETL
             throw new ArgumentException($"{parameterName} parameter is mandatory");
         }
 
-        protected void ThrowNoSuchAttachment(string documentId, string attachmentName)
-        {
-            throw new InvalidOperationException($"Document '{documentId}' doesn't have attachment named '{attachmentName}'");
-        }
-
         protected void ThrowNoSuchCounter(string documentId, string counterName)
         {
             throw new InvalidOperationException($"Document '{documentId}' doesn't have counter named '{counterName}'");
-        }
-
-        protected void ThrowNoAttachments(string documentId, string attachmentName)
-        {
-            throw new InvalidOperationException(
-                $"Document '{documentId}' doesn't have any attachment while the transformation tried to add '{attachmentName}'");
         }
 
         protected void ThrowNoCounters(string documentId, string counterName)
