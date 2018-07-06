@@ -352,7 +352,7 @@ namespace SlowTests.Client.Attachments
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfRevisionDocuments);
-                    Assert.Equal(2, stats.CountOfAttachments);
+                    Assert.Equal(2 + 1, stats.CountOfAttachments); // the imported document will create 1 additional revision with 1 attachment
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
 
                     using (var session = store2.OpenSession())
@@ -421,7 +421,7 @@ namespace SlowTests.Client.Attachments
                         var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                         Assert.Equal(1, stats.CountOfDocuments);
                         Assert.Equal(5, stats.CountOfRevisionDocuments);
-                        Assert.Equal(14, stats.CountOfAttachments);
+                        Assert.Equal(14 + 4, stats.CountOfAttachments); // the imported document will create 1 additional revision with 4 attachments
                         Assert.Equal(4, stats.CountOfUniqueAttachments);
 
                         using (var session = store2.OpenSession())
@@ -431,7 +431,6 @@ namespace SlowTests.Client.Attachments
                             using (var attachment = session.Advanced.Attachments.Get("users/1", "big-file"))
                             {
                                 attachment.Stream.CopyTo(attachmentStream);
-                                Assert.Contains("A:" + (2 + 20 * i), attachment.Details.ChangeVector);
                                 Assert.Equal("big-file", attachment.Details.Name);
                                 Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                                 Assert.Equal(999 * 1024, attachmentStream.Position);
