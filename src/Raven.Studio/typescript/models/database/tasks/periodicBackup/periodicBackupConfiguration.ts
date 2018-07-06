@@ -163,8 +163,7 @@ class periodicBackupConfiguration {
                 `${backupFrequencySplitted.length === 1 ? "" : "s"}. ` + 
                 "Exactly 5 parts are required!");
             return "N/A";
-        }
-        else if (backupFrequencySplitted.length > 5) {
+        } else if (backupFrequencySplitted.length > 5) {
             backupParsingError(`Expression has ${backupFrequencySplitted.length} part` +
                 `${backupFrequencySplitted.length === 1 ? "" : "s"}. ` +
                 "Exactly 5 parts are required!");

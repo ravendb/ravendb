@@ -105,21 +105,17 @@ class queryCompleter {
                 if (asSpecified) {
                     if (keyword === "load") {
                         result.aliases[identifier] = nestedFieldName;
-                    }
-                    else {
+                    } else {
                         result.alias = identifier;
                         result.aliases = {};
                         result.aliases[identifier] = result.collection;
                     }
-                }
-                else if (keyword === "load") {
+                } else if (keyword === "load") {
                     nestedFieldName = identifier;
-                }
-                else if (keyword === "from") {
+                } else if (keyword === "from") {
                     result.collection = identifier;
                     asSpecified = true;
-                }
-                else if (keyword === "index") {
+                } else if (keyword === "index") {
                     result.index = identifier;
                     asSpecified = true;
                 }
@@ -292,8 +288,7 @@ class queryCompleter {
                 if (token.type === "identifier") {
                     lastToken = token;
                     continue;
-                }
-                else if (token.type === "text") {
+                } else if (token.type === "text") {
                     const firstToken = token.value.trim();
                     if (firstToken !== "" && firstToken !== "," && firstToken !== "." && firstToken !== "[].") {
                         lastToken = token;

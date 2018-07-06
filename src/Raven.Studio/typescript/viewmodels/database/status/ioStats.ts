@@ -1095,8 +1095,7 @@ class ioStats extends viewModelBase {
                 if (currentEnd > joinedDurations[joinedIndex][1]) {
                     joinedDurations[joinedIndex][1] = currentEnd;
                 }
-            }
-            else {
+            } else {
                 joinedIndex++;
                 joinedDurations.push(durationsInfo[i]);
             }
@@ -1264,8 +1263,7 @@ class ioStats extends viewModelBase {
             // Check if data is an IOStats json data..
             if (!importedData.hasOwnProperty('Environments')) {
                 messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
-            }
-            else {
+            } else {
                 if (this.hasAnyData()) {
                     this.resetGraphData();
                 }
@@ -1326,8 +1324,7 @@ class ioStats extends viewModelBase {
 
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
-        }
-        else {
+        } else {
             exportFileName = `IOStats-of-${this.activeDatabase().name}-${moment().format("YYYY-MM-DD-HH-mm")}`;
         }
 

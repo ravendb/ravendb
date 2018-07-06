@@ -285,8 +285,7 @@ class patch extends viewModelBase {
                                 this.savePatchToStorage();
                             }
                         });
-                }
-                else {
+                } else {
                     this.savePatchToStorage();
                 }                
                 

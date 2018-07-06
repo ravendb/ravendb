@@ -32,8 +32,7 @@ class restorePoint {
                     backupType = "Incremental ";
                 }
                 backupType += "Snapshot";
-            }
-            else if (this.isIncremental) {
+            } else if (this.isIncremental) {
                 backupType = "Incremental";
             } else {
                 backupType = "Full";

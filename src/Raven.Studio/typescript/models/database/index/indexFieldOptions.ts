@@ -154,8 +154,7 @@ class indexFieldOptions {
                     this.storage("Yes");
                     this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
-                }
-                else if (newValue === null) {
+                } else if (newValue === null) {
                     this.analyzer(null); 
                     this.storage(null);
                     this.indexing(null);

@@ -173,8 +173,7 @@ class editRavenEtlTask extends viewModelBase {
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
                 hasAnyErrors = true;
-            }
-            else {
+            } else {
                 // Use the new connection string
                 editedEtl.connectionStringName(this.newConnectionString().connectionStringName());               
             }
@@ -201,8 +200,7 @@ class editRavenEtlTask extends viewModelBase {
                 .fail(() => {
                     this.spinners.save(false);
                 });
-        }
-        else {
+        } else {
             savingNewStringAction.resolve();
         }
 

@@ -23,8 +23,7 @@ class inputCursor {
         if ('selectionStart' in input) {
             // Normal browsers
             cursorPosition = (<any>input)["selectionStart"];
-        }
-        else {
+        } else {
             // IE
             input.focus();
             var sel = (<any>document)["selection"].createRange();

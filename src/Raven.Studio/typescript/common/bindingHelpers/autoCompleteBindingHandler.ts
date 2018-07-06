@@ -153,8 +153,7 @@ class autoCompleteBindingHandler {
             }
 
             this.updateInputElement(selected, $input);
-        }
-        else if (args.which === upArrow) {
+        } else if (args.which === upArrow) {
             args.preventDefault();
             if (curSelected.length > 0) {
                 curSelected.removeClass("active");
@@ -176,8 +175,7 @@ class autoCompleteBindingHandler {
             }
 
             this.updateInputElement(selected, $input);
-        }
-        else if (args.which === enter) {
+        } else if (args.which === enter) {
             args.preventDefault();
             args.stopPropagation();
             var itemToSelect = curSelected.length ? curSelected : $(this.findAutoCompleteItemMatching($element, $input.val()));
