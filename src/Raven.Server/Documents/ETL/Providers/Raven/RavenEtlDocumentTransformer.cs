@@ -141,8 +141,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentRun.AddAttachment(self, name, attachmentReference);
+            var attachmentReferenceString = attachmentReference.AsString();
 
+            if (attachmentReferenceString.EndsWith(Transformation.AttachmentNullMarkerSuffix) == false)
+            {
+                _currentRun.AddAttachment(self, name, attachmentReference);
+            }
+            else
+            {
+                if (name == null)
+                {
+                    name = attachmentReferenceString.Substring(Transformation.AttachmentMarker.Length,
+                        attachmentReferenceString.Length - Transformation.AttachmentMarker.Length - Transformation.AttachmentNullMarkerSuffix.Length);
+                }
+                
+                _currentRun.DeleteAttachment(self, name);
+            }
+            
             return self;
         }
 
@@ -248,13 +263,28 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     case EtlItemType.Document:
                         if (_script.HasTransformation)
+                        {
+                            Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
+
                             ApplyDeleteCommands(item, OperationType.Delete);
+                        }
                         else
-                            _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                        {
+                            if (item.IsAttachmentTombstone == false)
+                            {
+                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                            }
+                            else
+                            {
+                                var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
+
+                                _currentRun.DeleteAttachment(doc, attachmentName);
+                            }
+                        }
                         break;
                     case EtlItemType.Counter:
 
-                        var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterName(Context, item.CounterTombstoneId);
+                        var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterNameFromTombstone(Context, item.CounterTombstoneId);
 
                         if (_script.HasTransformation)
                         {

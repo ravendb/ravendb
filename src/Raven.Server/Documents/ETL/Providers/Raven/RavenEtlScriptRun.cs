@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         
         private Dictionary<JsValue, List<(string Name, Attachment Attachment)>> _addAttachments;
 
+        private Dictionary<JsValue, List<string>> _deleteAttachments;
+
         private Dictionary<JsValue, List<(string Name, long Value)>> _addCounters;
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _counters;
@@ -108,6 +110,25 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             attachments.Add((name ?? attachment.Name, attachment));
         }
 
+        public void DeleteAttachment(JsValue instance, string name)
+        {
+            if (_deleteAttachments == null)
+                _deleteAttachments = new Dictionary<JsValue, List<string>>(ReferenceEqualityComparer<JsValue>.Default);
+
+            if (_deleteAttachments.TryGetValue(instance, out var attachmentsToDelete) == false)
+            {
+                attachmentsToDelete = new List<string>();
+                _deleteAttachments.Add(instance, attachmentsToDelete);
+            }
+
+            attachmentsToDelete.Add(name);
+        }
+
+        public void DeleteAttachment(string documentId, string name)
+        {
+            _deletes.Add(new DeleteAttachmentCommandData(documentId, name, null));
+        }
+
         public void AddCounter(JsValue instance, JsValue counterReference)
         {
             var counter = _loadedCounters[counterReference];
@@ -186,6 +207,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             commands.Add(new PutAttachmentCommandData(put.Value.Id, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
                                 null));
+                        }
+                    }
+
+                    if (_deleteAttachments != null && _deleteAttachments.TryGetValue(put.Key, out var deleteAttachments))
+                    {
+                        foreach (var deleteAttachment in deleteAttachments)
+                        {
+                            commands.Add(new DeleteAttachmentCommandData(put.Value.Id, deleteAttachment, null));
                         }
                     }
 

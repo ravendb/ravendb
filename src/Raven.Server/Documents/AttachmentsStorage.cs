@@ -1005,6 +1005,38 @@ namespace Raven.Server.Documents
             return new StreamsTempFile(tempPath.FullPath, _documentDatabase);
         }
 
+        public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(JsonOperationContext context,
+            LazyStringValue attachmentTombstoneId)
+        {
+            var p = attachmentTombstoneId.Buffer;
+            var size = attachmentTombstoneId.Size;
+
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            var attachmentNameIndex = sizeOfDocId +
+                                      1 + // separator
+                                      1 + // type: d
+                                      1; // separator
+
+            int sizeOfAttachmentName = 0;
+
+            for (; sizeOfAttachmentName < size - (sizeOfDocId + 3); sizeOfAttachmentName++)
+            {
+                if (p[attachmentNameIndex + sizeOfAttachmentName] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
+            var name = context.AllocateStringValue(null, p + attachmentNameIndex, sizeOfAttachmentName);
+
+            return (doc, name);
+        }
+
 #if DEBUG
         public static void AssertAttachments(BlittableJsonReaderObject document, DocumentFlags flags)
         {

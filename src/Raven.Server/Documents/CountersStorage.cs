@@ -170,11 +170,12 @@ namespace Raven.Server.Documents
             return (doc, name);
         }
 
-        public static (LazyStringValue DocId, string CounterName) ExtractDocIdAndCounterName(JsonOperationContext context, LazyStringValue counterTombstoneId)
+        public static (LazyStringValue DocId, string CounterName) ExtractDocIdAndCounterNameFromTombstone(JsonOperationContext context,
+            LazyStringValue counterTombstoneId)
         {
             var p = counterTombstoneId.Buffer;
             var size = counterTombstoneId.Size;
-                
+
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
             {

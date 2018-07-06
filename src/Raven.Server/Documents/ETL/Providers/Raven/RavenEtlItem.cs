@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Operations.Counters;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -11,7 +12,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public RavenEtlItem(Tombstone tombstone, string collection, EtlItemType type) : base(tombstone, collection, type)
         {
-           
+            if (tombstone.Type == Tombstone.TombstoneType.Attachment)
+            {
+                AttachmentTombstoneId = tombstone.LowerId;
+            }
         }
 
         public RavenEtlItem(CounterDetail counter, string collection)
@@ -24,5 +28,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             CounterName = counter.CounterName;
             CounterValue = counter.TotalValue;
         }
+
+        public LazyStringValue AttachmentTombstoneId { get; protected set; }
+
+        public bool IsAttachmentTombstone => AttachmentTombstoneId != null;
     }
 }

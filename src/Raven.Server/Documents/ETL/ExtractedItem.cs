@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.ETL
             switch (type)
             {
                 case EtlItemType.Document:
-                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document);
+                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document || tombstone.Type == Tombstone.TombstoneType.Attachment);
                     DocumentId = tombstone.LowerId;
                     Collection = collection;
                     break;
