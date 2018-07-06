@@ -7,6 +7,8 @@ namespace Tests.Infrastructure
     {
         public const string LocalConnection = @"server=127.0.0.1;uid=root;pwd=;sslMode=None";
 
+        public static string LocalConnectionWithTimeout = $"{LocalConnection};connection timeout=3";
+
         public static readonly Lazy<string> MySqlDatabaseConnection = new Lazy<string>(() =>
         {
             using (var con = new MySqlConnection(LocalConnection))
