@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using MySql.Data.MySqlClient;
 using Xunit;
 
@@ -7,19 +6,29 @@ namespace Tests.Infrastructure
 {
     public class RequiresMySqlFactAttribute : FactAttribute
     {
-        public RequiresMySqlFactAttribute()
+        private static readonly Lazy<bool> IsMySqlAvailableLazy = new Lazy<bool>(() =>
         {
             try
             {
-                using (var con = new MySqlConnection(MySqlTests.LocalConnection))
+                using (var con = new MySqlConnection(MySqlTests.LocalConnectionWithTimeout))
                 {
                     con.Open();
                 }
+
+                return true;
             }
             catch (Exception)
             {
-                Skip = "Test requires MySQL database";
+                return false;
             }
+        });
+
+        public static bool IsMySqlAvailable => IsMySqlAvailableLazy.Value;
+
+        public RequiresMySqlFactAttribute()
+        {
+            if (IsMySqlAvailable == false)
+                Skip = "Test requires MySQL database";
         }
     }
 }
