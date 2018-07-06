@@ -399,7 +399,7 @@ namespace FastTests.Client.Indexing
             public int Count { get; set; }
         }
 
-        private class UsersByName : AbstractIndexCreationTask
+        private class UsersByName : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -418,7 +418,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        private class TeemoByDuration : AbstractIndexCreationTask
+        private class TeemoByDuration : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -436,7 +436,7 @@ namespace FastTests.Client.Indexing
                 };
             }
         }
-        private class UsersByNameWithAdditionalSources : AbstractIndexCreationTask
+        private class UsersByNameWithAdditionalSources : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -462,7 +462,7 @@ function Mr(x){
                 };
             }
         }
-        private class FanoutByNumbers : AbstractIndexCreationTask
+        private class FanoutByNumbers : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -497,7 +497,7 @@ return result;
             }
         }
 
-        private class FanoutByNumbersWithReduce : AbstractIndexCreationTask
+        private class FanoutByNumbersWithReduce : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -539,7 +539,7 @@ groupBy( f => f.Foo )
             }
         }
 
-        private class UsersByPhones : AbstractIndexCreationTask
+        private class UsersByPhones : AbstractJavaScriptIndexCreationTask
         {
             public class UsersByPhonesResult
             {
@@ -564,7 +564,7 @@ groupBy( f => f.Foo )
             }
         }
 
-        private class UsersByNameAndAnalyzedName : AbstractIndexCreationTask
+        private class UsersByNameAndAnalyzedName : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -605,7 +605,7 @@ map('Users', function (u){
             }
         }
 
-        private class UsersAndProductsByName : AbstractIndexCreationTask
+        private class UsersAndProductsByName : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -625,7 +625,7 @@ map('Users', function (u){
             }
         }
 
-        private class UsersByNameAndIsActive : AbstractIndexCreationTask
+        private class UsersByNameAndIsActive : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -644,7 +644,7 @@ map('Users', function (u){
             }
         }
 
-        private class UsersWithProductsByName : AbstractIndexCreationTask
+        private class UsersWithProductsByName : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -670,7 +670,7 @@ map('Users', function (u){
             public double Latitude { get; set; }
         }
 
-        private class Spatial : AbstractIndexCreationTask
+        private class Spatial : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -689,7 +689,7 @@ map('Users', function (u){
             }
         }
 
-        private class DynamicSpatial : AbstractIndexCreationTask
+        private class DynamicSpatial : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -708,7 +708,7 @@ map('Users', function (u){
             }
         }
 
-        private class UsersAndProductsByNameAndCount : AbstractIndexCreationTask
+        private class UsersAndProductsByNameAndCount : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -733,7 +733,7 @@ map('Users', function (u){
             }
         }
 
-        private class UsersReducedByName : AbstractIndexCreationTask
+        private class UsersReducedByName : AbstractJavaScriptIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
