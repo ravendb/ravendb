@@ -290,20 +290,21 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var fromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler;
                 var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
                 // We want the revision's attachments to have a lower etag than the revision itself
-                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                    fromSmuggler == false)
+                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                 {
-                    using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
+                    if (flags.Contain(DocumentFlags.Revision) == false)
                     {
-                        if (table.VerifyKeyExists(changeVectorSlice) == false)
+                        using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
                         {
-                            _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
+                            if (table.VerifyKeyExists(changeVectorSlice) == false)
+                            {
+                                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
+                            }
                         }
                     }
                 }
