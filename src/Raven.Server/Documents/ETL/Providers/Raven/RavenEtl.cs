@@ -41,6 +41,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new TombstonesToRavenEtlItems(tombstones, collection);
         }
 
+        protected override bool ShouldTrackAttachmentTombstones()
+        {
+            // if script isn't empty we relay on addAttachment() calls and detect that attachments needs be deleted
+            // when this call gets an attachment reference marked as null ($attachment/{attachment-name}/$null)
+
+            return string.IsNullOrEmpty(Transformation.Script);
+        }
+
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
         {
             return new RavenEtlDocumentTransformer(Database, context, _script);

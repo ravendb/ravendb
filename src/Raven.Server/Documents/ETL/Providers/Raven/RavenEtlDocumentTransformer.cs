@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -107,9 +108,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             else
             {
                 if (_script.Transformation != null)
+                {
+                    Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
                     ApplyDeleteCommands(item, OperationType.Delete);
+                }
                 else
-                    _commands.Add(new DeleteCommandData(item.DocumentId, null));
+                {
+                    if (item.IsAttachmentTombstone == false)
+                    {
+                        _commands.Add(new DeleteCommandData(item.DocumentId, null));
+                    }
+                    else
+                    {
+                        var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
+
+                        _commands.Add(new DeleteAttachmentCommandData(doc, attachmentName, null));
+                    }
+                }
             }
         }
 

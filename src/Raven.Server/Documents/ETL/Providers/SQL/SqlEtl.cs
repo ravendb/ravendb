@@ -37,6 +37,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones, collection);
         }
 
+        protected override bool ShouldTrackAttachmentTombstones()
+        {
+            return false;
+        }
+
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
         {
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);

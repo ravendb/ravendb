@@ -857,12 +857,23 @@ namespace Raven.Server.Documents
             int start,
             int take)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                yield break;
+            string tableName;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones));
+            if (collection == AttachmentsStorage.AttachmentsTombstones ||
+                collection == RevisionsStorage.RevisionsTombstones)
+            {
+                tableName = collection;
+            }
+            else
+            {
+                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    yield break;
+
+                tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+            }
+
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
 
             if (table == null)
                 yield break;
