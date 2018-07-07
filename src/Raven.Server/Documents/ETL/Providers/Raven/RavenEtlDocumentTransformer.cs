@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var attachmentReferenceString = attachmentReference.AsString();
 
-            if (attachmentReferenceString.EndsWith(Transformation.AttachmentNullMarkerSuffix) == false)
+            if (attachmentReferenceString.EndsWith(Transformation.NullMarkerSuffix) == false)
             {
                 _currentRun.AddAttachment(self, name, attachmentReference);
             }
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (name == null)
                 {
                     name = attachmentReferenceString.Substring(Transformation.AttachmentMarker.Length,
-                        attachmentReferenceString.Length - Transformation.AttachmentMarker.Length - Transformation.AttachmentNullMarkerSuffix.Length);
+                        attachmentReferenceString.Length - Transformation.AttachmentMarker.Length - Transformation.NullMarkerSuffix.Length);
                 }
                 
                 _currentRun.DeleteAttachment(self, name);
@@ -179,7 +179,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentRun.AddCounter(self, counterReference);
+            var counterReferenceString = counterReference.AsString();
+
+            if (counterReferenceString.EndsWith(Transformation.NullMarkerSuffix) == false)
+            {
+                _currentRun.AddCounter(self, counterReference);
+            }
+            else
+            {
+                var counterName = counterReferenceString.Substring(Transformation.CounterMarker.Length,
+                    counterReferenceString.Length - Transformation.CounterMarker.Length - Transformation.NullMarkerSuffix.Length);
+
+                _currentRun.DeleteCounter(self, counterName);
+            }
 
             return self;
         }

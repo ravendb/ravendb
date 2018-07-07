@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _counters;
 
+        private Dictionary<JsValue, List<string>> _deleteCounters;
+
         private Dictionary<JsValue, Attachment> _loadedAttachments;
 
         private Dictionary<JsValue, (string Name, long Value)> _loadedCounters;
@@ -164,6 +166,20 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             });
         }
 
+        public void DeleteCounter(JsValue instance, string counterName)
+        {
+            if (_deleteCounters == null)
+                _deleteCounters = new Dictionary<JsValue, List<string>>(ReferenceEqualityComparer<JsValue>.Default);
+
+            if (_deleteCounters.TryGetValue(instance, out var countersToDelete) == false)
+            {
+                countersToDelete = new List<string>();
+                _deleteCounters.Add(instance, countersToDelete);
+            }
+
+            countersToDelete.Add(counterName);
+        }
+
         public void DeleteCounter(LazyStringValue documentId, string counterName)
         {
             if (_counters == null)
@@ -233,6 +249,25 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         }
 
                         commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations)
+                        {
+                            FromEtl = true
+                        });
+                    }
+
+                    if (_deleteCounters != null && _deleteCounters.TryGetValue(put.Key, out var deleteCounters))
+                    {
+                        var deleteCounterOperations = new List<CounterOperation>();
+
+                        foreach (var deleteCounter in deleteCounters)
+                        {
+                            deleteCounterOperations.Add(new CounterOperation()
+                            {
+                                Type = CounterOperationType.Delete,
+                                CounterName = deleteCounter
+                            });
+                        }
+
+                        commands.Add(new CountersBatchCommandData(put.Value.Id, deleteCounterOperations)
                         {
                             FromEtl = true
                         });
