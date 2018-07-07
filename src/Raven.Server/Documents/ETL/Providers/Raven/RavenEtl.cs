@@ -47,12 +47,21 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new CountersToRavenEtlItems(counters, collection);
         }
 
-        protected override bool NeedsToTrackAttachmentTombstones()
+        protected override bool ShouldTrackAttachmentTombstones()
         {
             // if script isn't empty we relay on addAttachment() calls and detect that attachments needs be deleted
             // when this call gets an attachment reference marked as null ($attachment/{attachment-name}/$null)
 
             return string.IsNullOrEmpty(Transformation.Script);
+        }
+
+        protected override bool ShouldTrackCounters()
+        {
+            // we track counters only if script is empty (then we send all counters together with documents) or
+            // when load counter behavior functions are defined, otherwise counters are send on document updates
+            // when addCounter() is called during transformation
+
+            return string.IsNullOrEmpty(Transformation.Script) || Transformation.CollectionToLoadCounterBehaviorFunction != null;
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)

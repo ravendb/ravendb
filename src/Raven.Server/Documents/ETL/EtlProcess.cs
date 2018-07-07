@@ -129,7 +129,9 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
 
-        protected abstract bool NeedsToTrackAttachmentTombstones();
+        protected abstract bool ShouldTrackAttachmentTombstones();
+
+        protected abstract bool ShouldTrackCounters();
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
@@ -173,7 +175,7 @@ namespace Raven.Server.Documents.ETL
                             merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones, en.Collection, EtlItemType.Document));
                         }
 
-                        if (NeedsToTrackAttachmentTombstones())
+                        if (ShouldTrackAttachmentTombstones())
                         {
                             var attachmentTombstones = Database.DocumentsStorage
                                 .GetTombstonesFrom(context, AttachmentsStorage.AttachmentsTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
@@ -187,9 +189,6 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     case EtlItemType.Counter:
-
-                        if (this is SqlEtl)
-                            break;
 
                         var lastDocEtag = stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document);
 
@@ -546,7 +545,17 @@ namespace Raven.Server.Documents.ETL
                                 {
                                     List<TTransformed> transformations = null;
 
-                                    foreach (var type in new[] { EtlItemType.Document, EtlItemType.Counter })
+                                    var typesToWorkOn = new List<EtlItemType>()
+                                    {
+                                        EtlItemType.Document
+                                    };
+
+                                    if (ShouldTrackCounters())
+                                    {
+                                        typesToWorkOn.Add(EtlItemType.Counter);
+                                    }
+
+                                    foreach (var type in typesToWorkOn)
                                     {
                                         var extracted = Extract(context, loadLastProcessedEtag + 1, type, stats);
 
@@ -698,12 +707,11 @@ namespace Raven.Server.Documents.ETL
                 lastProcessedTombstones[collection] = lastProcessedEtag;
             }
 
-            lastProcessedTombstones[CountersStorage.CountersTombstones] = lastProcessedEtag;
+            if (ShouldTrackCounters())
+                lastProcessedTombstones[CountersStorage.CountersTombstones] = lastProcessedEtag;
 
-            if (NeedsToTrackAttachmentTombstones())
-            {
+            if (ShouldTrackAttachmentTombstones())
                 lastProcessedTombstones[AttachmentsStorage.AttachmentsTombstones] = lastProcessedEtag;
-            }
 
             return lastProcessedTombstones;
         }
