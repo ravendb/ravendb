@@ -43,7 +43,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new NotImplementedException("TODO arek");
         }
 
-        protected override bool NeedsToTrackAttachmentTombstones()
+        protected override bool ShouldTrackAttachmentTombstones()
+        {
+            return false;
+        }
+
+        protected override bool ShouldTrackCounters()
         {
             return false;
         }
