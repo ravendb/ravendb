@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal const string CounterMarker = "$counter/";
 
-        internal const string AttachmentNullMarkerSuffix = "/$null";
+        internal const string NullMarkerSuffix = "/$null";
 
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
 

@@ -116,13 +116,13 @@ namespace Raven.Server.Documents.ETL
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
                 if (attachment == null)
-                    return loadAttachmentReference + Transformation.AttachmentNullMarkerSuffix;
+                    return loadAttachmentReference + Transformation.NullMarkerSuffix;
 
                 AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             }
             else
             {
-                return loadAttachmentReference + Transformation.AttachmentNullMarkerSuffix;
+                return loadAttachmentReference + Transformation.NullMarkerSuffix;
             }
 
             return loadAttachmentReference;
@@ -141,38 +141,16 @@ namespace Raven.Server.Documents.ETL
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
 
                 if (value == null)
-                    ThrowNoSuchCounter(Current.DocumentId, counterName);
+                    return loadCounterReference + Transformation.NullMarkerSuffix;
 
                 AddLoadedCounter(loadCounterReference, counterName, value.Value);
             }
             else
             {
-                ThrowNoCounters(Current.DocumentId, counterName);
+                return loadCounterReference + Transformation.NullMarkerSuffix;
             }
 
             return loadCounterReference;
-        }
-
-        protected static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
-        {
-            if (value.Length <= Transformation.AttachmentMarker.Length)
-            {
-                attachmentName = null;
-                return false;
-            }
-
-            var buffer = value.Buffer;
-
-            if (*(long*)buffer != 7883660417928814884 || // $attachm
-                *(int*)(buffer + 8) != 796159589) // ent/
-            {
-                attachmentName = null;
-                return false;
-            }
-
-            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
-
-            return true;
         }
 
         private JsValue GetAttachments(JsValue self, JsValue[] args)
@@ -284,17 +262,6 @@ namespace Raven.Server.Documents.ETL
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {
             throw new ArgumentException($"{parameterName} parameter is mandatory");
-        }
-
-        protected void ThrowNoSuchCounter(string documentId, string counterName)
-        {
-            throw new InvalidOperationException($"Document '{documentId}' doesn't have counter named '{counterName}'");
-        }
-
-        protected void ThrowNoCounters(string documentId, string counterName)
-        {
-            throw new InvalidOperationException(
-                $"Document '{documentId}' doesn't have any counter while the transformation tried to add '{counterName}'");
         }
 
         protected static void ThrowInvalidSriptMethodCall(string message)

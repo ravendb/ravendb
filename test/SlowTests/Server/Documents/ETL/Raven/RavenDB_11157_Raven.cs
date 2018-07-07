@@ -337,14 +337,13 @@ for (var i = 0; i < counters.length; i++) {
         }
 
         [Fact]
-        public void Should_error_if_counter_doesnt_exist()
+        public void Should_remove_counter_if_add_counter_gets_null_argument()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
                     @"
-
 var doc = loadToUsers(this);
 doc.addCounter(loadCounter('likes'));
 "
@@ -376,15 +375,34 @@ doc.addCounter(loadCounter('likes'));
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
+                using (var session = dest.OpenSession())
+                {
+                    // addCounter(null) should throw transformation error
+
+                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.NotNull(session.Load<User>("users/2"));
+                    Assert.NotNull(session.Load<User>("users/3"));
+                }
+
                 AssertCounters(dest, new[]
                 {
                     ("users/2", "likes", 1L, false)
                 });
 
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/2").Delete("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
                 using (var session = dest.OpenSession())
                 {
-                    Assert.Null(session.Load<User>("users/1"));
-                    Assert.Null(session.Load<User>("users/3"));
+                    Assert.Null(session.CountersFor("users/2").Get("likes"));
                 }
             }
         }

@@ -93,6 +93,28 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             });
         }
 
+        private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
+        {
+            if (value.Length <= Transformation.AttachmentMarker.Length)
+            {
+                attachmentName = null;
+                return false;
+            }
+
+            var buffer = value.Buffer;
+
+            if (*(long*)buffer != 7883660417928814884 || // $attachm
+                *(int*)(buffer + 8) != 796159589) // ent/
+            {
+                attachmentName = null;
+                return false;
+            }
+
+            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
+
+            return true;
+        }
+
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
             if (_loadedAttachments.TryGetValue(name, out var loadedAttachments) == false)
