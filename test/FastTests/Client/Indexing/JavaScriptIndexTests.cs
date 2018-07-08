@@ -362,21 +362,37 @@ namespace FastTests.Client.Indexing
         public void CanReduceNullValues()
         {
             using (var store = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                store.ExecuteIndex(new UsersReducedByName());
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User { Name = null });
-                    session.Store(new User { Name = null });
-                    session.Store(new User { Name = null });
-                    session.Store(new User { Name = "Tal" });
-                    session.Store(new User { Name = "Maxim" });
-                    session.SaveChanges();
-                    WaitForIndexing(store);
-                    var res = session.Query<User>("UsersReducedByName").OfType<ReduceResults>().Single(x => x.Count == 3);
-                    Assert.Null(res.Name);
-                }
+                ReduceNullValuesInternal(store);
+            }
+        }
 
+        private static void ReduceNullValuesInternal(DocumentStore store)
+        {
+            store.ExecuteIndex(new UsersReducedByName());
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = null });
+                session.Store(new User { Name = null });
+                session.Store(new User { Name = null });
+                session.Store(new User { Name = "Tal" });
+                session.Store(new User { Name = "Maxim" });
+                session.SaveChanges();
+                WaitForIndexing(store);
+                var res = session.Query<User>("UsersReducedByName").OfType<ReduceResults>().Single(x => x.Count == 3);
+                Assert.Null(res.Name);
+            }
+        }
+
+        [Fact]
+        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance()
+        {
+            using (var store = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                ReduceNullValuesInternal(store);
+                ReduceNullValuesInternal(store2);
             }
         }
         private class User
