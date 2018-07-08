@@ -143,6 +143,8 @@ namespace Raven.Client.Documents.Session
 
         private bool _isInMoreLikeThis;
 
+        protected string FromAlias { get; set; }
+
         private static TimeSpan DefaultTimeout
         {
             get
@@ -493,7 +495,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             Include(path.ToPropertyPath());
         }
 
-        public void Include(Action<IIncludeBuilder<T>> includes)
+        public void Include(Action<IQueryIncludeBuilder<T>> includes)
         {
             if (includes == null)
                 return;
@@ -509,7 +511,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 }
             }
 
-            IncludeCounters(includeBuilder.AllCounters, includeBuilder.CountersToInclude);
+            IncludeCounters(includeBuilder.Alias, includeBuilder.CountersToIncludeBySourcePath);
         }
 
         /// <summary>
@@ -1137,7 +1139,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 				HighlightingTokens.Count == 0 && 
 				ExplanationToken == null && 
 				QueryTimings == null &&
-				CounterIncludesToken == null)
+				CounterIncludesTokens == null)
                 return;
 
             queryText.Append(" include ");
@@ -1167,13 +1169,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 }
             }
 
-            if (CounterIncludesToken != null)
+            if (CounterIncludesTokens != null)
             {
-                if (first == false)
-                    queryText.Append(",");
-                first = false;
+                foreach (var counterIncludesToken in CounterIncludesTokens)
+                {
+                    if (first == false)
+                        queryText.Append(",");
+                    first = false;
 
-                CounterIncludesToken.WriteTo(queryText);
+                    counterIncludesToken.WriteTo(queryText);
+                }
             }
 
             foreach (var token in HighlightingTokens)

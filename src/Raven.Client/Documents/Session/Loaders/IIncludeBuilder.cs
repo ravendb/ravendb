@@ -26,11 +26,25 @@ namespace Raven.Client.Documents.Session.Loaders
 
     }
 
-    internal class IncludeBuilder<T> : IIncludeBuilder<T>
+    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T>
+    {
+        IIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name);
+
+        IIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
+
+        IIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
+    }
+
+
+    internal class IncludeBuilder<T> : IQueryIncludeBuilder<T>
     {
         public HashSet<string> DocumentsToInclude;
-        public HashSet<string> CountersToInclude;
-        public bool AllCounters;
+        public HashSet<string> CountersToInclude => CountersToIncludeBySourcePath[string.Empty].CountersToInclude;
+        public bool AllCounters => CountersToIncludeBySourcePath[string.Empty].AllCounters;
+        public string Alias;
+
+        public Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
+
 
         private readonly DocumentConventions _conventions;
 
@@ -70,44 +84,113 @@ namespace Raven.Client.Documents.Session.Loaders
 
         public IIncludeBuilder<T> IncludeCounter(string name)
         {
-            if (AllCounters)
-                throw new InvalidOperationException("IIncludeBuilder : You cannot use Counter(string name) after using AllCounters() ");
+            IncludeCounter(string.Empty, name);
+            return this;
+        }
 
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentNullException(nameof(name));
+        public IIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name)
+        {
+            if (Alias == null)
+                Alias = path.Parameters[0].Name;
 
-            if (CountersToInclude == null)
-                CountersToInclude = new HashSet<string>();
-
-            CountersToInclude.Add(name);
+            IncludeCounter(path.ToPropertyPath(), name);
             return this;
         }
 
         public IIncludeBuilder<T> IncludeCounters(string[] names)
         {
-            if (CountersToInclude == null)
-                CountersToInclude = new HashSet<string>();
+            IncludeCounters(string.Empty, names);
+            return this;
+        }
 
-            if (names == null)
-                throw new ArgumentNullException(nameof(names));
+        public IIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
+        {
+            if (Alias == null)
+                Alias = path.Parameters[0].Name;
 
-            foreach (var name in names)
-            {
-                if (string.IsNullOrWhiteSpace(name))
-                    throw new InvalidOperationException("Counters(string[] names) : 'names' should not contain null or whitespace elements");
-                CountersToInclude.Add(name);
-            }
+            IncludeCounters(path.ToPropertyPath(), names);
             return this;
         }
 
         public IIncludeBuilder<T> IncludeAllCounters()
         {
-            if (CountersToInclude != null)
+            IncludeAll(string.Empty);
+
+            return this;
+        }
+
+        public IIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path)
+        {
+            if (Alias == null)
+                Alias = path.Parameters[0].Name;
+
+            IncludeAll(path.ToPropertyPath());
+
+            return this;
+        }
+
+        private void IncludeCounter(string path, string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
+            AssertNotAllAndAddNewEntryIfNeeded(path);
+
+            CountersToIncludeBySourcePath[path]
+                .CountersToInclude.Add(name);
+        }
+
+        private void IncludeCounters(string path, string[] names)
+        {
+            if (names == null)
+                throw new ArgumentNullException(nameof(names));
+
+            AssertNotAllAndAddNewEntryIfNeeded(path);
+
+            foreach (var name in names)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    throw new InvalidOperationException("Counters(string[] names) : 'names' should not " +
+                                                        "contain null or whitespace elements");
+                CountersToIncludeBySourcePath[path]
+                    .CountersToInclude.Add(name);
+            }
+
+        }
+
+        private void IncludeAll(string sourcePath)
+        {
+            if (CountersToIncludeBySourcePath == null)
+            {
+                CountersToIncludeBySourcePath = new Dictionary<string,
+                    (bool, HashSet<string>)>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (CountersToIncludeBySourcePath.TryGetValue(sourcePath, out var val) &&
+                val.CountersToInclude != null)
+
                 throw new InvalidOperationException("IIncludeBuilder : You cannot use AllCounters() after using " +
                                                     "Counter(string name) or Counters(string[] names)");
 
-            AllCounters = true;
-            return this;
+            CountersToIncludeBySourcePath[sourcePath] = (true, null);
         }
+
+        private void AssertNotAllAndAddNewEntryIfNeeded(string path)
+        {
+            if (CountersToIncludeBySourcePath != null &&
+                CountersToIncludeBySourcePath.TryGetValue(path, out var val) &&
+                val.AllCounters)
+                throw new InvalidOperationException("IIncludeBuilder : You cannot use Counter(name) after using AllCounters() ");
+
+            if (CountersToIncludeBySourcePath == null)
+            {
+                CountersToIncludeBySourcePath = new Dictionary<string,
+                    (bool, HashSet<string>)>(StringComparer.OrdinalIgnoreCase)
+                {
+                    {path, (false, new HashSet<string>())}
+                };
+            }
+        }
+
     }
 }

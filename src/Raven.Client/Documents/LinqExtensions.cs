@@ -83,18 +83,19 @@ namespace Raven.Client.Documents
         /// <param name="source">The source for querying</param>
         /// <param name="includes">Specifies the documents and/or counters to include </param>
         /// <returns></returns>
-        public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Action<IIncludeBuilder<TResult>> includes)
+        public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Action<IQueryIncludeBuilder<TResult>> includes)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, 
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression,
                 Expression.Constant(includes)));
 
             return (IRavenQueryable<TResult>)queryable;
         }
+
 
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, FacetBase facet)
         {
