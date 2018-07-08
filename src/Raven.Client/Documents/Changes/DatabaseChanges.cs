@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Security;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
@@ -56,11 +58,26 @@ namespace Raven.Client.Documents.Changes
             _task = DoWork();   
         }
 
+        public static event Func<object, X509Certificate, X509Chain, SslPolicyErrors, bool> WebSocketsRemoteCertificateValidationCallback;
+
+        private static bool OnWebSocketsRemoteCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors)
+        {
+            if (WebSocketsRemoteCertificateValidationCallback == null)
+                return errors == SslPolicyErrors.None;
+
+            return WebSocketsRemoteCertificateValidationCallback(sender, certificate, chain, errors);
+        }
+
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
         {
             var clientWebSocket = new ClientWebSocket();
             if (requestExecutor.Certificate != null)
                 clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
+
+#if NETCOREAPP2_1
+            if (WebSocketsRemoteCertificateValidationCallback != null)
+                clientWebSocket.Options.RemoteCertificateValidationCallback += OnWebSocketsRemoteCertificateValidationCallback;
+#endif
             return clientWebSocket;
         }
 
