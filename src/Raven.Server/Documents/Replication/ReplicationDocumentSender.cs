@@ -194,6 +194,7 @@ namespace Raven.Server.Documents.Replication
                     var numberOfItemsSent = 0;
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     short lastTransactionMarker = -1;
+                    long prevLastEtag = _lastEtag;
 
                     using (_stats.Storage.Start())
                     {                        
@@ -250,6 +251,9 @@ namespace Raven.Server.Documents.Replication
                                 var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id))
                                 {
+                                    //We need to filter attachments that are been sent in the same batch as the document
+                                    if(attachment.Etag >= prevLastEtag)
+                                        continue;
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
                                     AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
