@@ -192,7 +192,6 @@ namespace SlowTests.Cluster
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
-            Console.WriteLine(leader.WebUrl);
             var conventionsForLoadBalancing = new DocumentConventions
             {
                 ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin
@@ -351,7 +350,6 @@ namespace SlowTests.Cluster
                         await Task.Delay(100);
                     } while (requestExecutor.TopologyNodes == null);
 
-                    Console.WriteLine(requestExecutor.TopologyNodes.Count);
 
                     DisposeServerAndWaitForFinishOfDisposal(leader);
 
