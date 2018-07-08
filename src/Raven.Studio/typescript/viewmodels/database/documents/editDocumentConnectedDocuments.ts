@@ -73,7 +73,9 @@ class connectedDocuments {
     isCountersActive = ko.pureComputed(() => connectedDocuments.currentTab() === "counters");        
     
     isUploaderActive: KnockoutComputed<boolean>;
-    showUploadNotAvailable: KnockoutComputed<boolean>;
+    
+    isArtificialDocument: KnockoutComputed<boolean>;
+    isHiloDocument: KnockoutComputed<boolean>;  
 
     gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem | counterItem>>();
     uploader: editDocumentUploader;
@@ -108,11 +110,6 @@ class connectedDocuments {
             const readOnly = inReadOnlyMode();
             return onAttachmentsPane && !newDoc && !readOnly;
         });
-        this.showUploadNotAvailable = ko.pureComputed(() => {
-            const onAttachmentsPane = this.isAttachmentsActive();
-            const readOnly = inReadOnlyMode();
-            return onAttachmentsPane && readOnly;
-        });
 
         this.searchInputVisible = ko.pureComputed(() => !this.isRevisionsActive() && !this.isRecentActive());
         this.searchInput.throttle(250).subscribe(() => {
@@ -120,6 +117,14 @@ class connectedDocuments {
         });
 
         this.clearSearchInputSubscription = connectedDocuments.currentTab.subscribe(() => this.searchInput(""));
+
+        this.isArtificialDocument = ko.pureComputed(() => {
+            return this.document().__metadata.hasFlag("Artificial");
+        });
+
+        this.isHiloDocument = ko.pureComputed(() => {
+            return this.document().__metadata.collection == "@hilo";
+        });        
     }
 
     private initColumns() {

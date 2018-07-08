@@ -2,7 +2,7 @@
 
 import generalUtils = require("common/generalUtils");
 
-type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters";
+type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial";
 
 class documentMetadata {
     collection: string;
