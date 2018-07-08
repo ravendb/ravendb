@@ -21,9 +21,6 @@ namespace SlowTests.Bugs
                 {
                     var testDocs = session.Query<TestDoc>()
                         .Where(x => x.Id.In(idsToLoad.Select(y => y))).ToList();
-
-                    foreach (var doc in testDocs)
-                        Console.WriteLine(doc.Id);
                 }
             }
         }
