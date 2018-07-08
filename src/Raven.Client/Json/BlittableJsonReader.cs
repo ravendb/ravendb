@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -25,6 +26,18 @@ namespace Raven.Client.Json
         private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
         private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
 
+        private readonly JsonOperationContext _context;
+
+        public BlittableJsonReader()
+        {
+
+        }
+
+        public BlittableJsonReader(JsonOperationContext context)
+        {
+            _context = context;
+        }
+
         public void Init(BlittableJsonReaderObject root)
         {
             _items.Clear();
@@ -47,7 +60,7 @@ namespace Raven.Client.Json
 
 
         private bool _readAsLazyNumber = false;
-       
+
 
         public override bool Read()
         {
@@ -127,7 +140,7 @@ namespace Raven.Client.Json
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
             if (val is decimal asDec)
-            {                
+            {
                 return BlittableJsonToken.LazyNumber;
             }
             return BlittableJsonToken.StartObject;
@@ -137,6 +150,9 @@ namespace Raven.Client.Json
         {
             switch (token & BlittableJsonReaderBase.TypesMask)
             {
+                case BlittableJsonToken.EmbeddedBlittable:
+                    SetToken(JsonToken.Raw, value);
+                    return true;
                 case BlittableJsonToken.StartObject:
                     var newObject = new CurrentItem
                     {
@@ -155,7 +171,7 @@ namespace Raven.Client.Json
                     _items.Push(newArray);
                     SetToken(JsonToken.StartArray);
                     return true;
-                case BlittableJsonToken.Integer:                  
+                case BlittableJsonToken.Integer:
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.LazyNumber:
@@ -171,15 +187,15 @@ namespace Raven.Client.Json
                             SetToken(JsonToken.Integer, ulongValue);
                         }
                         else if (lnv.TryParseDecimal(out var decimalValue))
-                        {                            
+                        {
                             SetToken(JsonToken.Float, decimalValue);
                         }
                         else
                         {
                             SetToken(JsonToken.Float, (double)lnv);
                         }
-                        
-                    }                    
+
+                    }
 
                     return true;
                 case BlittableJsonToken.String:
@@ -251,11 +267,11 @@ namespace Raven.Client.Json
                 return null;
             }
             return Value?.ToString();
-        }               
+        }
 
         public override byte[] ReadAsBytes()
-        {            
-            var str = ReadAsString();            
+        {
+            var str = ReadAsString();
             if (str == null)
                 return null;
             return Convert.FromBase64String(str);
@@ -265,7 +281,7 @@ namespace Raven.Client.Json
         {
             _readAsLazyNumber = true;
             try
-            { 
+            {
                 if (!Read())
                 {
                     SetToken(JsonToken.None);
@@ -288,7 +304,7 @@ namespace Raven.Client.Json
                 }
             }
 
-            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
+            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);
         }
 
         public override double? ReadAsDouble()
@@ -317,9 +333,9 @@ namespace Raven.Client.Json
                     return doubleVal;
                 }
             }
-           
+
             return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
-        }                
+        }
 
         public override DateTime? ReadAsDateTime()
         {
@@ -335,6 +351,35 @@ namespace Raven.Client.Json
             if (str == null)
                 return null;
             return DateTimeOffset.ParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        }
+
+        public BlittableJsonReaderObject ReadAsBlittableJsonReaderObject()
+        {
+            if (Value == null)
+            {
+                return null;
+            }
+
+            if (Value is BlittableJsonReaderObject blittableValue)
+            {
+                return blittableValue.Clone(_context);
+            }
+            throw new SerializationException($"Try to read {nameof(BlittableJsonReaderObject)} from non {nameof(BlittableJsonReaderObject)} value");
+        }
+
+        public LazyStringValue ReadAsLazyStringValue()
+        {
+            if (Value == null)
+            {
+                return null;
+            }
+
+            //Todo To consider if should change the reader to set the value as LazyStringValue 
+            if (Value is string strValue)
+            {
+                return _context.GetLazyString(strValue);
+            }
+            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from non {nameof(LazyStringValue)} value");
         }
     }
 

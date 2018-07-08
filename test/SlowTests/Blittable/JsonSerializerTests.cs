@@ -1,0 +1,206 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Json;
+using Raven.Client.Json.Converters;
+using Raven.Server.Documents.Handlers;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Xunit;
+
+namespace SlowTests.Blittable
+{
+    public class JsonSerializerTests : RavenTestBase
+    {
+        public class Command
+        {
+            //Todo To consider if should deal with BlittableJsonReaderArray
+            //        public BlittableJsonReaderArray BlittableArray { get; set; }
+            public BlittableJsonReaderObject BlittableObject { get; set; }
+            public LazyStringValue LazyString { get; set; }
+        }
+
+        [Fact]
+        public void JsonDeserialize_WhenHasLazyStringProperty_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+            {
+                Command actual;
+                LazyStringValue expected;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
+                using (var writer = new BlittableJsonWriter(writeContext))
+                {
+                    expected = readContext.GetLazyString("Some Lazy String");
+                    var jsonSerializer = new JsonSerializer
+                    {
+                        ContractResolver = new DefaultRavenContractResolver(),
+                        ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                    };
+
+                    jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                    var command = new Command { LazyString = expected };
+                    jsonSerializer.Serialize(writer, command);
+                    writer.FinalizeDocument();
+
+                    var toDeseialize = writer.CreateReader();
+
+                    using (var reader = new BlittableJsonReader(readContext))
+                    {
+                        reader.Init(toDeseialize);
+                        actual = jsonSerializer.Deserialize<Command>(reader);
+                    }
+                }
+
+                //Todo To check how to force test fail if actual.BlittableObject is on writeContext 
+                Assert.Equal(expected, actual.LazyString);
+            }
+        }
+
+        [Fact]
+        public void JsonDeserialize_WhenHasBlittableObjectProperty_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+            {
+                Command actual;
+                BlittableJsonReaderObject expected;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
+                using (var writer = new BlittableJsonWriter(writeContext))
+                {
+                    var data = new { Property = "Value" };
+                    expected = EntityToBlittable.ConvertCommandToBlittable(data, readContext);
+                    var jsonSerializer = new JsonSerializer
+                    {
+                        ContractResolver = new DefaultRavenContractResolver(),
+                    };
+
+                    jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                    var command = new Command { BlittableObject = expected };
+                    jsonSerializer.Serialize(writer, command);
+                    writer.FinalizeDocument();
+
+                    var toDeseialize = writer.CreateReader();
+
+
+                    using (var reader = new BlittableJsonReader(readContext))
+                    {
+                        reader.Init(toDeseialize);
+                        actual = jsonSerializer.Deserialize<Command>(reader);
+                    }
+                }
+
+                //Todo To check how to force test fail if actual.BlittableObject is on writeContext 
+                Assert.Equal(expected, actual.BlittableObject);
+            }
+        }
+
+        [Fact]
+        public void JsonSerialize_WhenLazyStringValueIsProperty_ShouldSerialize()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonWriter(context))
+            {
+                var expected = context.GetLazyString("igal");
+
+                var jsonSerializer = new JsonSerializer
+                {
+                    ContractResolver = new DefaultRavenContractResolver(),
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                };
+
+                jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                var command = new Command { LazyString = expected };
+                jsonSerializer.Serialize(writer, command);
+                writer.FinalizeDocument();
+
+                //Assert
+                var reader = writer.CreateReader();
+                reader.TryGet(nameof(Command.LazyString), out LazyStringValue actual);
+                Assert.Equal(expected, actual);
+            }
+        }
+
+        [Fact]
+        public void JsonSerialize_WhenBlittableObjectIsProperty_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonWriter(context))
+            {
+                var data = new { Property = "Value" };
+                var expected = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var jsonSerializer = new JsonSerializer
+                {
+                    ContractResolver = new DefaultRavenContractResolver(),
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                };
+
+                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                var command = new Command { BlittableObject = expected };
+                jsonSerializer.Serialize(writer, command);
+                writer.FinalizeDocument();
+
+                //Assert
+                var reader = writer.CreateReader();
+                reader.TryGet(nameof(Command.BlittableObject), out BlittableJsonReaderObject actual);
+                Assert.Equal(expected, actual);
+            }
+        }
+
+        [Fact]
+        //Todo To consider if should support direct serialize of LazyStringValue
+        public void JsonSerialize_WhenLazyStringValueIsTheRoot_ShouldSerialize()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonWriter(context))
+            {
+                var expected = context.GetLazyString("igal");
+
+                var jsonSerializer = new JsonSerializer
+                {
+                    ContractResolver = new DefaultRavenContractResolver(),
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                };
+
+                jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                jsonSerializer.Serialize(writer, expected);
+                writer.FinalizeDocument();
+
+                //Assert
+                var reader = writer.CreateReader();
+//                Assert.Equal(expected, actual);
+            }
+        }
+
+        [Fact]
+        //Todo To consider if should support direct serialize of BlittableObject
+        public void JsonSerialize_WhenBlittableIsTheRoot_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonWriter(context))
+            {
+                var data = new DynamicJsonValue
+                {
+                    ["Property"] = "Value"
+                };
+                var blittableData = EntityToBlittable.ConvertCommandToBlittable(data, context);
+
+                var jsonSerializer = new JsonSerializer
+                {
+                    ContractResolver = new DefaultRavenContractResolver(),
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                };
+
+                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                jsonSerializer.Serialize(writer, blittableData);
+                writer.FinalizeDocument();
+
+                //Assert
+                var result = writer.CreateReader();
+                Assert.True(result.TryGet(nameof(data), out object _));
+            }
+        }
+    }
+}
