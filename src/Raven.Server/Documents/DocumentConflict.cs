@@ -45,7 +45,8 @@ namespace Raven.Server.Documents
                 StorageId = doc.StorageId,
                 ChangeVector = doc.ChangeVector,
                 LastModified = doc.LastModified,
-                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Data))
+                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Data)),
+                Flags = doc.Flags
             };
         }
 
@@ -64,7 +65,8 @@ namespace Raven.Server.Documents
                 StorageId = tombstone.StorageId,
                 ChangeVector = tombstone.ChangeVector,
                 LastModified = tombstone.LastModified,
-                Collection = tombstone.Collection
+                Collection = tombstone.Collection,
+                Flags = tombstone.Flags
             };
         }
 

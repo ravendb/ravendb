@@ -47,6 +47,11 @@ namespace Raven.Server.Documents
             return (current & flag) == flag;
         }
 
+        public static DocumentFlags Strip(this DocumentFlags current, DocumentFlags flag)
+        {
+            return current & ~flag;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Contain(this NonPersistentDocumentFlags current, NonPersistentDocumentFlags flag)
         {

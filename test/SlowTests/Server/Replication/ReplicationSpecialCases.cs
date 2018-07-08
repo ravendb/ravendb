@@ -358,7 +358,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 15 * 1000);
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 15 * 1000));
 
                 var buffer = new byte[3];
                 using (var session = destination.OpenAsyncSession())
