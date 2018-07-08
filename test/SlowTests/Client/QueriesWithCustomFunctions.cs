@@ -1766,7 +1766,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                                     ToUpper = u.Name.ToUpper(),
                                     ToLower = u.Name.ToLower(),
                                     Contains = u.Name.Contains("e"),
-                                    Format = $"Name: {u.Name}, LastName : {u.LastName}",
+                                    Format = "Name: "+u.Name+", LastName : "+u.LastName,
                                     Split = u.Name.Split('r', StringSplitOptions.None),
                                     SplitLimit = u.Name.Split(new char[] { 'r' }, 3),
                                     SplitArray = u.Name.Split(new char[] { 'r', 'e' }),
@@ -1790,7 +1790,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                         "ToUpper : u.Name.toUpperCase(), " +
                         "ToLower : u.Name.toLowerCase(), " +
                         "Contains : u.Name.indexOf(\"e\") !== -1, " +
-                        "Format : \"Name: {0}, LastName : {1}\".format(u.Name, u.LastName), " +
+                        "Format : \"Name: \"+u.Name+\", LastName : \"+u.LastName, " +
                         "Split : u.Name.split(new RegExp(\"r\", \"g\")), " +
                         "SplitLimit : u.Name.split(new RegExp(\"r\", \"g\")), " +
                         "SplitArray : u.Name.split(new RegExp(\"r\"+\"|\"+\"e\", \"g\")), " +
