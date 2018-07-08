@@ -1,7 +1,9 @@
 <div class="modal-dialog modal-lg" role="document" id="mapReduceIndexSyntaxDialog">
     <div class="modal-content">
+        <div class="margin-top margin-right margin-bottom margin-bottom-lg">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+        </div>
         <div class="modal-header margin-top">
-           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
            <div class="well well-sm"> 
                The Reduce function will group the results from the Maps stage based on the specified field and sum up their values.<br/>
                The outcome of both the Map and the Reduce functions must have the <strong>same</strong> structure.
@@ -26,6 +28,8 @@
     <span class="token string">Count</span> = 1,
     <span class="token string">Revenue</span> = product.UnitsOnOrder <span class="token operator">* </span>product.PricePerUnit
 }
+
+
 </pre>
 <pre>
 <span class="text-info">// Reduce Function:</span> 
@@ -37,6 +41,7 @@
    <span class="token string">Count</span> = g.Sum(x <span class="token operator">=> </span>x.Count),
    <span class="token string">Revenue</span> = g.Sum(x <span class="token operator">=> </span>x.Revenue)
 }
+
 </pre>
                 </div>
                 <div class="col-lg-6">
@@ -52,7 +57,9 @@
             Category: product.<span class="token string">Category</span>,
             <span class="token string">Count</span>: 1,
             <span class="token string">Revenue</span>: product.UnitsOnOrder <span class="token operator">*</span> product.PricePerUnit
-};}})
+        };
+    }
+})
 </pre>
 <pre>
 <span class="text-info">// Reduce Function:</span>
@@ -63,7 +70,8 @@
         <span class="token string">Category</span>: g.key.Category,
         <span class="token string">Count</span>: g.values.reduce((count, val) <span class="token operator">=></span> val.Count <span class="token operator">+</span> count, 0),
         <span class="token string">Revenue</span>: g.values.reduce((amount, val) <span class="token operator">=></span> val.Revenue <span class="token operator">+</span> amount, 0)
-};})
+    };
+})
 </pre>
                 </div>
             </div>
