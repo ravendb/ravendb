@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || NETCOREAPP2_1
 #define CURRENT
 #endif
 
