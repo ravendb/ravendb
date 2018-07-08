@@ -86,6 +86,7 @@ namespace Raven.Server.Documents.Replication
                                     collection,
                                     resolvedConflict: out resolved))
                                 {
+                                    resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
                                     resolvedConflicts.Add((resolved, maxConflictEtag));
 
                                     //stats.AddResolvedBy(collection + " Script", conflictList.Count);
@@ -95,7 +96,9 @@ namespace Raven.Server.Documents.Replication
 
                             if (ConflictSolver?.ResolveToLatest == true)
                             {
-                                resolvedConflicts.Add((ResolveToLatest(context, conflicts), maxConflictEtag));
+                                resolved = ResolveToLatest(context, conflicts);
+                                resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
+                                resolvedConflicts.Add((resolved, maxConflictEtag));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
@@ -269,7 +272,7 @@ namespace Raven.Server.Documents.Replication
                 using (Slice.External(context.Allocator, resolved.LowerId, out Slice lowerId))
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,
-                        _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection), documentFlags: DocumentFlags.Resolved | DocumentFlags.HasRevisions);
+                        _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection), documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions);
                     return;
                 }
             }
@@ -286,7 +289,7 @@ namespace Raven.Server.Documents.Replication
                 DeleteDocumentFromDifferentCollectionIfNeeded(context, resolved);
 
                 ReplicationUtils.EnsureCollectionTag(clone, resolved.Collection);
-                _database.DocumentsStorage.Put(context, resolved.LowerId, null, clone, null, resolved.ChangeVector, DocumentFlags.Resolved);
+                _database.DocumentsStorage.Put(context, resolved.LowerId, null, clone, null, resolved.ChangeVector, resolved.Flags | DocumentFlags.Resolved);
             }
         }
 
