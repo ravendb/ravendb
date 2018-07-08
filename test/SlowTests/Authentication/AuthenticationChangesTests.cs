@@ -12,7 +12,7 @@ namespace SlowTests.Authentication
 {
     public class AuthenticationChangesTests : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-9580: Does not work on current version .NET core.")]
+        [Fact]
         public async Task ChangesWithAuthentication()
         {
             var serverCertPath = SetupServerAuthentication();

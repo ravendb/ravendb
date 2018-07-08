@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
@@ -86,6 +87,7 @@ namespace FastTests
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
             RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
+            DatabaseChanges.WebSocketsRemoteCertificateValidationCallback += (message, certificate2, arg3, arg4) => true;
 
             var fileInfo = new FileInfo(XunitConfigurationFile);
             if (fileInfo.Exists)
