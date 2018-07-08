@@ -401,92 +401,62 @@ namespace FastTests.Client.Indexing
 
         private class UsersByName : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersByName()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersByName",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                 };
             }
         }
 
         private class TeemoByDuration : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public TeemoByDuration()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "TeemoByDuration",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Teemos', function (t){ return { Duration: t.Duration, Description: t.Description};})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Teemos', function (t){ return { Duration: t.Duration, Description: t.Description};})",
                 };
             }
         }
+
         private class UsersByNameWithAdditionalSources : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersByNameWithAdditionalSources()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersByName",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Users', function (u){ return { Name: Mr(u.Name)};})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration(),
-                    AdditionalSources = new Dictionary<string, string>
-                    {
-                        ["The Script"] = @"
-function Mr(x){
-    return 'Mr. ' + x;
-}"
-                    }
-
+                    @"map('Users', function (u){ return { Name: Mr(u.Name)};})",
                 };
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    ["The Script"] = @"function Mr(x){
+                                        return 'Mr. ' + x;
+                                        }"
+                };
+
             }
+
         }
+
         private class FanoutByNumbers : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public FanoutByNumbers()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "FanoutByNumbers",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Fanouts', function (f){ 
- var result = [];
-for(var i = 0; i < f.Numbers.length; i++)
-{
-    result.push({
-        Foo: f.Foo,
-        Sum: f.Numbers[i]
-    });
-}
-return result;
-})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Fanouts', function (f){
+                                var result = [];
+                                for(var i = 0; i < f.Numbers.length; i++)
+                                {
+                                    result.push({
+                                        Foo: f.Foo,
+                                        Sum: f.Numbers[i]
+                                    });
+                                 }
+                                return result;
+                            })",
                 };
             }
 
@@ -499,39 +469,28 @@ return result;
 
         private class FanoutByNumbersWithReduce : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public FanoutByNumbersWithReduce()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "FanoutByNumbersWithReduce",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Fanouts', function (f){ 
- var result = [];
-for(var i = 0; i < f.Numbers.length; i++)
-{
-    result.push({
-        Foo: f.Foo,
-        Sum: f.Numbers[i]
-    });
-}
-return result;
-})",
-                    },
-                    Reduce =
-                    @"
-groupBy( f => f.Foo )
- .aggregate( g => ({
-     Foo: g.key,
-     Sum: g.values.reduce((total, val) => val.Sum + total,0)
- }))",
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Fanouts', function (f){
+                                var result = [];
+                                for(var i = 0; i < f.Numbers.length; i++)
+                                {
+                                    result.push({
+                                        Foo: f.Foo,
+                                        Sum: f.Numbers[i]
+                                    });
+                                }
+                                return result;
+                                })",
                 };
+                Reduce = @"groupBy( f => f.Foo )
+                             .aggregate( g => ({
+                                 Foo: g.key,
+                                 Sum: g.values.reduce((total, val) => val.Sum + total,0)
+                             }))";
             }
-
             internal class Result
             {
                 public string Foo { get; set; }
@@ -547,58 +506,39 @@ groupBy( f => f.Foo )
                 public string Phone { get; set; }
             }
 
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersByPhones()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersByPhones",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Users', function (u){ return { Name: u.Name, Phone: u.PhoneNumbers};})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Users', function (u){ return { Name: u.Name, Phone: u.PhoneNumbers};})",
                 };
             }
         }
 
         private class UsersByNameAndAnalyzedName : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersByNameAndAnalyzedName()
             {
-                return new IndexDefinition
-                {
-                    Name = "UsersByName",
-                    Maps = new HashSet<string>
-                    {
-                        @"
-map('Users', function (u){ 
-    return { 
-        Name: u.Name, 
-        _: {$value: u.Name, $name:'AnalyzedName', $options:{index: true, store: true}}
-    };
-})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Fields = new Dictionary<string, IndexFieldOptions>
-                    {
+                Maps = new HashSet<string>
                         {
-                            Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions()
+                            @"map('Users', function (u){
+                                    return {
+                                        Name: u.Name,
+                                        _: {$value: u.Name, $name:'AnalyzedName', $options:{index: true, store: true}}
+                                    };
+                                })",
+                        };
+                Fields = new Dictionary<string, IndexFieldOptions>
+                        {
                             {
-                                Indexing = FieldIndexing.Search,
-                                Analyzer = "StandardAnalyzer"
+                                Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions()
+                                {
+                                    Indexing = FieldIndexing.Search,
+                                    Analyzer = "StandardAnalyzer"
+                                }
                             }
-                        }
-                    },
-                    Configuration = new IndexConfiguration()
-                };
-
+                        };
             }
-
             public class Result
             {
                 public string AnalyzedName { get; set; }
@@ -607,58 +547,34 @@ map('Users', function (u){
 
         private class UsersAndProductsByName : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersAndProductsByName()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersAndProductsByName",
-                    Maps = new HashSet<string>
-                        {
-                            @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
-                            @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
-                        },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                    @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                 };
             }
         }
 
         private class UsersByNameAndIsActive : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersByNameAndIsActive()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersByNameAndIsActive",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Users', u => u.Name, function(f){ return f.IsActive;})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Users', u => u.Name, function(f){ return f.IsActive;})",
                 };
             }
         }
 
         private class UsersWithProductsByName : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersWithProductsByName()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersWithProductsByName",
-                    Maps = new HashSet<string>
-                        {
-                            @"map('Users', function (u){ return { Name: u.Name, Count: 1, Product: load(u.Product,'Products').Name};})",
-                        },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Users', function (u){ return { Name: u.Name, Count: 1, Product: load(u.Product,'Products').Name};})",
                 };
             }
         }
@@ -672,88 +588,58 @@ map('Users', function (u){
 
         private class Spatial : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public Spatial()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "Spatial",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Locations', function (l){ return { Description: l.Description, Location: createSpatialField(l.Latitude, l.Longitude)}})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Locations', function (l){ return { Description: l.Description, Location: createSpatialField(l.Latitude, l.Longitude)}})",
                 };
             }
         }
 
         private class DynamicSpatial : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public DynamicSpatial()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "Spatial",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(l.Latitude, l.Longitude), $name:'Location', $options:{index: true, store: true}} }})",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
+                    @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(l.Latitude, l.Longitude), $name:'Location', $options:{index: true, store: true}} }})",
                 };
             }
         }
 
         private class UsersAndProductsByNameAndCount : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersAndProductsByNameAndCount()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersAndProductsByNameAndCount",
-                    Maps = new HashSet<string>
-                        {
-                            @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
-                            @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
-                        },
-                    Reduce = @"groupBy( x =>  x.Name )
+                    @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                    @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
+                };
+                Reduce = @"groupBy( x =>  x.Name )
                                 .aggregate(g => {return {
                                     Name: g.key,
                                     Count: g.values.reduce((total, val) => val.Count + total,0)
-                               };})",
-                    Type = IndexType.JavaScriptMapReduce,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
-                };
+                               };})";
             }
+
         }
 
         private class UsersReducedByName : AbstractJavaScriptIndexCreationTask
         {
-            public override IndexDefinition CreateIndexDefinition()
+            public UsersReducedByName()
             {
-                return new IndexDefinition
+                Maps = new HashSet<string>
                 {
-                    Name = "UsersReducedByName",
-                    Maps = new HashSet<string>
-                    {
-                        @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
-                    },
-                    Reduce = @"groupBy( x =>  x.Name )
+                    @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                };
+                Reduce = @"groupBy( x =>  x.Name )
                                 .aggregate(g => {return {
                                     Name: g.key,
                                     Count: g.values.reduce((total, val) => val.Count + total,0)
-                               };})",
-                    Type = IndexType.JavaScriptMapReduce,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Configuration = new IndexConfiguration()
-                };
+                               };})";
+
             }
         }
     }
