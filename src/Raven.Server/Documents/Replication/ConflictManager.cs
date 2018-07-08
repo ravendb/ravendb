@@ -62,7 +62,8 @@ namespace Raven.Server.Documents.Replication
                 LastModified = new DateTime(lastModifiedTicks),
                 LowerId = documentsContext.GetLazyString(id),
                 Id = documentsContext.GetLazyString(id),
-                ChangeVector = changeVector
+                ChangeVector = changeVector,
+                Flags = flags
             };
 
             if (TryResolveConflictByScript(
