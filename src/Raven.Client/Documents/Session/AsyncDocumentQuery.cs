@@ -883,7 +883,7 @@ namespace Raven.Client.Documents.Session
                 IsGroupBy,
                 queryData?.DeclareToken,
                 queryData?.LoadTokens,
-                queryData?.FromAlias)
+                queryData?.FromAlias ?? FromAlias)
             {
                 PageSize = PageSize,
                 SelectTokens = SelectTokens,
@@ -898,7 +898,7 @@ namespace Raven.Client.Documents.Session
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 Negate = Negate,
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),
-                CounterIncludesToken = CounterIncludesToken,
+                CounterIncludesTokens = CounterIncludesTokens,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
@@ -911,7 +911,8 @@ namespace Raven.Client.Documents.Session
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+                FromAlias = FromAlias
             };
 
             return query;

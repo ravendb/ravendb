@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Session
         ///   Includes the specified documents and/or counters in the query, specified by IncludeBuilder
         /// </summary>
         /// <param name="includes"></param>
-        void Include(Action<IIncludeBuilder<T>> includes);
+        void Include(Action<IQueryIncludeBuilder<T>> includes);
 
         /// <summary>
         ///   Takes the specified count.

@@ -1086,7 +1086,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includeArg);
 
-                    if (includeArg is Action<IIncludeBuilder<T>> includeBuilder)
+                    if (includeArg is Action<IQueryIncludeBuilder<T>> includeBuilder)
                     {
                         _documentQuery.Include(includeBuilder);
                     }
