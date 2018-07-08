@@ -91,6 +91,9 @@ class editDocument extends viewModelBase {
     editedDocId: KnockoutComputed<string>;
     displayLastModifiedDate: KnockoutComputed<boolean>;
     collectionTracker = collectionsTracker.default;
+
+    canViewAttachments: KnockoutComputed<boolean>;
+    canViewCounters: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -121,6 +124,8 @@ class editDocument extends viewModelBase {
         if (!navigationArgs || !navigationArgs.id) {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
+
+        this.setActiveTab();
     }
 
     // Called when the view is attached to the DOM.
@@ -371,6 +376,14 @@ class editDocument extends viewModelBase {
             const id = this.document().getId();
             return appUrl.forEditDoc(id, this.activeDatabase());
         });
+
+        this.canViewAttachments = ko.pureComputed(() => {
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
+        });
+
+        this.canViewCounters = ko.pureComputed(() => {
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
+        });
     }
 
     enableCustomNameProvider() {
@@ -523,6 +536,8 @@ class editDocument extends viewModelBase {
         this.metadata().changeVector(undefined);
 
         this.userSpecifiedId(docId);
+
+        this.setActiveTab();
     }
 
     saveDocument() {
@@ -807,6 +822,16 @@ class editDocument extends viewModelBase {
         const deferred = generate.execute();
         deferred.done((code: string) => app.showBootstrapDialog(new showDataDialog("The Generated C# Class", code, "csharp", null)));
     }
+    
+    private setActiveTab() {
+        if (!this.canViewAttachments() || !this.canViewCounters()) {
+            this.connectedDocuments.activateRecent();
+        } else if (this.inReadOnlyMode()) { // revision mostly..
+            this.connectedDocuments.activateRevisions(false);
+        } else {
+            this.connectedDocuments.activateAttachments();
+        }
+    }    
 }
 
 export = editDocument;
