@@ -85,17 +85,26 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Action<IQueryIncludeBuilder<TResult>> includes)
         {
+            var queryInspector = (IRavenQueryInspector)source;
+            var conventions = queryInspector.Session.Conventions;
+
+            var includeBuilder = new IncludeBuilder<TResult>(conventions);
+            includes.Invoke(includeBuilder);
+
+            return Include(source, includeBuilder);
+        }
+
+        private static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, IncludeBuilder includes)
+        {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression,
-                Expression.Constant(includes)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(includes)));
 
             return (IRavenQueryable<TResult>)queryable;
         }
-
 
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, FacetBase facet)
         {
@@ -174,11 +183,11 @@ namespace Raven.Client.Documents
         /// Project query results according to the specified type
         /// </summary>
         public static IRavenQueryable<TResult> ProjectInto<TResult>(this IQueryable queryable)
-        {            
+        {
             var ofType = queryable.OfType<TResult>();
             var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
             var ravenQueryInspector = (RavenQueryInspector<TResult>)results;
-            
+
             var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
             ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));
             return (IRavenQueryable<TResult>)results;
