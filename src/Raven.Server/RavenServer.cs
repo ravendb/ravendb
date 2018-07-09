@@ -326,7 +326,7 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Server failed to contact itself @ {url}. " +
                                       $"This can happen if PublicServerUrl is not the same as the domain in the certificate or you have other certificate errors. " +
-                                      "Trying again, this time with a ServerCertificateCustomValidationCallback which allows connections with the same certificate.", e);
+                                      "Trying again, this time with a RemoteCertificateValidationCallback which allows connections with the same certificate.", e);
 
                 try
                 {
@@ -359,14 +359,14 @@ namespace Raven.Server
                             }
 
                             if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Successful connection with ServerCertificateCustomValidationCallback to {url}.");
+                                Logger.Operations($"Successful connection with RemoteCertificateValidationCallback to {url}.");
                         }
                     }
                 }
                 catch (Exception e2)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Server failed to contact itself @ {url} even though ServerCertificateCustomValidationCallback allows connections with the same certificate.", e2);
+                        Logger.Operations($"Server failed to contact itself @ {url} even though RemoteCertificateValidationCallback allows connections with the same certificate.", e2);
                 }
             }
         }
