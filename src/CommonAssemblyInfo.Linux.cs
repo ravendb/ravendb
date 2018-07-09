@@ -3,6 +3,7 @@
 [assembly: InternalsVisibleTo("Tests.Infrastructure")]
 [assembly: InternalsVisibleTo("FastTests")]
 [assembly: InternalsVisibleTo("SlowTests")]
+[assembly: InternalsVisibleTo("EmbeddedTests")]
 [assembly: InternalsVisibleTo("StressTests")]
 [assembly: InternalsVisibleTo("RachisTests")]
 [assembly: InternalsVisibleTo("TypingsGenerator")]
