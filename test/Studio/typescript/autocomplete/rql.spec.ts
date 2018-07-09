@@ -161,10 +161,11 @@ describe("RQL Autocomplete", () => {
     ]), (x: autoCompleteWordList) => x.score).reverse();
 
     const fieldsShipToList = [
-        {caption: "City", value: "City ", score: 106, meta: "string field"},
-        {caption: "Country", value: "Country ", score: 105, meta: "string field"},
-        {caption: "Line1", value: "Line1 ", score: 104, meta: "string field"},
-        {caption: "Line2", value: "Line2 ", score: 103, meta: "null field"},
+        {caption: "City", value: "City ", score: 107, meta: "string field"},
+        {caption: "Country", value: "Country ", score: 106, meta: "string field"},
+        {caption: "Line1", value: "Line1 ", score: 105, meta: "string field"},
+        {caption: "Line2", value: "Line2 ", score: 104, meta: "null field"},
+        {caption: "Location", value: "Location ", score: 103, meta: "object field"},
         {caption: "PostalCode", value: "PostalCode ", score: 102, meta: "string field"},
         {caption: "Region", value: "Region ", score: 101, meta: "string field"}
     ];
@@ -736,9 +737,9 @@ select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
         });
     });
 
-    it('from Collection select multi nested field | without sapce should list fields with the ShipTo.Nested.NestedObject. field prefix', done => {
+    it('from Collection select multi nested field | without sapce should list fields with the ShipTo.Location.NestedObject. field prefix', done => {
         rqlTestUtils.autoComplete(`from Orders 
-select ShipTo.Nested.NestedObject.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+select ShipTo.Location.NestedObject.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
                 {caption: "C2", value: "C2 ", score: 103, meta: "string field"},
@@ -748,7 +749,7 @@ select ShipTo.Nested.NestedObject.|`, northwindProvider(), (errors, wordlist, pr
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
-            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo", "Nested", "NestedObject"]);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo", "Location", "NestedObject"]);
 
             done();
         });
