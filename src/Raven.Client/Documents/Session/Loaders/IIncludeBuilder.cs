@@ -6,35 +6,38 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
-    public interface IIncludeBuilder<T>
+    public interface IIncludeBuilder<T, out TBuilder>
     {
-        IIncludeBuilder<T> IncludeCounter(string name);
+        TBuilder IncludeCounter(string name);
 
-        IIncludeBuilder<T> IncludeCounters(string[] names);
+        TBuilder IncludeCounters(string[] names);
 
-        IIncludeBuilder<T> IncludeAllCounters();
+        TBuilder IncludeAllCounters();
 
-        IIncludeBuilder<T> IncludeDocuments(string path);
+        TBuilder IncludeDocuments(string path);
 
-        IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, string>> path);
+        TBuilder IncludeDocuments(Expression<Func<T, string>> path);
 
-        IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
+        TBuilder IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
 
-        IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
+        TBuilder IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
 
-        IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
+        TBuilder IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
     }
 
-    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T>
+    public interface IIncludeBuilder<T> : IIncludeBuilder<T, IIncludeBuilder<T>>
     {
-        IIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name);
-
-        IIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
-
-        IIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
     }
 
+    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T, IQueryIncludeBuilder<T>>
+    {
+        IQueryIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name);
+
+        IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
+
+        IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
+    }
 
     internal class IncludeBuilder<T> : IQueryIncludeBuilder<T>
     {
@@ -53,7 +56,7 @@ namespace Raven.Client.Documents.Session.Loaders
             _conventions = conventions;
         }
 
-        public IIncludeBuilder<T> IncludeDocuments(string path)
+        public IQueryIncludeBuilder<T> IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
                 DocumentsToInclude = new HashSet<string>();
@@ -61,34 +64,34 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, string>> path)
+        public IQueryIncludeBuilder<T> IncludeDocuments(Expression<Func<T, string>> path)
         {
             return IncludeDocuments(path.ToPropertyPath());
         }
 
-        public IIncludeBuilder<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        public IQueryIncludeBuilder<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             return IncludeDocuments(path.ToPropertyPath());
         }
 
 
-        public IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        public IQueryIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
         }
 
-        public IIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        public IQueryIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
         }
 
-        public IIncludeBuilder<T> IncludeCounter(string name)
+        public IQueryIncludeBuilder<T> IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
-        public IIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name)
+        public IQueryIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name)
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
@@ -97,13 +100,13 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IIncludeBuilder<T> IncludeCounters(string[] names)
+        public IQueryIncludeBuilder<T> IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
-        public IIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
+        public IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
@@ -112,14 +115,14 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IIncludeBuilder<T> IncludeAllCounters()
+        public IQueryIncludeBuilder<T> IncludeAllCounters()
         {
             IncludeAll(string.Empty);
 
             return this;
         }
 
-        public IIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path)
+        public IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path)
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
@@ -185,12 +188,16 @@ namespace Raven.Client.Documents.Session.Loaders
             if (CountersToIncludeBySourcePath == null)
             {
                 CountersToIncludeBySourcePath = new Dictionary<string,
-                    (bool, HashSet<string>)>(StringComparer.OrdinalIgnoreCase)
-                {
-                    {path, (false, new HashSet<string>())}
-                };
+                    (bool, HashSet<string>)>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (CountersToIncludeBySourcePath.ContainsKey(path) == false)
+            {
+                CountersToIncludeBySourcePath[path] = (false, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             }
         }
 
     }
+
+
 }
