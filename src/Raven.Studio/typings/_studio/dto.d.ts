@@ -72,6 +72,7 @@ interface documentMetadataDto {
     '@attachments'?: Array<documentAttachmentDto>;
     '@change-vector'?: string;
     '@counters'?: Array<string>;
+    '@counters-snapshot'?: dictionary<number>;
 }
 
 interface updateDatabaseConfigurationsResult {
