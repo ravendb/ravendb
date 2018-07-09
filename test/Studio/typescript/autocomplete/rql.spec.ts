@@ -990,6 +990,19 @@ where OrderedAt = com|`, northwindProvider(), (errors, wordlist, prefix, lastKey
         });
     });
 
+    it('After where field and equal operator after prefix | list document ID', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where OrderedAt = 'companies/1-A'|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "'companies/1-A'");
+            assert.deepEqual(wordlist, documentIdList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
     it.skip('After where field and in operator | ?????????????????????????????', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt in |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {

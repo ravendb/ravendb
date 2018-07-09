@@ -121,6 +121,7 @@ class rqlTestUtils {
             documentIdPrefix: (prefix, callback) => {
                 switch (prefix) {
                     case "com":
+                    case "companies/1-A":
                         callback([
                             {
                                 "@metadata": {

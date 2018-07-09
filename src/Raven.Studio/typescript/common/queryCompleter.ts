@@ -415,6 +415,11 @@ class queryCompleter {
                         result.whereFunctionParameters++;
                     }
                     break;
+                case "operator.where":
+                    if (!isBeforeCommaOrBinaryOperation && result.fieldName) {
+                        result.fieldName = null;
+                    }
+                    break;
             }
             
             lastToken = token;
@@ -468,6 +473,10 @@ class queryCompleter {
         }
 
         return this.completeError("empty completion");
+    }
+
+    private trimValue(value: string) {
+        return _.trim(value, "'\"")
     }
 
     complete(editor: AceAjax.Editor,
@@ -611,13 +620,14 @@ class queryCompleter {
 
                     this.getIndexFields()
                         .done((wordList) => {
-                            if (!wordList.find(x => x.caption === lastKeyword.fieldName)) {
+                            let fieldName = this.trimValue(lastKeyword.fieldName);
+                            if (!wordList.find(x => x.caption === fieldName)) {
                                 return this.completeError("Field not in the words list");
                             }
 
                             // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
                             if (lastKeyword.info.index) {
-                                this.providers.terms(lastKeyword.info.index, lastKeyword.fieldName, 20, terms => {
+                                this.providers.terms(lastKeyword.info.index, fieldName, 20, terms => {
                                     if (terms && terms.length) {
                                         return this.completeWords(terms.map(term => ({
                                                 caption: term,
@@ -632,7 +642,7 @@ class queryCompleter {
                                     return this.completeError("empty completion");
                                 }
 
-                                this.providers.documentIdPrefix(prefix, metadata => {
+                                this.providers.documentIdPrefix(this.trimValue(prefix), metadata => {
                                     if (!metadata || metadata.length < 1) {
                                         return this.completeError("no metadata");
                                     }
