@@ -49,8 +49,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override bool ShouldTrackAttachmentTombstones()
         {
-            // if script isn't empty we relay on addAttachment() calls and detect that attachments needs be deleted
-            // when this call gets an attachment reference marked as null ($attachment/{attachment-name}/$null)
+            // if script isn't empty and we have addAttachment() calls there we send DELETE doc command before sending transformation results (docs and attachments)
 
             return string.IsNullOrEmpty(Transformation.Script);
         }

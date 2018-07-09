@@ -16,8 +16,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         
         private Dictionary<JsValue, List<(string Name, Attachment Attachment)>> _addAttachments;
 
-        private Dictionary<JsValue, List<string>> _deleteAttachments;
-
         private Dictionary<JsValue, Attachment> _loadedAttachments;
 
         private Dictionary<JsValue, List<CounterOperation>> _countersByJsReference;
@@ -110,20 +108,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             attachments.Add((name ?? attachment.Name, attachment));
         }
 
-        public void DeleteAttachment(JsValue instance, string name)
-        {
-            if (_deleteAttachments == null)
-                _deleteAttachments = new Dictionary<JsValue, List<string>>(ReferenceEqualityComparer<JsValue>.Default);
-
-            if (_deleteAttachments.TryGetValue(instance, out var attachmentsToDelete) == false)
-            {
-                attachmentsToDelete = new List<string>();
-                _deleteAttachments.Add(instance, attachmentsToDelete);
-            }
-
-            attachmentsToDelete.Add(name);
-        }
-
         public void DeleteAttachment(string documentId, string name)
         {
             _deletes.Add(new DeleteAttachmentCommandData(documentId, name, null));
@@ -166,24 +150,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 CounterName = counterName,
                 Delta = value,
                 Type = CounterOperationType.Put
-            });
-        }
-
-        public void DeleteCounter(JsValue instance, string counterName)
-        {
-            if (_countersByJsReference == null)
-                _countersByJsReference = new Dictionary<JsValue, List<CounterOperation>>(ReferenceEqualityComparer<JsValue>.Default);
-
-            if (_countersByJsReference.TryGetValue(instance, out var operations) == false)
-            {
-                operations = new List<CounterOperation>();
-                _countersByJsReference.Add(instance, operations);
-            }
-
-            operations.Add(new CounterOperation
-            {
-                CounterName = counterName,
-                Type = CounterOperationType.Delete
             });
         }
 
@@ -230,14 +196,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             commands.Add(new PutAttachmentCommandData(put.Value.Id, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
                                 null));
-                        }
-                    }
-
-                    if (_deleteAttachments != null && _deleteAttachments.TryGetValue(put.Key, out var deleteAttachments))
-                    {
-                        foreach (var deleteAttachment in deleteAttachments)
-                        {
-                            commands.Add(new DeleteAttachmentCommandData(put.Value.Id, deleteAttachment, null));
                         }
                     }
 

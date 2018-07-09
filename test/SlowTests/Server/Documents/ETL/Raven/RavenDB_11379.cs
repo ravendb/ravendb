@@ -24,6 +24,17 @@ var doc = loadToUsers(this);
 doc.addAttachment('image', loadAttachment('photo'));
 
 ", false, "photo", "image")]
+        [InlineData(@"
+
+var doc = loadToUsers(this);
+
+var attachments = this['@metadata']['@attachments'];
+
+for (var i = 0; i < attachments.length; i++) {
+    if (attachments[i].Name.endsWith('.png'))
+        doc.addAttachment(loadAttachment(attachments[i].Name));
+}
+", false, "photo.png", "photo.png")]
         public void Should_remove_attachment(string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName)
         {
             using (var src = GetDocumentStore())

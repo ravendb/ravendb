@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             LoadToDestinations = tables;
 
-            if (_transformation.IsAddingAttachments)
+            if (_transformation.IsLoadingAttachments)
                _loadedAttachments = new Dictionary<string, Queue<Attachment>>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_transformation.IsAddingAttachments && 
+                if (_transformation.IsLoadingAttachments && 
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     var attachment = _loadedAttachments[attachmentName].Dequeue();
