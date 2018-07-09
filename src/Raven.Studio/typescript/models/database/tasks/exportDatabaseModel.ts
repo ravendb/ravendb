@@ -70,7 +70,7 @@ class exportDatabaseModel {
     private initValidation() {
         this.exportDefinitionHasIncludes = ko.pureComputed(() => {
             return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
-                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
+                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeCounters();
         });
 
         this.transformScript.extend({
