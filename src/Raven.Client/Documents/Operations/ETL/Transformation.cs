@@ -22,8 +22,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal const string CounterMarker = "$counter/";
 
-        internal const string NullMarkerSuffix = "/$null";
-
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
 
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
@@ -52,6 +50,8 @@ namespace Raven.Client.Documents.Operations.ETL
         internal Dictionary<string, string> CollectionToLoadCounterBehaviorFunction { get; private set; }
 
         internal bool IsAddingAttachments { get; private set; }
+
+        internal bool IsLoadingAttachments { get; private set; }
 
         internal bool IsAddingCounters { get; private set; }
 
@@ -103,9 +103,10 @@ namespace Raven.Client.Documents.Operations.ETL
                                "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>()` instead.");
                 }
 
-                IsAddingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0 || AddAttachmentMethodRegex.Matches(Script).Count > 0;
+                IsAddingAttachments = AddAttachmentMethodRegex.Matches(Script).Count > 0;
+                IsLoadingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
 
-                IsAddingCounters = LoadCounterMethodRegex.Matches(Script).Count > 0 || AddCounterMethodRegex.Matches(Script).Count > 0;
+                IsAddingCounters = AddCounterMethodRegex.Matches(Script).Count > 0;
 
                 var counterBehaviors = LoadCountersBehaviorMethodRegex.Matches(Script);
 

@@ -116,13 +116,13 @@ namespace Raven.Server.Documents.ETL
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
                 if (attachment == null)
-                    return loadAttachmentReference + Transformation.NullMarkerSuffix;
+                    return JsValue.Null;
 
                 AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             }
             else
             {
-                return loadAttachmentReference + Transformation.NullMarkerSuffix;
+                return JsValue.Null;
             }
 
             return loadAttachmentReference;
@@ -141,13 +141,13 @@ namespace Raven.Server.Documents.ETL
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
 
                 if (value == null)
-                    return loadCounterReference + Transformation.NullMarkerSuffix;
+                    return JsValue.Null;
 
                 AddLoadedCounter(loadCounterReference, counterName, value.Value);
             }
             else
             {
-                return loadCounterReference + Transformation.NullMarkerSuffix;
+                return JsValue.Null;
             }
 
             return loadCounterReference;

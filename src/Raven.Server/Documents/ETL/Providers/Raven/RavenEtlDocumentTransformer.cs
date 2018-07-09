@@ -130,6 +130,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     break;
             }
 
+            if (attachmentReference.IsNull())
+                return self;
+
             if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
             {
                 var message =
@@ -141,23 +144,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            var attachmentReferenceString = attachmentReference.AsString();
+            _currentRun.AddAttachment(self, name, attachmentReference);
 
-            if (attachmentReferenceString.EndsWith(Transformation.NullMarkerSuffix) == false)
-            {
-                _currentRun.AddAttachment(self, name, attachmentReference);
-            }
-            else
-            {
-                if (name == null)
-                {
-                    name = attachmentReferenceString.Substring(Transformation.AttachmentMarker.Length,
-                        attachmentReferenceString.Length - Transformation.AttachmentMarker.Length - Transformation.NullMarkerSuffix.Length);
-                }
-                
-                _currentRun.DeleteAttachment(self, name);
-            }
-            
             return self;
         }
 
@@ -167,6 +155,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one arguments");
 
             var counterReference = args[0];
+
+            if (counterReference.IsNull())
+                return self;
 
             if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
             {
@@ -179,19 +170,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            var counterReferenceString = counterReference.AsString();
-
-            if (counterReferenceString.EndsWith(Transformation.NullMarkerSuffix) == false)
-            {
-                _currentRun.AddCounter(self, counterReference);
-            }
-            else
-            {
-                var counterName = counterReferenceString.Substring(Transformation.CounterMarker.Length,
-                    counterReferenceString.Length - Transformation.CounterMarker.Length - Transformation.NullMarkerSuffix.Length);
-
-                _currentRun.DeleteCounter(self, counterName);
-            }
+            _currentRun.AddCounter(self, counterReference);
 
             return self;
         }
@@ -218,13 +197,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     case EtlItemType.Document:
                         if (_script.HasTransformation)
                         {
-                            if (_script.LoadToCollections.Length > 1 || _script.IsLoadedToDefaultCollection(item, _script.LoadToCollections[0]) == false)
-                            {
-                                // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
-                                // documents loaded to non default collections
+                            // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
+                            // documents loaded to non default collections
 
-                                ApplyDeleteCommands(item, OperationType.Put);
-                            }
+                            ApplyDeleteCommands(item, OperationType.Put);
 
                             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
 
