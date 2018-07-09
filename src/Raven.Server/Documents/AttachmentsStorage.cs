@@ -2,17 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Extensions;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Data.Tables;
@@ -24,7 +20,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
-using Raven.Client;
 
 namespace Raven.Server.Documents
 {
