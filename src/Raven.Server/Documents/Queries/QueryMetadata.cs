@@ -516,6 +516,17 @@ namespace Raven.Server.Documents.Queries
                 {
                     sourcePath = value.PropertyPath;
                 }
+
+                else if (Query.From.Alias?.Value != null &&
+                         fe.FieldValue != null)
+                {
+                    var split = fe.FieldValue.Split('.');
+                    if (split.Length == 2 &&
+                        split[0] == Query.From.Alias.Value)
+                    {
+                        sourcePath = split[1];
+                    }
+                }
             }
 
             if (start == expression.Arguments.Count)
