@@ -1138,7 +1138,7 @@ namespace Raven.Server
                                         }
                                     }
 
-                                    matchingVersion = MatchingOperationVersion(header, out error, out version);
+                                    matchingVersion = SupportedOperationVersion(header, out error, out version);
                                     if (matchingVersion == false)
                                     {
                                         RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
@@ -1238,17 +1238,27 @@ namespace Raven.Server
             }
         }
 
-        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error, out int version)
-        {
-            version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
-            if (version == header.OperationVersion)
+        /// <summary>
+        /// This method is intended to verify if this server is able to support the incoming TCP operation protocol.
+        /// It might be that we are able to downgrade our protocol version while the other side is not able to since he is not aware of any other protocol.
+        /// E.G. v4.0 server sending a replication request to v4.1, at this point v4.1 destination is able to downgrade to v4.0 but not the other way around.
+        /// </summary>
+        /// <param name="header"> The TCP header containing information about the TCP operation</param>
+        /// <param name="error">Error message in case we don't support this protocol version at all.</param>
+        /// <param name="version">The version we agreed on which will always be the request version</param>
+        /// <returns></returns>
+        private bool SupportedOperationVersion(TcpConnectionHeaderMessage header, out string error, out int version)
+        {            
+            if (TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion) == false)
             {
-                error = null;
-                return true;
+                version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
+                error = $"The operation of type {header.Operation} with version {header.OperationVersion} is not supported by this server which is using version {version}";
+                return false;
             }
 
-            error = $"Message of type {header.Operation} version should be {version} but got a message with version {header.OperationVersion}";
-            return false;
+            version = header.OperationVersion;
+            error = null;
+            return true;
         }
 
         private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
