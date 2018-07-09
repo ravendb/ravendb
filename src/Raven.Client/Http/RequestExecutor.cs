@@ -1411,7 +1411,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
+        internal static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
             if (onServerCertificateCustomValidationCallback == null ||
