@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents.Replication
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            _protocolVersion = TcpConnectionHeaderMessage.ReplicationTcpVersion;
         }
 
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -465,15 +467,22 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                documentsContext.Write(writer, new DynamicJsonValue
+                WriteHeaderInternal(documentsContext, writer, TcpConnectionHeaderMessage.ReplicationTcpVersion);
+                var destinationProtocol = ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
+                if (destinationProtocol != TcpConnectionHeaderMessage.ReplicationTcpVersion)
                 {
-                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, // _parent.Database.Name,
-                    [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ReplicationTcpVersion
-                });
-                writer.Flush();
-                ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
+                    WriteHeaderInternal(documentsContext, writer, destinationProtocol);
+                    var newDestinationProtocol = ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
+                    if (newDestinationProtocol != destinationProtocol)
+                    {
+                        throw new InvalidOperationException(
+                            $"After downgrading replication protocol from {TcpConnectionHeaderMessage.ReplicationTcpVersion} to {destinationProtocol}" +
+                            $" the destination now request that we will move to {newDestinationProtocol} this should not happen and probably a bug.");
+                    }
+
+                    _protocolVersion = destinationProtocol;
+                }
+
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
@@ -490,7 +499,19 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ReadHeaderResponseAndThrowIfUnAuthorized(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer)
+        private void WriteHeaderInternal(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, int replicationTcpVersion)
+        {
+            documentsContext.Write(writer, new DynamicJsonValue
+            {
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, // _parent.Database.Name,
+                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = replicationTcpVersion
+            });
+            writer.Flush();
+        }
+
+        private int ReadHeaderResponseAndThrowIfUnAuthorized(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer)
         {
             const int timeout = 2 * 60 * 1000; 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
@@ -516,6 +537,10 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
+                        if (TcpConnectionHeaderMessage.OperationVersionSupported(TcpConnectionHeaderMessage.OperationTypes.Replication, headerResponse.Version))
+                        {
+                            return headerResponse.Version;
+                        }
                         //Kindly request the server to drop the connection
                         documentsContext.Write(writer, new DynamicJsonValue
                         {
@@ -531,8 +556,17 @@ namespace Raven.Server.Documents.Replication
                         throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }
             }
+
+            return TcpConnectionHeaderMessage.ReplicationTcpVersion;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool CanCommunicateWithReplicationProtocol(int headerResponseVersion)
+        {
+            return _supportedProtocolVersions.Contains(headerResponseVersion);
+        }
+        
+        private static HashSet<int> _supportedProtocolVersions = new HashSet<int>(){31,33};
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
             while (true)
@@ -847,6 +881,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
+        private int _protocolVersion;
 
         public void Dispose()
         {
