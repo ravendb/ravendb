@@ -58,25 +58,21 @@ namespace Raven.Client.Documents.Changes
             _task = DoWork();   
         }
 
-        public static event Func<object, X509Certificate, X509Chain, SslPolicyErrors, bool> WebSocketsRemoteCertificateValidationCallback;
-
-        private static bool OnWebSocketsRemoteCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors)
-        {
-            if (WebSocketsRemoteCertificateValidationCallback == null)
-                return errors == SslPolicyErrors.None;
-
-            return WebSocketsRemoteCertificateValidationCallback(sender, certificate, chain, errors);
-        }
-
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
         {
             var clientWebSocket = new ClientWebSocket();
             if (requestExecutor.Certificate != null)
                 clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
 
-#if NETCOREAPP2_1
-            if (WebSocketsRemoteCertificateValidationCallback != null)
-                clientWebSocket.Options.RemoteCertificateValidationCallback += OnWebSocketsRemoteCertificateValidationCallback;
+#if NETCOREAPP
+            if (RequestExecutor.HasServerCertificateCustomValidationCallback)
+            {
+                var callbackTranslator = new RequestExecutor.CallbackTranslator
+                {
+                    Callback = RequestExecutor.OnServerCertificateCustomValidationCallback
+                };
+                RequestExecutor.RemoteCertificateValidationCallback += callbackTranslator.Translate;
+            }
 #endif
             return clientWebSocket;
         }

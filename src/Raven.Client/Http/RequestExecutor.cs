@@ -1340,12 +1340,50 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
         }
 
-        private static Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>[] _serverCertificateCustomValidationCallback = Array.Empty<Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>>();
+        private static RemoteCertificateValidationCallback[] _serverCertificateCustomValidationCallback = Array.Empty<RemoteCertificateValidationCallback>();
         private static ConcurrentDictionary<WeakReference<Action>, object> _liveClients = new ConcurrentDictionary<WeakReference<Action>, object>();
         private Action _updateHttpHandlerDelegate;// we need this to hold a reference to the action as long as the executer is alive
         private static readonly ReaderWriterLockSlim _serverCallbackRWLock = new ReaderWriterLockSlim();
 
+        // HttpClient and ClientWebSocket use certificate validation callbacks with different signatures.
+        // We need this translator for backward compatibility to allow the user to supply any of the two signatures.
+        public class CallbackTranslator
+        {
+            public Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> Callback;
+
+            public bool Translate(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
+            {
+                return Callback(sender as HttpRequestMessage, cert as X509Certificate2, chain, errors);
+            }
+        }
+
+        [Obsolete("Use RemoteCertificateValidationCallback instead")]
         public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback
+        {
+            add
+            {
+                var callbackTranslator = new CallbackTranslator
+                {
+                    Callback = value
+                };
+                RemoteCertificateValidationCallback += callbackTranslator.Translate;
+            }
+            remove
+            {
+                var callbacks = _serverCertificateCustomValidationCallback;
+                if (callbacks == null)
+                    return;
+                foreach (var callback in callbacks)
+                {
+                    if (callback.Target is CallbackTranslator ct && ct.Callback == value)
+                    {
+                        RemoteCertificateValidationCallback -= ct.Translate;
+                    }
+                }
+            }
+        }
+
+        public static event RemoteCertificateValidationCallback RemoteCertificateValidationCallback
         {
             add
             {
@@ -1399,7 +1437,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
+        public static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
             if (onServerCertificateCustomValidationCallback == null ||
