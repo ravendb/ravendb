@@ -7,7 +7,7 @@ using Xunit;
 
 namespace EmbeddedTests.Issues
 {
-    public class RavenDB_7787 : RavenTestBase
+    public class BasicTests : RavenTestBase
     {
         [Fact]
         public void TestEmbedded()
