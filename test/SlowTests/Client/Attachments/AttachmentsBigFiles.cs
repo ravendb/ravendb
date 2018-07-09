@@ -24,7 +24,7 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenSession())
                 using (var stream = new BigDummyStream(size))
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
 
                     session.Advanced.Attachments.Store(user, "big-file", stream);
@@ -63,7 +63,7 @@ namespace SlowTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -76,16 +76,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("", result.ContentType);
                     Assert.Equal(hash, result.Hash);
                     Assert.Equal(size, result.Size);
-
-                    if (PlatformDetails.RunningOnPosix == false)
-                        Assert.Equal(size, bigStream.Position);
-                    else
-                    {
-                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
-                        // Remove this workaround when this line is removed from request executor:
-                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
-                        Assert.Equal(0, bigStream.Position);
-                    }
+                    Assert.Equal(size, bigStream.Position);
                 }
 
                 using (var session = store.OpenSession())
