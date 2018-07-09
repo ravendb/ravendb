@@ -14,10 +14,13 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
+using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
@@ -341,11 +344,29 @@ namespace Raven.Server.Documents.Replication
                 if (_cts.IsCancellationRequested)
                     return;
 
+                DynamicJsonValue returnValue;
+
+                if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
+                {
+                    returnValue = new DynamicJsonValue
+                    {
+                        [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.MissingAttachments.ToString(),
+                        [nameof(ReplicationMessageReply.MessageType)] = messageType,
+                        [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
+                        [nameof(ReplicationMessageReply.Exception)] = mae.ToString()
+                    };
+
+                    documentsContext.Write(writer, returnValue);
+                    writer.Flush();
+
+                    return;
+                }
+
                 if (_log.IsInfoEnabled)
                     _log.Info($"Failed replicating documents {FromToString}.", e);
 
                 //return negative ack
-                var returnValue = new DynamicJsonValue
+                returnValue = new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
                     [nameof(ReplicationMessageReply.MessageType)] = messageType,
@@ -525,7 +546,17 @@ namespace Raven.Server.Documents.Replication
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                {
+                    //This is the case where we had a missing attachment, it is rare but expected.
+                    if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
+                    {
+                        _log.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
+                    }
+                    else
+                    {
+                        _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                    }
+                }
                 throw;
             }
             finally
@@ -1037,6 +1068,8 @@ namespace Raven.Server.Documents.Replication
                                         //the other side will receive negative ack and will retry sending again.
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
+                                        //TODO:We need to assert only if the otherside can handle the change to the protocol otherwise we need to raise an alert
+                                        AssertAttachmentsFromReplication(context, item.Id, document);
                                     }
 
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
@@ -1117,9 +1150,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                             }
                         }
-                    }
-
-                    _incoming._attachmentStreamsTempFile.Reset();
+                    }                    
 
                     Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
@@ -1135,7 +1166,29 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
+                    _incoming._attachmentStreamsTempFile.Reset();
                     IsIncomingReplication = false;
+                }
+            }
+
+            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+            {
+                if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                {
+                    foreach (BlittableJsonReaderObject attachment in attachments)
+                    {
+                        if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
+                        {
+                            if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
+                            {
+                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue name);
+                                var msg = $"Document '{id}' has attachment '{name?.ToString() ?? "uknown"}' " +
+                                          $"listed as one of his attachments but it doesn't exist in the attachment storage";
+                                throw new MissingAttachmentException(msg);
+                            }
+                        }
+                    }
                 }
             }
 

@@ -244,6 +244,8 @@ namespace Raven.Server.Documents.Replication
                                                 _parent.EnsureNotDeleted(dest.NodeTag);
                                             }
                                             var didWork = documentSender.ExecuteReplicationOnce(scope, ref nextReplicateAt);
+                                            if (documentSender.MissingAttachmentsInLastBatch)
+                                                continue;
                                             if (didWork == false)
                                                 break;
 
@@ -801,6 +803,8 @@ namespace Raven.Server.Documents.Replication
                     UpdateDestinationChangeVector(replicationBatchReply);
                     OnSuccessfulTwoWaysCommunication();
                     break;
+                case ReplicationMessageReply.ReplyType.MissingAttachments:
+                    break;
                 default:
                     var msg = $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
                     if (_log.IsInfoEnabled)
@@ -821,6 +825,9 @@ namespace Raven.Server.Documents.Replication
                             $"Received reply for replication batch from {Destination.FromString()}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                         throw new InvalidOperationException(
                             $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
+                    case ReplicationMessageReply.ReplyType.MissingAttachments:
+                        _log.Info($"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
                             "Received reply for replication batch with unrecognized type... got " +

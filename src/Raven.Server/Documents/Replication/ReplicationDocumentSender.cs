@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow;
@@ -28,6 +29,7 @@ namespace Raven.Server.Documents.Replication
         private readonly OutgoingReplicationHandler _parent;
         private OutgoingReplicationStatsScope _statsInstance;
         private readonly ReplicationStats _stats = new ReplicationStats();
+        public bool MissingAttachmentsInLastBatch { get; private set; }
 
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
@@ -181,6 +183,8 @@ namespace Raven.Server.Documents.Replication
                     var numberOfItemsSent = 0;
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     short lastTransactionMarker = -1;
+                    long prevLastEtag = _lastEtag;
+
                     using (_stats.Storage.Start())
                     {
                         foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag, _stats))
@@ -222,6 +226,25 @@ namespace Raven.Server.Documents.Replication
                             }
 
                             _stats.Storage.RecordInputAttempt();
+
+                            //Here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundry
+                            if (MissingAttachmentsInLastBatch &&
+                                item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
+                                (item.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                            {
+                                var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
+                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id))
+                                {
+                                    //We need to filter attachments that are been sent in the same batch as the document
+                                    if (attachment.Etag >= prevLastEtag)
+                                        continue;
+                                    var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
+                                    attachment.Stream = stream;
+                                    AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
+                                    size += attachment.Stream.Length;
+                                }
+
+                            }
 
                             _lastEtag = item.Etag;
 
@@ -269,6 +292,8 @@ namespace Raven.Server.Documents.Replication
                         using (_stats.Network.Start())
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
+                            if (MissingAttachmentsInLastBatch)
+                                return false;
                         }
                     }
                     catch (OperationCanceledException)
@@ -283,6 +308,9 @@ namespace Raven.Server.Documents.Replication
                             _log.Info("Failed to send document replication batch", e);
                         throw;
                     }
+
+                    MissingAttachmentsInLastBatch = false;
+
                     return true;
                 }
                 finally
@@ -383,7 +411,8 @@ namespace Raven.Server.Documents.Replication
             }
 
             // destination already has it
-            if (ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+            if ((MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) &&
+                ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
@@ -448,8 +477,12 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
-            _parent.HandleServerResponse();
-
+            var (type, _) = _parent.HandleServerResponse();
+            if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
+            {
+                MissingAttachmentsInLastBatch = true;
+                return;
+            }
             _parent._lastSentDocumentEtag = _lastEtag;
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;

@@ -463,6 +463,25 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue lowerDocumentId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
+            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, Slices.Empty, out Slice prefixSlice))
+            {
+                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
+                {
+                    var attachment = TableValueToAttachment(context, ref sr.Value.Reader);
+                    if (attachment == null)
+                        continue;
+
+                    attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
+
+                    yield return attachment;
+                }
+            }
+        }
+
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
         {
             var attachments = new DynamicJsonArray();
@@ -480,6 +499,13 @@ namespace Raven.Server.Documents
                 }
             }
             return attachments;
+        }
+
+        public bool AttachmentExists(DocumentsOperationContext context, LazyStringValue hash)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            using (Slice.From(context.Allocator, hash.Buffer, hash.Size, out var slice))
+                return tree.StreamExist(slice);
         }
 
         public (long AttachmentCount, long StreamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
