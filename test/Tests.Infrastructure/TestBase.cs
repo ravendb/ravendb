@@ -86,8 +86,7 @@ namespace FastTests
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
-            RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
-            DatabaseChanges.WebSocketsRemoteCertificateValidationCallback += (message, certificate2, arg3, arg4) => true;
+            RequestExecutor.RemoteCertificateValidationCallback += (message, certificate2, arg3, arg4) => true;
 
             var fileInfo = new FileInfo(XunitConfigurationFile);
             if (fileInfo.Exists)
