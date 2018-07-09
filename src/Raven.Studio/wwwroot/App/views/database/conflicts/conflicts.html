@@ -34,10 +34,10 @@
                                 <i class="icon-database"></i><span class="source-database">ExampleDatabase</span> -->
                             </div>
                             <div>
-                                <button class="btn btn-sm btn-warning usethis" data-bind="click: _.partial($root.useThis, $data)"><i class="icon-tick"></i><span>Use this</span></button>
+                                <button class="btn btn-sm btn-warning usethis" data-bind="click: _.partial($root.useThis, $data), style: { visibility: deletedMarker() ? 'hidden' : 'visible' }"><i class="icon-tick"></i><span>Use this</span></button>
                             </div>
                         </div>
-                        <div class="vectors" data-bind="collapse: $root.changeVectorsVisible">
+                        <div class="vectors" data-bind="collapse: $root.changeVectorsVisible, visible: !deletedMarker()">
                             <div class="title"><small>Change vector:</small></div>
                             <div data-bind="foreach: changeVector">
                                 <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
