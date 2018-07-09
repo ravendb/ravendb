@@ -254,10 +254,15 @@ class editDocument extends viewModelBase {
        
         this.countersCount = ko.pureComputed(() => {
             const doc = this.document();
+            
+            if (doc && doc.__metadata && doc.__metadata.revisionCounters().length) {
+                return doc.__metadata.revisionCounters().length;
+            }
+            
             if (!doc || !doc.__metadata || !doc.__metadata.counters()) {
                 return 0;
             }
-
+            
             return doc.__metadata.counters().length;
         });
         

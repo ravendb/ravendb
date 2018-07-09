@@ -4,6 +4,11 @@ import generalUtils = require("common/generalUtils");
 
 type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial";
 
+interface revisionCounter {
+    name: string;
+    value: number;
+}
+
 class documentMetadata {
     collection: string;
     ravenClrType: string;
@@ -19,6 +24,7 @@ class documentMetadata {
 
     attachments = ko.observableArray<documentAttachmentDto>();
     counters = ko.observableArray<string>();
+    revisionCounters = ko.observableArray<revisionCounter>();
     
     changeVector = ko.observable<string>();
 
@@ -54,6 +60,9 @@ class documentMetadata {
             this.attachments(dto['@attachments']);
             
             this.counters(dto['@counters']);
+            
+            const revisionCounter = dto['@counters-snapshot'];
+            this.revisionCounters(revisionCounter ? _.map(revisionCounter, (v, k) => ({ name: k, value: v })): []);
 
             this.changeVector(dto['@change-vector']);
 
@@ -67,6 +76,7 @@ class documentMetadata {
                     property.toUpperCase() !== '@last-modified'.toUpperCase() &&
                     property.toUpperCase() !== '@attachments'.toUpperCase() &&
                     property.toUpperCase() !== '@counters'.toUpperCase() &&
+                    property.toUpperCase() !== '@counters-snapshot'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase() &&
                     property.toUpperCase() !== '@change-vector'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
