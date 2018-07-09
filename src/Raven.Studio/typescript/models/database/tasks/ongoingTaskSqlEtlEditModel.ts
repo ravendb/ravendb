@@ -16,6 +16,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     sqlTables = ko.observableArray<ongoingTaskSqlEtlTableModel>([]);
     
     validationGroup: KnockoutValidationGroup;
+    enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
@@ -71,6 +72,11 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             sqlTables: this.sqlTables,
             transformationScripts: this.transformationScripts,
             preferredMentor: this.preferredMentor
+        });
+        
+        this.enterTestModeValidationGroup = ko.validatedObservable({
+            connectionStringName: this.connectionStringName,
+            sqlTables: this.sqlTables
         });
     }
 

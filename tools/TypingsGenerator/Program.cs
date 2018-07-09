@@ -37,6 +37,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.SQL.Simulation;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
@@ -331,6 +332,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(SimulateSqlEtl));
             scripter.AddType(typeof(SqlEtlTable));
+            scripter.AddType(typeof(SqlEtlSimulationResult));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));
