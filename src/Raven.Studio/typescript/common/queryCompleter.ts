@@ -599,37 +599,25 @@ class queryCompleter {
                 if (lastKeyword.dividersCount === 2) {
                     return callback(null, queryCompleter.whereOperators);
                 }
-                
-                if (true) { // TODO: refactor this
+
+                if (lastKeyword.dividersCount === 3) {
                     if (!lastKeyword.fieldName) {
                         return this.completeError("No field was specified");
                     }
 
-                    const collection = this.lastKeyword.info.collection;
-                    const index = this.lastKeyword.info.index;
-                    if (!collection && !index) {
+                    if (!lastKeyword.info.collection && !lastKeyword.info.index) {
                         return this.completeError("no collection or index specified");
                     }
 
                     this.getIndexFields()
                         .done((wordList) => {
-                            if (!wordList.find(x => x.value === lastKeyword.fieldName)) {
+                            if (!wordList.find(x => x.caption === lastKeyword.fieldName)) {
                                 return this.completeError("Field not in the words list");
                             }
 
-                            let currentValue: string = "";
-
-                            /* TODO: currentValue = currentToken.value.trim();
-                             const rowTokens: any[] = session.getTokens(pos.row);
-                             if (!!rowTokens && rowTokens.length > 1) {
-                             currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
-                             currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
-                             }*/
-
-
                             // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                            if (index) {
-                                this.providers.terms(index, lastKeyword.fieldName, 20, terms => {
+                            if (lastKeyword.info.index) {
+                                this.providers.terms(lastKeyword.info.index, lastKeyword.fieldName, 20, terms => {
                                     if (terms && terms.length) {
                                         return this.completeWords(terms.map(term => ({
                                                 caption: term,
@@ -640,25 +628,27 @@ class queryCompleter {
                                     }
                                 })
                             } else {
-                                /* TODO finish me!
-                                if (currentValue.length > 0) {
-                                    // TODO: Not sure what we want to show here?
-                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, 1, this.activeDatabase())
-                                        .execute()
-                                        .done((results: metadataAwareDto[]) => {
-                                            if (results && results.length > 0) {
-                                                this.completeWords(callback, results.map(curVal => {
-                                                    return {
-                                                        value: "'" + curVal["@metadata"]["@id"] + "'",
-                                                        score: 1,
-                                                        meta: "value"
-                                                    };
-                                                }));
-                                            }
-                                        });
-                                } else {
+                                if (!prefix || prefix.length < 1) {
                                     return this.completeError("empty completion");
-                                }*/
+                                }
+
+                                this.providers.documentIdPrefix(prefix, metadata => {
+                                    if (!metadata || metadata.length < 1) {
+                                        return this.completeError("no metadata");
+                                    }
+                                    const doc = metadata[0];
+                                    if (!doc || !doc["@metadata"]) {
+                                        return this.completeError("no metadata entry");
+                                    }
+                                    const meta = doc["@metadata"];
+                                    if (!meta || !meta["@id"]) {
+                                        return this.completeError("no @id in metadata");
+                                    }
+                                    const documentId = meta["@id"];
+                                    return this.completeWords([
+                                        {caption: documentId, value: queryCompleter.escapeCollectionOrFieldName(documentId), score: 1, meta: "@id"}
+                                    ]);
+                                });
                             }
                         });
                 }
@@ -827,6 +817,13 @@ class queryCompleter {
                     .execute()
                     .done(terms => {
                         callback(terms.Terms);
+                    });
+            },
+            documentIdPrefix: (prefix, callback) => {
+                new getDocumentsMetadataByIDPrefixCommand(prefix, 1, activeDatabase())
+                    .execute()
+                    .done((results: metadataAwareDto[]) => {
+                        callback(results);
                     });
             },
             collections: (callback) => {

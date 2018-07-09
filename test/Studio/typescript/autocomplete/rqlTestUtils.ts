@@ -105,6 +105,7 @@ class rqlTestUtils {
     static emptyProvider() {
         const completer = new queryCompleter({
             terms: (indexName, field, pageSize, callback) => callback([]),
+            documentIdPrefix: (prefix, callback) => callback([]),
             collections: callback => callback([]),
             indexFields: (indexName, callback) => callback([]),
             collectionFields: (collectionName, prefix, callback) => callback({}),
@@ -117,6 +118,22 @@ class rqlTestUtils {
     static northwindProvider() {
         const providers: queryCompleterProviders = {
             terms: (indexName, field, pageSize, callback) => callback([]),
+            documentIdPrefix: (prefix, callback) => {
+                switch (prefix) {
+                    case "com":
+                        callback([
+                            {
+                                "@metadata": {
+                                    "@id": "companies/1-A"
+                                }
+                            }
+                        ]);
+                        break;
+                    default:
+                        callback([]);
+                        break;
+                }
+            },
             collections: callback => {
                 callback([
                     "Regions",

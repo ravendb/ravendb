@@ -79,6 +79,10 @@ describe("RQL Autocomplete", () => {
         {caption: "@metadata", value: "@metadata ", score: 101, meta: "object field"}
     ];
 
+    const documentIdList: autoCompleteWordList[] = [
+        {caption: "companies/1-A", value: "'companies/1-A'", score: 1, meta: "@id"}
+    ];
+
     const fieldsListWithFunctions: autoCompleteWordList[] = fieldsList.concat(functionsList);
 
     const whereFieldsList: autoCompleteWordList[] = _.sortBy(fieldsListWithFunctions.concat(queryCompleter.whereFunctionsOnly), (x: autoCompleteWordList) => x.score).reverse();
@@ -960,14 +964,27 @@ where OrderedAt =|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword
         });
     });
 
-    it.skip('After where field and equal operator | ?????????????????????????????', done => {
+    it('After where field and equal operator | list nothing because of empty prefix', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt = |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('After where field and equal operator with prefix | list document ID', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where OrderedAt = com|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "com");
+            assert.deepEqual(wordlist, documentIdList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 3);
 
             done();
         });
