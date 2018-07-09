@@ -865,8 +865,18 @@ namespace Raven.Server.Commercial
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
 
             var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-            var activeTcpListeners = ipProperties.GetActiveTcpListeners();
-
+            IPEndPoint[] activeTcpListeners;
+            try
+            {
+                activeTcpListeners = ipProperties.GetActiveTcpListeners();
+            }
+            catch (Exception e)
+            {
+                // If GetActiveTcpListeners is not supported, skip the validation
+                // See https://github.com/dotnet/corefx/issues/30909
+                return;
+            }
+            
             foreach (var requestedEndpoint in requestedEndpoints)
             {
                 if (activeTcpListeners.Contains(requestedEndpoint))
@@ -874,9 +884,11 @@ namespace Raven.Server.Commercial
                     if (currentServerEndpoints.Contains(requestedEndpoint))
                         continue; // OK... used by the current server
 
-                    throw new InvalidOperationException($"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
+                    throw new InvalidOperationException(
+                        $"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
                 }
             }
+            
         }
 
         public static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
