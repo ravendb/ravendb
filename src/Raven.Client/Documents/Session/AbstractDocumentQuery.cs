@@ -1373,6 +1373,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (WhereTokens.Count == 0)
                 return;
 
+            if (FromAlias != null)
+            {
+                AddFromAliasToWhereTokens(FromAlias);
+                FromAlias = null;
+            }
+
             writer
                 .Append(" where ");
 
