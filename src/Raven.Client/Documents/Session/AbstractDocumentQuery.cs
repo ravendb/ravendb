@@ -495,23 +495,20 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             Include(path.ToPropertyPath());
         }
 
-        public void Include(Action<IQueryIncludeBuilder<T>> includes)
+        public void Include(IncludeBuilder includes)
         {
             if (includes == null)
                 return;
             
-            var includeBuilder = new IncludeBuilder<T>(Conventions);
-            includes.Invoke(includeBuilder);
-
-            if (includeBuilder.DocumentsToInclude != null)
+            if (includes.DocumentsToInclude != null)
             {
-                foreach (var doc in includeBuilder.DocumentsToInclude)
+                foreach (var doc in includes.DocumentsToInclude)
                 {
                     DocumentIncludes.Add(doc);
                 }
             }
 
-            IncludeCounters(includeBuilder.Alias, includeBuilder.CountersToIncludeBySourcePath);
+            IncludeCounters(includes.Alias, includes.CountersToIncludeBySourcePath);
         }
 
         /// <summary>

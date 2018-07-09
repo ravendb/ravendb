@@ -60,16 +60,18 @@ namespace Raven.Client.Documents.Session.Loaders
         IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path);
     }
 
-    internal class IncludeBuilder<T> : IQueryIncludeBuilder<T>, IIncludeOperations<T>
+    public class IncludeBuilder
     {
-        public HashSet<string> DocumentsToInclude;
-        public HashSet<string> CountersToInclude => CountersToIncludeBySourcePath[string.Empty].CountersToInclude;
-        public bool AllCounters => CountersToIncludeBySourcePath[string.Empty].AllCounters;
-        public string Alias;
+        internal HashSet<string> DocumentsToInclude;
+        internal HashSet<string> CountersToInclude => CountersToIncludeBySourcePath[string.Empty].CountersToInclude;
+        internal bool AllCounters => CountersToIncludeBySourcePath[string.Empty].AllCounters;
+        internal string Alias;
 
-        public Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
+        internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
+    }
 
-
+    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>
+    {
         private readonly DocumentConventions _conventions;
 
         internal IncludeBuilder(DocumentConventions conventions)
