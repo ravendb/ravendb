@@ -36,14 +36,14 @@ class conflictItem {
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             this.originalValue(json);
-            this.lastModified(moment.utc(dto.LastModified).local().format(conflictItem.dateFormat));
             this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
             this.deletedMarker(false);
-            
             this.changeVector(changeVectorUtils.formatChangeVector(dto.ChangeVector, useLongChangeVectorFormat));
         } else {
             this.deletedMarker(true);
         }
+
+        this.lastModified(moment.utc(dto.LastModified).local().format(conflictItem.dateFormat));
     }
 }
 
