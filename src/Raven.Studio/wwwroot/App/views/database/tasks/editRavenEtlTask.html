@@ -102,7 +102,7 @@
                                 <div class="padding bg-success small" data-bind="visible: Success">
                                     <div>Successfully connected to the node</div>
                                 </div>
-                                <div data-bind="visible: !Success">
+                                <div data-bind="if: !Success">
                                     <div class="padding bg-danger small">
                                         <h2>Connection test failed!</h2>
                                         <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
