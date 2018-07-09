@@ -18,7 +18,15 @@ namespace Raven.Client.Documents.Session
 
             if (alias != null)           
             {
-                FromAlias = FromToken.Alias ?? alias;
+                if (FromToken.Alias == null)
+                {
+                    FromAlias = alias;
+
+                }
+                else
+                {
+                    alias = FromToken.Alias;
+                }
             }
 
             foreach (var kvp in countersToIncludeByDocId)
@@ -27,14 +35,14 @@ namespace Raven.Client.Documents.Session
                 if (alias != null)
                 {
                     path = path == string.Empty 
-                        ? FromAlias
-                        : $"{FromAlias}.{path}";
+                        ? alias
+                        : $"{alias}.{path}";
                 }
 
                 if (kvp.Value.All)
                 {
                     CounterIncludesTokens.Add(CounterIncludesToken.All(path));
-                    return;
+                    continue;
                 }
 
 

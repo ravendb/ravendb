@@ -6,40 +6,61 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
-    public interface IIncludeBuilder<T, out TBuilder>
+    public interface IIncludeOperations<T>
     {
-        TBuilder IncludeCounter(string name);
+        IIncludeOperations<T> IncludeDocuments(string path);
 
-        TBuilder IncludeCounters(string[] names);
+        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, string>> path);
 
-        TBuilder IncludeAllCounters();
+        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
 
-        TBuilder IncludeDocuments(string path);
+        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
 
-        TBuilder IncludeDocuments(Expression<Func<T, string>> path);
+        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
-        TBuilder IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
+        IIncludeOperations<T> IncludeCounter(string name);
 
-        TBuilder IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
+        IIncludeOperations<T> IncludeCounters(string[] names);
 
-        TBuilder IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
+        IIncludeOperations<T> IncludeAllCounters();
 
+        IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name);
+
+        IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
+
+        IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path);
     }
 
-    public interface IIncludeBuilder<T> : IIncludeBuilder<T, IIncludeBuilder<T>>
+    public interface IIncludeBuilder<T>
     {
+        IIncludeOperations<T> IncludeDocuments(string path);
+
+        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, string>> path);
+
+        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
+
+        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
+
+        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
+
+        IIncludeOperations<T> IncludeCounter(string name);
+
+        IIncludeOperations<T> IncludeCounters(string[] names);
+
+        IIncludeOperations<T> IncludeAllCounters();
     }
 
-    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T, IQueryIncludeBuilder<T>>
+
+    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T>
     {
-        IQueryIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name);
+        IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name);
 
-        IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
+        IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
 
-        IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
+        IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path);
     }
 
-    internal class IncludeBuilder<T> : IQueryIncludeBuilder<T>
+    internal class IncludeBuilder<T> : IQueryIncludeBuilder<T>, IIncludeOperations<T>
     {
         public HashSet<string> DocumentsToInclude;
         public HashSet<string> CountersToInclude => CountersToIncludeBySourcePath[string.Empty].CountersToInclude;
@@ -56,7 +77,7 @@ namespace Raven.Client.Documents.Session.Loaders
             _conventions = conventions;
         }
 
-        public IQueryIncludeBuilder<T> IncludeDocuments(string path)
+        public IIncludeOperations<T> IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
                 DocumentsToInclude = new HashSet<string>();
@@ -64,34 +85,35 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeDocuments(Expression<Func<T, string>> path)
+        public IIncludeOperations<T> IncludeDocuments(Expression<Func<T, string>> path)
         {
             return IncludeDocuments(path.ToPropertyPath());
         }
 
-        public IQueryIncludeBuilder<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        public IIncludeOperations<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             return IncludeDocuments(path.ToPropertyPath());
         }
 
 
-        public IQueryIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        public IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
         }
 
-        public IQueryIncludeBuilder<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        public IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
         }
 
-        public IQueryIncludeBuilder<T> IncludeCounter(string name)
+        public IIncludeOperations<T> IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name)
+
+        public IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name)
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
@@ -100,13 +122,13 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeCounters(string[] names)
+        public IIncludeOperations<T> IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
+        public IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
@@ -115,14 +137,14 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeAllCounters()
+        public IIncludeOperations<T> IncludeAllCounters()
         {
             IncludeAll(string.Empty);
 
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path)
+        public IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path)
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
@@ -198,6 +220,5 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
     }
-
 
 }

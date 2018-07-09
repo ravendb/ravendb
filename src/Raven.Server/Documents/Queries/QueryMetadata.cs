@@ -511,22 +511,26 @@ namespace Raven.Server.Documents.Queries
             {
                 start = 1;
 
-                if (Query.From.Alias?.Value != fe.FieldValue &&
-                    RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
+                if (Query.From.Alias?.Value != fe.FieldValue)
                 {
-                    sourcePath = value.PropertyPath;
-                }
-
-                else if (Query.From.Alias?.Value != null &&
-                         fe.FieldValue != null)
-                {
-                    var split = fe.FieldValue.Split('.');
-                    if (split.Length == 2 &&
-                        split[0] == Query.From.Alias.Value)
+                    if (RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
                     {
-                        sourcePath = split[1];
+                        sourcePath = value.PropertyPath;
+                    }
+
+                    else if (Query.From.Alias?.Value != null &&
+                             fe.FieldValue != null)
+                    {
+                        var split = fe.FieldValue.Split('.');
+                        if (split.Length >= 2 &&
+                            split[0] == Query.From.Alias.Value)
+                        {
+                            sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                        }
                     }
                 }
+
+
             }
 
             if (start == expression.Arguments.Count)
