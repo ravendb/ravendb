@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Changes
                 {
                     Callback = RequestExecutor.OnServerCertificateCustomValidationCallback
                 };
-                RequestExecutor.RemoteCertificateValidationCallback += callbackTranslator.Translate;
+                clientWebSocket.Options.RemoteCertificateValidationCallback += callbackTranslator.Translate;
             }
 #endif
             return clientWebSocket;
