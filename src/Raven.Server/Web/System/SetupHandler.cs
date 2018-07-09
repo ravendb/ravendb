@@ -316,6 +316,19 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
+            NetworkInterface[] netInterfaces = null;
+            List<string> ips;
+            try
+            {
+                netInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+            }
+            catch (Exception e)
+            {
+                // https://github.com/dotnet/corefx/issues/26476
+                // If GetAllNetworkInterfaces is not supported, we'll just return the default: 127.0.0.1
+            }
+
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -326,43 +339,66 @@ namespace Raven.Server.Web.System
                 writer.WritePropertyName("NetworkInterfaces");
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var netInterface in NetworkInterface.GetAllNetworkInterfaces())
+
+                if (netInterfaces != null)
                 {
-                    var ips = netInterface.GetIPProperties().UnicastAddresses
-                        .Where(x =>
-                        {
-                            // filter 169.254.xxx.xxx out, they are not meaningful for binding
-                            if (x.Address.AddressFamily != AddressFamily.InterNetwork)
-                                return false;
-                            var addressBytes = x.Address.GetAddressBytes();
+                    foreach (var netInterface in netInterfaces)
+                    {
+                        ips = netInterface.GetIPProperties().UnicastAddresses
+                            .Where(x =>
+                            {
+                                // filter 169.254.xxx.xxx out, they are not meaningful for binding
+                                if (x.Address.AddressFamily != AddressFamily.InterNetwork)
+                                    return false;
+                                var addressBytes = x.Address.GetAddressBytes();
 
-                            // filter 127.xxx.xxx.xxx out, in docker only
-                            if (SetupParameters.Get(ServerStore).IsDocker && addressBytes[0] == 127)
-                                return false;
+                                // filter 127.xxx.xxx.xxx out, in docker only
+                                if (SetupParameters.Get(ServerStore).IsDocker && addressBytes[0] == 127)
+                                    return false;
 
-                            return addressBytes[0] != 169 || addressBytes[1] != 254;
-                        })
-                        .Select(addr => addr.Address.ToString())
-                        .ToList();
+                                return addressBytes[0] != 169 || addressBytes[1] != 254;
+                            })
+                            .Select(addr => addr.Address.ToString())
+                            .ToList();
 
-                    // If there's a hostname in the server url, add it to the list
-                    if (SetupParameters.Get(ServerStore).DockerHostname != null && ips.Contains(SetupParameters.Get(ServerStore).DockerHostname) == false)
-                        ips.Add(SetupParameters.Get(ServerStore).DockerHostname);
+                        // If there's a hostname in the server url, add it to the list
+                        if (SetupParameters.Get(ServerStore).DockerHostname != null && ips.Contains(SetupParameters.Get(ServerStore).DockerHostname) == false)
+                            ips.Add(SetupParameters.Get(ServerStore).DockerHostname);
 
-                    if (first == false)
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Name");
+                        writer.WriteString(netInterface.Name);
                         writer.WriteComma();
-                    first = false;
-
+                        writer.WritePropertyName("Description");
+                        writer.WriteString(netInterface.Description);
+                        writer.WriteComma();
+                        writer.WriteArray("Addresses", ips);
+                        writer.WriteEndObject();
+                    }
+                }
+                else
+                {
+                    // https://github.com/dotnet/corefx/issues/26476
+                    // If GetAllNetworkInterfaces is not supported, we'll just return the default: 127.0.0.1
+                    ips = new List<string>
+                    {
+                        "127.0.0.1"
+                    };
                     writer.WriteStartObject();
                     writer.WritePropertyName("Name");
-                    writer.WriteString(netInterface.Name);
+                    writer.WriteString("Loopback Interface");
                     writer.WriteComma();
                     writer.WritePropertyName("Description");
-                    writer.WriteString(netInterface.Description);
+                    writer.WriteString("Loopback Interface");
                     writer.WriteComma();
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
+                
 
                 writer.WriteEndArray();
                 writer.WriteEndObject();
