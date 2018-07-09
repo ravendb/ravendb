@@ -1321,7 +1321,7 @@ namespace Raven.Client.Http
 
         // HttpClient and ClientWebSocket use certificate validation callbacks with different signatures.
         // We need this translator for backward compatibility to allow the user to supply any of the two signatures.
-        public class CallbackTranslator
+        private class CallbackTranslator
         {
             public Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> Callback;
 
@@ -1411,7 +1411,7 @@ namespace Raven.Client.Http
             }
         }
 
-        internal static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
+        internal static bool OnServerCertificateCustomValidationCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
             if (onServerCertificateCustomValidationCallback == null ||
@@ -1420,7 +1420,7 @@ namespace Raven.Client.Http
 
             for (int i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
             {
-                var result = onServerCertificateCustomValidationCallback[i](msg, cert, chain, errors);
+                var result = onServerCertificateCustomValidationCallback[i](sender, cert, chain, errors);
                 if (result)
                     return true;
             }

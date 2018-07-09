@@ -67,11 +67,7 @@ namespace Raven.Client.Documents.Changes
 #if NETCOREAPP
             if (RequestExecutor.HasServerCertificateCustomValidationCallback)
             {
-                var callbackTranslator = new RequestExecutor.CallbackTranslator
-                {
-                    Callback = RequestExecutor.OnServerCertificateCustomValidationCallback
-                };
-                clientWebSocket.Options.RemoteCertificateValidationCallback += callbackTranslator.Translate;
+                clientWebSocket.Options.RemoteCertificateValidationCallback += RequestExecutor.OnServerCertificateCustomValidationCallback;
             }
 #endif
             return clientWebSocket;
