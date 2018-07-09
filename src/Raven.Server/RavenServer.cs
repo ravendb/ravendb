@@ -350,8 +350,14 @@ namespace Raven.Server
                             if (response.IsSuccessStatusCode)
                             {
                                 // It worked, let's register this callback globally in the RequestExecutor
-                                if(RequestExecutor.HasServerCertificateCustomValidationCallback == false)
-                                    RequestExecutor.ServerCertificateCustomValidationCallback += CertificateCallback;
+                                if (RequestExecutor.HasServerCertificateCustomValidationCallback == false)
+                                {
+                                    var callbackTranslator = new RequestExecutor.CallbackTranslator
+                                    {
+                                        Callback = CertificateCallback
+                                    };
+                                    RequestExecutor.RemoteCertificateValidationCallback += callbackTranslator.Translate;
+                                }
                             }
 
                             if (Logger.IsOperationsEnabled)
