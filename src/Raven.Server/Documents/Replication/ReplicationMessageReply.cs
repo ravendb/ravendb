@@ -6,7 +6,8 @@
         {
             None,
             Ok,
-            Error
+            Error,
+            MissingAttachments
         }
 
         public ReplyType Type { get; set; }

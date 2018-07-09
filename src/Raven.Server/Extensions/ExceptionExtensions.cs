@@ -30,5 +30,15 @@ namespace Raven.Server.Extensions
 
             return e.InnerExceptions[0];
         }
+
+        public static Exception ExtractSingleInnerException(this Exception e)
+        {
+            if (e is AggregateException ae)
+            {
+                return ae.ExtractSingleInnerException();
+            }
+
+            return e;
+        }
     }
 }

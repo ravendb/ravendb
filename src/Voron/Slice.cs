@@ -127,6 +127,12 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.InternalScope From(ByteStringContext context, LazyStringValue value, out Slice str)
+        {
+            return From(context, value.Buffer, value.Size, ByteStringType.Immutable, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, byte* value, int size, ByteStringType type, out Slice str)
         {
             var scope = context.From(value, size, type, out ByteString byteString);

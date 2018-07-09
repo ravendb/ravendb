@@ -257,7 +257,13 @@ namespace Voron.Data.BTrees
             return new VoronStream(tree.Name, chunksDetails, _llt);
         }
 
-        public int TouchStream(Slice key)
+        public bool StreamExist(Slice key)
+        {
+            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+            return tree.NumberOfEntries > 0;
+        }
+
+    public int TouchStream(Slice key)
         {
             var info = GetStreamInfo(key, writable: true);
 

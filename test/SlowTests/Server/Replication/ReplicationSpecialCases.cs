@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Replication;
@@ -317,6 +318,70 @@ namespace SlowTests.Server.Replication
                     // all good! no conflict here
                 }
                 Assert.False(failed);
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldSendMissingAttachments()
+        {
+            var docId = "users/1";
+            using (var source = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Source"
+
+            }))
+            using (var destination = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Destination"
+            }))
+            {
+                await SetupReplicationAsync(source, destination);
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    await session.StoreAsync(new User() { Name = "Foo" }, docId);
+                    session.Advanced.Attachments.Store(docId, "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocumentToReplicate<User>(destination, docId, 15 * 1000);
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(docId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(new byte[] { 4, 5, 6 }))
+                {
+                    session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 15 * 1000);
+
+                var buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(docId);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(attachments.Length, 2);
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            Assert.NotNull(attachment);
+                            Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                            if (attachment.Details.Name == "foo.png")
+                            {
+                                Assert.Equal(1, buffer[0]);
+                                Assert.Equal(2, buffer[1]);
+                                Assert.Equal(3, buffer[2]);
+                            }
+                        }
+                    }
+
+                }
             }
         }
     }

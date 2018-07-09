@@ -160,6 +160,23 @@ namespace FastTests.Server.Replication
             return null;
         }
 
+        protected T WaitForDocumentWithAttachmentToReplicate<T>(IDocumentStore store, string id, string attachmentName, int timeout)
+            where T : class
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                using (var session = store.OpenSession(store.Database))
+                {
+                    var doc = session.Load<T>(id);
+                    if (doc != null && session.Advanced.Attachments.Exists(id, attachmentName))
+                        return doc;
+                }
+                Thread.Sleep(100);
+            }
+
+            return null;
+        }
         public class SetupResult : IDisposable
         {
             public IReadOnlyList<ServerNode> Nodes;
