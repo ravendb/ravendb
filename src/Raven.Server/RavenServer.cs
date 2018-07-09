@@ -350,11 +350,7 @@ namespace Raven.Server
                                 // It worked, let's register this callback globally in the RequestExecutor
                                 if (RequestExecutor.HasServerCertificateCustomValidationCallback == false)
                                 {
-                                    var callbackTranslator = new RequestExecutor.CallbackTranslator
-                                    {
-                                        Callback = CertificateCallback
-                                    };
-                                    RequestExecutor.RemoteCertificateValidationCallback += callbackTranslator.Translate;
+                                    RequestExecutor.RemoteCertificateValidationCallback += CertificateCallback;
                                 }
                             }
 
@@ -371,13 +367,14 @@ namespace Raven.Server
             }
         }
 
-        bool CertificateCallback(HttpRequestMessage message, X509Certificate2 certificate2, X509Chain chain, SslPolicyErrors errors)
+        bool CertificateCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
             if (errors == SslPolicyErrors.None || errors == SslPolicyErrors.RemoteCertificateChainErrors) // self-signed is acceptable
                 return true;
 
+            var cert2 = HttpsConnectionAdapter.ConvertToX509Certificate2(cert);
             // We trust ourselves
-            return certificate2?.Thumbprint == Certificate?.Certificate?.Thumbprint;
+            return cert2?.Thumbprint == Certificate?.Certificate?.Thumbprint;
         }
 
         private Task _currentRefreshTask = Task.CompletedTask;
