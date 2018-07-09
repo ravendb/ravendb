@@ -157,17 +157,7 @@ namespace SlowTests.Client.Attachments
                     await task;
                     var attachment = command.Result;
                     Assert.Equal("File", attachment.Name);
-
-                    if (PlatformDetails.RunningOnPosix == false)
-                        Assert.Equal(size, stream.Position);
-                    else
-                    {
-                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
-                        // Remove this workaround when this line is removed from request executor:
-                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
-                        Assert.Equal(0, stream.Position);
-                    }
-
+                    Assert.Equal(size, stream.Position);
                     Assert.Equal(size, attachment.Size);
                     Assert.Equal("application/pdf", attachment.ContentType);
                     Assert.Equal(hash, attachment.Hash);

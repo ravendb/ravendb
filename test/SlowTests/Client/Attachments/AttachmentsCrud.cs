@@ -642,15 +642,7 @@ namespace SlowTests.Client.Attachments
                 {
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
 
-                    if (PlatformDetails.RunningOnPosix == false)
-                        Assert.Equal(3, profileStream.Position);
-                    else
-                    {
-                        // We opted-out of the new SocketsHttpHandler HTTP stack in .NET Core 2.1
-                        // Remove this workaround when this line is removed from request executor:
-                        // AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
-                        Assert.Equal(0, profileStream.Position);
-                    }
+                    Assert.Equal(3, profileStream.Position);
 
                     profileStream.Position = 0;
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg"));
