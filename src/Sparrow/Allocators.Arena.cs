@@ -9,7 +9,7 @@ namespace Sparrow
     {
         int InitialBlockSize { get; }
         int MaxBlockSize { get; }
-        IAllocatorComposer<Pointer> CreateAllocator();
+        IAllocatorComposer<BlockPointer> CreateAllocator();
     }
 
     public static class ArenaAllocator
@@ -22,7 +22,7 @@ namespace Sparrow
 
             public int InitialBlockSize => 1 * Constants.Size.Megabyte;
             public int MaxBlockSize => 16 * Constants.Size.Megabyte;
-            public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<NativeAllocator.Default>>();
+            public IAllocatorComposer<BlockPointer> CreateAllocator() => new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
         }
     }
 
@@ -30,7 +30,7 @@ namespace Sparrow
         where TOptions : struct, IArenaAllocatorOptions
     {
         private TOptions _options;
-        private IAllocatorComposer<Pointer> _internalAllocator;
+        private IAllocatorComposer<BlockPointer> _internalAllocator;
 
         private long _allocated;
         private long _used;
@@ -71,13 +71,13 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Allocate(ref ArenaAllocator<TOptions> allocator, int size, out BlockPointer.Header* header)
+        public void Allocate(ref ArenaAllocator<TOptions> allocator, int size, ref BlockPointer ptr)
         {
             throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Release(ref ArenaAllocator<TOptions> allocator, in BlockPointer.Header* header)
+        public void Release(ref ArenaAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
         }
 

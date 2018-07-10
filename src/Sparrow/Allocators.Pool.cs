@@ -9,6 +9,7 @@ namespace Sparrow
     public interface IPoolAllocatorOptions : INativeOptions
     {
         int MaxPoolMemoryInBytes { get; }
+
         IAllocatorComposer<Pointer> CreateAllocator();
     }
 
@@ -32,12 +33,12 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can)</remarks>
-    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
+    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
         private bool _isMemoryLow;
-        private Pointer[] _freed;
+        private BlockPointer[] _freed;
         private IAllocatorComposer<Pointer> _internalAllocator;
 
         public int Allocated { get; private set; }    
@@ -46,7 +47,7 @@ namespace Sparrow
         public void Initialize(ref PoolAllocator<TOptions> allocator)
         {
             // Initialize the struct pointers structure used to navigate over the allocated memory.
-            allocator._freed = new Pointer[27];
+            allocator._freed = new BlockPointer[27];
             allocator.Allocated = 0;
             allocator.Used = 0;
         }
@@ -64,18 +65,18 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Pointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
+        public BlockPointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
             int vsize = Bits.NextPowerOf2(size);
 
             var index = Bits.MostSignificantBit(vsize) - 1;
             if (_freed[index].IsValid)
-            {   
+            {
                 // Stack copy of the pointer itself.
-                Pointer section = _freed[index];
+                BlockPointer section = _freed[index];
 
                 // Pointer was holding the marker for the next released block instead. 
-                _freed[index] = *((Pointer*)section.Ptr);
+                _freed[index] = *((BlockPointer*)section.Ptr);
                 allocator.Used += section.Size;
 
                 return section;
@@ -85,11 +86,11 @@ namespace Sparrow
             allocator.Allocated += vsize;
 
             var ptr =  _internalAllocator.Allocate(vsize);
-            return new Pointer(ptr.Ptr, size);
+            return new BlockPointer(ptr.Ptr, size, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Release(ref PoolAllocator<TOptions> allocator, ref Pointer ptr)
+        public void Release(ref PoolAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
             if (allocator._isMemoryLow || allocator.Used > allocator._options.MaxPoolMemoryInBytes)
                 goto UnlikelyRelease;
@@ -107,7 +108,7 @@ namespace Sparrow
             if (section.IsValid)
             {
                 // Copy the section pointer that is already freed to the current memory. 
-                *(Pointer*)ptr.Ptr = section;
+                *(BlockPointer*)ptr.Ptr = section;
             }
             
             // Put a copy of the currently released memory block on the front. 
@@ -124,7 +125,9 @@ namespace Sparrow
             // https://github.com/dotnet/coreclr/issues/6024
 
             allocator.Used -= ptr.Size;
-            allocator._internalAllocator.Release(ref ptr);
+
+            Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.BlockSize);
+            allocator._internalAllocator.Release(ref nakedPtr);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -148,13 +151,13 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnAllocate(ref PoolAllocator<TOptions> allocator, Pointer ptr)
+        public void OnAllocate(ref PoolAllocator<TOptions> allocator, BlockPointer ptr)
         {
             // Nothing to do here.
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnRelease(ref PoolAllocator<TOptions> allocator, Pointer ptr)
+        public void OnRelease(ref PoolAllocator<TOptions> allocator, BlockPointer ptr)
         {
             // Nothing to do here.
         }
@@ -182,13 +185,14 @@ namespace Sparrow
                 ref var section = ref _freed[i];
                 while (section.IsValid)
                 {
-                    Pointer current = section;
+                    BlockPointer current = section;
 
                     // Copy the pointer found on the first memory bytes of the section. 
-                    section = *(Pointer*)current.Ptr;
+                    section = *(BlockPointer*)current.Ptr;
 
                     // The block is guaranteed to be valid, so we release it to the internal allocator.
-                    allocator._internalAllocator.Release(ref current);
+                    Pointer currentPtr = new Pointer(current.Ptr, current.BlockSize);
+                    allocator._internalAllocator.Release(ref currentPtr);
                 }
             }
         }

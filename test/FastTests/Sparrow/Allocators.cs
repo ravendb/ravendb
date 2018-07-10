@@ -118,7 +118,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_PoolDefaultByBytes()
         {
-            var allocator = new Allocator<PoolAllocator<PoolAllocator.Default>>();
+            var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
             allocator.Initialize(default(PoolAllocator.Default));
 
             var ptr = allocator.Allocate(1000);
@@ -132,7 +132,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_PoolReturnUsedBytes()
         {
-            var allocator = new Allocator<PoolAllocator<PoolAllocator.Default>>();
+            var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
             allocator.Initialize(default(PoolAllocator.Default));
 
             int size = 1000;
@@ -156,13 +156,13 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_PoolReturnBlockBytes()
         {
-            var allocator = new Allocator<PoolAllocator<PoolAllocator.Default>>();
+            var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
             allocator.Initialize(default(PoolAllocator.Default));
 
             int size = 1000;
 
             long[] addresses = new long[5];
-            var pointers = new Pointer[5];
+            var pointers = new BlockPointer[5];
             for (int i = 0; i < 5; i++)
             {
                 var ptr = allocator.Allocate(size);
@@ -195,7 +195,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ThreadAffinePoolReturnUsedBytes()
         {
-            var allocator = new BlockAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
+            var allocator = new FixedSizeAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
             allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
 
             var config = default(ThreadAffineBlockAllocator.Default);
@@ -219,7 +219,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ThreadAffinePoolReturnBlockBytes()
         {
-            var allocator = new BlockAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
+            var allocator = new FixedSizeAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
             allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
 
             var config = default(ThreadAffineBlockAllocator.Default);
@@ -359,6 +359,5 @@ namespace FastTests.Sparrow
                 BeforeFinalizationCalled = true;
             }
         }
-
     }
 }
