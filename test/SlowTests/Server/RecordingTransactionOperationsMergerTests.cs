@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
@@ -17,6 +18,8 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -28,10 +31,36 @@ namespace SlowTests.Server
     public class RecordingTransactionOperationsMergerTests : RavenTestBase
     {
         [Fact]
+        public void AllDerivedCommandsOfMergedTransactionCommand_MustBeRecordable_ExceptForExceptions()
+        {
+            var exceptions = new[]
+            {
+                typeof(TransactionOperationsMerger.MergedTransactionCommand),
+                typeof(ExecuteRateLimitedOperations<>),
+                typeof(TransactionsRecordingCommand)
+            };
+
+            var baseType = typeof(TransactionOperationsMerger.MergedTransactionCommand);
+            var types = baseType.Assembly.GetTypes();
+            var deriveTypes = types
+            .Where(t => baseType.IsAssignableFrom(t)
+                        && exceptions.Contains(t) == false);
+            Assert.All(deriveTypes, t =>
+            {
+                //Todo To consider how to check the deseialize possibility
+                var i = typeof(TransactionOperationsMerger.IRecordableCommand);
+                Assert.True(i.IsAssignableFrom(t), $"{t.Name} should implement {i.Name}");
+            });
+        }
+
+        [Fact]
         public void Attachments()
         {
-            var dateString = DateTime.Now.ToString("G").Replace(" ", "").Replace(":", "").Replace(@"/", "");
-            var filePath = $@"C:\Records\record_{dateString}.json";
+            //Todo To remove after the test pass
+            //            var dateString = Path.GetFileName(NewDataPath($"record") + ".json");
+            //            var filePath = Path.Combine(@"C:\Records", dateString);
+
+            var filePath = NewDataPath();
 
             var album = new Album
             {
@@ -67,7 +96,7 @@ namespace SlowTests.Server
         [Fact]
         public void StartRecordingWithoutStop_ShouldResultInLegalJson()
         {
-            var filePath = Path.GetTempFileName();
+            var filePath = NewDataPath();
 
             //Recording
             using (var store = GetDocumentStore())
@@ -88,14 +117,29 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public void ReplayUnsetToZeroStream_ShouldThrowException()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var replayStream = new MemoryStream(new byte[10]))
+                    {
+                        replayStream.Position = 5;
+                        store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                    }
+                }
+            });
+        }
+
+        [Fact]
         public void RecordingDeleteCommand()
         {
-            var filePath = Path.GetTempFileName();
+            var filePath = NewDataPath();
 
-            var expectedNames = new[] { "Avi" };//, "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper" };
+            var expectedNames = new[] { "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper" };
+            var userToDelete = new User { Name = "Avi" };
             var users = expectedNames.Select(n => new User { Name = n }).ToArray();
-            User[] documents = { };
-
 
             //Recording
             using (var store = GetDocumentStore())
@@ -103,13 +147,15 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
+                    session.Store(userToDelete);
+
                     foreach (var user in users)
                     {
                         session.Store(user);
                     }
                     session.SaveChanges();
 
-                    store.Commands().Execute(new DeleteDocumentCommand(users.First().Id, null));
+                    store.Commands().Execute(new DeleteDocumentCommand(userToDelete.Id, null));
                 }
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
@@ -121,11 +167,12 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
-                    documents = session.Query<User>().ToArray();
+                    var actualUserNames = session.Query<User>().Select(u => u.Name).ToArray();
+
+                    //Assert
+                    Assert.Equal(actualUserNames, expectedNames);
                 }
             }
-
-            Assert.Empty(documents);
         }
 
         [Theory]
@@ -133,12 +180,12 @@ namespace SlowTests.Server
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public void RecordingPatchWithParametersByQuery(params string[] names)
         {
-            var filePath = Path.GetTempFileName();
+            var filePath = NewDataPath();
 
 
             var users = names.Select(n => new User { Name = n }).ToArray();
 
-            const string AgeKey = "age";
+            const string ageKey = "age";
             const int newAge = 34;
 
             //Recording
@@ -155,41 +202,37 @@ namespace SlowTests.Server
                     session.SaveChanges();
                 }
 
-                var query = $"FROM Users UPDATE {{  this.Age = ${AgeKey} ; }}";
-                Parameters parameters = new Parameters { [AgeKey] = newAge };
+                //Todo To check what that mean "Let's avoid concat of queries, even in test. Use parameters"
+                var query = $"FROM Users UPDATE {{  this.Age = ${ageKey}; }}";
+                var parameters = new Parameters { [ageKey] = newAge };
                 store.Operations
-                    .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }))
-                    .WaitForCompletion();
+                    .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }));
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
-
             }
 
             //Replay
-            User[] replayUsers;
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
-                    replayUsers = session.Query<User>().ToArray();
+                    var replayUsers = session.Query<User>().ToArray();
+
+                    //Assert
+                    Assert.All(replayUsers, u => Assert.True(u.Age == newAge, $"The age of {u.Name} should be {newAge} but is {u.Age}"));
                 }
             }
-
-            //Assert
-            Assert.All(replayUsers, u => Assert.True(u.Age == newAge, $"The age of {u.Name} should be {newAge} but is {u.Age}"));
         }
 
         [Fact]
         public void RecordingPatchAsBatch()
         {
-            var filePath = Path.GetTempFileName();
+            var filePath = NewDataPath();
 
             const string newName = "Balilo";
             var user = new User { Name = "Baruch" };
-            User[] documents = { };
-
 
             //Recording
             using (var store = GetDocumentStore())
@@ -213,13 +256,12 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
-                    documents = session.Query<User>().ToArray();
-                }
-                WaitForUserToContinueTheTest(store);
-            }
+                    var documents = session.Query<User>().ToArray();
 
-            //Assert
-            Assert.Equal(documents.First().Name, newName);
+                    //Assert
+                    Assert.Equal(documents.First().Name, newName);
+                }
+            }
         }
 
         [Theory]
@@ -227,8 +269,7 @@ namespace SlowTests.Server
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public void RecordingStoreAsBatch(params string[] expected)
         {
-            var filePath = Path.GetTempFileName();
-            User[] documents = { };
+            var filePath = NewDataPath();
 
             //Recording
             using (var store = GetDocumentStore())
@@ -253,21 +294,22 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
-                    documents = session.Query<User>().ToArray();
+                    var documents = session.Query<User>().ToArray();
+
+                    //Assert
+                    Assert.Contains(documents.Select(u => u.Name), n => expected.Contains(n));
                 }
             }
-
-            //Assert
-            Assert.Contains(documents.Select(u => u.Name), n => expected.Contains(n));
         }
 
         [Fact]
         public void RecordingDeleteAsBatch()
         {
-            var filePath = System.IO.Path.GetTempFileName();
+            var filePath = NewDataPath();
 
-            var toRemove = new User { Name = "ravenDb" };
-            User[] documents = { };
+            var expectedNames = new[] { "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper" };
+            var userToDelete = new User { Name = "Avi" };
+            var users = expectedNames.Select(n => new User { Name = n }).ToArray();
 
             //Recording
             using (var store = GetDocumentStore())
@@ -275,10 +317,15 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
                 using (var session = store.OpenSession())
                 {
-                    session.Store(toRemove);
+                    session.Store(userToDelete);
+
+                    foreach (var user in users)
+                    {
+                        session.Store(user);
+                    }
                     session.SaveChanges();
 
-                    session.Delete(toRemove);
+                    session.Delete(userToDelete);
                     session.SaveChanges();
                 }
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
@@ -291,29 +338,29 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
-                    documents = session.Query<User>().ToArray();
+                    var actualUserNames = session.Query<User>().Select(u => u.Name).ToArray();
+
+                    //Assert
+                    Assert.Equal(actualUserNames, expectedNames);
                 }
             }
-
-            //Assert
-            Assert.Empty(documents);
         }
 
         [Theory]
         [InlineData("Avi")]
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
-        public async Task RecordingSmuggler(params string[] names)
+        public async Task RecordingSmuggler(params string[] expectedNames)
         {
-            var recordFilePath = Path.GetTempFileName();
-            var exportFilePath = Path.GetTempFileName();
+            var recordFilePath = NewDataPath();
+            var exportFilePath = NewDataPath();
 
-            var expectedUsers = names.Select(n => new User { Name = n }).ToArray();
+            var users = expectedNames.Select(n => new User { Name = n }).ToArray();
 
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    foreach (var user in expectedUsers)
+                    foreach (var user in users)
                     {
                         session.Store(user);
                     }
@@ -335,24 +382,20 @@ namespace SlowTests.Server
             }
 
             //Replay
-            User[] actualUsers;
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
                 using (var session = store.OpenSession())
                 {
-                    actualUsers = session.Query<User>().ToArray();
+                    var actualNames = session.Query<User>().Select(u => u.Name).ToArray();
+
+                    //Assert
+                    Assert.All(expectedNames, en =>
+                        Assert.True(actualNames.Contains(en),
+                            $"{en} should appear one time but found {actualNames.Count(an => an == en)} times"));
                 }
             }
-
-            //Assert
-            var errors = expectedUsers
-                .Where(eu => actualUsers.Count(au => au.Name == eu.Name) != 1)
-                .Select(eu => $"{eu.Name} should appear one time but found {actualUsers.Count(au => au.Name == eu.Name)} times")
-                .ToArray();
-
-            Assert.True(!errors.Any(), string.Join(Environment.NewLine, errors));
         }
 
         [Theory]
@@ -360,7 +403,7 @@ namespace SlowTests.Server
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public async Task RecordingPut(params string[] names)
         {
-            var recordFilePath = Path.GetTempFileName();
+            var recordFilePath = NewDataPath();
 
             var expectedUsers = names.Select(n => new User { Name = n }).ToArray();
 
@@ -381,21 +424,20 @@ namespace SlowTests.Server
             }
 
             //Replay
-            User[] actualUsers;
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
 
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
-                    actualUsers = session.Query<User>().ToArray();
+                    var actualUsers = session.Query<User>().ToArray();
+
+                    //Assert
+                    Assert.Equal(expectedUsers, actualUsers, new UserComparer());
                 }
             }
 
-            //Assert
-            Assert.Equal(expectedUsers, actualUsers, new UserComparer());
         }
 
         [Theory]
@@ -403,7 +445,7 @@ namespace SlowTests.Server
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public void RecordingInsertBulk(params string[] names)
         {
-            var recordFilePath = Path.GetTempFileName();
+            var recordFilePath = NewDataPath();
 
             var expectedUsers = names.Select(n => new User { Name = n }).ToArray();
 
@@ -424,7 +466,6 @@ namespace SlowTests.Server
             }
 
             //Replay
-            User[] actualUsers;
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
@@ -432,18 +473,18 @@ namespace SlowTests.Server
 
                 using (var session = store.OpenSession())
                 {
-                    actualUsers = session.Query<User>().ToArray();
+                    var actualUsers = session.Query<User>().ToArray();
+
+                    //Assert
+                    Assert.Equal(expectedUsers, actualUsers, new UserComparer());
                 }
             }
-
-            //Assert
-            Assert.Equal(expectedUsers, actualUsers, new UserComparer());
         }
 
         //        [Fact]
         //        public void RecordingBulkOperation()
         //        {
-        //            var recordFilePath = Path.GetTempFileName();
+        //            var recordFilePath = NewDataPath();
         //            const int newAge = 57;
         //            var user = new User { Name = "Avi"};
         //
@@ -475,7 +516,6 @@ namespace SlowTests.Server
         //            using (var store = GetDocumentStore())
         //            {
         //                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(recordFilePath));
-        //                WaitForUserToContinueTheTest(store);
         //                using (var session = store.OpenSession())
         //                {
         //                    actualUser = session.Load<User>(user.Id);
