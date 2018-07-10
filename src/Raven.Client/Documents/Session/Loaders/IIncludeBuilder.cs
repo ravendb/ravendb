@@ -63,9 +63,32 @@ namespace Raven.Client.Documents.Session.Loaders
     public class IncludeBuilder
     {
         internal HashSet<string> DocumentsToInclude;
-        internal HashSet<string> CountersToInclude => CountersToIncludeBySourcePath[string.Empty].CountersToInclude;
-        internal bool AllCounters => CountersToIncludeBySourcePath[string.Empty].AllCounters;
+
         internal string Alias;
+
+        internal HashSet<string> CountersToInclude
+        {
+            get
+            {
+                if (CountersToIncludeBySourcePath == null)
+                    return null;
+
+                CountersToIncludeBySourcePath.TryGetValue(string.Empty, out var value);
+                return value.CountersToInclude;
+            }
+        }
+
+        internal bool AllCounters
+        {
+            get
+            {
+                if (CountersToIncludeBySourcePath == null)
+                    return false;
+
+                CountersToIncludeBySourcePath.TryGetValue(string.Empty, out var value);
+                return value.AllCounters;
+            }
+        }
 
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
     }
