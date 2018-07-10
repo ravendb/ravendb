@@ -154,7 +154,7 @@ class documents extends viewModelBase {
 
         this.registerDisposable(this.tracker.registerOnGlobalChangeVectorUpdatedHandler((changeVector: string) => {
             if (this.currentCollection().isAllDocuments) {
-                if (this.gridController().resultEtag() !== changeVector) {
+                if (changeVector && this.gridController().resultEtag() !== changeVector) {
                     this.dirtyCurrentCollection(true);
                 }
             }
