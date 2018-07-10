@@ -870,7 +870,7 @@ namespace Raven.Server.Commercial
             {
                 activeTcpListeners = ipProperties.GetActiveTcpListeners();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // If GetActiveTcpListeners is not supported, skip the validation
                 // See https://github.com/dotnet/corefx/issues/30909

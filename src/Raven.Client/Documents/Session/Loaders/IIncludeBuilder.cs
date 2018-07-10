@@ -6,58 +6,36 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
-    public interface IIncludeOperations<T>
+    public interface IIncludeBuilder<T, out TBuilder>
     {
-        IIncludeOperations<T> IncludeDocuments(string path);
+        TBuilder IncludeCounter(string name);
 
-        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, string>> path);
+        TBuilder IncludeCounters(string[] names);
 
-        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
+        TBuilder IncludeAllCounters();
 
-        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
+        TBuilder IncludeDocuments(string path);
 
-        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
+        TBuilder IncludeDocuments(Expression<Func<T, string>> path);
 
-        IIncludeOperations<T> IncludeCounter(string name);
+        TBuilder IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
 
-        IIncludeOperations<T> IncludeCounters(string[] names);
+        TBuilder IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
 
-        IIncludeOperations<T> IncludeAllCounters();
-
-        IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name);
-
-        IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
-
-        IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path);
+        TBuilder IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
     }
 
-    public interface IIncludeBuilder<T>
+    public interface IIncludeBuilder<T> : IIncludeBuilder<T, IIncludeBuilder<T>>
     {
-        IIncludeOperations<T> IncludeDocuments(string path);
-
-        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, string>> path);
-
-        IIncludeOperations<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
-
-        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
-
-        IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
-
-        IIncludeOperations<T> IncludeCounter(string name);
-
-        IIncludeOperations<T> IncludeCounters(string[] names);
-
-        IIncludeOperations<T> IncludeAllCounters();
     }
 
-
-    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T>
+    public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T, IQueryIncludeBuilder<T>>
     {
-        IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name);
+        IQueryIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name);
 
-        IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
+        IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
 
-        IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path);
+        IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
     }
 
     public class IncludeBuilder
@@ -93,7 +71,7 @@ namespace Raven.Client.Documents.Session.Loaders
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
     }
 
-    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeOperations<T>
+    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>
     {
         private readonly DocumentConventions _conventions;
 
@@ -102,73 +80,138 @@ namespace Raven.Client.Documents.Session.Loaders
             _conventions = conventions;
         }
 
-        public IIncludeOperations<T> IncludeDocuments(string path)
+        IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeCounter(Expression<Func<T, string>> path, string name)
         {
-            if (DocumentsToInclude == null)
-                DocumentsToInclude = new HashSet<string>();
-            DocumentsToInclude.Add(path);
+            IncludeCounterWithAlias(path, name);
             return this;
         }
 
-        public IIncludeOperations<T> IncludeDocuments(Expression<Func<T, string>> path)
+        IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeCounters(Expression<Func<T, string>> path, string[] names)
         {
-            return IncludeDocuments(path.ToPropertyPath());
+            IncludeCountersWithAlias(path, names);
+            return this;
         }
 
-        public IIncludeOperations<T> IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeAllCounters(Expression<Func<T, string>> path)
         {
-            return IncludeDocuments(path.ToPropertyPath());
+            IncludeAllCountersWithAlias(path);
+            return this;
         }
 
-
-        public IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
-        {
-            return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
-        }
-
-        public IIncludeOperations<T> IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
-        {
-            return IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
-        }
-
-        public IIncludeOperations<T> IncludeCounter(string name)
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
-
-        public IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name)
-        {
-            WithAlias(path);
-            IncludeCounter(path.ToPropertyPath(), name);
-            return this;
-        }
-
-        public IIncludeOperations<T> IncludeCounters(string[] names)
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
-        public IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllCounters()
+        {
+            IncludeAllCounters(string.Empty);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(string path)
+        {
+            IncludeDocuments(path);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath());
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath());
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounter(string name)
+        {
+            IncludeCounter(string.Empty, name);
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounters(string[] names)
+        {
+            IncludeCounters(string.Empty, names);
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllCounters()
+        {
+            IncludeAllCounters(string.Empty);
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(string path)
+        {
+            IncludeDocuments(path);
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath());
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath());
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return this;
+        }
+
+        IIncludeBuilder<T> IIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            return this;
+        }
+
+        private void IncludeDocuments(string path)
+        {
+            if (DocumentsToInclude == null)
+                DocumentsToInclude = new HashSet<string>();
+
+            DocumentsToInclude.Add(path);
+        }
+
+        private void IncludeCounterWithAlias(Expression<Func<T, string>> path, string name)
+        {
+            WithAlias(path);
+            IncludeCounter(path.ToPropertyPath(), name);
+        }
+
+        private void IncludeCountersWithAlias(Expression<Func<T, string>> path, string[] names)
         {
             WithAlias(path);
             IncludeCounters(path.ToPropertyPath(), names);
-            return this;
-        }
-
-        public IIncludeOperations<T> IncludeAllCounters()
-        {
-            IncludeAll(string.Empty);
-            return this;
-        }
-
-        public IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path)
-        {
-            WithAlias(path);
-            IncludeAll(path.ToPropertyPath());
-            return this;
         }
 
         private void IncludeCounter(string path, string name)
@@ -200,7 +243,13 @@ namespace Raven.Client.Documents.Session.Loaders
 
         }
 
-        private void IncludeAll(string sourcePath)
+        private void IncludeAllCountersWithAlias(Expression<Func<T, string>> path)
+        {
+            WithAlias(path);
+            IncludeAllCounters(path.ToPropertyPath());
+        }
+
+        private void IncludeAllCounters(string sourcePath)
         {
             if (CountersToIncludeBySourcePath == null)
             {
@@ -241,7 +290,5 @@ namespace Raven.Client.Documents.Session.Loaders
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
         }
-
     }
-
 }
