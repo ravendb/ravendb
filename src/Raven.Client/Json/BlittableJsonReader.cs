@@ -26,7 +26,7 @@ namespace Raven.Client.Json
         private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
         private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
 
-        private readonly JsonOperationContext _context;
+        public JsonOperationContext Context { get; }
 
         public BlittableJsonReader()
         {
@@ -35,7 +35,7 @@ namespace Raven.Client.Json
 
         public BlittableJsonReader(JsonOperationContext context)
         {
-            _context = context;
+            Context = context;
         }
 
         public void Init(BlittableJsonReaderObject root)
@@ -352,35 +352,5 @@ namespace Raven.Client.Json
                 return null;
             return DateTimeOffset.ParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
         }
-
-        public BlittableJsonReaderObject ReadAsBlittableJsonReaderObject()
-        {
-            if (Value == null)
-            {
-                return null;
-            }
-
-            if (Value is BlittableJsonReaderObject blittableValue)
-            {
-                return blittableValue.Clone(_context);
-            }
-            throw new SerializationException($"Try to read {nameof(BlittableJsonReaderObject)} from non {nameof(BlittableJsonReaderObject)} value");
-        }
-
-        public LazyStringValue ReadAsLazyStringValue()
-        {
-            if (Value == null)
-            {
-                return null;
-            }
-
-            //Todo To consider if should change the reader to set the value as LazyStringValue 
-            if (Value is string strValue)
-            {
-                return _context.GetLazyString(strValue);
-            }
-            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from non {nameof(LazyStringValue)} value");
-        }
     }
-
 }

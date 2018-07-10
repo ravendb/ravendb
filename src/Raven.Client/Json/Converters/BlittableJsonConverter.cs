@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text;
 using Newtonsoft.Json;
 using Sparrow.Json;
@@ -9,12 +10,6 @@ namespace Raven.Client.Json.Converters
 
     internal sealed class BlittableJsonConverter : RavenJsonConverter
     {
-        //Todo To consider put context as part of the converter and not part of the reader
-        //public BlittableJsonConverter(JsonOperationContext context)
-        //{
-        //    _context = context;
-        //}
-
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             writer.WriteValue(value);
@@ -22,19 +17,23 @@ namespace Raven.Client.Json.Converters
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            //Todo To consider put context as part of the converter and not part of the reader
-            //if (reader.Value is BlittableJsonReaderObject blittable)
-            //{
-            //    return blittable.Clone(_context);
-            //}
-            //throw new Exception($"Value must be {nameof(BlittableJsonReaderObject)}");
-
-            if (reader is BlittableJsonReader blittableReader)
+            var blittableReader = reader as BlittableJsonReader;
+            if (blittableReader == null)
             {
-                return blittableReader.ReadAsBlittableJsonReaderObject();
+                throw new Exception($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
             }
 
-            throw new Exception($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
+            if (blittableReader.Value == null)
+            {
+                return null;
+            }
+
+            if (blittableReader.Value is BlittableJsonReaderObject blittableValue)
+            {
+                return blittableValue.Clone(blittableReader.Context);
+            }
+            throw new SerializationException($"Try to read {nameof(BlittableJsonReaderObject)} from non {nameof(BlittableJsonReaderObject)} value");
+
         }
 
         public override bool CanConvert(Type objectType)

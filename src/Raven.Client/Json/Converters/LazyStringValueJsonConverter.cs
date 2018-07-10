@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Sparrow.Json;
 
@@ -6,13 +7,6 @@ namespace Raven.Client.Json.Converters
 {
     internal sealed class LazyStringValueJsonConverter : RavenJsonConverter
     {
-        //Todo To consider put context as part of the converter and not part of the reader
-        //public BlittableJsonConverter(JsonOperationContext context)
-        //{
-        //    _context = context;
-        //}
-
-
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             writer.WriteValue(value);
@@ -20,18 +14,23 @@ namespace Raven.Client.Json.Converters
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            //Todo To consider put context as part of the converter and not part of the reader
-            //if (reader.Value is LazyStringValue lazyString)
-            //{
-            //    return lazyString.Clone(_context);
-            //}
-            //throw new Exception($"Value must be {nameof(BlittableJsonReaderObject)}");
-
-            if (reader is BlittableJsonReader blittableReader)
+            var blittableReader = reader as BlittableJsonReader;
+            if (blittableReader == null)
             {
-                return blittableReader.ReadAsLazyStringValue();
+                throw new Exception($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
             }
-            throw new Exception($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
+
+            if (blittableReader.Value == null)
+            {
+                return null;
+            }
+
+            //Todo It will be better to change the reader to set the value as LazyStringValue 
+            if (blittableReader.Value is string strValue)
+            {
+                return blittableReader.Context.GetLazyString(strValue);
+            }
+            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from non {nameof(LazyStringValue)} value");
         }
 
         public override bool CanConvert(Type objectType)
