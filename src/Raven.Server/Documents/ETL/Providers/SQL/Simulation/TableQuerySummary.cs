@@ -61,6 +61,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
             {
                 paramterValue = $"'{RelationalDatabaseWriter.SanitizeSqlValue(paramterValue.ToString())}'";
             }
+            else if (param.DbType == DbType.Binary)
+            {
+                paramterValue = "<binary_data>";
+            }
 
             return paramterValue;
         }
