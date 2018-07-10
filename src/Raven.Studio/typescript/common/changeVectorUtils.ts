@@ -1,7 +1,5 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 
-import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
-
 class changeVectorUtils {
 
     static shouldUseLongFormat(changeVectors: string[]) {
@@ -54,8 +52,16 @@ class changeVectorUtils {
                 } as changeVectorItem;
             });
         }
-        
     }
+
+
+    static formatChangeVectorAsShortString(input: string) {
+        //A:1066-8Bk5eyIYfES1TzuU6TnzPg, C:1066-iazDDYGWiUmj8AwW4jgjYA, E:1066-m9yioKcvEkGny6tfKJo3Tw, B:1068-5hNdZ22Up0e+KkaU7u2VUg, D:1066-OHQUXCEyYU6VE
+        const tokens = changeVectorUtils.parse(input);
+        return tokens.map(x => `${x.tag}:${x.etag}`).join(", ");
+    }
+                              
+    
 } 
 
 export = changeVectorUtils;

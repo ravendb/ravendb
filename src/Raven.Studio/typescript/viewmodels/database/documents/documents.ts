@@ -7,6 +7,7 @@ import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import changeVectorUtils = require("common/changeVectorUtils");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -194,7 +195,7 @@ class documents extends viewModelBase {
                 return [
                     new checkedColumn(true),
                     new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
-                    new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "200px"),
+                    new textColumn<document>(grid, x => changeVectorUtils.formatChangeVectorAsShortString(x.__metadata.changeVector()), "Change Vector", "200px"),
                     new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Last Modified", "300px"),
                     new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px"),
                     new flagsColumn(grid)
@@ -215,6 +216,8 @@ class documents extends viewModelBase {
             if (column instanceof textColumn) {
                 if (this.currentCollection().isAllDocuments && column.header === "Last Modified") {
                     onValue(moment.utc(doc.__metadata.lastModified()), doc.__metadata.lastModified());
+                } else if (this.currentCollection().isAllDocuments && column.header === "Change Vector") {
+                    onValue(doc.__metadata.changeVector());
                 } else {
                     fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                         if (!_.isUndefined(v)) {
