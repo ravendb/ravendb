@@ -124,20 +124,27 @@ class spatialOptions {
 
         let x = maxX - minX;
         let y = maxY - minY;
-        for (let i = 0; i < maxTreeLevel; i++) {
-            if (strategy === "GeohashPrefixTree") {
-                if (i % 2 == 0) {
-                    x /= 8;
-                    y /= 4;
+        
+        if (maxTreeLevel > 100) {
+            // prevent from iterating on very huge values - which will lead to 0 anyway
+            x = 0;
+            y = 0;
+        } else {
+            for (let i = 0; i < maxTreeLevel; i++) {
+                if (strategy === "GeohashPrefixTree") {
+                    if (i % 2 == 0) {
+                        x /= 8;
+                        y /= 4;
+                    }
+                    else {
+                        x /= 4;
+                        y /= 8;
+                    }
                 }
-                else {
-                    x /= 4;
-                    y /= 8;
+                else if (strategy === "QuadPrefixTree") {
+                    x /= 2;
+                    y /= 2;
                 }
-            }
-            else if (strategy === "QuadPrefixTree") {
-                x /= 2;
-                y /= 2;
             }
         }
 
