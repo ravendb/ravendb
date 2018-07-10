@@ -1353,7 +1353,7 @@ namespace Raven.Client.Http
             add
             {
                 if (ServerCertificateCustomValidationCallbackRegistrationException != null)
-                    throw ServerCertificateCustomValidationCallbackRegistrationException;
+                    ThrowRemoteCertificateValidationCallbackRegistrationException();
 
                 lock (_locker)
                 {
@@ -1364,13 +1364,20 @@ namespace Raven.Client.Http
             remove
             {
                 if (ServerCertificateCustomValidationCallbackRegistrationException != null)
-                    throw ServerCertificateCustomValidationCallbackRegistrationException;
+                    ThrowRemoteCertificateValidationCallbackRegistrationException();
 
                 lock (_locker)
                 {
                     _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Except(new[] { value }).ToArray();
                 }
             }
+        }
+
+        private static void ThrowRemoteCertificateValidationCallbackRegistrationException()
+        {
+            throw new PlatformNotSupportedException(
+                $"Cannot register {nameof(RemoteCertificateValidationCallback)}. {ServerCertificateCustomValidationCallbackRegistrationException.Message}",
+                ServerCertificateCustomValidationCallbackRegistrationException);
         }
 
         internal static bool OnServerCertificateCustomValidationCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
