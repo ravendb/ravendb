@@ -1157,7 +1157,7 @@ namespace Raven.Server.Web.System
                         {
                             using (database.PreventFromUnloading())
                             {
-                                // send some initial progess so studio can open details 
+                                // send some initial progress so studio can open details 
                                 result.AddInfo("Starting migration");
                                 result.AddInfo($"Path of temporary export file: {tmpFile}");
                                 onProgress(overallProgress);

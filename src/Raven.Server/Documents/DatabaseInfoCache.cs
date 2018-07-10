@@ -50,7 +50,6 @@ namespace Raven.Server.Documents
             using (var tx = context.OpenWriteTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
-
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
                 using (var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -100,7 +99,7 @@ namespace Raven.Server.Documents
         }
 
         /// <summary>
-        /// This method deletes the database info from the cache when the databse is deleted.
+        /// This method deletes the database info from the cache when the database is deleted.
         /// It assumes that the ctx already opened a write transaction.
         /// </summary>
         /// <param name="ctx">A context allocated outside the method with an open write transaction</param>
@@ -108,7 +107,7 @@ namespace Raven.Server.Documents
         public void DeleteInternal(TransactionOperationContext ctx, Slice databaseName)
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Deleteing database info for '{databaseName}'.");
+                Logger.Info($"Deleting database info for '{databaseName}'.");
             var table = ctx.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
             table.DeleteByKey(databaseName);
         }

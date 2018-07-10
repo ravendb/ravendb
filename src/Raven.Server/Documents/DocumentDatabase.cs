@@ -57,7 +57,7 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
-        private DisposeOnce<SingleAttempt> _disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents
                 HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 ConfigurationStorage = new ConfigurationStorage(this);
-                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
+                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown);
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
@@ -374,6 +374,7 @@ namespace Raven.Server.Documents
 
         private unsafe void DisposeInternal()
         {
+            _databaseShutdown.Cancel();
 
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
@@ -389,8 +390,6 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Failed to generate and store database info", e);
             }
-
-            _databaseShutdown.Cancel();
 
             // we'll wait for 1 minute to drain all the requests
             // from the database
@@ -588,7 +587,6 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
-                PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
                 DocumentsStorage.Environment.ScratchBufferPool.Cleanup();
             }
             finally
