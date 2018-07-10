@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/transactions/stop-recording";
+                url = $"{node.Url}/databases/{node.Database}/admin/transactions/stop-recording";
 
                 var request = new HttpRequestMessage
                 {

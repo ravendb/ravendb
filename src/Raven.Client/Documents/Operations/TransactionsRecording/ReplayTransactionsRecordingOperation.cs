@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -13,6 +14,8 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
         public ReplayTransactionsRecordingOperation(Stream replayStream)
         {
             _replayStream = replayStream;
+            if (_replayStream.Position != 0)
+                throw new ArgumentException("For replay transactions recording the stream position must to be set to zero");
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -38,6 +41,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                     Method = HttpMethod.Post,
                     Content = new StreamContent(_replayStream)
                 };
+                _replayStream.Position = 0;
                 return request;
             }
         }

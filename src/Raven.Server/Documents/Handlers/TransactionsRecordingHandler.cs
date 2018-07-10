@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
@@ -18,29 +19,29 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/transactions/start-recording", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/databases/*/admin/transactions/start-recording", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task StartRecording()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                const string filePropertyName = "file";
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "body request");
-                if (false == input.TryGet(filePropertyName, out string filePath))
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                var parameters = JsonDeserializationServer.StartTransactionsRecordingOperationParameters(json);
+                if (parameters.File == null)
                 {
-                    ThrowRequiredPropertyNameInRequest(filePropertyName);
+                    ThrowRequiredPropertyNameInRequest(nameof(parameters.File));
                 }
 
                 var command = new TransactionsRecordingCommand(
                         Database.TxMerger,
                         TransactionsRecordingCommand.Instruction.Start,
-                        filePath
+                        parameters.File
                     );
 
                 await Database.TxMerger.Enqueue(command);
             }
         }
 
-        [RavenAction("/databases/*/transactions/stop-recording", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/databases/*/admin/transactions/stop-recording", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task StopRecording()
         {
             var command = new TransactionsRecordingCommand(
