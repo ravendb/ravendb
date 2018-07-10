@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
                     object result = null;
                     string responseString = null;
                     string errorMessage = null;
-                    
+
                     try
                     {
                         var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
@@ -91,7 +91,7 @@ namespace Raven.Server.Web.System
                         error = e.ToString();
                         errorMessage = DomainRegistrationServiceUnreachableError;
                     }
-                    
+
                     using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                     {
                         if (error != null)
@@ -103,14 +103,14 @@ namespace Raven.Server.Web.System
                                 Error = error,
                                 Type = typeof(RavenException).FullName
                             });
-                            
+
                             streamWriter.Flush();
                         }
                         else
                         {
                             streamWriter.Write(responseString);
                         }
-                        
+
                         streamWriter.Flush();
                     }
                 }
@@ -165,13 +165,13 @@ namespace Raven.Server.Web.System
                     }
 
                     if (error != null)
-                    {   
+                    {
                         JToken errorJToken = null;
                         if (responseString != null)
                         {
-                            JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken); 
+                            JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken);
                         }
-                        
+
                         using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
                             new JsonSerializer().Serialize(streamWriter, new
@@ -254,7 +254,7 @@ namespace Raven.Server.Web.System
             using (var userDomainsWithIpsJson = context.ReadForMemory(RequestBodyStream(), "setup-secured"))
             {
                 var userDomainsWithIps = JsonDeserializationServer.UserDomainsWithIps(userDomainsWithIpsJson);
-                
+
                 foreach (var domain in userDomainsWithIps.Domains)
                 {
                     foreach (var subDomain in domain.Value)
@@ -276,7 +276,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, blittable);
                 }
             }
-            
+
             return Task.CompletedTask;
         }
 
@@ -317,17 +317,15 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             NetworkInterface[] netInterfaces = null;
-            List<string> ips;
             try
             {
                 netInterfaces = NetworkInterface.GetAllNetworkInterfaces();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // https://github.com/dotnet/corefx/issues/26476
                 // If GetAllNetworkInterfaces is not supported, we'll just return the default: 127.0.0.1
             }
-
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -340,6 +338,7 @@ namespace Raven.Server.Web.System
                 writer.WriteStartArray();
                 var first = true;
 
+                List<string> ips;
                 if (netInterfaces != null)
                 {
                     foreach (var netInterface in netInterfaces)
@@ -398,7 +397,7 @@ namespace Raven.Server.Web.System
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
-                
+
 
                 writer.WriteEndArray();
                 writer.WriteEndObject();
@@ -639,7 +638,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-setup-info"))
-            {                
+            {
                 var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
                 byte[] zipBytes;
                 try
@@ -668,7 +667,7 @@ namespace Raven.Server.Web.System
                             using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json"))
                                 if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
                                     urlByTag[tag] = publicServerUrl;
-                            
+
                         }
                     }
 
@@ -692,7 +691,7 @@ namespace Raven.Server.Web.System
 
                             first = false;
                         }
-                        
+
                         writer.WriteEndArray();
                     }
 
@@ -710,7 +709,7 @@ namespace Raven.Server.Web.System
         public async Task ContinueClusterSetup()
         {
             AssertOnlyInSetupMode();
-            
+
             var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
             var operationId = GetLongQueryString("operationId", false);
 
@@ -728,7 +727,7 @@ namespace Raven.Server.Web.System
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, operationCancelToken);
             }
-            
+
             NoContentStatus();
         }
 
@@ -766,14 +765,14 @@ namespace Raven.Server.Web.System
         }
 
         private static string GeneralDomainRegistrationError = "Registration error.";
-        private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later."; 
+        private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later.";
     }
 
     public class LicenseInfo
     {
         public License License { get; set; }
     }
-    
+
     public class ConfigurationNodeInfo
     {
         public string Tag { get; set; }
