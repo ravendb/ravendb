@@ -95,16 +95,29 @@ namespace Raven.Client.Documents.Session
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                     new LinqMethods(), extension));
 
-            var patchRequest = new PatchRequest
-            {
-                Script = $"this.{pathScript}{adderScript}",
-                Values = extension.Parameters
-            };
+            var patchRequest = CreatePatchRequest(arrayAdder, pathScript, adderScript, extension);
 
             if (TryMergePatches(id, patchRequest) == false)
             {
                 Defer(new PatchCommandData(id, null, patchRequest, null));
             }
+        }
+
+        private static PatchRequest CreatePatchRequest<U>(Expression<Func<JavaScriptArray<U>, object>> arrayAdder, string pathScript, string adderScript, JavascriptConversionExtensions.CustomMethods extension)
+        {
+            var script = $"this.{pathScript}{adderScript}";
+
+            if (arrayAdder.Body is MethodCallExpression mce &&
+                mce.Method.Name == nameof(JavaScriptArray<U>.RemoveAll))
+            {
+                script = $"this.{pathScript} = {script}";
+            }
+
+            return new PatchRequest
+            {
+                Script = script,
+                Values = extension.Parameters
+            };
         }
 
         private bool TryMergePatches(string id, PatchRequest patchRequest)
