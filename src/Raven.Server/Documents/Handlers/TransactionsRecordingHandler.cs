@@ -72,6 +72,11 @@ namespace Raven.Server.Documents.Handlers
             _filePath = filePath;
         }
 
+        public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
+        {
+            return ExecuteDirectly(context);
+        }
+
         protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             switch (_instruction)

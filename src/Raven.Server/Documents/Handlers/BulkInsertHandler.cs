@@ -229,23 +229,21 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (mergedCmdReader.TryGet(nameof(Commands), out BlittableJsonReaderArray commandsReader) == false)
                 {
-                    throw new Exception($"Cant read {nameof(Commands)} from {nameof(MergedInsertBulkCommand)}");
+                    throw new InvalidOperationException($"Can't read {nameof(Commands)} while deserializing {nameof(MergedInsertBulkCommand)}");
                 }
 
-                var i = 0;
                 var totalSize = 0;
                 var commands = new BatchRequestParser.CommandData[commandsReader.Length];
-                while (i < commandsReader.Length)
+                for (var i = 0; i < commandsReader.Length; i++)
                 {
                     var commandReader = commandsReader.GetByIndex<BlittableJsonReaderObject>(i);
                     commands[i] = BatchRequestParser.ReadCommand(commandReader, database, context);
                     totalSize += commands[i].Document.Size;
-                    i++;
                 }
 
                 var ret = new MergedInsertBulkCommand
                 {
-                    NumberOfCommands = i,
+                    NumberOfCommands = commandsReader.Length,
                     TotalSize = totalSize,
                     Commands = commands,
                     Database = database,

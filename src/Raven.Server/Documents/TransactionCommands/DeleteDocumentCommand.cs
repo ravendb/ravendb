@@ -1,4 +1,5 @@
 ﻿using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -56,9 +57,9 @@ namespace Raven.Server.Documents.TransactionCommands
         {
             if (!reader.TryGet(IdKey, out string id))
             {
-                return null;
+                throw new SerializationException($"Can't read {IdKey} of {nameof(DeleteDocumentCommand)}");
             }
-            
+
             return new DeleteDocumentCommand(id, null, database);
         }
     }

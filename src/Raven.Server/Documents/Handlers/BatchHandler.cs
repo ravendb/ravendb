@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.PATCH:
                             try
                             {
-                                cmd.PatchCommand.Execute(context, null);
+                                cmd.PatchCommand.ExecuteDirectly(context);
                             }
                             catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
                             {
@@ -541,10 +541,9 @@ namespace Raven.Server.Documents.Handlers
                     Database = database
                 };
 
-                if (!mergedCmdReader.TryGet(nameof(ParsedCommands), out BlittableJsonReaderArray parsedCommandsReader))
+                if (false == mergedCmdReader.TryGet(nameof(ParsedCommands), out BlittableJsonReaderArray parsedCommandsReader))
                 {
-                    //Todo To decide what happen
-                    return null;
+                    throw new InvalidOperationException($"Can't read {nameof(ParsedCommands)} while deserializing {nameof(MergedBatchCommand)}");
                 }
 
                 var commandsData = new BatchRequestParser.CommandData[parsedCommandsReader.Length];

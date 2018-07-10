@@ -80,7 +80,6 @@ namespace Raven.Server.Documents
         public int NumberOfQueuedOperations => _operations.Count;
 
         private string TransactionMergerThreadName => $"'{_parent.Name}' Transaction Merging Thread";
-        private string TransactionRecordThreadName => $"'{_parent.Name}' Transaction Record Thread";
 
         public void Start()
         {
@@ -96,6 +95,11 @@ namespace Raven.Server.Documents
         public abstract class MergedTransactionCommand
         {
             protected abstract int ExecuteCmd(DocumentsOperationContext context);
+
+            internal int ExecuteDirectly(DocumentsOperationContext context)
+            {
+                return ExecuteCmd(context);
+            }
 
             public virtual int Execute(DocumentsOperationContext context, RecordingState recordingState)
             {
@@ -268,6 +272,7 @@ namespace Raven.Server.Documents
                         return;
                     }
 
+                    //Todo To decide where the file should be saved
                     var recordingFileStream = new FileStream(_filePath, FileMode.Create);
                     //Todo to use zip
                     var gZiprecordingFileStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
@@ -631,7 +636,7 @@ namespace Raven.Server.Documents
                     {
                         previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
 
-                        _recordingStatus?.Record(TxInstruction.FinishAsyncAndStartNew);
+                        _recordingStatus?.Record(TxInstruction.BeginAsyncCommitAndStartNewTransaction);
                         context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     }
                     catch (Exception e)
@@ -759,7 +764,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                //_recordingStatus?.Record(TxInstruction.DisposeTx, previous.Disposed == false);
+                _recordingStatus?.Record(TxInstruction.DisposeTx, previous.Disposed == false);
                 previous.Dispose();
             }
         }
@@ -806,7 +811,6 @@ namespace Raven.Server.Documents
         }
 
         private bool _alreadyListeningToPreviousOperationEnd;
-        //private bool _doRecordOperations = false;
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps,
@@ -1031,9 +1035,6 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
-                            //Todo I'm not sure for what is for...
-                            _recordingStatus?.Record(TxInstruction.Rollback);
-
                             if (alreadyRetried == false && op.RetryOnError)
                             {
                                 alreadyRetried = true;
@@ -1100,9 +1101,9 @@ namespace Raven.Server.Documents
             Commit,
             Rollback,
             DisposeTx,
-            FinishAsyncAndStartNew,
+            BeginAsyncCommitAndStartNewTransaction,
 
-            //Todo I think this is not relevant all the async instruction can run as one unit in  FinishAsyncAndStartNew
+            //Todo I think this is not relevant all the async instruction can run as one unit in  BeginAsyncCommitAndStartNewTransaction
             EndAsyncCommit
         }
 
@@ -1138,7 +1139,7 @@ namespace Raven.Server.Documents
                 var state = new JsonParserState();
                 var parser = new UnmanagedJsonParser(context, state, "file");
 
-                foreach (BlittableJsonReaderObject item in UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer))
+                foreach (var item in UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer))
                 {
                     using (item)
                     {
@@ -1159,12 +1160,10 @@ namespace Raven.Server.Documents
                                 case TxInstruction.Commit:
                                     txCtx.Transaction.Commit();
                                     break;
-                                case TxInstruction.Rollback:
-                                    break;
                                 case TxInstruction.DisposeTx:
                                     txDisposable.Dispose();
                                     break;
-                                case TxInstruction.FinishAsyncAndStartNew:
+                                case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
                                     var previousTx = txCtx.Transaction;
                                     txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction();
                                     txDisposable = txCtx.Transaction;
@@ -1173,7 +1172,7 @@ namespace Raven.Server.Documents
                                     previousTx.Dispose();
                                     break;
                                 case TxInstruction.EndAsyncCommit:
-                                    //Todo I think this is not relevant all the async instruction can run as one unit in  FinishAsyncAndStartNew
+                                    //Todo I think this is not relevant all the async instruction can run as one unit in  BeginAsyncCommitAndStartNewTransaction
                                     //previousTx.EndAsyncCommit();
                                     break;
                             }
@@ -1223,7 +1222,7 @@ namespace Raven.Server.Documents
 
             if (cmd == null)
             {
-                //Todo to decide what to do when can't read command
+                //Todo to decide what to do when can't read command - "If there is an error, using the PeepingTomStream to provide context"
                 throw new Exception("Can't read MergedTransactionCommand for replay");
             }
             return cmd;

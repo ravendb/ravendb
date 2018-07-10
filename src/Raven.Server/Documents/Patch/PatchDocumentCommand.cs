@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 using Esprima.Ast;
 using Jint.Native;
 using Raven.Client.Documents.Operations;
@@ -338,7 +339,7 @@ namespace Raven.Server.Documents.Patch
 
         private static void ThrowCantReadProperty(string idKey)
         {
-            throw new Exception($"Can't read {idKey} of {nameof(PatchDocumentCommand)}");
+            throw new SerializationException($"Can't read {idKey} of {nameof(PatchDocumentCommand)}");
         }
     }
 }

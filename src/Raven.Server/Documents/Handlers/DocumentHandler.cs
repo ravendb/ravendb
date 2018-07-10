@@ -548,12 +548,12 @@ namespace Raven.Server.Documents.Handlers
         {
             if (mergedCmdReader.TryGet(IdKey, out string id) == false)
             {
-                throw new Exception($"Cant read {IdKey} from {nameof(MergedPutCommand)}");
+                throw new InvalidOperationException($"Can't read {IdKey} while deserializing {nameof(MergedPutCommand)}");
             }
 
             if (mergedCmdReader.TryGet(DocumentKey, out BlittableJsonReaderObject document) == false)
             {
-                throw new Exception($"Cant read {DocumentKey} from {nameof(MergedPutCommand)}");
+                throw new InvalidOperationException($"Can't read {DocumentKey} while deserializing {nameof(MergedPutCommand)}");
             }
 
             document = document.Clone(context);

@@ -182,14 +182,19 @@ namespace Raven.Server.Documents.Queries
                 _getDetails = getDetails;
             }
 
-            protected override int ExecuteCmd(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
             {
-                var count = _command.Execute(context, null);
+                var count = _command.Execute(context, recording);
 
                 if (_retieveDetails)
                     AfterExecute?.Invoke(_getDetails(_command));
 
                 return count;
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                throw new NotSupportedException("Should only call Execute() here");
             }
 
             public Action<IBulkOperationDetails> AfterExecute { private get; set; }

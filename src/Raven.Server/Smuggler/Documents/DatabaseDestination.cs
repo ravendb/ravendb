@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
@@ -685,16 +686,15 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (mergedCmdReader.TryGet(nameof(BuildVersionType), out BuildVersionType type) == false)
                 {
-                    throw new Exception($"Can't read {nameof(BuildVersionType)} from {nameof(MergedBatchPutCommand)}");
+                    throw new SerializationException($"Can't read {nameof(BuildVersionType)} from {nameof(MergedBatchPutCommand)}");
                 }
 
-                //Todo To check if log is necessary 
                 var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
                 var ret = new MergedBatchPutCommand(database, type, log);
 
                 if (mergedCmdReader.TryGet(nameof(Documents), out BlittableJsonReaderArray documentsReader) == false)
                 {
-                    throw new Exception($"Can't read {nameof(Documents)} from {nameof(MergedBatchPutCommand)}");
+                    throw new SerializationException($"Can't read {nameof(Documents)} from {nameof(MergedBatchPutCommand)}");
                 }
 
                 for (var i = 0; i < documentsReader.Length; i++)
@@ -755,7 +755,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private static void ThrowCantReadProperty(string objName, string propName)
             {
-                throw new Exception($"Can't read {propName} from {objName}");
+                throw new SerializationException($"Can't read {propName} from {objName}");
             }
         }
     }
