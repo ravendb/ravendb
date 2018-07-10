@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Session.Loaders
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
     }
 
-    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>
+    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeOperations<T>
     {
         private readonly DocumentConventions _conventions;
 
@@ -117,9 +117,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         public IIncludeOperations<T> IncludeCounter(Expression<Func<T, string>> path, string name)
         {
-            if (Alias == null)
-                Alias = path.Parameters[0].Name;
-
+            WithAlias(path);
             IncludeCounter(path.ToPropertyPath(), name);
             return this;
         }
@@ -132,9 +130,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         public IIncludeOperations<T> IncludeCounters(Expression<Func<T, string>> path, string[] names)
         {
-            if (Alias == null)
-                Alias = path.Parameters[0].Name;
-
+            WithAlias(path);
             IncludeCounters(path.ToPropertyPath(), names);
             return this;
         }
@@ -142,17 +138,13 @@ namespace Raven.Client.Documents.Session.Loaders
         public IIncludeOperations<T> IncludeAllCounters()
         {
             IncludeAll(string.Empty);
-
             return this;
         }
 
         public IIncludeOperations<T> IncludeAllCounters(Expression<Func<T, string>> path)
         {
-            if (Alias == null)
-                Alias = path.Parameters[0].Name;
-
+            WithAlias(path);
             IncludeAll(path.ToPropertyPath());
-
             return this;
         }
 
@@ -219,6 +211,12 @@ namespace Raven.Client.Documents.Session.Loaders
             {
                 CountersToIncludeBySourcePath[path] = (false, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             }
+        }
+
+        private void WithAlias(Expression<Func<T, string>> path)
+        {
+            if (Alias == null)
+                Alias = path.Parameters[0].Name;
         }
 
     }

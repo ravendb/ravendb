@@ -883,7 +883,7 @@ namespace Raven.Client.Documents.Session
                 IsGroupBy,
                 queryData?.DeclareToken,
                 queryData?.LoadTokens,
-                queryData?.FromAlias ?? FromAlias)
+                queryData?.FromAlias)
             {
                 PageSize = PageSize,
                 SelectTokens = SelectTokens,
@@ -911,8 +911,7 @@ namespace Raven.Client.Documents.Session
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
-                DefaultOperator = DefaultOperator,
-                FromAlias = FromAlias
+                DefaultOperator = DefaultOperator
             };
 
             return query;
