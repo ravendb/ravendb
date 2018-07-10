@@ -2,11 +2,8 @@
 
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import database = require("models/resources/database");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
-import collection = require("models/database/documents/collection");
-import document = require("models/database/documents/document");
 
 class queryCompleter {
     private rules: AceAjax.RqlHighlightRules;
@@ -625,41 +622,16 @@ class queryCompleter {
                                 return this.completeError("Field not in the words list");
                             }
 
-                            // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                            if (lastKeyword.info.index) {
-                                this.providers.terms(lastKeyword.info.index, fieldName, 20, terms => {
-                                    if (terms && terms.length) {
-                                        return this.completeWords(terms.map(term => ({
-                                                caption: term,
-                                                value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
-                                                score: 1,
-                                                meta: "value"
-                                            })));
-                                    }
-                                })
-                            } else {
-                                if (!prefix || prefix.length < 1) {
-                                    return this.completeError("empty completion");
+                            this.providers.terms(lastKeyword.info.index, lastKeyword.info.collection, fieldName, 20, terms => {
+                                if (terms && terms.length) {
+                                    return this.completeWords(terms.map(term => ({
+                                            caption: term,
+                                            value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
+                                            score: 1,
+                                            meta: "term"
+                                        })));
                                 }
-
-                                this.providers.documentIdPrefix(this.trimValue(prefix), metadata => {
-                                    if (!metadata || metadata.length < 1) {
-                                        return this.completeError("no metadata");
-                                    }
-                                    const doc = metadata[0];
-                                    if (!doc || !doc["@metadata"]) {
-                                        return this.completeError("no metadata entry");
-                                    }
-                                    const meta = doc["@metadata"];
-                                    if (!meta || !meta["@id"]) {
-                                        return this.completeError("no @id in metadata");
-                                    }
-                                    const documentId = meta["@id"];
-                                    return this.completeWords([
-                                        {caption: documentId, value: queryCompleter.escapeCollectionOrFieldName(documentId), score: 1, meta: "@id"}
-                                    ]);
-                                });
-                            }
+                            });
                         });
                 }
 
@@ -822,18 +794,11 @@ class queryCompleter {
     
     static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: rqlQueryType) {
         const providers: queryCompleterProviders = {
-            terms: (indexName, field, pageSize, callback) => {
-                new getIndexTermsCommand(indexName, field, activeDatabase(), pageSize)
+            terms: (indexName, collection, field, pageSize, callback) => {
+                new getIndexTermsCommand(indexName, collection, field, activeDatabase(), pageSize)
                     .execute()
                     .done(terms => {
                         callback(terms.Terms);
-                    });
-            },
-            documentIdPrefix: (prefix, callback) => {
-                new getDocumentsMetadataByIDPrefixCommand(prefix, 1, activeDatabase())
-                    .execute()
-                    .done((results: metadataAwareDto[]) => {
-                        callback(results);
                     });
             },
             collections: (callback) => {

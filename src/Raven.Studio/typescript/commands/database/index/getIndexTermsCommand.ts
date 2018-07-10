@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexTermsCommand extends commandBase {
 
-    constructor(private indexName: string, private field: string, private db: database, private pageSize: number, private fromValue: string = undefined) {
+    constructor(private indexName: string, private collection: string, private field: string, private db: database, private pageSize: number, private fromValue: string = undefined) {
         super();
     }
 
@@ -12,6 +12,7 @@ class getIndexTermsCommand extends commandBase {
         const args = {
             field: this.field,
             name: this.indexName, 
+            collection: this.collection, 
             pageSize: this.pageSize,
             fromValue: this.fromValue
         };
