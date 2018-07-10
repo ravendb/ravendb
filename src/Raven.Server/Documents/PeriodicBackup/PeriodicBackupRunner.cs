@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static readonly Dictionary<string, long> EmptyDictionary = new Dictionary<string, long>();
 
-        private readonly ConcurrentSet<Task> _inactiveRunningPeriodicBackupsTasks = new ConcurrentSet<Task>();
         private bool _disposed;
 
         // interval can be 2^32-2 milliseconds at most
@@ -97,6 +96,26 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             var taskStatus = GetTaskStatus(databaseRecord, configuration, skipErrorLog: true);
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
+        }
+
+        private DateTime? GetNextWakeupTime(long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
+        {
+            // we will always wake up the database for a full backup.
+            // but for incremental we will wake the database only if there were changes made.
+            
+            var now = SystemTime.UtcNow;
+            if (backupStatus.LastEtag != lastEtag)
+            {
+                var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
+                var nextlastIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency,
+                    lastIncrementalBackup, configuration, skipErrorLog: false);
+                if (nextlastIncrementalBackup != null)
+                    return nextlastIncrementalBackup;
+            }
+            
+            var lastFullBackup = backupStatus.LastFullBackupInternal ?? now;
+            return GetNextBackupOccurrence(configuration.FullBackupFrequency,
+                lastFullBackup, configuration, skipErrorLog: false);
         }
 
         private NextBackup GetNextBackupDetails(
@@ -297,6 +316,27 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup);
         }
 
+        public long GetWakeDatabaseTime()
+        {
+            var wakeupDatabase = long.MaxValue;
+            long lastEtag;
+
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+            }
+
+            foreach (var backup in _periodicBackups)
+            {
+                var nextBackup = GetNextWakeupTime(lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
+                if (nextBackup == null)
+                    continue;
+                wakeupDatabase = Math.Min(wakeupDatabase, nextBackup.Value.Ticks);
+            }
+            return wakeupDatabase;
+        }
+
         private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup)
         {
             if (periodicBackup.UpdateBackupTaskSemaphore.Wait(0) == false)
@@ -348,7 +388,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         try
                         {
-                            return await backupTask.RunPeriodicBackup(onProgress);
+                            using (_database.PreventFromUnloading())
+                            {
+                                return await backupTask.RunPeriodicBackup(onProgress);
+                            }
                         }
                         finally
                         {
@@ -493,12 +536,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (databaseRecord.PeriodicBackups == null)
             {
-                foreach (var periodicBackup in _periodicBackups)
+                Parallel.ForEach(_periodicBackups, (periodicBackup) =>
                 {
-                    periodicBackup.Value.DisableFutureBackups();
-
-                    TryAddInactiveRunningPeriodicBackups(periodicBackup.Value.RunningTask);
-                }
+                    periodicBackup.Value.Dispose();
+                });
+                _periodicBackups.Clear();
                 return;
             }
 
@@ -513,8 +555,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 UpdatePeriodicBackup(newBackupTaskId, periodicBackupConfiguration, taskState);
             }
 
-            RemoveInactiveCompletedTasks();
-
             var deletedBackupTaskIds = _periodicBackups.Keys.Except(allBackupTaskIds).ToList();
             foreach (var deletedBackupId in deletedBackupTaskIds)
             {
@@ -523,28 +563,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 // stopping any future backups
                 // currently running backups will continue to run
-                deletedBackup.DisableFutureBackups();
-                TryAddInactiveRunningPeriodicBackups(deletedBackup.RunningTask);
-            }
-        }
-
-        public void RemoveInactiveCompletedTasks()
-        {
-            if (_inactiveRunningPeriodicBackupsTasks.Count == 0)
-                return;
-
-            var tasksToRemove = new List<Task>();
-            foreach (var inactiveTask in _inactiveRunningPeriodicBackupsTasks)
-            {
-                if (inactiveTask.IsCompleted == false)
-                    continue;
-
-                tasksToRemove.Add(inactiveTask);
-            }
-
-            foreach (var taskToRemove in tasksToRemove)
-            {
-                _inactiveRunningPeriodicBackupsTasks.TryRemove(taskToRemove);
+                deletedBackup.Dispose();
             }
         }
 
@@ -557,15 +576,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
             if (_periodicBackups.TryGetValue(taskId, out var existingBackupState) == false)
             {
-                var newPeriodicBackup = new PeriodicBackup
+                var newPeriodicBackup = new PeriodicBackup(_logger)
                 {
                     Configuration = newConfiguration
                 };
 
-                _periodicBackups.TryAdd(taskId, newPeriodicBackup);
+                var periodicBackup = _periodicBackups.GetOrAdd(taskId, newPeriodicBackup);
+                if (periodicBackup != newPeriodicBackup)
+                {
+                    newPeriodicBackup.Dispose();
+                }
 
                 if (taskState == TaskStatus.ActiveByCurrentNode)
-                    newPeriodicBackup.UpdateTimer(GetTimer(newConfiguration, backupStatus));
+                    periodicBackup.UpdateTimer(GetTimer(newConfiguration, backupStatus));
 
                 return;
             }
@@ -644,15 +667,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             return TaskStatus.ActiveByOtherNode;
         }
 
-        private void TryAddInactiveRunningPeriodicBackups(Task runningTask)
-        {
-            if (runningTask == null ||
-                runningTask.IsCompleted)
-                return;
-
-            _inactiveRunningPeriodicBackupsTasks.Add(runningTask);
-        }
-
         public void Dispose()
         {
             if (_disposed)
@@ -670,46 +684,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     _cancellationToken.Cancel();
 
-                    foreach (var periodicBackup in _periodicBackups)
+                    Parallel.ForEach(_periodicBackups.Values, (periodicBackup) =>
                     {
-                        periodicBackup.Value.DisableFutureBackups();
-
-                        var task = periodicBackup.Value.RunningTask;
-                        WaitForTaskCompletion(task);
-                    }
-
-                    foreach (var task in _inactiveRunningPeriodicBackupsTasks)
-                    {
-                        WaitForTaskCompletion(task);
-                    }
+                        periodicBackup.Dispose();
+                    });
                 }
 
                 if (_tempBackupPath != null)
                     IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
             }
         }
-
-        private void WaitForTaskCompletion(Task task)
-        {
-            try
-            {
-                task?.Wait();
-            }
-            catch (ObjectDisposedException)
-            {
-                // shutting down, probably
-            }
-            catch (AggregateException e) when (e.InnerException is OperationCanceledException)
-            {
-                // shutting down
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Error when disposing periodic backup runner task", e);
-            }
-        }
-
+        
         public bool HasRunningBackups()
         {
             foreach (var periodicBackup in _periodicBackups)

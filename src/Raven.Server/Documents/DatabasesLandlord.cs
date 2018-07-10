@@ -29,6 +29,7 @@ namespace Raven.Server.Documents
         private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         private readonly TimeSpan _concurrentDatabaseLoadTimeout;
@@ -287,6 +288,14 @@ namespace Raven.Server.Documents
             {
                 var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
 
+                // we don't want to wake up database during dispose.
+                Parallel.ForEach(_wakeupTimers, (timer) =>
+                {
+                    var mre = new ManualResetEvent(false);
+                    timer.Value.Dispose(mre);
+                    mre.WaitOne();
+                });
+
                 // shut down all databases in parallel, avoid having to wait for each one
                 Parallel.ForEach(DatabasesCache.Values, new ParallelOptions
                 {
@@ -350,6 +359,11 @@ namespace Raven.Server.Documents
         {
             try
             {
+                if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
+                {
+                    timer.Dispose();
+                }
+
                 if (_disposing.TryEnterReadLock(0) == false)
                     ThrowServerIsBeingDisposed(databaseName);
 
@@ -661,10 +675,34 @@ namespace Raven.Server.Documents
             ValueChanged
         }
 
-        public void UnloadDirectly(StringSegment databaseName, [CallerMemberName] string caller = null)
+        public void UnloadDirectly(StringSegment databaseName, long? wakeup = null, [CallerMemberName] string caller = null)
         {
             LastRecentlyUsed.TryRemove(databaseName, out _);
-            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _, caller).Dispose();
+            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller).Dispose();
+            ScheduleDatabaseWakeup(databaseName.Value, wakeup);
+        }
+
+        private void ScheduleDatabaseWakeup(string name, long? wakeup)
+        {
+            if (name == null)
+                return;
+
+            if (_wakeupTimers.TryRemove(name, out var timer))
+            {
+                timer.Dispose();
+            }
+
+            if(wakeup.HasValue == false || wakeup.Value == long.MaxValue)
+                return;
+            
+            var dueTime = Math.Max(1000, (int)TimeSpan.FromTicks(wakeup.Value - DateTime.Now.Ticks).TotalMilliseconds);
+            _wakeupTimers.TryAdd(name, new Timer(_ =>
+            {
+                if (_disposing.IsWriteLockHeld)
+                    return;
+
+                TryGetOrCreateResourceStore(name); 
+            }, null, dueTime, Timeout.Infinite));
         }
 
         private void CompleteDatabaseUnloading(DocumentDatabase database)

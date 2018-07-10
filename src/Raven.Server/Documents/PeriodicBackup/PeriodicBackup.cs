@@ -3,13 +3,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
+using Sparrow.Logging;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class PeriodicBackup
+    public class PeriodicBackup : IDisposable
     {
         private readonly SemaphoreSlim _updateTimerSemaphore = new SemaphoreSlim(1);
         public readonly SemaphoreSlim UpdateBackupTaskSemaphore = new SemaphoreSlim(1);
+
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         public Timer BackupTimer { get; private set; }
 
@@ -26,6 +30,35 @@ namespace Raven.Server.Documents.PeriodicBackup
         public PeriodicBackupStatus BackupStatus { get; set; }
 
         public PeriodicBackupStatus RunningBackupStatus { get; set; }
+
+        public PeriodicBackup(Logger logger)
+        {
+            _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
+            {
+                DisableFutureBackups();
+
+                if (RunningTask?.IsCompleted == false)
+                {
+                    RunningTask.ContinueWith(t =>
+                    {
+                        var exception = t.Exception?.GetBaseException();
+                        if (exception != null)
+                        {
+                            if (exception is ObjectDisposedException ||
+                                (exception is AggregateException && exception.InnerException is OperationCanceledException))
+                            {
+                                // expected
+                            }
+                            else
+                            {
+                                if (logger.IsInfoEnabled)
+                                    logger.Info("Error when disposing periodic backup runner task", exception);
+                            }
+                        }
+                    });
+                }
+            });
+        }
 
         public void DisableFutureBackups()
         {
@@ -69,6 +102,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         public bool HasScheduledBackup()
         {
             return BackupTimer != null;
+        }
+
+        public void Dispose()
+        {
+            _disposeOnce.Dispose();
         }
     }
 }

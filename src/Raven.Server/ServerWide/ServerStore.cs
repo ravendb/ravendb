@@ -1419,13 +1419,8 @@ namespace Raven.Server.ServerWide
                     foreach (var db in databasesToCleanup)
                     {
 
-                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) &&
-                            resourceTask != null &&
-                            resourceTask.Status == TaskStatus.RanToCompletion &&
-                            resourceTask.Result.PeriodicBackupRunner != null &&
-                            resourceTask.Result.PeriodicBackupRunner.HasRunningBackups())
+                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false)
                         {
-                            // there are running backups for this database
                             continue;
                         }
 
@@ -1454,7 +1449,7 @@ namespace Raven.Server.ServerWide
                         if (idleDbInstance.CanUnload == false)
                             continue;
 
-                        DatabasesLandlord.UnloadDirectly(db);
+                        DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTime());
                     }
 
                 }
