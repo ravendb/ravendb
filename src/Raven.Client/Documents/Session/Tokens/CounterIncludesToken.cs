@@ -4,7 +4,7 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class CounterIncludesToken : QueryToken
     {
-        private readonly string _sourcePath;
+        private string _sourcePath;
         private readonly string _parameterName;
         private readonly bool _all;
 
@@ -23,6 +23,13 @@ namespace Raven.Client.Documents.Session.Tokens
         public static CounterIncludesToken All(string sourcePath)
         {
             return new CounterIncludesToken(sourcePath, null, true);
+        }
+
+        public void AddAliasToPath(string alias)
+        {
+            _sourcePath = _sourcePath == string.Empty
+                ? alias
+                : $"{alias}.{_sourcePath}";
         }
 
         public override void WriteTo(StringBuilder writer)

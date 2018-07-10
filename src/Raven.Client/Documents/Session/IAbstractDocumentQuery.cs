@@ -316,6 +316,8 @@ namespace Raven.Client.Documents.Session
 
         void AddFromAliasToWhereTokens(string fromAlias);
 
+        string AddAliasToCounterIncludesTokens(string fromAlias);
+
         string ProjectionParameter(object id);
 
         void SuggestUsing(SuggestionBase suggestion);

@@ -143,7 +143,7 @@ namespace Raven.Client.Documents.Session
 
         private bool _isInMoreLikeThis;
 
-        protected string FromAlias { get; set; }
+        private string _includesAlias;
 
         private static TimeSpan DefaultTimeout
         {
@@ -1370,12 +1370,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (WhereTokens.Count == 0)
                 return;
 
-            if (FromAlias != null)
-            {
-                AddFromAliasToWhereTokens(FromAlias);
-                FromAlias = null;
-            }
-
             writer
                 .Append(" where ");
 
@@ -1704,6 +1698,25 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 var whereToken = token as WhereToken;
                 whereToken?.AddAlias(fromAlias);
             }
+        }
+
+        public string AddAliasToCounterIncludesTokens(string fromAlias)
+        {
+            if (_includesAlias == null)
+                return fromAlias;
+
+            if (fromAlias == null)
+            {
+                fromAlias = _includesAlias;
+                AddFromAliasToWhereTokens(fromAlias);
+            }
+
+            foreach (var counterIncludesToken in CounterIncludesTokens)
+            {
+                counterIncludesToken.AddAliasToPath(fromAlias);
+            }
+
+            return fromAlias;
         }
 
         protected static void GetSourceAliasIfExists(QueryData queryData, string[] fields, out string sourceAlias)

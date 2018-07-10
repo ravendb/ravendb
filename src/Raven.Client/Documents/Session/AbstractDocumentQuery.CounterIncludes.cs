@@ -15,33 +15,13 @@ namespace Raven.Client.Documents.Session
                 return;
 
             CounterIncludesTokens = new List<CounterIncludesToken>();
-
-            if (alias != null)           
-            {
-                if (FromToken.Alias == null)
-                {
-                    FromAlias = alias;
-
-                }
-                else
-                {
-                    alias = FromToken.Alias;
-                }
-            }
+            _includesAlias = alias;
 
             foreach (var kvp in countersToIncludeByDocId)
             {
-                var path = kvp.Key;
-                if (alias != null)
-                {
-                    path = path == string.Empty 
-                        ? alias
-                        : $"{alias}.{path}";
-                }
-
                 if (kvp.Value.All)
                 {
-                    CounterIncludesTokens.Add(CounterIncludesToken.All(path));
+                    CounterIncludesTokens.Add(CounterIncludesToken.All(kvp.Key));
                     continue;
                 }
 
@@ -50,7 +30,7 @@ namespace Raven.Client.Documents.Session
                     continue;
 
                 CounterIncludesTokens.Add(CounterIncludesToken.Create(
-                    path,
+                    kvp.Key,
                     kvp.Value.Counters.Count == 1
                         ? AddQueryParameter(kvp.Value.Counters.First())
                         : AddQueryParameter(kvp.Value.Counters)));
