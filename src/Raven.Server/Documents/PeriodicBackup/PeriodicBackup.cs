@@ -3,13 +3,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
+using Sparrow.Collections;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class PeriodicBackup
+    public class PeriodicBackup : IDisposable
     {
         private readonly SemaphoreSlim _updateTimerSemaphore = new SemaphoreSlim(1);
         public readonly SemaphoreSlim UpdateBackupTaskSemaphore = new SemaphoreSlim(1);
+
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         public Timer BackupTimer { get; private set; }
 
@@ -26,6 +30,19 @@ namespace Raven.Server.Documents.PeriodicBackup
         public PeriodicBackupStatus BackupStatus { get; set; }
 
         public PeriodicBackupStatus RunningBackupStatus { get; set; }
+        
+        public PeriodicBackup(ConcurrentSet<Task> inactiveRunningPeriodicBackupsTasks)
+        {
+            _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
+            {
+                DisableFutureBackups();
+
+                if (RunningTask?.IsCompleted == false)
+                {
+                    inactiveRunningPeriodicBackupsTasks.Add(RunningTask);
+                }
+            });
+        }
 
         public void DisableFutureBackups()
         {
@@ -69,6 +86,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         public bool HasScheduledBackup()
         {
             return BackupTimer != null;
+        }
+
+        public void Dispose()
+        {
+            _disposeOnce.Dispose();
         }
     }
 }
