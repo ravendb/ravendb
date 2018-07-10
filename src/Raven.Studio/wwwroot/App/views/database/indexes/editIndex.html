@@ -10,14 +10,13 @@
                     </div>
                 </div>
             </div>
-            <div class="clearfix">
-                <div class="pull-left-sm">
+            <div class="flex-horizontal">
+                <div class="btn-group flex-grow">
                     <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
-                    <a data-bind="attr: { href: indexesUrl }, visible: !isEditingExistingIndex()" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
+                    <a data-bind="attr: { href: indexesUrl }" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
                     <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
-                    <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
                 </div>
-                <div class="btn-group pull-right-sm">
+                <div class="btn-group">
                     <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i> <span>Copy C#</span></a>
                     <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
                     <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
@@ -221,7 +220,7 @@
                 </div>
                 <div class="col-lg-4 col-xl-6 flex-horizontal">
                     <div class="flex-separator"></div>
-                    <div class="btn-group btn-group-sm">
+                    <div class="btn-group">
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
                     </div>
