@@ -2767,18 +2767,15 @@ from Users as user select output(user)", query.ToString());
                 {
                     session.Store(new Order
                     {
-                        Employee = "employees/1-A",
-                        OrderedAt = new DateTime(1999, 1, 21)
+                        Employee = "employees/1-A"
                     }, "orders/1-A");
                     session.Store(new Order
                     {
-                        Employee = "employees/2-A",
-                        OrderedAt = new DateTime(2016, 6, 6)
+                        Employee = "employees/2-A"
                     }, "orders/2-A");
                     session.Store(new Order
                     {
-                        Employee = "employees/3-A",
-                        OrderedAt = new DateTime(1942, 8, 1)
+                        Employee = "employees/3-A"
                     }, "orders/3-A");
                     session.Store(new Employee
                     {
@@ -2813,39 +2810,141 @@ from Users as user select output(user)", query.ToString());
                         .Select(o => new
                         {
                             o.Id,
-                            o.OrderedAt,
                             o.Employee
                         });
 
-/*                    Assert.Equal("from Orders as x where x.OrderedAt.Year < $p2 " +
+                    Assert.Equal("from Orders as x " +
+                                 "select id() as Id, Employee " +
                                  "include counters(x, $p0),counters(x.Employee, $p1)"
-                        , query.ToString());*/
+                        , query.ToString());
 
-                    var orders = query.ToList();
+                    var results = query.ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
-/*                    Assert.Equal(2, orders.Count);
+                    Assert.Equal(3, results.Count);
 
-                    var order = orders[0];
+                    var order = results[0];
                     Assert.Equal("orders/1-A", order.Id);
 
-                    var val = session.CountersFor(order).Get("Likes");
+                    var val = session.CountersFor(order.Id).Get("Likes");
                     Assert.Equal(100, val);
-
                     val = session.CountersFor(order.Employee).Get("Downloads");
                     Assert.Equal(1000, val);
 
-                    order = orders[1];
+                    order = results[1];
+                    Assert.Equal("orders/2-A", order.Id);
+
+                    val = session.CountersFor(order.Id).Get("Likes");
+                    Assert.Equal(200, val);
+                    val = session.CountersFor(order.Employee).Get("Downloads");
+                    Assert.Equal(2000, val);
+
+                    order = results[2];
                     Assert.Equal("orders/3-A", order.Id);
 
-                    val = session.CountersFor(order).Get("Likes");
+                    val = session.CountersFor(order.Id).Get("Likes");
                     Assert.Equal(300, val);
-
                     val = session.CountersFor(order.Employee).Get("Downloads");
                     Assert.Equal(3000, val);
 
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);*/
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionQueryIncludeCountersWithSelect()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1-A"
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2-A"
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/3-A"
+                    }, "orders/3-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Aviv"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/2-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Bob"
+                    }, "employees/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Likes", 100);
+                    session.CountersFor("orders/2-A").Increment("Likes", 200);
+                    session.CountersFor("orders/3-A").Increment("Likes", 300);
+
+                    session.CountersFor("employees/1-A").Increment("Downloads", 1000);
+                    session.CountersFor("employees/2-A").Increment("Downloads", 2000);
+                    session.CountersFor("employees/3-A").Increment("Downloads", 3000);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<Order>()
+                        .Include(i => i
+                            .IncludeCounter("Likes")
+                            .IncludeCounter(x => x.Employee, "Downloads"))
+                        .Select(o => new
+                        {
+                            o.Id,
+                            o.Employee
+                        });
+
+                    Assert.Equal("from Orders as x " +
+                                 "select id() as Id, Employee " +
+                                 "include counters(x, $p0),counters(x.Employee, $p1)"
+                        , query.ToString());
+
+                    var results = await query.ToListAsync();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    Assert.Equal(3, results.Count);
+
+                    var order = results[0];
+                    Assert.Equal("orders/1-A", order.Id);
+
+                    var val = await session.CountersFor(order.Id).GetAsync("Likes");
+                    Assert.Equal(100, val);
+                    val = await session.CountersFor(order.Employee).GetAsync("Downloads");
+                    Assert.Equal(1000, val);
+
+                    order = results[1];
+                    Assert.Equal("orders/2-A", order.Id);
+
+                    val = await session.CountersFor(order.Id).GetAsync("Likes");
+                    Assert.Equal(200, val);
+                    val = await session.CountersFor(order.Employee).GetAsync("Downloads");
+                    Assert.Equal(2000, val);
+
+                    order = results[2];
+                    Assert.Equal("orders/3-A", order.Id);
+
+                    val = await session.CountersFor(order.Id).GetAsync("Likes");
+                    Assert.Equal(300, val);
+                    val = await session.CountersFor(order.Employee).GetAsync("Downloads");
+                    Assert.Equal(3000, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                 }
             }
@@ -2900,46 +2999,166 @@ from Users as user select output(user)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = from o in session.Query<Order>()
-                                .Include(i => i
-                                    .IncludeCounter("Likes")
-                                    .IncludeCounter(x => x.Employee, "Downloads"))
+                                    .Include(i => i
+                                        .IncludeCounter("Likes")
+                                        .IncludeCounter(x => x.Employee, "Downloads")
+                                        .IncludeDocuments("Employee"))
                                 where o.OrderedAt.Year < 2000
                                 select new
                                 {
                                     o.Id,
                                     o.OrderedAt,
-                                    o.Employee
+                                    o.Employee,
+
+                                    //this will create js projection with from-alias 'o'
+                                    Foo = o.Employee + o.Company
                                 };
 
-                    /*                    Assert.Equal("from Orders as x where x.OrderedAt.Year < $p2 " +
-                                                     "include counters(x, $p0),counters(x.Employee, $p1)"
-                                            , query.ToString());*/
+                    Assert.Equal("from Orders as o " +
+                                 "where o.OrderedAt.Year < $p2 " +
+                                 "select { Id : id(o), OrderedAt : new Date(Date.parse(o.OrderedAt)), " +
+                                    "Employee : o.Employee, Foo : o.Employee+o.Company } " +
+                                 "include Employee,counters(o, $p0),counters(o.Employee, $p1)"
+                        , query.ToString());
 
-                    var orders = query.ToList();
+                    var results = query.ToList();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included documents should be in cache
+                    session.Load<Employee>(new[] { "employees/1-A", "employees/3-A" });
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
-                    /*                    Assert.Equal(2, orders.Count);
+                    Assert.Equal(2, results.Count);
 
-                                        var order = orders[0];
-                                        Assert.Equal("orders/1-A", order.Id);
+                    var order = results[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    Assert.Equal(new DateTime(1999, 1, 21), order.OrderedAt);
 
-                                        var val = session.CountersFor(order).Get("Likes");
-                                        Assert.Equal(100, val);
+                    var val = session.CountersFor(order.Id).Get("Likes");
+                    Assert.Equal(100, val);
 
-                                        val = session.CountersFor(order.Employee).Get("Downloads");
-                                        Assert.Equal(1000, val);
+                    val = session.CountersFor(order.Employee).Get("Downloads");
+                    Assert.Equal(1000, val);
 
-                                        order = orders[1];
-                                        Assert.Equal("orders/3-A", order.Id);
+                    order = results[1];
+                    Assert.Equal("orders/3-A", order.Id);
+                    Assert.Equal(new DateTime(1942, 8, 1), order.OrderedAt);
 
-                                        val = session.CountersFor(order).Get("Likes");
-                                        Assert.Equal(300, val);
+                    val = session.CountersFor(order.Id).Get("Likes");
+                    Assert.Equal(300, val);
 
-                                        val = session.CountersFor(order.Employee).Get("Downloads");
-                                        Assert.Equal(3000, val);
+                    val = session.CountersFor(order.Employee).Get("Downloads");
+                    Assert.Equal(3000, val);
 
-                                        Assert.Equal(1, session.Advanced.NumberOfRequests);*/
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionQueryIncludeCountersUsingFromAliasWithSelectAndWhere()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1-A",
+                        OrderedAt = new DateTime(1999, 1, 21)
+                    }, "orders/1-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2-A",
+                        OrderedAt = new DateTime(2016, 6, 6)
+                    }, "orders/2-A");
+                    session.Store(new Order
+                    {
+                        Employee = "employees/3-A",
+                        OrderedAt = new DateTime(1942, 8, 1)
+                    }, "orders/3-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Aviv"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/2-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Bob"
+                    }, "employees/3-A");
+
+                    session.CountersFor("orders/1-A").Increment("Likes", 100);
+                    session.CountersFor("orders/2-A").Increment("Likes", 200);
+                    session.CountersFor("orders/3-A").Increment("Likes", 300);
+
+                    session.CountersFor("employees/1-A").Increment("Downloads", 1000);
+                    session.CountersFor("employees/2-A").Increment("Downloads", 2000);
+                    session.CountersFor("employees/3-A").Increment("Downloads", 3000);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = from o in session.Query<Order>()
+                                    .Include(i => i
+                                        .IncludeCounter("Likes")
+                                        .IncludeCounter(x => x.Employee, "Downloads")
+                                        .IncludeDocuments("Employee"))
+                                where o.OrderedAt.Year < 2000
+                                select new
+                                {
+                                    o.Id,
+                                    o.OrderedAt,
+                                    o.Employee,
+
+                                    //this will create js projection with from-alias 'o'
+                                    Foo = o.Employee + o.Company
+                                };
+
+                    Assert.Equal("from Orders as o " +
+                                 "where o.OrderedAt.Year < $p2 " +
+                                 "select { Id : id(o), OrderedAt : new Date(Date.parse(o.OrderedAt)), " +
+                                    "Employee : o.Employee, Foo : o.Employee+o.Company } " +
+                                 "include Employee,counters(o, $p0),counters(o.Employee, $p1)"
+                        , query.ToString());
+
+                    var results = await query.ToListAsync();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included documents should be in cache
+                    await session.LoadAsync<Employee>(new[] { "employees/1-A", "employees/3-A" });
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // included counters should be in cache
+                    Assert.Equal(2, results.Count);
+
+                    var order = results[0];
+                    Assert.Equal("orders/1-A", order.Id);
+                    Assert.Equal(new DateTime(1999, 1, 21), order.OrderedAt);
+
+                    var val = await session.CountersFor(order.Id).GetAsync("Likes");
+                    Assert.Equal(100, val);
+
+                    val = await session.CountersFor(order.Employee).GetAsync("Downloads");
+                    Assert.Equal(1000, val);
+
+                    order = results[1];
+                    Assert.Equal("orders/3-A", order.Id);
+                    Assert.Equal(new DateTime(1942, 8, 1), order.OrderedAt);
+
+                    val = await session.CountersFor(order.Id).GetAsync("Likes");
+                    Assert.Equal(300, val);
+
+                    val = await session.CountersFor(order.Employee).GetAsync("Downloads");
+                    Assert.Equal(3000, val);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                 }
             }
