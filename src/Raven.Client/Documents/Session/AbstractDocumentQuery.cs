@@ -499,7 +499,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             if (includes == null)
                 return;
-            
+
             if (includes.DocumentsToInclude != null)
             {
                 foreach (var doc in includes.DocumentsToInclude)
@@ -1132,11 +1132,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildInclude(StringBuilder queryText)
         {
-            if (DocumentIncludes.Count == 0 && 
-				HighlightingTokens.Count == 0 && 
-				ExplanationToken == null && 
-				QueryTimings == null &&
-				CounterIncludesTokens == null)
+            if (DocumentIncludes.Count == 0 &&
+                HighlightingTokens.Count == 0 &&
+                ExplanationToken == null &&
+                QueryTimings == null &&
+                CounterIncludesTokens == null)
                 return;
 
             queryText.Append(" include ");

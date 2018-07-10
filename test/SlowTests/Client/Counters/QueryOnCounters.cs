@@ -26,7 +26,7 @@ namespace SlowTests.Client.Counters
 
                     session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.CountersFor("users/2-A").Increment("Downloads", 200);
-                    session.CountersFor("users/3-A").Increment( "Likes", 300);
+                    session.CountersFor("users/3-A").Increment("Likes", 300);
 
                     session.SaveChanges();
                 }
@@ -289,7 +289,7 @@ namespace SlowTests.Client.Counters
                         .RawQuery<CounterResult4>("from users as u select { Name : u.Name, Downloads : counter(u, \"downloads\"), Likes : counterRaw(u, \"likes\") }")
                         .ToList();
 
-                    Assert.Equal(3, query.Count); 
+                    Assert.Equal(3, query.Count);
 
                     Assert.Equal("Jerry", query[0].Name);
                     Assert.Equal(100, query[0].Downloads);
@@ -515,9 +515,9 @@ namespace SlowTests.Client.Counters
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", FriendId = "users/2-A"}, "users/1-A");
-                    session.Store(new User { Name = "Bob", FriendId = "users/3-A"}, "users/2-A");
-                    session.Store(new User { Name = "Pigpen", FriendId = "users/1-A"}, "users/3-A");
+                    session.Store(new User { Name = "Jerry", FriendId = "users/2-A" }, "users/1-A");
+                    session.Store(new User { Name = "Bob", FriendId = "users/3-A" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1-A" }, "users/3-A");
 
                     session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.CountersFor("users/2-A").Increment("Downloads", 200);
@@ -872,7 +872,7 @@ namespace SlowTests.Client.Counters
 
                     Assert.Equal("from Users as user " +
                                  "select counter(user, Downloads) as Downloads, " +
-                                        "counter(user, Likes) as Likes" 
+                                        "counter(user, Likes) as Likes"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1099,8 +1099,8 @@ namespace SlowTests.Client.Counters
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", Age = 55}, "users/1-A");
-                    session.Store(new User { Name = "Bob", Age = 68}, "users/2-A");
+                    session.Store(new User { Name = "Jerry", Age = 55 }, "users/1-A");
+                    session.Store(new User { Name = "Bob", Age = 68 }, "users/2-A");
                     session.Store(new User { Name = "Pigpen", Age = 27 }, "users/3-A");
 
                     session.CountersFor("users/1-A").Increment("Downloads", 100);
@@ -1238,9 +1238,9 @@ namespace SlowTests.Client.Counters
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry"}, "users/1-A");
-                    session.Store(new User { Name = "Bob"}, "users/2-A");
-                    session.Store(new User { Name = "Pigpen"}, "users/3-A");
+                    session.Store(new User { Name = "Jerry" }, "users/1-A");
+                    session.Store(new User { Name = "Bob" }, "users/2-A");
+                    session.Store(new User { Name = "Pigpen" }, "users/3-A");
 
                     session.CountersFor("users/1-A").Increment("Downloads", 100);
                     session.CountersFor("users/2-A").Increment("Downloads", 200);
@@ -1258,14 +1258,14 @@ namespace SlowTests.Client.Counters
                                     Name = user.Name,
                                     Downloads = c
                                 };
-                    
+
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(user) {
 	var c = counter(user, ""Downloads"");
 	return { Name : user.Name, Downloads : c };
 }
-from Users as user select output(user)" , query.ToString());
-                    
+from Users as user select output(user)", query.ToString());
+
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
 
@@ -1303,12 +1303,12 @@ from Users as user select output(user)" , query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = from user in session.Query<User>()
-                        let c = session.CountersFor(user).Get("Downloads")
-                        select new
-                        {
-                            Name = user.Name,
-                            Downloads = c
-                        };
+                                let c = session.CountersFor(user).Get("Downloads")
+                                select new
+                                {
+                                    Name = user.Name,
+                                    Downloads = c
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(user) {
@@ -1420,7 +1420,7 @@ from Users as user select output(user)", query.ToString());
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter("Downloads"));
 
-                    Assert.Equal("from Orders include counters($p0)" 
+                    Assert.Equal("from Orders include counters($p0)"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1482,7 +1482,7 @@ from Users as user select output(user)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Order>()
-                        .Include(i => i.IncludeCounters(new []{ "Downloads" , "Likes"}));
+                        .Include(i => i.IncludeCounters(new[] { "Downloads", "Likes" }));
 
                     Assert.Equal("from Orders include counters($p0)"
                                 , query.ToString());
@@ -1511,7 +1511,7 @@ from Users as user select output(user)", query.ToString());
                     Assert.Equal(300, val);
 
                     // should register missing counters
-                    val = session.CountersFor(order).Get("Likes"); 
+                    val = session.CountersFor(order).Get("Likes");
                     Assert.Null(val);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -1589,7 +1589,7 @@ from Users as user select output(user)", query.ToString());
                     Assert.Equal(5, dic["Cats"]);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
-                    
+
                 }
             }
         }
@@ -1818,7 +1818,7 @@ from Users as user select output(user)", query.ToString());
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included documents should be in cache
-                    session.Load<User>(new []{ "companies/1-A", "companies/3-A" });
+                    session.Load<User>(new[] { "companies/1-A", "companies/3-A" });
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
@@ -2037,7 +2037,7 @@ from Users as user select output(user)", query.ToString());
                 {
                     var query = session.Advanced
                         .RawQuery<Order>("from orders include counters($p0)")
-                        .AddParameter("p0", new [] {"Downloads", "Likes"})
+                        .AddParameter("p0", new[] { "Downloads", "Likes" })
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -2330,9 +2330,9 @@ from Users as user select output(user)", query.ToString());
                 {
                     var query = session.Query<Order>()
                         .Include(i => i.IncludeCounter(o => o.Employee, "Downloads"));
-                   
+
                     Assert.Equal("from Orders as o " +
-                                 "include counters(o.Employee, $p0)" 
+                                 "include counters(o.Employee, $p0)"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -2466,7 +2466,7 @@ from Users as user select output(user)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Order>()
-                        .Include(i => i.IncludeCounters(o => o.Employee, new []{"Downloads", "Likes"}));
+                        .Include(i => i.IncludeCounters(o => o.Employee, new[] { "Downloads", "Likes" }));
 
                     Assert.Equal("from Orders as o " +
                                  "include counters(o.Employee, $p0)"
@@ -3328,7 +3328,7 @@ from Users as user select output(user)", query.ToString());
 
                     // included documents should be in cache
                     var employees = session.Load<Employee>(
-                        new[] {"employees/1-A", "employees/2-A", "employees/3-A"});
+                        new[] { "employees/1-A", "employees/2-A", "employees/3-A" });
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
