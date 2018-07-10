@@ -382,7 +382,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                     <div class="sql-statement panel">
                         <pre data-bind="text: CommandText"></pre>
                         
-                        <h4 class="margin-left" data-bind="visible: Params.length">Parameters:</h4>
+                        <h4 class="margin-left" data-bind="visible: Params && Params.length">Parameters:</h4>
                         <dl class="dl-horizontal" data-bind="foreach: Params">
                             <dt data-bind="text: Key"></dt>
                             <dd data-bind="text: Value"></dd>

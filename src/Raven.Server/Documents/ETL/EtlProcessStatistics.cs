@@ -11,20 +11,19 @@ namespace Raven.Server.Documents.ETL
         private readonly string _processTag;
         private readonly string _processName;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly EtlErrorsDetails _transformationErrorsInCurrentBatch;
-        private readonly EtlErrorsDetails _loadErrorsInCurrentBatch;
-        private readonly SlowSqlDetails _slowSqlsInCurrentBatch;
 
         private readonly EnsureAlerts _alertsGuard;
+
+        private bool _preventFromAddingAlertsToNotificationCenter;
 
         public EtlProcessStatistics(string processTag, string processName, NotificationCenter.NotificationCenter notificationCenter)
         {
             _processTag = processTag;
             _processName = processName;
             _notificationCenter = notificationCenter;
-            _transformationErrorsInCurrentBatch = new EtlErrorsDetails();
-            _loadErrorsInCurrentBatch = new EtlErrorsDetails();
-            _slowSqlsInCurrentBatch = new SlowSqlDetails();
+            TransformationErrorsInCurrentBatch = new EtlErrorsDetails();
+            LastLoadErrorsInCurrentBatch = new EtlErrorsDetails();
+            LastSlowSqlWarningsInCurrentBatch = new SlowSqlDetails();
             _alertsGuard = new EnsureAlerts(this);
         }
 
@@ -46,6 +45,12 @@ namespace Raven.Server.Documents.ETL
 
         public AlertRaised LastAlert { get; set; }
 
+        public EtlErrorsDetails TransformationErrorsInCurrentBatch { get; }
+
+        public EtlErrorsDetails LastLoadErrorsInCurrentBatch { get; }
+
+        public SlowSqlDetails LastSlowSqlWarningsInCurrentBatch { get; }
+
         public bool WasLatestLoadSuccessful { get; set; }
 
         public void TransformationSuccess()
@@ -55,9 +60,9 @@ namespace Raven.Server.Documents.ETL
 
         public IDisposable NewBatch()
         {
-            _transformationErrorsInCurrentBatch.Errors.Clear();
-            _loadErrorsInCurrentBatch.Errors.Clear();
-            _slowSqlsInCurrentBatch.Statements.Clear();
+            TransformationErrorsInCurrentBatch.Errors.Clear();
+            LastLoadErrorsInCurrentBatch.Errors.Clear();
+            LastSlowSqlWarningsInCurrentBatch.Statements.Clear();
 
             return _alertsGuard;
         }
@@ -68,7 +73,7 @@ namespace Raven.Server.Documents.ETL
 
             LastTransformationErrorTime = SystemTime.UtcNow;
 
-            _transformationErrorsInCurrentBatch.Add(new EtlErrorInfo
+            TransformationErrorsInCurrentBatch.Add(new EtlErrorInfo
             {
                 Date = SystemTime.UtcNow,
                 DocumentId = documentId,
@@ -97,7 +102,7 @@ namespace Raven.Server.Documents.ETL
 
             LastLoadErrorTime = SystemTime.UtcNow;
 
-            _loadErrorsInCurrentBatch.Add(new EtlErrorInfo
+            LastLoadErrorsInCurrentBatch.Add(new EtlErrorInfo
             {
                 Date = SystemTime.UtcNow,
                 DocumentId = documentId,
@@ -120,7 +125,7 @@ namespace Raven.Server.Documents.ETL
 
         public void RecordSlowSql(SlowSqlStatementInfo slowSql)
         {
-            _slowSqlsInCurrentBatch.Add(slowSql);
+            LastSlowSqlWarningsInCurrentBatch.Add(slowSql);
         }
 
         public void LoadSuccess(int items)
@@ -131,32 +136,32 @@ namespace Raven.Server.Documents.ETL
 
         private void CreateAlertIfAnyTransformationErrors(string preMessage = null)
         {
-            if (_transformationErrorsInCurrentBatch.Errors.Count == 0)
+            if (TransformationErrorsInCurrentBatch.Errors.Count == 0 || _preventFromAddingAlertsToNotificationCenter)
                 return;
 
-            LastAlert = _notificationCenter.EtlNotifications.AddTransformationErrors(_processTag, _processName, _transformationErrorsInCurrentBatch.Errors, preMessage);
+            LastAlert = _notificationCenter.EtlNotifications.AddTransformationErrors(_processTag, _processName, TransformationErrorsInCurrentBatch.Errors, preMessage);
 
-            _transformationErrorsInCurrentBatch.Errors.Clear();
+            TransformationErrorsInCurrentBatch.Errors.Clear();
         }
 
         private void CreateAlertIfAnyLoadErrors(string preMessage = null)
         {
-            if (_loadErrorsInCurrentBatch.Errors.Count == 0)
+            if (LastLoadErrorsInCurrentBatch.Errors.Count == 0 || _preventFromAddingAlertsToNotificationCenter)
                 return;
 
-            LastAlert = _notificationCenter.EtlNotifications.AddLoadErrors(_processTag, _processName, _loadErrorsInCurrentBatch.Errors, preMessage);
+            LastAlert = _notificationCenter.EtlNotifications.AddLoadErrors(_processTag, _processName, LastLoadErrorsInCurrentBatch.Errors, preMessage);
 
-            _loadErrorsInCurrentBatch.Errors.Clear();
+            LastLoadErrorsInCurrentBatch.Errors.Clear();
         }
 
         private void CreateAlertIfAnySlowSqls()
         {
-            if (_slowSqlsInCurrentBatch.Statements.Count == 0)
+            if (LastSlowSqlWarningsInCurrentBatch.Statements.Count == 0 || _preventFromAddingAlertsToNotificationCenter)
                 return;
 
-            _notificationCenter.EtlNotifications.AddSlowSqlWarnings(_processTag, _processName, _slowSqlsInCurrentBatch.Statements);
+            _notificationCenter.EtlNotifications.AddSlowSqlWarnings(_processTag, _processName, LastSlowSqlWarningsInCurrentBatch.Statements);
 
-            _slowSqlsInCurrentBatch.Statements.Clear();
+            LastSlowSqlWarningsInCurrentBatch.Statements.Clear();
         }
 
         public DynamicJsonValue ToJson()
@@ -197,9 +202,9 @@ namespace Raven.Server.Documents.ETL
             LoadErrors = 0;
             LastChangeVector = null;
             LastAlert = null;
-            _transformationErrorsInCurrentBatch.Errors.Clear();
-            _loadErrorsInCurrentBatch.Errors.Clear();
-            _slowSqlsInCurrentBatch.Statements.Clear();
+            TransformationErrorsInCurrentBatch.Errors.Clear();
+            LastLoadErrorsInCurrentBatch.Errors.Clear();
+            LastSlowSqlWarningsInCurrentBatch.Statements.Clear();
         }
 
         private class EnsureAlerts : IDisposable
@@ -217,6 +222,13 @@ namespace Raven.Server.Documents.ETL
                 _parent.CreateAlertIfAnySlowSqls();
                 _parent.CreateAlertIfAnyLoadErrors();
             }
+        }
+
+        public IDisposable PreventFromAddingAlertsToNotificationCenter()
+        {
+            _preventFromAddingAlertsToNotificationCenter = true;
+
+            return new DisposableAction(() => _preventFromAddingAlertsToNotificationCenter = false);
         }
     }
 }
