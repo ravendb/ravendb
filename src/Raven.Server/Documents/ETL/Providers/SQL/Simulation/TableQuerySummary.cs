@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
 {
@@ -20,15 +23,46 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
         {
             var tableQuerySummary = new TableQuerySummary();
             tableQuerySummary.TableName = tableName;
-            tableQuerySummary.Commands =
-                commands
-                    .Select(x => new CommandData
-                    {
-                        CommandText = x.CommandText,
-                        Params = x.Parameters.Cast<DbParameter>().Select(y => new KeyValuePair<string, object>(y.ParameterName, y.Value)).ToArray()
-                    }).ToArray();
+
+            var commandData = new List<CommandData>();
+
+            foreach (var c in commands)
+            {
+                var @params = new List<KeyValuePair<string, object>>();
+
+                foreach (var param in c.Parameters.Cast<DbParameter>())
+                {
+                    var paramterValue = GetParameterValue(param);
+
+                    @params.Add(new KeyValuePair<string, object>(param.ParameterName, paramterValue));
+                }
+
+                commandData.Add(new CommandData
+                {
+                    CommandText = c.CommandText,
+                    Params = @params.ToArray()
+                });
+            }
+
+            tableQuerySummary.Commands = commandData.ToArray();
 
             return tableQuerySummary;
+        }
+
+        public static object GetParameterValue(DbParameter param)
+        {
+            var paramterValue = param.Value;
+
+            if (paramterValue == DBNull.Value)
+            {
+                paramterValue = "NULL";
+            }
+            else if (param.DbType == DbType.AnsiString || param.DbType == DbType.String)
+            {
+                paramterValue = $"'{RelationalDatabaseWriter.SanitizeSqlValue(paramterValue.ToString())}'";
+            }
+
+            return paramterValue;
         }
     }
 }

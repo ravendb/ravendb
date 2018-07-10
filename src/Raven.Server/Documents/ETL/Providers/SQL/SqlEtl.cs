@@ -103,46 +103,58 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             var summaries = new List<TableQuerySummary>();
 
-            if (simulateSqlEtl.PerformRolledBackTransaction)
+            using (Statistics.PreventFromAddingAlertsToNotificationCenter())
             {
-                using (var writer = new RelationalDatabaseWriter(this, Database))
+                if (simulateSqlEtl.PerformRolledBackTransaction)
                 {
+                    try
+                    {
+                        using (var writer = new RelationalDatabaseWriter(this, Database))
+                        {
+                            foreach (var records in toWrite)
+                            {
+                                var commands = new List<DbCommand>();
+
+                                writer.Write(records, commands, CancellationToken);
+
+                                summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
+                            }
+
+                            writer.Rollback();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Statistics.RecordLoadError(e.ToString(), documentId: null, count: 1);
+                    }
+                }
+                else
+                {
+                    var simulatedwriter = new RelationalDatabaseWriterSimulator(Configuration);
+
                     foreach (var records in toWrite)
                     {
-                        var commands = new List<DbCommand>();
+                        var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
+                        {
+                            CommandText = x
+                        }).ToArray();
 
-                        writer.Write(records, commands, CancellationToken);
-
-                        summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
+                        summaries.Add(new TableQuerySummary
+                        {
+                            TableName = records.TableName,
+                            Commands = commands
+                        });
                     }
-
-                    writer.Rollback();
                 }
-            }
-            else
-            {
-                var simulatedwriter = new RelationalDatabaseWriterSimulator(Configuration);
 
-                foreach (var records in toWrite)
+                return new SqlEtlSimulationResult
                 {
-                    var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
-                    {
-                        CommandText = x
-                    }).ToArray();
-
-                    summaries.Add(new TableQuerySummary
-                    {
-                        TableName = records.TableName,
-                        Commands = commands
-                    });
-                }
+                    TransformationErrors = Statistics.TransformationErrorsInCurrentBatch,
+                    LastLoadErrors = Statistics.LastLoadErrorsInCurrentBatch,
+                    SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch,
+                    Summary = summaries
+                };
             }
-
-            return new SqlEtlSimulationResult
-            {
-                LastAlert = Statistics.LastAlert,
-                Summary = summaries
-            };
         }
 
         public static SqlEtlSimulationResult SimulateSqlEtl(SimulateSqlEtl simulateSqlEtl, DocumentDatabase database, ServerStore serverStore, DocumentsOperationContext context)
@@ -152,10 +164,19 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (document == null)
                 throw new InvalidOperationException($"Document {simulateSqlEtl.DocumentId} does not exist");
 
-            if (serverStore.LoadDatabaseRecord(database.Name, out _).SqlConnectionStrings.TryGetValue(simulateSqlEtl.Configuration.ConnectionStringName, out var connectionString) == false)
-                throw new InvalidOperationException($"Connection string named {simulateSqlEtl.Configuration.ConnectionStringName} was not found in the database record");
+            SqlConnectionString connection = null;
 
-            simulateSqlEtl.Configuration.Initialize(connectionString);
+            if (simulateSqlEtl.Connection != null)
+            {
+                connection = simulateSqlEtl.Connection;
+            }
+            else if (serverStore.LoadDatabaseRecord(database.Name, out _).SqlConnectionStrings
+                         .TryGetValue(simulateSqlEtl.Configuration.ConnectionStringName, out connection) == false)
+            {
+                throw new InvalidOperationException($"Connection string named {simulateSqlEtl.Configuration.ConnectionStringName} was not found in the database record");
+            }
+            
+            simulateSqlEtl.Configuration.Initialize(connection);
 
             if (simulateSqlEtl.Configuration.Validate(out List<string> errors) == false)
             {

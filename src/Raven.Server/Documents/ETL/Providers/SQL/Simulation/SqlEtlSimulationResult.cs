@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
 {
@@ -7,6 +7,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
     {
         public List<TableQuerySummary> Summary { get; set; }
 
-        public AlertRaised LastAlert { get; set; }
+        public EtlErrorsDetails TransformationErrors { get; set; }
+
+        public EtlErrorsDetails LastLoadErrors{ get; set; }
+
+        public SlowSqlDetails SlowSqlWarnings { get; set; }
     }
 }

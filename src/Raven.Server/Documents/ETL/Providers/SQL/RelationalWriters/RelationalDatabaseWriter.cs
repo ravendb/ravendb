@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (column.Id == pkName)
                             continue;
                         var colParam = cmd.CreateParameter();
-                        colParam.ParameterName = column.Id;
+                        colParam.ParameterName = GetParameterName(column.Id);
                         SetParamValue(colParam, column, _stringParserList);
                         cmd.Parameters.Add(colParam);
                         sb.Append(GetParameterName(column.Id)).Append(", ");

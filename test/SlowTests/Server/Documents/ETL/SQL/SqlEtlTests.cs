@@ -644,7 +644,10 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                             }
                         }, database, database.ServerStore, context);
 
-                        Assert.Null(result.LastAlert);
+                        Assert.Equal(0, result.TransformationErrors.Errors.Count);
+                        Assert.Equal(0, result.LastLoadErrors.Errors.Count);
+                        Assert.Equal(0, result.SlowSqlWarnings.Statements.Count);
+
                         Assert.Equal(2, result.Summary.Count);
 
                         var orderLines = result.Summary.First(x => x.TableName == "OrderLines");

@@ -16,5 +16,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         /// Sql Replication Script
         /// </summary>
         public SqlEtlConfiguration Configuration;
+
+        public SqlConnectionString Connection;
     }
 }

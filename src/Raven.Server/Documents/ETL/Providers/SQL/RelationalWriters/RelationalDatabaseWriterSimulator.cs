@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.Simulation;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 sb.Length = sb.Length - 2;
 
 
-                sb.Append(") VALUES (")
+                sb.Append(") \r\nVALUES (")
                     .Append("'")
                     .Append(itemToReplicate.DocumentId)
                     .Append("'")
@@ -73,8 +74,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         continue;
                      DbParameter param = new SqlParameter();
                      RelationalDatabaseWriter.SetParamValue(param, column, null);
-                     sb.Append("'").Append(param.Value).Append("'").Append(", ");
+
+                    sb.Append(TableQuerySummary.GetParameterValue(param)).Append(", ");
                 }
+
                 sb.Length = sb.Length - 2;
                 sb.Append(")");
                 if (IsSqlServerFactoryType && _configuration.ForceQueryRecompile)
@@ -96,7 +99,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
             for (int i = 0; i < toSqlItems.Count; i += maxParams)
             {
-
                 var sb = new StringBuilder("DELETE FROM ")
                     .Append(GetTableNameString(tableName))
                     .Append(" WHERE ")
@@ -107,16 +109,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 {
                     if (i != j)
                         sb.Append(", ");
-                    if (parameterize)
-                    {
-                        sb.Append(toSqlItems[j].DocumentId);
-                    }
-                    else
-                    {
-                        sb.Append("'").Append(RelationalDatabaseWriter.SanitizeSqlValue(toSqlItems[j].DocumentId)).Append("'");
-                    }
-
+                    
+                    sb.Append("'").Append(RelationalDatabaseWriter.SanitizeSqlValue(toSqlItems[j].DocumentId)).Append("'");
                 }
+
                 sb.Append(")");
 
                 if (IsSqlServerFactoryType && _configuration.ForceQueryRecompile)
