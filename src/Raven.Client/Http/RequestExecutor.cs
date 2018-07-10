@@ -131,6 +131,21 @@ namespace Raven.Client.Http
         private HttpClient GetCachedOrCreateHttpClient(ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache) =>
             httpClientCache.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
 
+        private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
+
+        static RequestExecutor()
+        {
+            try
+            {
+                using (var handler = new HttpClientHandler())
+                    handler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+            }
+            catch (Exception e)
+            {
+                ServerCertificateCustomValidationCallbackRegistrationException = e;
+            }
+        }
+
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
         {
             Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
@@ -1220,7 +1235,7 @@ namespace Raven.Client.Http
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
 
-            if (PlatformDetails.RunningOnMacOsx == false)
+            if (ServerCertificateCustomValidationCallbackRegistrationException == null)
                 httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
 
             if (certificate != null)
@@ -1337,8 +1352,8 @@ namespace Raven.Client.Http
         {
             add
             {
-                if (PlatformDetails.RunningOnMacOsx)
-                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to RemoteCertificateValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
+                if (ServerCertificateCustomValidationCallbackRegistrationException != null)
+                    throw ServerCertificateCustomValidationCallbackRegistrationException;
 
                 lock (_locker)
                 {
@@ -1348,8 +1363,8 @@ namespace Raven.Client.Http
 
             remove
             {
-                if (PlatformDetails.RunningOnMacOsx)
-                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to RemoteCertificateValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
+                if (ServerCertificateCustomValidationCallbackRegistrationException != null)
+                    throw ServerCertificateCustomValidationCallbackRegistrationException;
 
                 lock (_locker)
                 {
