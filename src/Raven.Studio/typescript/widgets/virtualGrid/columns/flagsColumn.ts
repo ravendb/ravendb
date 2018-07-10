@@ -10,10 +10,10 @@ class flagsColumn implements virtualColumn {
 
     width = "65px";
     
-    header = `<div style="padding-left: 8px;">🏳️</div>`; //TODO: change to icon-flags
+    header = `<div style="padding-left: 8px;"><i class="icon-flag"></i></div>`;
 
     get headerAsText() {
-        return "Document Flags (🏳️)";
+        return "Document Flags";
     }
 
     renderCell(item: document, isSelected: boolean): string {
