@@ -317,12 +317,11 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             NetworkInterface[] netInterfaces = null;
-            List<string> ips;
             try
             {
                 netInterfaces = NetworkInterface.GetAllNetworkInterfaces();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // https://github.com/dotnet/corefx/issues/26476
                 // If GetAllNetworkInterfaces is not supported, we'll just return the default: 127.0.0.1
@@ -340,6 +339,7 @@ namespace Raven.Server.Web.System
                 writer.WriteStartArray();
                 var first = true;
 
+                List<string> ips;
                 if (netInterfaces != null)
                 {
                     foreach (var netInterface in netInterfaces)
