@@ -15,7 +15,6 @@ namespace Sparrow
 
     public interface IThreadAffineBlockOptions : INativeOptions, IBlockAllocatorOptions
     {
-        int BlockSize { get; }
         bool AcceptOnlyBlocks { get; }
 
         int ItemsPerLane { get; }

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Global;
 
 namespace Sparrow
 {
     public interface IPoolAllocatorOptions : INativeOptions
     {
+        int MaxPoolMemoryInBytes { get; }
         IAllocatorComposer<Pointer> CreateAllocator();
     }
 
@@ -17,10 +20,18 @@ namespace Sparrow
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
+            public int MaxPoolMemoryInBytes => 256 * Constants.Size.Megabyte;
+
             public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<Default>>();
         }
     }
 
+    /// <summary>
+    /// The PoolAllocator will hold all the memory it can during the process. It will not keep track of allocations (except when running in validation mode),
+    /// that means this allocator can leak if used improperly. 
+    /// </summary>
+    /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
+    /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can)</remarks>
     public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
@@ -35,7 +46,7 @@ namespace Sparrow
         public void Initialize(ref PoolAllocator<TOptions> allocator)
         {
             // Initialize the struct pointers structure used to navigate over the allocated memory.
-            allocator._freed = new Pointer[32];
+            allocator._freed = new Pointer[27];
             allocator.Allocated = 0;
             allocator.Used = 0;
         }
@@ -52,6 +63,7 @@ namespace Sparrow
             allocator._internalAllocator.Initialize(allocator._options);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Pointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
             int vsize = Bits.NextPowerOf2(size);
@@ -76,15 +88,20 @@ namespace Sparrow
             return new Pointer(ptr.Ptr, size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref PoolAllocator<TOptions> allocator, ref Pointer ptr)
         {
-            if (allocator._isMemoryLow)
+            if (allocator._isMemoryLow || allocator.Used > allocator._options.MaxPoolMemoryInBytes)
                 goto UnlikelyRelease;
 
             int originalSize = ptr.Size;
 
             int size = Bits.NextPowerOf2(ptr.Size);
             var index = Bits.MostSignificantBit(size) - 1;
+            
+            // Allocating more than 2^26 (100MB should not be pooled, chunks are big enough to clutter the allocator)
+            if (index >= 27) 
+                goto UnlikelyRelease;
 
             var section = _freed[index];
             if (section.IsValid)
@@ -95,47 +112,48 @@ namespace Sparrow
             
             // Put a copy of the currently released memory block on the front. 
             _freed[index] = ptr;
-            
+
             allocator.Used -= originalSize;
 
             return;
 
         UnlikelyRelease:
-            // This should be an unlikely case, when you are running out of memory all performance guarantees go down the drain
-            // So we dont care if we hit expensive calls that allows us to release some steam at the cost of hitting cold code. 
+            // This should be an unlikely case, when you are running out of memory or over allocated,
+            // all performance guarantees go down the drain. So we dont care if we hit expensive calls
+            // that allows us to release some steam at the cost of hitting cold code. 
             // https://github.com/dotnet/coreclr/issues/6024
 
-            allocator.ReleaseWhenLowMemory(ref allocator, ref ptr);
+            allocator.Used -= ptr.Size;
+            allocator._internalAllocator.Release(ref ptr);
         }
 
-        private void ReleaseWhenLowMemory(ref PoolAllocator<TOptions> allocator, ref Pointer ptr)
-        {
-            throw new NotImplementedException("Not Implemented Yet");
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew(ref PoolAllocator<TOptions> allocator)
         {
             if (!allocator._isMemoryLow)
                 return;
 
-            // Do something on renew when we are notified we are low on memory
-            throw new NotImplementedException("Not Implemented Yet");
+            // We are low on memory, we will release the whole pool.
+            ReleasePoolMemory(ref allocator);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(ref PoolAllocator<TOptions> allocator)
         {
             if (!allocator._isMemoryLow)
                 return;
 
-            // Do something on renew when we are notified we are low on memory
-            throw new NotImplementedException("Not Implemented Yet");
+            // We are low on memory, we will release the whole pool.
+            ReleasePoolMemory(ref allocator);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnAllocate(ref PoolAllocator<TOptions> allocator, Pointer ptr)
         {
             // Nothing to do here.
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnRelease(ref PoolAllocator<TOptions> allocator, Pointer ptr)
         {
             // Nothing to do here.
@@ -143,20 +161,8 @@ namespace Sparrow
 
         public void Dispose()
         {
-            for (int i = 0; i < 32; i++)
-            {
-                ref var section = ref _freed[i];
-                while (section.IsValid)
-                {
-                    Pointer current = section;
-                    
-                    // Copy the pointer found on the first memory bytes of the section. 
-                    section = *(Pointer*)current.Ptr;
-
-                    // The block is guaranteed to be valid, so we release it to the internal allocator.
-                    _internalAllocator.Release(ref current);
-                }
-            }
+            // We are going to be disposed, we then release all holded memory. 
+            ReleasePoolMemory(ref this);
         }
 
         public void NotifyLowMemory(ref PoolAllocator<TOptions> allocator)
@@ -167,6 +173,24 @@ namespace Sparrow
         public void NotifyLowMemoryOver(ref PoolAllocator<TOptions> allocator)
         {
             allocator._isMemoryLow = false;
+        }
+
+        private void ReleasePoolMemory(ref PoolAllocator<TOptions> allocator)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                ref var section = ref _freed[i];
+                while (section.IsValid)
+                {
+                    Pointer current = section;
+
+                    // Copy the pointer found on the first memory bytes of the section. 
+                    section = *(Pointer*)current.Ptr;
+
+                    // The block is guaranteed to be valid, so we release it to the internal allocator.
+                    allocator._internalAllocator.Release(ref current);
+                }
+            }
         }
     }
 }
