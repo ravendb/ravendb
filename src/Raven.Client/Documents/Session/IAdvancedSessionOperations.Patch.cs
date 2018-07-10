@@ -63,5 +63,11 @@ namespace Raven.Client.Documents.Session
         {
             throw new NotSupportedException("Never called");
         }
+
+        [JavascriptMethodName("filter")]
+        public JavaScriptArray<U> RemoveAll(Func<U, bool> predicate)
+        {
+            throw new NotSupportedException("Never called");
+        }
     }
 }

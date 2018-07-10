@@ -52,17 +52,32 @@ namespace Raven.Client.Util
                         args.Add(expr);
                 }
 
-                for (var i = 0; i < args.Count; i++)
+                if (nameAttribute.Name == "filter")
                 {
-                    var name = $"arg_{Parameters.Count}_{Suffix}";
-                    if (i != 0)
-                        javascriptWriter.Write(", ");
-                    javascriptWriter.Write("args.");
-                    javascriptWriter.Write(name);
-                    object val;
-                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
-                        Parameters[name] = val;
+                    if (args[0] is LambdaExpression lambda)
+                    {
+                        javascriptWriter.Write(lambda.Parameters[0].Name);
+                        javascriptWriter.Write(" => ");
+                        javascriptWriter.Write(" !("); // negate body
+                        context.Visitor.Visit(lambda.Body);
+                        javascriptWriter.Write(")");
+                    }
                 }
+                else
+                {
+                    for (var i = 0; i < args.Count; i++)
+                    {
+                        var name = $"arg_{Parameters.Count}_{Suffix}";
+                        if (i != 0)
+                            javascriptWriter.Write(", ");
+                        javascriptWriter.Write("args.");
+                        javascriptWriter.Write(name);
+                        object val;
+                        if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
+                            Parameters[name] = val;
+                    }
+                }
+
                 if (nameAttribute.PositionalArguments != null)
                 {
                     for (int i = args.Count;
