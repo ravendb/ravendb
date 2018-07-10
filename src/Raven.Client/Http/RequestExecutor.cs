@@ -68,7 +68,7 @@ namespace Raven.Client.Http
 
         private ServerNode _topologyTakenFromNode;
 
-        public HttpClient HttpClient { get; private set; }
+        public HttpClient HttpClient { get; }
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
@@ -163,31 +163,11 @@ namespace Raven.Client.Http
                 GlobalHttpClientWithCompression :
                 GlobalHttpClientWithoutCompression;
 
-
-
-            _serverCallbackRWLock.EnterReadLock();
-            try
-            {
-                _updateHttpHandlerDelegate = UpdateHttpClient;
-                _liveClients.TryAdd(new WeakReference<Action>(_updateHttpHandlerDelegate), null);
-                _updateHttpHandlerDelegate();
-            }
-            finally
-            {
-                _serverCallbackRWLock.ExitReadLock();
-            }
-
+            HttpClient = httpClientCache.TryGetValue(thumbprint, out var lazyClient) == false ?
+                GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
-
-            void UpdateHttpClient()
-            {
-                HttpClient = httpClientCache.TryGetValue(thumbprint, out var lazyClient) == false ?
-                                GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
-            }
         }
-
-
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
@@ -1257,18 +1237,8 @@ namespace Raven.Client.Http
                 throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
             }
 
-            var serverCallBack = _serverCertificateCustomValidationCallback;
-            if (serverCallBack != null)
-            {
-                if (PlatformDetails.RunningOnMacOsx)
-                {
-                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
-                }
-                else
-                {
-                    httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
-                }
-            }
+            if (PlatformDetails.RunningOnMacOsx == false)
+                httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
 
             if (certificate != null)
             {
@@ -1331,9 +1301,7 @@ namespace Raven.Client.Http
         }
 
         private static RemoteCertificateValidationCallback[] _serverCertificateCustomValidationCallback = Array.Empty<RemoteCertificateValidationCallback>();
-        private static ConcurrentDictionary<WeakReference<Action>, object> _liveClients = new ConcurrentDictionary<WeakReference<Action>, object>();
-        private Action _updateHttpHandlerDelegate;// we need this to hold a reference to the action as long as the executer is alive
-        private static readonly ReaderWriterLockSlim _serverCallbackRWLock = new ReaderWriterLockSlim();
+        private static readonly object _locker = new object();
 
         // HttpClient and ClientWebSocket use certificate validation callbacks with different signatures.
         // We need this translator for backward compatibility to allow the user to supply any of the two signatures.
@@ -1352,22 +1320,31 @@ namespace Raven.Client.Http
         {
             add
             {
-                var callbackTranslator = new CallbackTranslator
+                lock (_locker)
                 {
-                    Callback = value
-                };
-                RemoteCertificateValidationCallback += callbackTranslator.Translate;
+                    var callbackTranslator = new CallbackTranslator
+                    {
+                        Callback = value
+                    };
+
+                    RemoteCertificateValidationCallback += callbackTranslator.Translate;
+                }
             }
+
             remove
             {
-                var callbacks = _serverCertificateCustomValidationCallback;
-                if (callbacks == null)
-                    return;
-                foreach (var callback in callbacks)
+                lock (_locker)
                 {
-                    if (callback.Target is CallbackTranslator ct && ct.Callback == value)
+                    var callbacks = _serverCertificateCustomValidationCallback;
+                    if (callbacks == null)
+                        return;
+
+                    foreach (var callback in callbacks)
                     {
-                        RemoteCertificateValidationCallback -= ct.Translate;
+                        if (callback.Target is CallbackTranslator ct && ct.Callback == value)
+                        {
+                            RemoteCertificateValidationCallback -= ct.Translate;
+                        }
                     }
                 }
             }
@@ -1377,53 +1354,24 @@ namespace Raven.Client.Http
         {
             add
             {
-                _serverCallbackRWLock.EnterWriteLock();
-                try
+                if (PlatformDetails.RunningOnMacOsx)
+                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to RemoteCertificateValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
+
+                lock (_locker)
                 {
                     _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Concat(new[] { value }).ToArray();
-                    ForceUpdateOfAllHttpClients();
-                }
-                finally
-                {
-                    _serverCallbackRWLock.ExitWriteLock();
                 }
             }
+
             remove
             {
-                _serverCallbackRWLock.EnterWriteLock();
-                try
+                if (PlatformDetails.RunningOnMacOsx)
+                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to RemoteCertificateValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
+
+                lock (_locker)
                 {
                     _serverCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback.Except(new[] { value }).ToArray();
-                    ForceUpdateOfAllHttpClients();
                 }
-                finally
-                {
-                    _serverCallbackRWLock.ExitWriteLock();
-                }
-            }
-        }
-
-        private static void ForceUpdateOfAllHttpClients()
-        {
-            // change for the server callback requires changing http handlers
-            GlobalHttpClientWithCompression.Clear();
-            GlobalHttpClientWithoutCompression.Clear();
-            foreach (var client in _liveClients.Keys)
-            {
-                if (client.TryGetTarget(out var updateHttpClient))
-                {
-                    try
-                    {
-                        updateHttpClient();
-                    }
-                    catch (Exception)
-                    {
-                        // we can't really handle this, so we won't
-                        // try, this should be very odd behavior
-                    }
-                }
-                else
-                    _liveClients.TryRemove(client, out _);
             }
         }
 
@@ -1434,7 +1382,7 @@ namespace Raven.Client.Http
                 onServerCertificateCustomValidationCallback.Length == 0)
                 return errors == SslPolicyErrors.None;
 
-            for (int i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
+            for (var i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
             {
                 var result = onServerCertificateCustomValidationCallback[i](sender, cert, chain, errors);
                 if (result)
