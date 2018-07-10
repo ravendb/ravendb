@@ -37,8 +37,6 @@ namespace Raven.Embedded
                 if (string.IsNullOrWhiteSpace(options.ServerUrl))
                     options.ServerUrl = "https://127.0.0.1:0";
 
-                options.CommandLineArgs.Add($"--ServerUrl={options.ServerUrl}");
-
                 if (options.Security.CertificatePath != null)
                 {
                     options.CommandLineArgs.Add($"--Security.Certificate.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePath)}");
@@ -56,10 +54,9 @@ namespace Raven.Embedded
             {
                 if (string.IsNullOrWhiteSpace(options.ServerUrl))
                     options.ServerUrl = "http://127.0.0.1:0";
-
-                options.CommandLineArgs.Add($"--ServerUrl={options.ServerUrl}");
             }
 
+            options.CommandLineArgs.Add($"--ServerUrl={options.ServerUrl}");
             options.CommandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));
 
             if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
