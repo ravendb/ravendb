@@ -1418,17 +1418,19 @@ namespace Raven.Server.ServerWide
                     foreach (var db in databasesToCleanup)
                     {
 
-                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false)
+                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false || 
+                            resourceTask == null ||
+                            resourceTask.Status != TaskStatus.RanToCompletion)
                         {
                             continue;
                         }
 
+                        var idleDbInstance = resourceTask.Result;
+
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
-                        if (resourceTask == null ||
-                            resourceTask.Result.Configuration.Core.RunInMemory)
+                        if (idleDbInstance.Configuration.Core.RunInMemory)
                             continue;
-                        var idleDbInstance = resourceTask.Result;
 
                         if (idleDbInstance.CanUnload == false)
                             continue;
