@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             try
                                             {
-                                                _index.HandleMap(current.LowerId, mapResults, indexWriter, indexContext, collectionStats);
+                                                _index.HandleMap(current.LowerId, current.Id, mapResults, indexWriter, indexContext, collectionStats);
                                             }
                                             catch (Exception e)
                                             {

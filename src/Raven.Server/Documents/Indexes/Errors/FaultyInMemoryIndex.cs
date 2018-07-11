@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Errors
                 {
                     Error = _e?.ToString(),
                     Action = $"Index {Name} is in-memory implementation of a faulty index",
-                    Timestamp = _createdAt 
+                    Timestamp = _createdAt
                 }
             };
         }

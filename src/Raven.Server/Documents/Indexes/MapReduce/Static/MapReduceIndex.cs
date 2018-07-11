@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
-        {            
+        {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
             ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase, isIndexReset);
 
@@ -92,10 +92,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                                 $"and this will result in an infinite loop.");
 
             foreach (var referencedCollection in index.ReferencedCollections)
-            foreach (var collectionName in referencedCollection.Value)
-            {
-                collections.Add(collectionName.Name);
-            }
+                foreach (var collectionName in referencedCollection.Value)
+                {
+                    collections.Add(collectionName.Name);
+                }
             if (collections.Contains(outputReduceToCollection))
                 throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
                                                 $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
@@ -132,10 +132,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 var otherIndexCollections = new HashSet<string>(otherIndex.Collections);
 
                 foreach (var referencedCollection in otherIndex.GetReferencedCollections())
-                foreach (var collectionName in referencedCollection.Value)
-                {
-                    otherIndexCollections.Add(collectionName.Name);
-                }
+                    foreach (var collectionName in referencedCollection.Value)
+                    {
+                        otherIndexCollections.Add(collectionName.Name);
+                    }
 
                 if (otherIndexCollections.Contains(outputReduceToCollection) &&
                     CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, collections, indexes, out string description))
@@ -175,16 +175,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var referencedCollections = new HashSet<string>();
 
             foreach (var referencedCollection in indexToCheck.GetReferencedCollections())
-            foreach (var collectionName in referencedCollection.Value)
-            {
-                referencedCollections.Add(collectionName.Name);
-            }
+                foreach (var collectionName in referencedCollection.Value)
+                {
+                    referencedCollections.Add(collectionName.Name);
+                }
 
             if (referencedCollections.Count > 0)
                 description += $" (referenced: {string.Join(",", referencedCollections)})";
 
             description += $" => {indexToCheck.Definition.OutputReduceToCollection}";
-            
+
             if (string.IsNullOrWhiteSpace(indexToCheck.Definition.OutputReduceToCollection))
                 return false;
 
@@ -195,10 +195,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 var otherIndexCollections = new HashSet<string>(index.Collections);
                 foreach (var referencedCollection in index.GetReferencedCollections())
-                foreach (var collectionName in referencedCollection.Value)
-                {
-                    otherIndexCollections.Add(collectionName.Name);
-                }
+                    foreach (var collectionName in referencedCollection.Value)
+                    {
+                        otherIndexCollections.Add(collectionName.Name);
+                    }
                 if (otherIndexCollections.Contains(indexToCheck.Definition.OutputReduceToCollection))
                 {
                     var failed = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out string innerDescription);
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, type);
         }
 
-        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
             {
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(lowerId, wrapper, indexContext, stats);
+            return PutMapResults(lowerId, id, wrapper, indexContext, stats);
         }
 
         protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)
