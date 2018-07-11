@@ -50,16 +50,16 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(name));
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.DELETE, null)))
-                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered for this document to be deleted.");
+                ThrowException(documentId, name, "store", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
-                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
+                ThrowException(documentId, name, "store", "create");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
-                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with the same name.");
+                ThrowException(documentId, name, "store", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, name)))
-                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to rename an attachment with the same name.");
+                ThrowException(documentId, name, "store", "rename");
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
@@ -105,10 +105,10 @@ namespace Raven.Client.Documents.Session
                 return; // no-op
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
+                ThrowException(documentId, name, "delete", "create");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, name)))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to rename an attachment with the same name.");
+                ThrowException(documentId, name, "delete", "rename");
 
             Defer(new DeleteAttachmentCommandData(documentId, name, null));
         }
@@ -129,10 +129,16 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException($"Can't rename attachment {name} of document {documentId}, the document was already deleted in this session.");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
-                throw new InvalidOperationException($"Can't rename attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with {name} name.");
+                ThrowException(documentId, name, "rename", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, name)))
-                throw new InvalidOperationException($"Can't rename attachment {name} of document {documentId}, there is a deferred command registered to rename an attachment with the same name.");
+                ThrowException(documentId, name, "rename", "rename");
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, newName)))
+                ThrowException(documentId, newName, "rename", "delete");
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, newName)))
+                ThrowException(documentId, newName, "rename", "rename");
 
             Defer(new RenameAttachmentCommandData(documentId, name, newName, null));
         }
@@ -146,6 +152,11 @@ namespace Raven.Client.Documents.Session
                 ThrowEntityNotInSession(entity);
 
             Rename(document.Id, name, newName);
+        }
+
+        private static void ThrowException(string documentId, string name, string operation, string previousOperation)
+        {
+            throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}', there is a deferred command registered to {previousOperation} an attachment with '{name}' name.");
         }
     }
 }
