@@ -345,13 +345,13 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
-        protected static async Task DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
+        protected static async Task DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose, CancellationToken token = default)
         {
             var mre = new AsyncManualResetEvent();
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            await mre.WaitAsync().ConfigureAwait(false);
+            await mre.WaitAsync(token).ConfigureAwait(false);
         }
 
         protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
