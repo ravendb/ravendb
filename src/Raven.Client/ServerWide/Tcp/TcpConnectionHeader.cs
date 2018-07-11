@@ -26,32 +26,43 @@ namespace Raven.Client.ServerWide.Tcp
         public int OperationVersion { get; set; }
 
         public string Info { get; set; }
-
-        public static readonly int NumberOfRetriesForSendingTcpHeader = 2;
+      
         public static readonly int ClusterTcpVersion = 10;
         public static readonly int HeartbeatsTcpVersion = 20;
         public static readonly int ReplicationTcpVersion = 33;
         public static readonly int SubscriptionTcpVersion = 40;
         public static readonly int TestConnectionTcpVersion = 50;
 
-        public static bool OperationVersionSupported(OperationTypes operationType, int version)
+        public static (bool Supported, int PrevSupported) OperationVersionSupported(OperationTypes operationType, int version)
         {
+            var prev = -1;
             if (_operationsToSupportedProtocolVersions.TryGetValue(operationType, out var supportedProtocols) == false)
-                return false;
-            return supportedProtocols.Contains(version);
+                return (false, prev);
+            
+            for (var i =0; i< supportedProtocols.Count; prev = supportedProtocols[i], i++)
+            {
+                var current = supportedProtocols[i];
+                if (current == version)
+                    return (true, prev);
+
+                if (current > version)
+                    return (false, prev);
+            }
+
+            return (false, prev);
         }
 
-        private static readonly Dictionary<OperationTypes,HashSet<int>> _operationsToSupportedProtocolVersions
-        = new Dictionary<OperationTypes, HashSet<int>>
+        private static readonly Dictionary<OperationTypes, List<int>> _operationsToSupportedProtocolVersions
+        = new Dictionary<OperationTypes, List<int>>
             {
-                [OperationTypes.Ping] = new HashSet<int> { -1},
-                [OperationTypes.None] = new HashSet<int> { -1 },
-                [OperationTypes.Drop] = new HashSet<int> { -2 },
-                [OperationTypes.Subscription] = new HashSet<int> { 40 },
-                [OperationTypes.Replication] = new HashSet<int> { 31, 33 },
-                [OperationTypes.Cluster] = new HashSet<int> { 10 },
-                [OperationTypes.Heartbeats] = new HashSet<int> { 20 },
-                [OperationTypes.TestConnection] = new HashSet<int> { 50 },
+                [OperationTypes.Ping] = new List<int> { -1},
+                [OperationTypes.None] = new List<int> { -1 },
+                [OperationTypes.Drop] = new List<int> { -2 },
+                [OperationTypes.Subscription] = new List<int> { 40 },
+                [OperationTypes.Replication] = new List<int> { 33, 31 },
+                [OperationTypes.Cluster] = new List<int> { 10 },
+                [OperationTypes.Heartbeats] = new List<int> { 20 },
+                [OperationTypes.TestConnection] = new List<int> { 50 },
         };
         public static int GetOperationTcpVersion(OperationTypes operationType)
         {
