@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Session
         /// Stores attachment to be sent in the session.
         /// </summary>
         void Store(string documentId, string name, Stream stream, string contentType = null);
-        
+
         /// <summary>
         /// Stores attachment to be sent in the session.
         /// </summary>
@@ -64,5 +64,23 @@ namespace Raven.Client.Documents.Session
         /// <param name="entity">instance of entity of the document which holds the attachment</param>
         /// <param name="name">the attachment name</param>
         void Delete(object entity, string name);
+
+        /// <summary>
+        ///     Marks the specified document's attachment for rename. The attachment will be renamed when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        /// </summary>
+        /// <param name="entity">instance of entity of the document which holds the attachment</param>
+        /// <param name="name">the attachment name</param>
+        /// <param name="newName">the attachment new name</param>
+        void Rename(object entity, string name, string newName);
+
+        /// <summary>
+        ///     Marks the specified document's attachment for rename. The attachment will be renamed when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        /// </summary>
+        /// <param name="documentId">the document which holds the attachment</param>
+        /// <param name="name">the attachment name</param>
+        /// <param name="newName">the attachment new name</param>
+        void Rename(string documentId, string name, string newName);
     }
 }

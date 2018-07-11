@@ -58,6 +58,9 @@ namespace Raven.Client.Documents.Session
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
                 throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with the same name.");
 
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, name)))
+                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to rename an attachment with the same name.");
+
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
                 throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, the document was already deleted in this session.");
@@ -104,7 +107,45 @@ namespace Raven.Client.Documents.Session
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
                 throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
 
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, name)))
+                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to rename an attachment with the same name.");
+
             Defer(new DeleteAttachmentCommandData(documentId, name, null));
+        }
+
+        public void Rename(string documentId, string name, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentNullException(nameof(documentId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentNullException(nameof(newName));
+
+            if (name == newName)
+                return; // no-op
+
+            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) && DeletedEntities.Contains(documentInfo.Entity))
+                throw new InvalidOperationException($"Can't rename attachment {name} of document {documentId}, the document was already deleted in this session.");
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
+                throw new InvalidOperationException($"Can't rename attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with {name} name.");
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentRENAME, name)))
+                throw new InvalidOperationException($"Can't rename attachment {name} of document {documentId}, there is a deferred command registered to rename an attachment with the same name.");
+
+            Defer(new RenameAttachmentCommandData(documentId, name, newName, null));
+        }
+
+        public void Rename(object entity, string name, string newName)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            Rename(document.Id, name, newName);
         }
     }
 }
