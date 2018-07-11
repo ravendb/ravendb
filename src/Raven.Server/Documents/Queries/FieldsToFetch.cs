@@ -135,7 +135,15 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            var extract = indexDefinition.MapFields.TryGetValue(selectFieldName, out var value) && value.Storage == FieldStorage.Yes;
+            var key = selectFieldName.Value.Length == 0 &&
+                  selectField.HasSourceAlias &&
+                  selectField.SourceAlias != null
+                ? selectField.SourceAlias
+                : selectFieldName;
+
+            var extract = indexDefinition.MapFields.TryGetValue(key, out var value) && 
+                          value.Storage == FieldStorage.Yes;
+
             if (extract)
                 anyExtractableFromIndex = true;
 
