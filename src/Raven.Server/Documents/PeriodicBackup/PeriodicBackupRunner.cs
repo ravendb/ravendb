@@ -710,6 +710,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        public bool HasPeriodicBackups()
+        {
+            RemoveInactiveCompletedTasks();
+            return _periodicBackups.Count > 0 || _inactiveRunningPeriodicBackupsTasks.Count > 0;
+        }
+
         public bool HasRunningBackups()
         {
             foreach (var periodicBackup in _periodicBackups)
@@ -719,7 +725,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return true;
             }
 
-            return false;
+            RemoveInactiveCompletedTasks();
+
+            return _inactiveRunningPeriodicBackupsTasks.Count > 0;
         }
 
         public BackupInfo GetBackupInfo()
