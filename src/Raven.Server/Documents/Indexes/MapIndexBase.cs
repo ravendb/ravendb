@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes
             writer.Delete(tombstone.LowerId, stats);
         }
 
-        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes
                 numberOfOutputs++;
             }
 
-            HandleIndexOutputsPerDocument(lowerId, numberOfOutputs, stats);
+            HandleIndexOutputsPerDocument(id ?? lowerId, numberOfOutputs, stats);
 
             DocumentDatabase.Metrics.MapIndexes.IndexedPerSec.Mark();
             return numberOfOutputs;

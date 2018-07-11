@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     try
                                     {
-                                        var numberOfResults = _index.HandleMap(current.LowerId, mapResults,
+                                        var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults,
                                             indexWriter, indexContext, collectionStats);
                                         _index.MapsPerSec.Mark(numberOfResults);
                                         resultsCount += numberOfResults;

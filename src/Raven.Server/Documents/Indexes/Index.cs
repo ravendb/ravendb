@@ -1502,7 +1502,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer,
+        public abstract int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChange change)
@@ -2115,13 +2115,13 @@ namespace Raven.Server.Documents.Indexes
                                 var includeDocumentsCommand = new IncludeDocumentsCommand(
                                     DocumentDatabase.DocumentsStorage, documentsContext,
                                     query.Metadata.Includes);
-	                            if (query.Metadata.HasCounters)
-	                            {
+                                if (query.Metadata.HasCounters)
+                                {
                                     includeCountersCommand = new IncludeCountersCommand(
-	                                    DocumentDatabase, 
-	                                    documentsContext,
-	                                    query.Metadata.CounterIncludes.Counters);
-	                            }
+                                        DocumentDatabase,
+                                        documentsContext,
+                                        query.Metadata.CounterIncludes.Counters);
+                                }
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
@@ -2177,7 +2177,7 @@ namespace Raven.Server.Documents.Indexes
                                         using (gatherScope?.Start())
                                             includeDocumentsCommand.Gather(document.Result);
 
-                                    	includeCountersCommand?.Fill(document.Result);
+                                        includeCountersCommand?.Fill(document.Result);
                                     }
                                 }
                                 catch (Exception e)
@@ -2729,7 +2729,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand);
 
-        protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
+        protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
         {
             stats.RecordNumberOfProducedOutputs(numberOfOutputs);
 
@@ -2744,7 +2744,7 @@ namespace Raven.Server.Documents.Indexes
             if (_indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument < numberOfOutputs)
             {
                 _indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument = numberOfOutputs;
-                _indexOutputsPerDocumentWarning.SampleDocumentId = documentKey;
+                _indexOutputsPerDocumentWarning.SampleDocumentId = documentId;
             }
 
             if (_indexOutputsPerDocumentWarning.LastWarnedAt != null &&
