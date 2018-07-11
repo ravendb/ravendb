@@ -1096,12 +1096,10 @@ namespace Raven.Server
                         {
                             TcpConnectionHeaderMessage header = null;
                             string error = null;
-                            int version = 0;
                             bool matchingVersion = false;
                             using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
-                                int retries = TcpConnectionHeaderMessage.NumberOfRetriesForSendingTcpHeader;
-                                while (retries > 0)
+                                while (true)
                                 {
                                     using (var headerJson = await context.ParseToMemoryAsync(
                                         stream,
@@ -1116,6 +1114,7 @@ namespace Raven.Server
                                     ))
                                     {
                                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+
                                         if (Logger.IsInfoEnabled)
                                         {
                                             Logger.Info(
@@ -1136,40 +1135,42 @@ namespace Raven.Server
 
                                             return;
                                         }
-                                    }
 
-                                    matchingVersion = SupportedOperationVersion(header, out error, out version);
-                                    if (matchingVersion == false)
+                                    }                                    
+
+                                    var (isSupported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion);
+                                    if (isSupported)
+                                        break;
+
+                                    if ( prevSupported == -1)
                                     {
-                                        RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
+                                        if (_tcpAuditLog != null)
+                                            _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'." +
+                                                              $" Dropping connection because we could not agree on a {header.OperationVersion} protocol version we both support.");
                                         if (Logger.IsInfoEnabled)
                                         {
                                             Logger.Info(
-                                                $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
-                                                $" {error} retries left:{retries}");
+                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
+                                                $"reason: Dropping connection because we could not agree on a {header.OperationVersion} protocol version we both support.");
                                         }
 
-                                        retries--;
-                                        continue;
+                                        return;
                                     }
-
-                                    break;
-                                }
-
-                                if (matchingVersion == false)
-                                {
-                                    if (_tcpAuditLog != null)
-                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because coudln't agree on a matching operation version for {header.Operation} on {header.DatabaseName}.");
-
-                                    //Couldn't agree on tcp operation version, will drop the connection now.
-                                    return;
+                                    if (Logger.IsInfoEnabled)
+                                    {
+                                        Logger.Info(
+                                            $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
+                                            $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {prevSupported}.");
+                                    }
+                                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, prevSupported);
+                                    
                                 }
 
                                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
                                 //At this stage the error is not relevant.
                                 RespondToTcpConnection(stream, context, null,
-                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, 
-                                    version);
+                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
+                                    header.OperationVersion);
 
                                 if (authSuccessful == false)
                                 {
@@ -1185,6 +1186,8 @@ namespace Raven.Server
 
                                     return; // cannot proceed
                                 }
+
+                                tcp.ProtocolVersion = header.OperationVersion;
                             }
 
                             if (_tcpAuditLog != null)
@@ -1236,29 +1239,6 @@ namespace Raven.Server
                 writer.WriteEndObject();
                 writer.Flush();
             }
-        }
-
-        /// <summary>
-        /// This method is intended to verify if this server is able to support the incoming TCP operation protocol.
-        /// It might be that we are able to downgrade our protocol version while the other side is not able to since he is not aware of any other protocol.
-        /// E.G. v4.0 server sending a replication request to v4.1, at this point v4.1 destination is able to downgrade to v4.0 but not the other way around.
-        /// </summary>
-        /// <param name="header"> The TCP header containing information about the TCP operation</param>
-        /// <param name="error">Error message in case we don't support this protocol version at all.</param>
-        /// <param name="version">The version we agreed on which will always be the request version</param>
-        /// <returns></returns>
-        private bool SupportedOperationVersion(TcpConnectionHeaderMessage header, out string error, out int version)
-        {            
-            if (TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion) == false)
-            {
-                version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
-                error = $"The operation of type {header.Operation} with version {header.OperationVersion} is not supported by this server which is using version {version}";
-                return false;
-            }
-
-            version = header.OperationVersion;
-            error = null;
-            return true;
         }
 
         private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)

@@ -45,6 +45,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         RevisionsConfigurationNotValid,
 
+        ReplicationMissingAttachments,
+
         OutOfMemoryException
     }
 }

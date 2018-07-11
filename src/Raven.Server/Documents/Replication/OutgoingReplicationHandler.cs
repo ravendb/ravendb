@@ -30,6 +30,7 @@ using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Security;
+using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -462,26 +463,57 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        public class TcpNegotiateParamaters
+        {
+            public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
+            public int Version { get; set; }
+            public string Database { get; set; }
+            public string NodeTag { get; set; }
+
+            public Func<DocumentsOperationContext, BlittableJsonTextWriter,int> ReadRespondAndGetVersion { get; set; }
+
+        }
+        //TODO:move this to a general TCP util class
+        private int NegotiateProtocolVersion(DocumentsOperationContext documentsContext, Stream stream /*TODO: remove this if not needed*/, TcpNegotiateParamaters parameters )
+        {
+            using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
+            {
+                var currentVersion = parameters.Version;
+                while (true)
+                {
+                    documentsContext.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database, // _parent.Database.Name,
+                        [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
+                        [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.NodeTag,
+                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
+                    });
+                    writer.Flush();
+                    var version = parameters.ReadRespondAndGetVersion(documentsContext, writer);
+                    var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
+                    if(supported)
+                        return version;
+                    if (prevSupported == -1)
+                        return -1;
+                    currentVersion = prevSupported;
+                }
+            }
+        }
         private void WriteHeaderToRemotePeer()
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                WriteHeaderInternal(documentsContext, writer, TcpConnectionHeaderMessage.ReplicationTcpVersion);
-                var destinationProtocol = ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
-                if (destinationProtocol != TcpConnectionHeaderMessage.ReplicationTcpVersion)
+                var parameters = new TcpNegotiateParamaters
                 {
-                    WriteHeaderInternal(documentsContext, writer, destinationProtocol);
-                    var newDestinationProtocol = ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
-                    if (newDestinationProtocol != destinationProtocol)
-                    {
-                        throw new InvalidOperationException(
-                            $"After downgrading replication protocol from {TcpConnectionHeaderMessage.ReplicationTcpVersion} to {destinationProtocol}" +
-                            $" the destination now request that we will move to {newDestinationProtocol} this should not happen and probably a bug.");
-                    }
-
-                    _protocolVersion = destinationProtocol;
-                }
+                    Database = Destination.Database,
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
+                    NodeTag = _parent._server.NodeTag,
+                    ReadRespondAndGetVersion = ReadHeaderResponseAndThrowIfUnAuthorized,
+                    Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
+                };
+                //This will either throw or return acceptable protocol version.
+                _protocolVersion = NegotiateProtocolVersion(documentsContext, _stream, parameters);
 
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
@@ -498,19 +530,6 @@ namespace Raven.Server.Documents.Replication
                 writer.Flush();
             }
         }
-
-        private void WriteHeaderInternal(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, int replicationTcpVersion)
-        {
-            documentsContext.Write(writer, new DynamicJsonValue
-            {
-                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, // _parent.Database.Name,
-                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = replicationTcpVersion
-            });
-            writer.Flush();
-        }
-
         private int ReadHeaderResponseAndThrowIfUnAuthorized(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer)
         {
             const int timeout = 2 * 60 * 1000; 
@@ -537,7 +556,7 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (TcpConnectionHeaderMessage.OperationVersionSupported(TcpConnectionHeaderMessage.OperationTypes.Replication, headerResponse.Version))
+                        if (headerResponse.Version != -1)
                         {
                             return headerResponse.Version;
                         }
