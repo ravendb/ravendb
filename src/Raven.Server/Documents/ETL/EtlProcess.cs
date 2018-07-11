@@ -16,6 +16,7 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
@@ -796,12 +797,12 @@ namespace Raven.Server.Documents.ETL
 
                 var csErrors = new List<string>();
 
-                if (testScript.Connection != null)
+                if (sqlTestScript.Connection != null)
                 {
-                    if (testScript.Connection.Validate(ref csErrors) == false)
+                    if (sqlTestScript.Connection.Validate(ref csErrors) == false)
                         throw new InvalidOperationException($"Invalid connection string due to {string.Join(";", csErrors)}");
 
-                    connection = testScript.Connection;
+                    connection = sqlTestScript.Connection as TConnectionString;
                 }
                 else
                 {
@@ -820,7 +821,7 @@ namespace Raven.Server.Documents.ETL
 
             testScript.Configuration.Initialize(connection);
 
-            testScript.Configuration.TestModeValidation = true;
+            testScript.Configuration.TestMode = true;
 
             if (testScript.Configuration.Validate(out List<string> errors) == false)
             {
@@ -846,6 +847,7 @@ namespace Raven.Server.Documents.ETL
             {
                 case EtlType.Sql:
                     using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, null))
+                    using (sqlEtl.Statistics.PreventFromAddingAlertsToNotificationCenter())
                     {
                         sqlEtl.EnsureThreadAllocationStats();
 
@@ -857,7 +859,20 @@ namespace Raven.Server.Documents.ETL
                         return sqlEtl.RunTest(context, transformed, sqlTestScript.PerformRolledBackTransaction);
                     }
                 case EtlType.Raven:
-                    throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
+                    using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, null))
+                    using (ravenEtl.Statistics.PreventFromAddingAlertsToNotificationCenter())
+                    {
+                        ravenEtl.EnsureThreadAllocationStats();
+
+                        var results = ravenEtl.Transform(new[] { new RavenEtlItem(document, collection) }, context, new EtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState());
+
+                        return new RavenEtlTestScriptResult
+                        {
+                            TransformationErrors = ravenEtl.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                            Commands = results.ToList()
+                        };
+                    }
                 default:
                     throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
             }

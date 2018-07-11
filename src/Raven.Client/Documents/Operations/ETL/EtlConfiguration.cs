@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string ConnectionStringName { get; set; }
 
-        internal bool TestModeValidation { get; set; }
+        internal bool TestMode { get; set; }
 
         [JsonDeserializationIgnore]
         [Newtonsoft.Json.JsonIgnore]
@@ -49,10 +49,10 @@ namespace Raven.Client.Documents.Operations.ETL
             if (string.IsNullOrEmpty(Name))
                 errors.Add($"{nameof(Name)} of ETL configuration cannot be empty");
 
-            if (TestModeValidation == false && string.IsNullOrEmpty(ConnectionStringName))
+            if (TestMode == false && string.IsNullOrEmpty(ConnectionStringName))
                 errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
 
-            if (TestModeValidation == false)
+            if (TestMode == false)
                 Connection.Validate(ref errors);
 
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

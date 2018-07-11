@@ -6,5 +6,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
     public class TestSqlEtlScript : TestEtlScript<SqlEtlConfiguration, SqlConnectionString>
     {
         public bool PerformRolledBackTransaction;
+
+        public SqlConnectionString Connection;
     }
 }

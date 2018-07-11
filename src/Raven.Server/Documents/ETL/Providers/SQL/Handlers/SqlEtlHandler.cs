@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
         }
 
         [RavenAction("/databases/*/admin/etl/sql/test", "POST", AuthorizationStatus.Operator)]
-        public Task PostSimulateSqlReplication()
+        public Task PostScriptTest()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
