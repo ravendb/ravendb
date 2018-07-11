@@ -679,11 +679,13 @@ namespace Raven.Server.Documents.Handlers
                     return CommandPropertyName.NoSuchProperty;
                 case 7:
                     if (*(int*)state.StringBuffer == 1836020294 &&
-                        state.StringBuffer[4] == (byte)'E')
+                        *(short*)(state.StringBuffer + sizeof(int)) == 29765 &&
+                        state.StringBuffer[6] == (byte)'l')
                         return CommandPropertyName.FromEtl;
 
                     if (*(int*)state.StringBuffer == 1316447566 &&
-                        state.StringBuffer[3] == (byte)'N')
+                        *(short*)(state.StringBuffer + sizeof(int)) == 28001 &&
+                        state.StringBuffer[6] == (byte)'e')
                         return CommandPropertyName.NewName;
 
                     return CommandPropertyName.NoSuchProperty;

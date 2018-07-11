@@ -785,7 +785,7 @@ namespace Raven.Server.Documents
             if (string.IsNullOrWhiteSpace(newName))
                 throw new ArgumentException("Argument cannot be null or whitespace.", nameof(newName));
             if (context.Transaction == null)
-                throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
+                throw new ArgumentException("Context must be set with a valid transaction before calling Rename", nameof(context));
 
             var attachment = GetAttachment(context, documentId, name, AttachmentType.Document, changeVector);
             if (attachment == null)

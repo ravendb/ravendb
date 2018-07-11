@@ -62,7 +62,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     });
                 }
 
-                _fullDocuments.Add(new CountersBatchCommandData(id, counterOperations));
+                _fullDocuments.Add(new CountersBatchCommandData(id, counterOperations)
+                {
+                    FromEtl = true
+                });
             }
         }
 
