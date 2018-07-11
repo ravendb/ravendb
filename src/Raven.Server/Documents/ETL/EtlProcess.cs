@@ -840,13 +840,13 @@ namespace Raven.Server.Documents.ETL
                                                     "while ETL test expects to get exactly 1 transformation script");
             }
 
-            if (testScript.Configuration.Transforms[0].Collections.Count != 1)
-            {
-                throw new InvalidOperationException($"Invalid number of collections specified in the transformation script. You have provided {testScript.Configuration.Transforms[0].Collections.Count} " +
-                                                    "while ETL test is supposed to work with exactly 1 collection");
-            }
+            var docCollection = database.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
 
-            var collection = testScript.Configuration.Transforms[0].Collections[0];
+            if (testScript.Configuration.Transforms[0].Collections.Contains(docCollection, StringComparer.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException($"Document '{document.Id}' belongs to {docCollection} collection " +
+                                                    $"while tested ETL script works on the following collections: {string.Join(", ", testScript.Configuration.Transforms[0].Collections)}");
+            }
 
             List<string> debugOutput;
 
@@ -858,7 +858,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         sqlEtl.EnsureThreadAllocationStats();
 
-                        var transformed = sqlEtl.Transform(new[] {new ToSqlItem(document, collection)}, context, new EtlStatsScope(new EtlRunStats()),
+                        var transformed = sqlEtl.Transform(new[] {new ToSqlItem(document, docCollection)}, context, new EtlStatsScope(new EtlRunStats()),
                             new EtlProcessState());
 
                         Debug.Assert(sqlTestScript != null);
@@ -874,7 +874,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         ravenEtl.EnsureThreadAllocationStats();
 
-                        var results = ravenEtl.Transform(new[] { new RavenEtlItem(document, collection) }, context, new EtlStatsScope(new EtlRunStats()),
+                        var results = ravenEtl.Transform(new[] { new RavenEtlItem(document, docCollection) }, context, new EtlStatsScope(new EtlRunStats()),
                             new EtlProcessState());
 
                         return new RavenEtlTestScriptResult
