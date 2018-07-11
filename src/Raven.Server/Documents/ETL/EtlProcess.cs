@@ -10,13 +10,16 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.ETL.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -772,6 +775,92 @@ namespace Raven.Server.Documents.ETL
                 return OngoingTaskConnectionStatus.Active;
 
             return OngoingTaskConnectionStatus.NotActive;
+        }
+
+        public static TestEtlScriptResult TestScript(TestEtlScript<TConfiguration, TConnectionString> testScript, DocumentDatabase database, ServerStore serverStore,
+            DocumentsOperationContext context)
+        {
+            var document = database.DocumentsStorage.Get(context, testScript.DocumentId);
+
+            if (document == null)
+                throw new InvalidOperationException($"Document {testScript.DocumentId} does not exist");
+
+            TConnectionString connection = null;
+
+            var sqlTestScript = testScript as TestSqlEtlScript;
+
+            if (sqlTestScript != null)
+            {
+                // we need to have connection string when testing SQL ETL because we need to have the factory name
+                // and if PerformRolledBackTransaction = true is specified then we need make a connection to SQL
+
+                var csErrors = new List<string>();
+
+                if (testScript.Connection != null)
+                {
+                    if (testScript.Connection.Validate(ref csErrors) == false)
+                        throw new InvalidOperationException($"Invalid connection string due to {string.Join(";", csErrors)}");
+
+                    connection = testScript.Connection;
+                }
+                else
+                {
+                    if (serverStore.LoadDatabaseRecord(database.Name, out _).SqlConnectionStrings
+                            .TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
+                    {
+                        throw new InvalidOperationException($"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
+                    }
+
+                    if (sqlConnection.Validate(ref csErrors) == false)
+                        throw new InvalidOperationException($"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
+
+                    connection = sqlConnection as TConnectionString;
+                }
+            }
+
+            testScript.Configuration.Initialize(connection);
+
+            testScript.Configuration.TestModeValidation = true;
+
+            if (testScript.Configuration.Validate(out List<string> errors) == false)
+            {
+                throw new InvalidOperationException($"Invalid ETL configuration for '{testScript.Configuration.Name}'. " +
+                                                    $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
+            }
+
+            if (testScript.Configuration.Transforms.Count != 1)
+            {
+                throw new InvalidOperationException($"Invalid number of transformations. You have provided {testScript.Configuration.Transforms.Count} " +
+                                                    "while ETL test expects to get exactly 1 transformation script");
+            }
+
+            if (testScript.Configuration.Transforms[0].Collections.Count != 1)
+            {
+                throw new InvalidOperationException($"Invalid number of collections specified in the transformation script. You have provided {testScript.Configuration.Transforms[0].Collections.Count} " +
+                                                    "while ETL test is supposed to work with exactly 1 collection");
+            }
+
+            var collection = testScript.Configuration.Transforms[0].Collections[0];
+
+            switch (testScript.Configuration.EtlType)
+            {
+                case EtlType.Sql:
+                    using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, null))
+                    {
+                        sqlEtl.EnsureThreadAllocationStats();
+
+                        var transformed = sqlEtl.Transform(new[] {new ToSqlItem(document, collection)}, context, new EtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState());
+
+                        Debug.Assert(sqlTestScript != null);
+
+                        return sqlEtl.RunTest(context, transformed, sqlTestScript.PerformRolledBackTransaction);
+                    }
+                case EtlType.Raven:
+                    throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
+                default:
+                    throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
+            }
         }
 
         public override void Dispose()
