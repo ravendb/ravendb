@@ -479,7 +479,7 @@ namespace Raven.Server.Rachis
             while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task;
+                var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState == rachisState)
                     return;
@@ -494,7 +494,7 @@ namespace Raven.Server.Rachis
             while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task;
+                var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (currentLeader != GetLeaderTag(safe: true))
                     return;
@@ -508,7 +508,7 @@ namespace Raven.Server.Rachis
             while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task;
+                var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState != rachisState)
                     return;
