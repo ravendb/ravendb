@@ -463,42 +463,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public class TcpNegotiateParamaters
-        {
-            public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
-            public int Version { get; set; }
-            public string Database { get; set; }
-            public string NodeTag { get; set; }
-
-            public Func<DocumentsOperationContext, BlittableJsonTextWriter,int> ReadRespondAndGetVersion { get; set; }
-
-        }
-        //TODO:move this to a general TCP util class
-        private int NegotiateProtocolVersion(DocumentsOperationContext documentsContext, Stream stream /*TODO: remove this if not needed*/, TcpNegotiateParamaters parameters )
-        {
-            using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
-            {
-                var currentVersion = parameters.Version;
-                while (true)
-                {
-                    documentsContext.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database, // _parent.Database.Name,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
-                        [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.NodeTag,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
-                    });
-                    writer.Flush();
-                    var version = parameters.ReadRespondAndGetVersion(documentsContext, writer);
-                    var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
-                    if(supported)
-                        return version;
-                    if (prevSupported == -1)
-                        return -1;
-                    currentVersion = prevSupported;
-                }
-            }
-        }
         private void WriteHeaderToRemotePeer()
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -513,7 +477,7 @@ namespace Raven.Server.Documents.Replication
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 };
                 //This will either throw or return acceptable protocol version.
-                _protocolVersion = NegotiateProtocolVersion(documentsContext, _stream, parameters);
+                _protocolVersion = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
 
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
@@ -530,7 +494,7 @@ namespace Raven.Server.Documents.Replication
                 writer.Flush();
             }
         }
-        private int ReadHeaderResponseAndThrowIfUnAuthorized(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer)
+        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer)
         {
             const int timeout = 2 * 60 * 1000; 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
@@ -561,7 +525,7 @@ namespace Raven.Server.Documents.Replication
                             return headerResponse.Version;
                         }
                         //Kindly request the server to drop the connection
-                        documentsContext.Write(writer, new DynamicJsonValue
+                        jsonContext.Write(writer, new DynamicJsonValue
                         {
                             [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, 
                             [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
