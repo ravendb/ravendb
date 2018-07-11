@@ -187,7 +187,7 @@ namespace SlowTests.Client.Attachments
                     session.Advanced.Attachments.Store(user, "profile", stream, "image/png");
 
                     var exception = Assert.Throws<InvalidOperationException>(() => session.Advanced.Attachments.Store(user, "profile", stream2));
-                    Assert.Equal("Can't store attachment profile of document users/1, there is a deferred command registered to create an attachment with the same name.", exception.Message);
+                    Assert.Equal("Can't store attachment 'profile' of document 'users/1', there is a deferred command registered to create an attachment with 'profile' name.", exception.Message);
                 }
             }
         }
