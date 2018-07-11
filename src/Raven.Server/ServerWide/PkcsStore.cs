@@ -24,12 +24,12 @@ namespace Raven.Server.ServerWide
 
     public class PkcsStore
     {
-        private static IgnoresCaseHashtable keys = new IgnoresCaseHashtable();
-        private static IDictionary localIds = new Hashtable();
-        private static IgnoresCaseHashtable certs = new IgnoresCaseHashtable();
-        private static IDictionary chainCerts = new Hashtable();
-        private static IDictionary keyCerts = new Hashtable();
-        private static AsymmetricKeyEntry unmarkedKeyEntry = null;
+        private readonly IgnoresCaseHashtable keys = new IgnoresCaseHashtable();
+        private readonly IDictionary localIds = new Hashtable();
+        private readonly IgnoresCaseHashtable certs = new IgnoresCaseHashtable();
+        private readonly IDictionary chainCerts = new Hashtable();
+        private readonly IDictionary keyCerts = new Hashtable();
+        private AsymmetricKeyEntry unmarkedKeyEntry = null;
 
         public void Load(Stream input, char[] password)
         {
@@ -38,10 +38,40 @@ namespace Raven.Server.ServerWide
             ContentInfo info = bag.AuthSafe;
             bool wrongPkcs12Zero = false;
 
-            IList certBags = new ArrayList();
+            if (password != null && bag.MacData != null) // check the mac code
+            {
+                MacData mData = bag.MacData;
+                DigestInfo dInfo = mData.Mac;
+                AlgorithmIdentifier algId = dInfo.AlgorithmID;
+                byte[] salt = mData.GetSalt();
+                int itCount = mData.IterationCount.IntValue;
+
+                byte[] data = ((Asn1OctetString)info.Content).GetOctets();
+
+                byte[] mac = CalculatePbeMac(algId.Algorithm, salt, itCount, password, false, data);
+                byte[] dig = dInfo.GetDigest();
+
+                if (!Arrays.ConstantTimeAreEqual(mac, dig))
+                {
+                    if (password.Length > 0)
+                        throw new IOException("PKCS12 key store MAC invalid - wrong password or corrupted file.");
+
+                    // Try with incorrect zero length password
+                    mac = CalculatePbeMac(algId.Algorithm, salt, itCount, password, true, data);
+
+                    if (!Arrays.ConstantTimeAreEqual(mac, dig))
+                        throw new IOException("PKCS12 key store MAC invalid - wrong password or corrupted file.");
+
+                    wrongPkcs12Zero = true;
+                }
+            }
+
             keys.Clear();
             localIds.Clear();
             unmarkedKeyEntry = null;
+
+            IList certBags = new ArrayList();
+            
 
             if (info.ContentType.Equals(PkcsObjectIdentifiers.Data))
             {
@@ -219,6 +249,24 @@ namespace Raven.Server.ServerWide
             return tab;
         }
 
+        internal static byte[] CalculatePbeMac(
+            DerObjectIdentifier oid,
+            byte[] salt,
+            int itCount,
+            char[] password,
+            bool wrongPkcs12Zero,
+            byte[] data)
+        {
+            Asn1Encodable asn1Params = PbeUtilities.GenerateAlgorithmParameters(
+                oid, salt, itCount);
+            ICipherParameters cipherParams = PbeUtilities.GenerateCipherParameters(
+                oid, password, wrongPkcs12Zero, asn1Params);
+
+            IMac mac = (IMac)PbeUtilities.CreateEngine(oid);
+            mac.Init(cipherParams);
+            return MacUtilities.DoFinal(mac, data);
+        }
+
         private byte[] CryptPbeData(
             bool forEncryption,
             AlgorithmIdentifier algId,
@@ -315,7 +363,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void LoadPkcs8ShroudedKeyBag(EncryptedPrivateKeyInfo encPrivKeyInfo, Asn1Set bagAttributes,
+        protected virtual void LoadPkcs8ShroudedKeyBag(EncryptedPrivateKeyInfo encPrivKeyInfo, Asn1Set bagAttributes,
             char[] password, bool wrongPkcs12Zero)
         {
             if (password != null)
@@ -327,7 +375,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
+        protected virtual void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
         {
             AsymmetricKeyParameter privKey = PrivateKeyFactory.CreateKey(privKeyInfo);
 
