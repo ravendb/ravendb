@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Jint.JsValueExtensions;
 
 namespace Raven.Server.Documents.ETL
 {

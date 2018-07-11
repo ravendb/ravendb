@@ -28,6 +28,7 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
+using static Jint.JsValueExtensions;
 
 namespace Raven.Server.Utils.Cli
 {

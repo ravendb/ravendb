@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
+using static Jint.JsValueExtensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
