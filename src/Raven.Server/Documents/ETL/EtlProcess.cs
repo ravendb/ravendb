@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
@@ -99,6 +100,8 @@ namespace Raven.Server.Documents.ETL
         private PoolOfThreads.LongRunningWork _longRunningWork;
         private EtlStatsAggregator _lastStats;
         private int _statsId;
+
+        private TestMode _testMode;
 
         protected readonly Transformation Transformation;
         protected readonly Logger Logger;
@@ -255,7 +258,7 @@ namespace Raven.Server.Documents.ETL
         {
             using (var transformer = GetTransformer(context))
             {
-                transformer.Initalize();
+                transformer.Initalize(debugMode: _testMode != null);
 
                 foreach (var item in items)
                 {
@@ -326,6 +329,8 @@ namespace Raven.Server.Documents.ETL
                         }
                     }
                 }
+
+                _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
 
                 return transformer.GetTransformedResults();
             }
@@ -843,11 +848,13 @@ namespace Raven.Server.Documents.ETL
 
             var collection = testScript.Configuration.Transforms[0].Collections[0];
 
+            List<string> debugOutput;
+
             switch (testScript.Configuration.EtlType)
             {
                 case EtlType.Sql:
                     using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, null))
-                    using (sqlEtl.Statistics.PreventFromAddingAlertsToNotificationCenter())
+                    using (sqlEtl.EnterTestMode(out debugOutput))
                     {
                         sqlEtl.EnsureThreadAllocationStats();
 
@@ -856,11 +863,14 @@ namespace Raven.Server.Documents.ETL
 
                         Debug.Assert(sqlTestScript != null);
 
-                        return sqlEtl.RunTest(context, transformed, sqlTestScript.PerformRolledBackTransaction);
+                        var result = sqlEtl.RunTest(context, transformed, sqlTestScript.PerformRolledBackTransaction);
+                        result.DebugOutput = debugOutput;
+
+                        return result;
                     }
                 case EtlType.Raven:
                     using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, null))
-                    using (ravenEtl.Statistics.PreventFromAddingAlertsToNotificationCenter())
+                    using (ravenEtl.EnterTestMode(out debugOutput))
                     {
                         ravenEtl.EnsureThreadAllocationStats();
 
@@ -870,12 +880,27 @@ namespace Raven.Server.Documents.ETL
                         return new RavenEtlTestScriptResult
                         {
                             TransformationErrors = ravenEtl.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
-                            Commands = results.ToList()
+                            Commands = results.ToList(),
+                            DebugOutput = debugOutput
                         };
                     }
                 default:
                     throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
             }
+        }
+
+        private IDisposable EnterTestMode(out List<string> debugOutput)
+        {
+            _testMode = new TestMode();
+            var disableAlerts = Statistics.PreventFromAddingAlertsToNotificationCenter();
+
+            debugOutput = _testMode.DebugOutput;
+
+            return new DisposableAction(() =>
+            {
+                _testMode = null;
+                disableAlerts.Dispose();
+            });
         }
 
         public override void Dispose()
@@ -891,6 +916,11 @@ namespace Raven.Server.Documents.ETL
             exceptionAggregator.Execute(() => _waitForChanges.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        private class TestMode
+        {
+            public readonly List<string> DebugOutput = new List<string>();
         }
     }
 }

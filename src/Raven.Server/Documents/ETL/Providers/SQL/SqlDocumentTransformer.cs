@@ -42,9 +42,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                _loadedAttachments = new Dictionary<string, Queue<Attachment>>(StringComparer.OrdinalIgnoreCase);
         }
 
-        public override void Initalize()
+        public override void Initalize(bool debugMode)
         {
-            base.Initalize();
+            base.Initalize(debugMode);
             
             DocumentScript.ScriptEngine.SetValue("varchar",
                 new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));

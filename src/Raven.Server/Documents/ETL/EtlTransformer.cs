@@ -35,11 +35,14 @@ namespace Raven.Server.Documents.ETL
             _counterBehaviors = counterBehaviors;
         }
 
-        public virtual void Initalize()
+        public virtual void Initalize(bool debugMode)
         {
             _returnMainRun = Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
             if (DocumentScript == null)
                 return;
+
+            if (debugMode)
+                DocumentScript.DebugMode = true;
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadToFunctionTranslator));
 
@@ -276,6 +279,11 @@ namespace Raven.Server.Documents.ETL
             {
 
             }
+        }
+
+        public List<string> GetDebugOutput()
+        {
+            return DocumentScript.DebugOutput;
         }
     }
 }

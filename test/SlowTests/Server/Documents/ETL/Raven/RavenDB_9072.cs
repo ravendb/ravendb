@@ -71,6 +71,8 @@ for (var i = 0; i < this.Lines.length; i++) {
     });
 }
 
+output('test output');
+
 loadToOrders(orderData);"
                                     }
                                 }
@@ -83,6 +85,8 @@ loadToOrders(orderData);"
 
                         Assert.Equal(1, result.Commands.OfType<DeletePrefixedCommandData>().Count());
                         Assert.Equal(3, result.Commands.OfType<PutCommandDataWithBlittableJson>().Count());
+
+                        Assert.Equal("test output", result.DebugOutput[0]);
                     }
                 }
             }
