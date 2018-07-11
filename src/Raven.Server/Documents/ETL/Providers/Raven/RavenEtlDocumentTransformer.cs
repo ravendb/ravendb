@@ -40,9 +40,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             LoadToDestinations = _script.HasTransformation ? _script.LoadToCollections : new string[0];
         }
 
-        public override void Initalize()
+        public override void Initalize(bool debugMode)
         {
-            base.Initalize();
+            base.Initalize(debugMode);
 
             if (DocumentScript == null)
                 return;

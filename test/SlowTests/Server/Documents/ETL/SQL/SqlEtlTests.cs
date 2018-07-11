@@ -639,7 +639,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                 {
                                     Collections = {"Orders"},
                                     Name = "OrdersAndLines",
-                                    Script = defaultScript
+                                    Script = defaultScript + "output('test output')"
                                 }
                             }
                         }
@@ -658,6 +658,8 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     var orders = result.Summary.First(x => x.TableName == "Orders");
 
                     Assert.Equal(2, orders.Commands.Length); // delete and insert
+
+                    Assert.Equal("test output", result.DebugOutput[0]);
                 }
             }
         }

@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -72,7 +73,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                 var dbDoc = context.ReadForMemory(RequestBodyStream(), "TestSqlEtlScript");
                 var testScript = JsonDeserializationServer.TestSqlEtlScript(dbDoc);
 
-                var result = SqlEtl.TestScript(testScript, Database, ServerStore, context);
+                var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(testScript, Database, ServerStore, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
