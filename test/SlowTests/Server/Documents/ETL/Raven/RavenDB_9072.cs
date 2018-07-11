@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -88,6 +89,99 @@ loadToOrders(orderData);"
 
                         Assert.Equal("test output", result.DebugOutput[0]);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanTestScriptSpecifiedOnMultipleCollections()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order());
+
+                    session.SaveChanges();
+                }
+
+                var database = GetDatabase(store.Database).Result;
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    RavenEtl.TestScript(new TestRavenEtlScript
+                    {
+                        DocumentId = "orders/1-A",
+                        Configuration = new RavenEtlConfiguration()
+                        {
+                            Name = "simulate",
+                            Transforms =
+                                {
+                                    new Transformation()
+                                    {
+                                        Collections =
+                                        {
+                                            "Orders",
+                                            "SpecialOrders"
+                                        },
+                                        Name = "test",
+                                        Script =
+                                            @"
+loadToOrders(this);"
+                                    }
+                                }
+                        }
+                    }, database, database.ServerStore, context);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowIfTestingOnDocumentBelongingToDifferentCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order());
+
+                    session.SaveChanges();
+                }
+
+                var database = GetDatabase(store.Database).Result;
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var ex = Assert.Throws<InvalidOperationException>(() => RavenEtl.TestScript(new TestRavenEtlScript
+                    {
+                        DocumentId = "orders/1-A",
+                        Configuration = new RavenEtlConfiguration()
+                        {
+                            Name = "simulate",
+                            Transforms =
+                            {
+                                new Transformation()
+                                {
+                                    Collections =
+                                    {
+                                        "DifferentCollection"
+                                    },
+                                    Name = "test",
+                                    Script =
+                                        @"
+loadToDifferentCollection(this);"
+                                }
+                            }
+                        }
+                    }, database, database.ServerStore, context));
+
+                    Assert.Contains(
+                        "Document 'orders/1-A' belongs to Orders collection while tested ETL script works on the following collections: DifferentCollection",
+                        ex.Message);
                 }
             }
         }
