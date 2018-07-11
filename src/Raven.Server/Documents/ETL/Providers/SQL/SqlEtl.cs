@@ -101,59 +101,56 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public SqlEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite, bool performRolledBackTransaction)
         {
             var summaries = new List<TableQuerySummary>();
-
-            using (Statistics.PreventFromAddingAlertsToNotificationCenter())
+            
+            if (performRolledBackTransaction)
             {
-                if (performRolledBackTransaction)
+                try
                 {
-                    try
+                    using (var writer = new RelationalDatabaseWriter(this, Database))
                     {
-                        using (var writer = new RelationalDatabaseWriter(this, Database))
+                        foreach (var records in toWrite)
                         {
-                            foreach (var records in toWrite)
-                            {
-                                var commands = new List<DbCommand>();
+                            var commands = new List<DbCommand>();
 
-                                writer.Write(records, commands, CancellationToken);
+                            writer.Write(records, commands, CancellationToken);
 
-                                summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
-                            }
-
-                            writer.Rollback();
+                            summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        Statistics.RecordLoadError(e.ToString(), documentId: null, count: 1);
+
+                        writer.Rollback();
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    var simulatedwriter = new RelationalDatabaseWriterSimulator(Configuration);
-
-                    foreach (var records in toWrite)
-                    {
-                        var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
-                        {
-                            CommandText = x
-                        }).ToArray();
-
-                        summaries.Add(new TableQuerySummary
-                        {
-                            TableName = records.TableName,
-                            Commands = commands
-                        });
-                    }
+                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: 1);
                 }
-
-                return new SqlEtlTestScriptResult
-                {
-                    TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
-                    LoadErrors = Statistics.LastLoadErrorsInCurrentBatch.Errors.ToList(),
-                    SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch.Statements.ToList(),
-                    Summary = summaries
-                };
             }
+            else
+            {
+                var simulatedwriter = new RelationalDatabaseWriterSimulator(Configuration);
+
+                foreach (var records in toWrite)
+                {
+                    var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
+                    {
+                        CommandText = x
+                    }).ToArray();
+
+                    summaries.Add(new TableQuerySummary
+                    {
+                        TableName = records.TableName,
+                        Commands = commands
+                    });
+                }
+            }
+
+            return new SqlEtlTestScriptResult
+            {
+                TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                LoadErrors = Statistics.LastLoadErrorsInCurrentBatch.Errors.ToList(),
+                SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch.Statements.ToList(),
+                Summary = summaries
+            };
         }
     }
 }

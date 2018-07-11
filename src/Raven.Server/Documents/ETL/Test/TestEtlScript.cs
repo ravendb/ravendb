@@ -8,7 +8,5 @@ namespace Raven.Server.Documents.ETL.Test
         public string DocumentId;
 
         public TConfiguration Configuration;
-
-        public TConnectionString Connection;
     }
 }

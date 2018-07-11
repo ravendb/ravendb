@@ -1,0 +1,46 @@
+﻿using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Server.Documents.ETL.Providers.Raven.Test;
+using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Json;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+
+namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
+{
+    public class RavenEtlHandler : DatabaseRequestHandler
+    {
+        [RavenAction("/databases/*/admin/etl/raven/test", "POST", AuthorizationStatus.Operator)]
+        public Task PostScriptTest()
+        {
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                context.OpenReadTransaction();
+
+                var testConfig = context.ReadForMemory(RequestBodyStream(), "TestRavenEtlScript");
+
+                var testScript = JsonDeserializationServer.TestRavenEtlScript(testConfig);
+
+                var result = (RavenEtlTestScriptResult) RavenEtl.TestScript(testScript, Database, ServerStore, context);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var defaultCoventions = new DocumentConventions();
+
+                    var djv = new DynamicJsonValue()
+                    {
+                        [nameof(result.Commands)] = new DynamicJsonArray(result.Commands.Select(x => x.ToJson(defaultCoventions, context))),
+                        [nameof(result.TransformationErrors)] = new DynamicJsonArray(result.TransformationErrors.Select(x => x.ToJson()))
+                    };
+
+                    writer.WriteObject(context.ReadObject(djv, "et/raven/test"));
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}
