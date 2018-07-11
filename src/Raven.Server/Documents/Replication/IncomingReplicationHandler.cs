@@ -1076,20 +1076,26 @@ namespace Raven.Server.Documents.Replication
                                         //the other side will receive negative ack and will retry sending again.
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
-                                        if (_incoming.SupportMissingAttachments)
+
+                                        try
                                         {
                                             AssertAttachmentsFromReplication(context, item.Id, document);
                                         }
-                                        else
+                                        catch (MissingAttachmentException mae)
                                         {
+                                            if (_incoming.SupportMissingAttachments)
+                                            {
+                                                throw;
+                                            }
+                                            
                                             _incoming._database.NotificationCenter.Add(AlertRaised.Create(
-                                            _incoming._database.Name,
-                                            IncomingReplicationStr,
-                                            $"Detected missing attachments for document {item.Id} with the following hashes:" +
-                                            $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
-                                            AlertType.ReplicationMissingAttachments,
-                                            NotificationSeverity.Warning));
-                                        }
+                                                _incoming._database.Name,
+                                                IncomingReplicationStr,
+                                                $"Detected missing attachments for document {item.Id} with the following hashes:" +
+                                                $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
+                                                AlertType.ReplicationMissingAttachments,
+                                                NotificationSeverity.Warning));                                            
+                                        }                                        
                                     }
 
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
