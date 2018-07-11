@@ -769,6 +769,23 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
+                        case CommandType.AttachmentRENAME:
+                            var attachmentRenameResult = Database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, cmd.Id, cmd.Name, cmd.NewName, cmd.ChangeVector);
+
+                            LastChangeVector = attachmentRenameResult.ChangeVector;
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                [nameof(BatchRequestParser.CommandData.Id)] = attachmentRenameResult.DocumentId,
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentRENAME),
+                                [nameof(BatchRequestParser.CommandData.Name)] = attachmentRenameResult.Name,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentRenameResult.ChangeVector
+                            });
+                            break;
                         case CommandType.Counters:
 
                             var counterDocId = cmd.Counters.DocumentId;

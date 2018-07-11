@@ -761,6 +761,20 @@ namespace Raven.Server.Documents
             };
         }
 
+        public AttachmentDetails RenameAttachment(DocumentsOperationContext context, string documentId, string name, string newName, LazyStringValue changeVector)
+        {
+            var attachment = GetAttachment(context, documentId, name, AttachmentType.Document, changeVector);
+            if (attachment == null)
+                throw new InvalidOperationException();
+
+            var hash = attachment.Base64Hash.ToString();
+            var putChangeVector = context.GetLazyString(string.Empty);
+            var result = PutAttachment(context, documentId, newName, attachment.ContentType, hash, putChangeVector, attachment.Stream);
+            DeleteAttachment(context, documentId, name, changeVector);
+
+            return result;
+        }
+
         public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true)
         {
             if (string.IsNullOrWhiteSpace(documentId))

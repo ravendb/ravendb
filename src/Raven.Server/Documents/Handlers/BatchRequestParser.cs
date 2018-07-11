@@ -7,7 +7,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Session;using Raven.Client.Documents.Operations.Counters;using Raven.Client.Extensions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -40,6 +42,7 @@ namespace Raven.Server.Documents.Handlers
             #region Attachment
 
             public string Name;
+            public string NewName;
             public string ContentType;
 
             #endregion
@@ -83,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             _cache.Push(cmds);
         }
-        
+
 
         public static async Task BuildCommandsAsync(JsonOperationContext ctx, BatchHandler.MergedBatchCommand command, Stream stream,
             DocumentDatabase database, ServerStore serverStore)
@@ -147,7 +150,7 @@ namespace Raven.Server.Documents.Handlers
                                 true
                             );
                     }
-                    
+
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
                         if (identities == null)
@@ -165,11 +168,11 @@ namespace Raven.Server.Documents.Handlers
 
                 if (identities != null)
                 {
-                    await GetIdentitiesValues(ctx, 
-                        database, 
-                        serverStore, 
-                        identities, 
-                        positionInListToCommandIndex, 
+                    await GetIdentitiesValues(ctx,
+                        database,
+                        serverStore,
+                        identities,
+                        positionInListToCommandIndex,
                         cmds);
                 }
 
@@ -205,7 +208,7 @@ namespace Raven.Server.Documents.Handlers
                    *(state.StringBuffer + sizeof(long) + sizeof(int) + sizeof(short)) == (byte)'e';
         }
 
-        private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore, 
+        private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore,
             List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
         {
             var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
@@ -217,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var value = positionInListToCommandIndex[index];
                 cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + "/" + newIds[index];
-                
+
                 if (string.IsNullOrEmpty(cmds[value].ChangeVector) == false)
                     ThrowInvalidUsageOfChangeVectorWithIdentities(cmds[value]);
                 cmds[value].ChangeVector = emptyChangeVector;
@@ -354,6 +357,22 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case JsonParserToken.String:
                                 commandData.Name = GetStringPropertyValue(state);
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
+                    case CommandPropertyName.NewName:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.NewName = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.NewName = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -584,6 +603,7 @@ namespace Raven.Server.Documents.Handlers
             #region Attachment
 
             Name,
+            NewName,
             ContentType,
 
             #endregion
@@ -661,6 +681,11 @@ namespace Raven.Server.Documents.Handlers
                     if (*(int*)state.StringBuffer == 1836020294 &&
                         state.StringBuffer[4] == (byte)'E')
                         return CommandPropertyName.FromEtl;
+
+                    if (*(int*)state.StringBuffer == 1316447566 &&
+                        state.StringBuffer[3] == (byte)'N')
+                        return CommandPropertyName.NewName;
+
                     return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
@@ -703,11 +728,16 @@ namespace Raven.Server.Documents.Handlers
                     return CommandType.AttachmentPUT;
 
                 case 16:
-                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
-                        *(long*)(state.StringBuffer + sizeof(long)) != 4995694080542667886)
-                        ThrowInvalidProperty(state, ctx);
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 4993719366250034286)
+                        return CommandType.AttachmentRENAME;
 
-                    return CommandType.AttachmentDELETE;
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
+                        return CommandType.AttachmentDELETE;
+
+                    ThrowInvalidProperty(state, ctx);
+                    return CommandType.None;
                 case 8:
                     if (*(long*)state.StringBuffer != 8318823012450529091)
                         ThrowInvalidProperty(state, ctx);
