@@ -176,7 +176,6 @@ namespace FastTests
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
-                        store.Urls = result.NodesAddedTo.SelectMany(UseFiddler).ToArray();
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                         AsyncHelpers.RunSync(async () =>
                         {
