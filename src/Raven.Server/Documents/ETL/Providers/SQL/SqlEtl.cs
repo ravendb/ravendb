@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection)
         {
-            throw new NotImplementedException("TODO arek");
+            throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
         protected override bool ShouldTrackAttachmentTombstones()
