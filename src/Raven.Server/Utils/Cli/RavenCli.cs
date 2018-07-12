@@ -9,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jint;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
