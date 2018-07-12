@@ -20,7 +20,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -412,7 +411,25 @@ namespace Raven.Server.Documents
                 }
 
                 if (handles.Count > 0)
-                    WaitHandle.WaitAll(handles.ToArray());
+                {
+                    var count = handles.Count;
+                    var batchSize = Math.Min(64, count);
+
+                    var numberOfBatches = count / batchSize;
+                    if (count % batchSize != 0)
+                    {
+                        // if we have a reminder, we need another batch 
+                        numberOfBatches++;
+                    }
+
+                    var batch = new WaitHandle[batchSize];
+                    for (var i = 0; i < numberOfBatches; i++)
+                    {
+                        var toCopy = Math.Min(64, count - i * batchSize);
+                        handles.CopyTo(i * batchSize, batch, 0, toCopy);
+                        WaitHandle.WaitAll(batch);
+                    }
+                }
 
                 // shut down all databases in parallel, avoid having to wait for each one
                 Parallel.ForEach(DatabasesCache.Values, new ParallelOptions
@@ -811,10 +828,30 @@ namespace Raven.Server.Documents
 
             _wakeupTimers.TryAdd(name, new Timer(_ =>
             {
-                if (_disposing.IsWriteLockHeld)
-                    return;
+                try
+                {
+                    _disposing.EnterReadLock();
+                    try
+                    {
+                        if (_serverStore.ServerShutdown.IsCancellationRequested)
+                            return;
 
-                TryGetOrCreateResourceStore(name);
+                        TryGetOrCreateResourceStore(name);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // expected 
+                    }
+                    finally
+                    {
+                        _disposing.ExitReadLock();
+                    }
+                }
+                catch
+                {
+                    // we have to swallow any exception here.
+                }
+
             }, null, milliSeconds, Timeout.Infinite));
         }
 
@@ -835,7 +872,7 @@ namespace Raven.Server.Documents
 
             // if we have a small value or even a negative one, simply don't dispose the database.
             dueTime = (int)(wakeup - DateTime.Now).Value.TotalMilliseconds;
-            return dueTime > 1000;
+            return dueTime > TimeSpan.FromMinutes(5).TotalMilliseconds;
         }
 
         private void CompleteDatabaseUnloading(DocumentDatabase database)
