@@ -12,6 +12,7 @@ namespace FastTests.Client.Indexing
 {
     public class JavaScriptIndexTests : RavenTestBase
     {
+
         [Fact]
         public void CreatingJavaScriptIndexWithFeaturesAvailabilitySetToStableWillThrow()
         {
@@ -307,7 +308,6 @@ namespace FastTests.Client.Indexing
                     WaitForIndexing(store);
                     session.Query<User>("UsersAndProductsByNameAndCount").OfType<ReduceResults>().Single(x => x.Name == "Brendan Eich");
                 }
-
             }
         }
 
@@ -395,6 +395,52 @@ namespace FastTests.Client.Indexing
                 ReduceNullValuesInternal(store2);
             }
         }
+
+        [Fact]
+        public void OutputReduceToCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Products_ByCategory());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Category { Name = "Beverages" }, "categories/1-A");
+                    session.Store(new Category { Name = "Seafood" }, "categories/2-A");
+                    session.Store(new product { Name = "Lakkalikööri", Category = "categories/1-A", PricePerUnit = 13 });
+                    session.Store(new product { Name = "Original Frankfurter", Category = "categories/1-A", PricePerUnit = 16 });
+                    session.Store(new product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
+                        .ToList();
+                    var res2 = session.Query<CategoryCount>()
+                        .ToList();
+                    Assert.Equal(res.Count, res2.Count);
+
+                }
+
+            }
+        }
+
+        private class Category
+        {
+            public string Description { get; set; }
+            public string Name { get; set; }
+        }
+        private class product
+        {
+            public string Category { get; set; }
+            public string Name { get; set; }
+            public int PricePerUnit { get; set; }
+        }
+
+        private class CategoryCount
+        {
+            public string Category { get; set; }
+
+            public int Count { get; set; }
+        }
+
         private class User
         {
             public string Name { get; set; }
@@ -656,6 +702,40 @@ namespace FastTests.Client.Indexing
                                     Count: g.values.reduce((total, val) => val.Count + total,0)
                                };})";
 
+            }
+        }
+
+        public class Products_ByCategory : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string Category { get; set; }
+
+                public int Count { get; set; }
+            }
+
+            public Products_ByCategory()
+            {
+                Maps = new HashSet<string>()
+                {
+                    @"map('products', function(p){
+                        return {
+                            Category:
+                            load(p.Category, 'Categories').Name,
+                            Count:
+                            1
+                        }
+                    })"
+                };
+
+                Reduce = @"groupBy( x => x.Category )
+                            .aggregate(g => {
+                                return {
+                                    Category: g.key,
+                                    Count: g.values.reduce((count, val) => val.Count + count, 0)
+                               };})";
+
+                OutputReduceToCollection = "CategoryCounts";
             }
         }
     }
