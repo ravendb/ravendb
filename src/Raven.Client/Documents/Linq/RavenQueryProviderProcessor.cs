@@ -60,6 +60,9 @@ namespace Raven.Client.Documents.Linq
         private List<LoadToken> _loadTokens;
         private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
         private int _insideLet = 0;
+        private string _loadAlias;
+        private bool _selectLoad;
+        private const string DefaultLoadAlias = "__load";
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "AS",
@@ -1467,12 +1470,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             _documentQuery.AddRootType(expression.Arguments[0].Type.GetGenericArguments()[0]);
                         }
 
-                        if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
-                            && unaryExpression.Operand is LambdaExpression lambdaExpression
-                            && lambdaExpression.Parameters[0] != null
-                            && lambdaExpression.Parameters[0].Name.StartsWith(LinqPathProvider.TransparentIdentifier))
+                        if (ExpressionHasNestedLambda(expression, out var lambdaExpression))
                         {
-                            _insideLet++;
+                            CheckForLetOrLoadFromSelect(expression, lambdaExpression);
                         }
 
                         VisitExpression(expression.Arguments[0]);
@@ -1484,6 +1484,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             VisitSelectAfterGroupBy(operand, _groupByElementSelector);
                             _groupByElementSelector = null;
                         }
+                        else if (_selectLoad)
+                        {
+                            AddFromAlias(lambdaExpression.Parameters[0].Name);
+                            _selectLoad = false;
+                        }
+
                         else
                             VisitSelect(operand);
                         break;
@@ -1641,6 +1647,98 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         throw new NotSupportedException("Method not supported: " + expression.Method.Name);
                     }
             }
+        }
+
+        private void CheckForLetOrLoadFromSelect(MethodCallExpression expression, LambdaExpression lambdaExpression)
+        {
+            var parameterName = lambdaExpression.Parameters[0].Name;
+
+            if (parameterName.StartsWith(LinqPathProvider.TransparentIdentifier))
+            {
+                _insideLet++;
+                return;
+            }
+
+            if (_loadAlias != null)
+            {
+                HandleLoadFromSelectIfNeeded(lambdaExpression);
+                _loadAlias = null;
+                return;
+            }
+
+            if (expression.Arguments[0] is MethodCallExpression mce &&
+                mce.Method.Name == "Select" &&
+                ExpressionHasNestedLambda(mce, out var innerLambda) &&                
+                CheckForLoad(innerLambda, out _))
+            {
+                _loadAlias = parameterName;
+                return;
+            }
+
+            HandleLoadFromSelectIfNeeded(lambdaExpression);
+        }
+
+        private bool CheckForLoad(LambdaExpression lambdaExpression, out MethodCallExpression mce)
+        {
+            if (lambdaExpression.Body is MethodCallExpression innerMce &&
+                innerMce.Method.Name == nameof(RavenQuery.Load) &&
+                (innerMce.Method.DeclaringType == typeof(RavenQuery) ||
+                 innerMce.Object?.Type == typeof(IDocumentSession)))
+            {
+                mce = innerMce;
+                return true;
+            }
+
+            mce = null;
+            return false;
+        }
+
+        private void HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
+        {
+            if (CheckForLoad(lambdaExpression, out var innerMce) == false)
+                return;
+
+            //add load token
+
+            if (_loadTokens == null)
+            {
+                _loadTokens = new List<LoadToken>();
+            }
+
+            string arg;
+            if (innerMce.Arguments[0] is ConstantExpression constantExpression && 
+                constantExpression.Type == typeof(string))
+            {
+                arg = _documentQuery.ProjectionParameter(constantExpression.Value);
+            }
+            else
+            {
+                arg = ToJs(innerMce.Arguments[0]);
+            }
+
+            _loadTokens.Add(LoadToken.Create(arg, _loadAlias ?? DefaultLoadAlias));
+
+            if (_loadAlias == null)
+            {
+                AddToFieldsToFetch(DefaultLoadAlias, DefaultLoadAlias);
+            }
+
+            _selectLoad = true;
+        }
+
+        private static bool ExpressionHasNestedLambda(MethodCallExpression expression, out LambdaExpression lambdaExpression)
+        {
+            if (expression.Arguments.Count > 1 &&
+                expression.Arguments[1] is UnaryExpression unaryExpression &&
+                unaryExpression.Operand is LambdaExpression lambda &&
+                lambda.Parameters[0] != null)
+            {
+                lambdaExpression = lambda;
+                return true;
+            }
+
+            lambdaExpression = null;
+            return false;
         }
 
         private void VisitGroupBy(Expression expression, GroupByArrayBehavior arrayBehavior)
@@ -1877,7 +1975,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
+
                     var selectPath = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(GetSelectPath(memberExpression));
+                    var parameter = JavascriptConversionExtensions.GetParameter(memberExpression)?.Name;
+                    selectPath = AddLoadAliasToPathIfNeeded(parameter, selectPath);
 
                     AddToFieldsToFetch(selectPath, selectPath);
                     if (_insideSelect == false)
@@ -2044,6 +2145,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private string AddLoadAliasToPathIfNeeded(string parameter, string selectPath)
+        {
+            if (parameter != null &&
+                _loadTokens != null &&
+                selectPath.StartsWith(parameter) == false &&
+                _loadTokens.Select(lt => lt.Alias).Contains(parameter))
+            {
+                return $"{parameter}.{selectPath}";
+            }
+
+            return selectPath;
         }
 
         private static void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)

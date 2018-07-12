@@ -134,22 +134,22 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var type = typeof(T);
                 var typeInfo = type.GetTypeInfo();
+                var projectionField = fieldsToFetch.Projections[0];
+
+                if (fieldsToFetch.SourceAlias != null)
+                {
+                    // remove source-alias from projection name
+                    projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
+                }
+
                 if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
                 {
-                    var projectionField = fieldsToFetch.Projections[0];
-
-                    if (fieldsToFetch.SourceAlias != null)
-                    {
-                        // remove source-alias from projection name
-                        projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
-                    }
-
                     return document.TryGet(projectionField, out T value) == false
                         ? default
                         : value;
                 }
 
-                if (document.TryGetMember(fieldsToFetch.Projections[0], out object inner) == false)
+                if (document.TryGetMember(projectionField, out object inner) == false)
                     return default;
 
                 if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
