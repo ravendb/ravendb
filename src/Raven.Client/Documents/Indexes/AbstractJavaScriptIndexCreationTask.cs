@@ -42,6 +42,12 @@ namespace Raven.Client.Documents.Indexes
         /// <inheritdoc />
         public override bool IsMapReduce => Reduce != null;
 
+        protected string OutputReduceToCollection
+        {
+            get => _definition.OutputReduceToCollection;
+            set => _definition.OutputReduceToCollection = value;
+        }
+
         /// <inheritdoc />
         public override IndexDefinition CreateIndexDefinition()
         {
