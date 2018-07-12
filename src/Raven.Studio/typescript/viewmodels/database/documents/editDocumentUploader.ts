@@ -4,8 +4,9 @@ import uploadAttachmentCommand = require("commands/database/documents/attachment
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import viewHelpers = require("common/helpers/view/viewHelpers")
+import notificationCenter = require("common/notifications/notificationCenter");
+import attachmentUpload = require("common/notifications/models/attachmentUpload");
 
-//TODO: for now we simple impl, which doesn't support drag-and-drop or simultaneous uploads
 class editDocumentUploader {
 
     static readonly filePickerSelector = "#uploadAttachmentFilePicker";
@@ -55,12 +56,24 @@ class editDocumentUploader {
     private uploadInternal(file: File) {
         this.spinners.upload(true);
 
-        new uploadAttachmentCommand(file, this.document().getId(), this.db())
+        const upload = attachmentUpload.forFile(this.db(), this.document().getId(), file.name);
+        
+        notificationCenter.instance.monitorAttachmentUpload(upload);
+
+        const command = new uploadAttachmentCommand(file, this.document().getId(), this.db(), event => upload.updateProgress(event));
+        
+        command
             .execute()
             .done(() => {
                 this.afterUpload();
             })
+            .fail(() => {
+                // remove progress notification - failure notification will be shown instead.
+                notificationCenter.instance.databaseNotifications.remove(upload);
+            })
             .always(() => this.spinners.upload(false));
+     
+        upload.abort = () => command.abort(); 
     }
 }
 

@@ -6,6 +6,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import alert = require("common/notifications/models/alert");
 import performanceHint = require("common/notifications/models/performanceHint");
 import recentError = require("common/notifications/models/recentError");
+import attachmentUpload = require("common/notifications/models/attachmentUpload");
 import recentLicenseLimitError = require("common/notifications/models/recentLicenseLimitError");
 import operation = require("common/notifications/models/operation");
 
@@ -104,7 +105,7 @@ class notificationCenter {
         ko.postbox.subscribe(EVENTS.NotificationCenter.RecentError, (error: recentError) => this.onRecentError(error));
         ko.postbox.subscribe(EVENTS.NotificationCenter.OpenNotification, (error: recentError) => this.openDetails(error));
 
-        _.bindAll(this, "dismiss", "postpone", "killOperation", "openDetails");
+        _.bindAll(this, "dismiss", "postpone", "killOperation", "openDetails", "killAttachmentUpload");
     }
 
     private initializeObservables() {
@@ -231,6 +232,10 @@ class notificationCenter {
         this.databaseNotifications.removeAll();
     }
 
+    monitorAttachmentUpload(notification: attachmentUpload) {
+        this.databaseNotifications.push(notification);
+    }
+    
     private onRecentError(error: recentError) {
         if (error instanceof recentLicenseLimitError) {
             this.openDetails(error);
@@ -364,7 +369,9 @@ class notificationCenter {
         if (notification instanceof recentError) {
             // local dismiss
             this.globalNotifications.remove(notification);
-
+        } else if (notification instanceof attachmentUpload) {
+            // local dismiss
+            this.databaseNotifications.remove(notification);
         } else { // remote dismiss
             const notificationId = notification.id;
 
@@ -384,6 +391,18 @@ class notificationCenter {
         this.databaseNotifications.remove(notification);
     }
 
+    killAttachmentUpload(upload: attachmentUpload) {
+        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort attachment upload?", ["No", "Yes"], true)
+            .done((result: confirmDialogResult) => {
+                if (result.can) {
+                    // no need for spinners here - it is sync call
+                    upload.abortUpload();
+                    
+                    this.databaseNotifications.remove(upload);
+                }
+            });
+    }
+    
     killOperation(operationToKill: operation) {
         return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
             .done((result: confirmDialogResult) => {
