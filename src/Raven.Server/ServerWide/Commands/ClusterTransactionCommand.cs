@@ -197,9 +197,9 @@ namespace Raven.Server.ServerWide.Commands
 
                 tvb.Add(databaseSlice.Content.Ptr, databaseSlice.Size);
                 tvb.Add(Separator);
-                tvb.Add(Bits.SwapBytes(index));
+                tvb.Add(Bits.SwapBytes(count));
                 tvb.Add(commands.BasePointer, commands.Size);
-                tvb.Add(count);
+                tvb.Add(index);
                 items.Insert(tvb);
 
                 using (commandsIndexTree.DirectAdd(CommandsCountKey, sizeof(long), out byte* ptr))
@@ -211,21 +211,21 @@ namespace Raven.Server.ServerWide.Commands
         {
             Database,
             Saparator,
-            RaftIndex,
+            PreviousCount,
             Commands,
-            PreviousCount
+            RaftIndex,
         }
 
-        public static unsafe long ReadFirstIndex(TransactionOperationContext serverContext, string database)
+        public static unsafe long ReadFirstClusterTransaction(TransactionOperationContext serverContext, string database)
         {
             var items = serverContext.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(serverContext, database, out var prefixSlice))
             {
-                var indexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex];
+                var indexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndCount];
                 var reader = items.SeekOneForwardFromPrefix(indexDef, prefixSlice);
                 if (reader == null)
                     return 0;
-                var value = *(long*)reader.Reader.Read((int)TransactionCommandsColumn.RaftIndex, out var _);
+                var value = *(long*)reader.Reader.Read((int)TransactionCommandsColumn.PreviousCount, out var _);
                 return Bits.SwapBytes(value);
             }
         }
@@ -282,13 +282,13 @@ namespace Raven.Server.ServerWide.Commands
             public string Database;
         }
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long fromIndex)
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long fromCount)
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-            using (GetPrefix(context, database, out Slice prefixSlice, fromIndex))
+            using (GetPrefix(context, database, out Slice prefixSlice))
             {
-                var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex];
+                var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndCount];
                 var commandsBulk = items.SeekForwardFrom(schemaIndexDef, prefixSlice, 0);
 
                 foreach (var command in commandsBulk)
@@ -299,7 +299,7 @@ namespace Raven.Server.ServerWide.Commands
                         yield break;
                     if (result.Database != lowerDb) // beware of reading commands of other databases.
                         yield break;
-                    if (result.Index < fromIndex)
+                    if (result.PreviousCount < fromCount)
                         continue;
                     yield return result;
                 }
@@ -329,8 +329,8 @@ namespace Raven.Server.ServerWide.Commands
             {
                 Options = options,
                 Commands = array,
-                Index = Bits.SwapBytes(index),
-                PreviousCount = count,
+                Index = index,
+                PreviousCount = Bits.SwapBytes(count),
                 Database = databse
             };
         }
@@ -354,6 +354,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var djv = base.ToJson(context);
             djv[nameof(ClusterCommands)] = new DynamicJsonArray(ClusterCommands.Select(x => x.ToJson(context)));
+            djv[nameof(SerializedDatabaseCommands)] = SerializedDatabaseCommands?.Clone(context);
             if (SerializedDatabaseCommands == null && DatabaseCommands.Count > 0)
             {
                 var databaseCommands = new DynamicJsonValue
@@ -361,9 +362,8 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(DatabaseCommands)] = new DynamicJsonArray(DatabaseCommands.Select(x => x.ToJson(context))),
                     [nameof(Options)] = Options.ToJson(),
                 };
-                SerializedDatabaseCommands = context.ReadObject(databaseCommands, "read database commands");
+                djv[nameof(SerializedDatabaseCommands)] = context.ReadObject(databaseCommands, "read database commands");
             }
-            djv[nameof(SerializedDatabaseCommands)] = SerializedDatabaseCommands;
             djv[nameof(Database)] = Database;
             djv[nameof(DatabaseCommandsCount)] = DatabaseCommandsCount;
 

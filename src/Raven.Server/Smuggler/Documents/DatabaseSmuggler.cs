@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -12,7 +14,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -91,15 +92,10 @@ namespace Raven.Server.Smuggler.Documents
                 return;
             }
 
-            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
-            using (serverContext.OpenReadTransaction())
-            using (docContext.OpenReadTransaction())
-            {
-                var transactionTasks = _database.ServerStore.DatabasesLandlord.ExecutePendingClusterTransactions(_database, 0, docContext, serverContext);
-                if (transactionTasks.Count == 0)
-                    return;
+            _database.ServerStore.DatabasesLandlord.ExecutePendingClusterTransactions(_database, 0, WaitForClusterTransactionCompletion);
 
+            void WaitForClusterTransactionCompletion(IReadOnlyList<Task> transactionTasks)
+            {
                 result.AddInfo($"Has to processing {transactionTasks.Count} cluster transactions before the export can take place.");
                 _onProgress.Invoke(result.Progress);
 

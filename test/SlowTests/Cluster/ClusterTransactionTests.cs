@@ -61,6 +61,50 @@ namespace SlowTests.Cluster
                 }
             }
         }
+        private Random _random = new Random();
+        private string RandomString(int length)
+        {
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
+            var str = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                str[i] = chars[_random.Next(chars.Length)];
+            }
+            return new string(str);
+        }
+
+        [Fact]
+        public void CanPreformSeveralClusterTransactions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                for (int j = 0; j < 10; j++)
+                {
+                    using (var session = store.OpenSession(new SessionOptions
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    }))
+                    {
+                        for (int i = 0; i < 25; i++)
+                        {
+                            var user = new User
+                            {
+                                LastName = RandomString(2048),
+                                Age = i
+                            };
+                            session.Store(user, "users/" + (25 * j + i));
+                        }
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Query<User>().ToArray();
+                    Assert.Equal(250, res.Length);
+                }
+            }
+        }
 
         [Fact]
         public async Task CanImportExportAndBackupWithClusterTransactions()
@@ -315,7 +359,7 @@ namespace SlowTests.Cluster
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        return ClusterTransactionCommand.ReadFirstIndex(ctx, store.Database);
+                        return ClusterTransactionCommand.ReadFirstClusterTransaction(ctx, store.Database);
                     }
                 }, 0);
 

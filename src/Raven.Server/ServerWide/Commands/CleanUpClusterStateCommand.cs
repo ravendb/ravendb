@@ -25,13 +25,13 @@ namespace Raven.Server.ServerWide.Commands
                 var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
                 using (ClusterTransactionCommand.GetPrefix(context, database, out var prefixSlice))
                 {
-                    var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex];
+                    var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndCount];
                     var deleted = items.DeleteForwardFrom(schemaIndexDef, prefixSlice, 
                         startsWith: true, 
                         numberOfEntriesToDelete: long.MaxValue,
                         shouldAbort: (tvb) =>
                         {
-                            var value = *(long*)tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.RaftIndex, out var _);
+                            var value = *(long*)tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.PreviousCount, out var _);
                             var currentIndex = Bits.SwapBytes(value);
                             return currentIndex > upToIndex;
                         });

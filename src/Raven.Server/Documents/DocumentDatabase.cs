@@ -57,7 +57,7 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
-        private DisposeOnce<SingleAttempt> _disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
