@@ -61,7 +61,7 @@ namespace Raven.Server.ServerWide
         private static readonly TableSchema ItemsSchema;
         private static readonly TableSchema CompareExchangeSchema;
         public static readonly TableSchema TransactionCommandsSchema;
-        public static readonly Slice CommandByDatabaseAndIndex;
+        public static readonly Slice CommandByDatabaseAndCount;
 
         public enum UniqueItems
         {
@@ -84,7 +84,7 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CmpXchg", out CompareExchange);
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
-                Slice.From(ctx, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
+                Slice.From(ctx, "CommandByDatabaseAndCount", out CommandByDatabaseAndCount);
                 Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsIndex);
             }
             ItemsSchema = new TableSchema();
@@ -107,9 +107,9 @@ namespace Raven.Server.ServerWide
             TransactionCommandsSchema = new TableSchema();
             TransactionCommandsSchema.DefineIndex(new TableSchema.SchemaIndexDef()
             {
-                Name = CommandByDatabaseAndIndex,
+                Name = CommandByDatabaseAndCount,
                 StartIndex = 0,
-                Count = 3, // Database, Separator, Index
+                Count = 3, // Database, Separator, Commands count
             });
         }
 
@@ -622,7 +622,7 @@ namespace Raven.Server.ServerWide
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             using (ClusterTransactionCommand.GetPrefix(context, databaseName, out var prefixSlice))
             {
-                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex], prefixSlice, true, long.MaxValue);
+                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndCount], prefixSlice, true, long.MaxValue);
             }
         }
 
