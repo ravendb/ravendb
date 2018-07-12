@@ -148,7 +148,7 @@ class indexFieldOptions {
                 changeInProgess = true;
                 
                 if (newValue) {
-                    this.analyzer("StandardAnalyzer");
+                    this.analyzer(null);
                     this.indexing("Search");
                     
                 } else {
