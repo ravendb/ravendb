@@ -2,6 +2,7 @@ using System;
 using Jint.Native;
 using Jint.Native.Object;
 using Sparrow.Json;
+using static Jint.JsValueExtensions;
 
 namespace Raven.Server.Documents.Patch
 {

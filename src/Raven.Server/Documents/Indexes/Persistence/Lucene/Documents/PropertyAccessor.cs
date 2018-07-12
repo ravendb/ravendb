@@ -9,6 +9,7 @@ using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
+using static Jint.JsValueExtensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {

@@ -16,6 +16,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Jint.JsValueExtensions;
 
 // ReSharper disable ForCanBeConvertedToForeach
 
