@@ -673,20 +673,21 @@ class editIndex extends viewModelBase {
         this.selectedSourcePreview(source);
     }
 
-    shouldDropupMenu(field: indexFieldOptions, placeInList: number ) {
-     return ko.pureComputed(() => {
-         
-         // todo: calculate dropup menu according to location in view port..        
-         
-         if (field.isDefaultFieldOptions() &&  this.editedIndex().fields().length)
-             return false; // both defualt + a field is showing
-         
-         if (!field.isDefaultFieldOptions() && placeInList < this.editedIndex().fields().length - 1) 
-            return false; // field is not the last one
-         
-         return true;
-     });
+    shouldDropupMenu(field: indexFieldOptions, placeInList: number) {
+        return ko.pureComputed(() => {
+
+            // todo: calculate dropup menu according to location in view port..        
+
+            if (field.isDefaultFieldOptions() && this.editedIndex().fields().length)
+                return false; // both default + a field is showing
+
+            if (!field.isDefaultFieldOptions() && placeInList < this.editedIndex().fields().length - 1)
+                return false; // field is not the last one
+
+            return true;
+        });
     }
+    
     /* TODO
 
     replaceIndex() {
