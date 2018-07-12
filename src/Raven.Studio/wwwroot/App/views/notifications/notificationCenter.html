@@ -211,3 +211,49 @@
         </div>
     </div>
 </script>
+
+<script type="text/html" id="AttachmentUpload-template">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <div data-bind="if: isCompleted()">
+                <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id)">
+                    <i class="icon-cancel"></i>
+                </button>
+                <div class="notification-header">
+                    <i class="icon-database-cutout icon-addon-tick"></i>
+                    <h3 data-bind="text: title"></h3>
+                </div>
+                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+                <p data-bind="text: message"></p>
+                <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
+            </div>
+
+            <div data-bind="if: !isCompleted()">
+                <div class="notification-header">
+                    <h3>
+                        <span data-bind="text: title"></span>
+                        <span class="global-spinner spinner-xs"></span>
+                    </h3>
+                </div>
+                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+                <p data-bind="text: message"></p>
+
+                <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
+                    <div class="progress-bar" role="progressbar"
+                         data-bind="style: {  width: percentageProgress() + '%' }, attr: { 'aria-valuenow': loaded, 'aria-valuemax': total }" aria-valuemin="0">
+                        <span class="sr-only" data-bind="text: percentageProgress() + '%'"></span>
+                    </div>
+                </div>
+
+                <div class="flex-horizontal">
+                    <small class="text-progress" data-bind="text: textualProgress, visible: !isCompleted()"></small>
+                    <div class="flex-separator"></div>
+                    <button class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killAttachmentUpload, $data), visible: killable()">
+                        <i class="icon-cancel"></i>
+                        <span>Abort</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>

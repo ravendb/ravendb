@@ -105,6 +105,17 @@ class commandBase {
 
         const url = baseUrl ? baseUrl + appUrl.forDatabaseQuery(db) + relativeUrl : appUrl.forDatabaseQuery(db) + relativeUrl;
 
+        const xhrConfiguration = (xhr: XMLHttpRequest) => {
+            xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
+                if (evt.lengthComputable) {
+                    const percentComplete = (evt.loaded / evt.total) * 100;
+                    if (percentComplete < 100) {
+                        requestExecution.markProgress();
+                    }
+                }
+            }, false);
+        };
+        
         const defaultOptions = {
             url: url,
             data: args,
@@ -114,24 +125,23 @@ class commandBase {
             headers: <any>undefined,
             xhr: () => {
                 const xhr = new XMLHttpRequest();
-                xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
-                    if (evt.lengthComputable) {
-                        const percentComplete = (evt.loaded / evt.total) * 100;
-                        if (percentComplete < 100) {
-                            requestExecution.markProgress();
-                        }
-                        //TODO: use event
-                        ko.postbox.publish("UploadProgress", percentComplete);
-                    }
-                }, false);
-
+                xhrConfiguration(xhr);
                 return xhr;
             }
         };
         
         if (options) {
             for (let prop in options) {
-                (<any>defaultOptions)[prop] = (<any>options)[prop];
+                if (prop === "xhr") {
+                    (defaultOptions as any)["xhr"] = () => {
+                        const xhrFactory = (<any>options)["xhr"];
+                        const xhr = xhrFactory();
+                        xhrConfiguration(xhr);
+                        return xhr;
+                    }
+                } else {
+                    (<any>defaultOptions)[prop] = (<any>options)[prop];    
+                }
             }
         }
 

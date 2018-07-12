@@ -436,7 +436,7 @@ interface sqlMigrationAdvancedSettingsDto {
     DetectManyToMany: boolean 
 }
 
-type virtualNotificationType = "CumulativeBulkInsert";
+type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload";
 
 declare module Raven.Server.NotificationCenter.Notifications {
     interface Notification  {
