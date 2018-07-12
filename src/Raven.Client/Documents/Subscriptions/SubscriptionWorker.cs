@@ -550,7 +550,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         private DateTime? LastConnectionFailure;
-        private TcpFeaturesSupported _supportedFeatures;
+        private TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
 
         private void AssertLastConnectionFailure()
         {

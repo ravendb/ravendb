@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Replication
             _database = options.DocumentDatabase;
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
-            SupportedFeatures = new TcpFeaturesSupported(TcpConnectionHeaderMessage.OperationTypes.Replication, options.ProtocolVersion);
+            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
 
@@ -644,7 +644,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
         private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
-        public TcpFeaturesSupported SupportedFeatures { get; private set; }
+        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
         private struct ReplicationItem : IDisposable
         {
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         catch (MissingAttachmentException mae)
                                         {
-                                            if (_incoming.SupportedFeatures.IsMissingAttachmentSupported)
+                                            if (_incoming.SupportedFeatures.Replication.MissingAttachments)
                                             {
                                                 throw;
                                             }
