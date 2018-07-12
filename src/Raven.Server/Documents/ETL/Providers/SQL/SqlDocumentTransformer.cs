@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
         private SqlTableWithRecords GetOrAdd(string tableName)

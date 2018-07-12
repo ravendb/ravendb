@@ -108,40 +108,50 @@ namespace Raven.Client.Documents.Operations.ETL
 
                 IsAddingCounters = AddCounterMethodRegex.Matches(Script).Count > 0;
 
+                if (IsAddingCounters && type == EtlType.Sql)
+                    errors.Add("Adding counters isn't supported by SQL ETL");
+
                 var counterBehaviors = LoadCountersBehaviorMethodRegex.Matches(Script);
 
                 if (counterBehaviors.Count > 0)
                 {
-                    CollectionToLoadCounterBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                    for (int i = 0; i < counterBehaviors.Count; i++)
+                    if (type == EtlType.Sql)
                     {
-                        var counterBehaviorFunction = counterBehaviors[i];
+                        errors.Add("Load counter behavior functions aren't supported by SQL ETL");
+                    }
+                    else
+                    {
+                        CollectionToLoadCounterBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-                        if (counterBehaviorFunction.Groups.Count != 2)
+                        for (int i = 0; i < counterBehaviors.Count; i++)
                         {
-                            errors.Add(
-                                "Invalid load counters behavior function. It is expected to have the following signature: " +
-                                "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
+                            var counterBehaviorFunction = counterBehaviors[i];
+
+                            if (counterBehaviorFunction.Groups.Count != 2)
+                            {
+                                errors.Add(
+                                    "Invalid load counters behavior function. It is expected to have the following signature: " +
+                                    "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
+                            }
+
+                            var function = counterBehaviorFunction.Groups[0].Value;
+                            var collection = counterBehaviorFunction.Groups[1].Value;
+
+                            var functionName = LoadCountersBehaviorMethodNameRegex.Match(function);
+
+                            if (Collections.Contains(collection) == false)
+                            {
+                                var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));
+
+                                errors.Add(
+                                    $"There is '{functionName}' function defined in '{Name}' script while the processed collections " +
+                                    $"({scriptCollections}) doesn't include '{collection}'. " +
+                                    "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +
+                                    "are loaded to the same collection on a destination side");
+                            }
+
+                            CollectionToLoadCounterBehaviorFunction[collection] = functionName.Value;
                         }
-
-                        var function = counterBehaviorFunction.Groups[0].Value;
-                        var collection = counterBehaviorFunction.Groups[1].Value;
-
-                        var functionName = LoadCountersBehaviorMethodNameRegex.Match(function);
-
-                        if (Collections.Contains(collection) == false)
-                        {
-                            var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));
-
-                            errors.Add(
-                                $"There is '{functionName}' function defined in '{Name}' script while the processed collections " +
-                                $"({scriptCollections}) doesn't include '{collection}'. " +
-                                "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +
-                                "are loaded to the same collection on a destination side");
-                        }
-
-                        CollectionToLoadCounterBehaviorFunction[collection] = functionName.Value;
                     }
                 }
             }
