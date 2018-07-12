@@ -105,6 +105,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             // but for incremental we will wake the database only if there were changes made.
             
             var now = SystemTime.UtcNow;
+
+            if (backupStatus == null)
+            {
+                return GetNextBackupOccurrence(configuration.FullBackupFrequency, now, configuration, skipErrorLog: false);
+            }
+
             if (backupStatus.LastEtag != lastEtag)
             {
                 var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
