@@ -124,7 +124,7 @@ class spatialOptions {
 
         let x = maxX - minX;
         let y = maxY - minY;
-        
+
         if (maxTreeLevel > 100) {
             // prevent from iterating on very huge values - which will lead to 0 anyway
             x = 0;
@@ -138,10 +138,12 @@ class spatialOptions {
                     } else {
                         x /= 4;
                         y /= 8;
-                    } else if (strategy === "QuadPrefixTree") {
+                    }
+                } else if (strategy === "QuadPrefixTree") {
                     x /= 2;
                     y /= 2;
                 }
+            }
         }
 
         if (type === "Geography") {

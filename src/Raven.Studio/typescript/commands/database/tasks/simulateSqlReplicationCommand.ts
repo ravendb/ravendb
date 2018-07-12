@@ -3,14 +3,14 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class simulateSqlReplicationCommand extends commandBase {
-    constructor(private db: database, private payload: Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.SimulateSqlEtl) {
+    constructor(private db: database, private payload: Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript) {
         super();
     }  
 
-    execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.SQL.Simulation.SqlEtlSimulationResult> {
-        const url = endpoints.databases.sqlEtl.adminEtlSqlSimulate;
+    execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult> {
+        const url = endpoints.databases.sqlEtl.adminEtlSqlTest;
 
-        return this.post<Raven.Server.Documents.ETL.Providers.SQL.Simulation.SqlEtlSimulationResult>(url, JSON.stringify(this.payload), this.db)
+        return this.post<Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult>(url, JSON.stringify(this.payload), this.db)
             .fail((response: JQueryXHR) => {                         
                 this.reportError(`Failed to simulate SQL replication`, response.responseText, response.statusText);
             });

@@ -77,7 +77,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     static empty(): connectionStringSqlEtlModel {
         return new connectionStringSqlEtlModel({
             Type: "Sql",
-            FactoryName: connectionStringSqlEtlModel.sqlProviders[0].value,
+            FactoryName: null,
             Name: "",
             ConnectionString: ""
         } as Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString, true, []);
