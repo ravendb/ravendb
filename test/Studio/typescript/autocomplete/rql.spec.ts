@@ -79,10 +79,6 @@ describe("RQL Autocomplete", () => {
         {caption: "@metadata", value: "@metadata ", score: 101, meta: "object field"}
     ];
 
-    const documentIdList: autoCompleteWordList[] = [
-        {caption: "companies/1-A", value: "'companies/1-A'", score: 1, meta: "@id"}
-    ];
-
     const fieldsListWithFunctions: autoCompleteWordList[] = fieldsList.concat(functionsList);
 
     const whereFieldsList: autoCompleteWordList[] = _.sortBy(fieldsListWithFunctions.concat(queryCompleter.whereFunctionsOnly), (x: autoCompleteWordList) => x.score).reverse();
@@ -322,6 +318,29 @@ describe("RQL Autocomplete", () => {
         {caption: "and", value: "and ", score: 21, meta: "all terms"}
     ];
 
+    const termsOrderOrderedAt = [
+        "1996-07-04T00:00:00.0000000",
+        "1996-07-05T00:00:00.0000000",
+        "1996-07-08T00:00:00.0000000",
+        "1996-07-09T00:00:00.0000000",
+        "1996-07-10T00:00:00.0000000",
+        "1996-07-11T00:00:00.0000000",
+        "1996-07-12T00:00:00.0000000",
+        "1996-07-15T00:00:00.0000000",
+        "1996-07-16T00:00:00.0000000",
+        "1996-07-17T00:00:00.0000000",
+        "1996-07-18T00:00:00.0000000",
+        "1996-07-19T00:00:00.0000000",
+        "1996-07-22T00:00:00.0000000",
+        "1996-07-23T00:00:00.0000000",
+        "1996-07-24T00:00:00.0000000",
+        "1996-07-25T00:00:00.0000000",
+        "1996-07-26T00:00:00.0000000",
+        "1996-07-29T00:00:00.0000000",
+        "1996-07-30T00:00:00.0000000",
+        "1996-07-31T00:00:00.0000000"
+    ].map(term => ({caption: term, value: `'${term}' `, score: 1, meta: "term"}));
+        
     it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
@@ -968,7 +987,7 @@ where OrderedAt =|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt = |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.isNull(wordlist);
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 3);
@@ -981,7 +1000,7 @@ where OrderedAt = |`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt = com|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "com");
-            assert.deepEqual(wordlist, documentIdList);
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 3);
@@ -994,7 +1013,7 @@ where OrderedAt = com|`, northwindProvider(), (errors, wordlist, prefix, lastKey
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt = 'companies/1-A'|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "'companies/1-A'");
-            assert.deepEqual(wordlist, documentIdList);
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 3);

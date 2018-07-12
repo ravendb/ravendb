@@ -628,17 +628,19 @@ class queryCompleter {
                             this.providers.terms(lastKeyword.info.index, lastKeyword.info.collection, fieldName, 20, terms => {
                                 if (terms && terms.length) {
                                     return this.completeWords(terms.map(term => ({
-                                            caption: term,
-                                            value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
-                                            score: 1,
-                                            meta: "term"
-                                        })));
+                                        caption: term,
+                                        value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
+                                        score: 1,
+                                        meta: "term"
+                                    })));
                                 }
+                                
+                                return this.completeError("No terms");
                             });
                         });
                 }
 
-                return;
+                return this.completeError("Failed to complete");
             }
             case "load": {
                 if (lastKeyword.dividersCount === 0) {
