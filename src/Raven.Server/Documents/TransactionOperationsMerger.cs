@@ -272,7 +272,6 @@ namespace Raven.Server.Documents
                         return;
                     }
 
-                    //Todo To decide where the file should be saved
                     var recordingFileStream = new FileStream(_filePath, FileMode.Create);
                     //Todo to use zip
                     var gZiprecordingFileStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
@@ -1179,7 +1178,7 @@ namespace Raven.Server.Documents
                             continue;
                         }
 
-                        var cmd = ReadCommand(strType, item, context);
+                        var cmd = ReadCommand(strType, item, context, peepingTomStream);
 
                         cmd?.Execute(txCtx, null);
                     }
@@ -1187,7 +1186,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private MergedTransactionCommand ReadCommand(string type, BlittableJsonReaderObject wrapCmdReader, JsonOperationContext context)
+        private MergedTransactionCommand ReadCommand(string type, BlittableJsonReaderObject wrapCmdReader, JsonOperationContext context,
+            PeepingTomStream peepingTomStream)
         {
             if (!wrapCmdReader.TryGet(CommandKey, out BlittableJsonReaderObject commandReader))
             {
@@ -1222,39 +1222,28 @@ namespace Raven.Server.Documents
 
             if (cmd == null)
             {
-                //Todo to decide what to do when can't read command - "If there is an error, using the PeepingTomStream to provide context"
-                throw new Exception("Can't read MergedTransactionCommand for replay");
+                throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
             return cmd;
         }
 
-        public void JustForKeepTheCode()
+        public class ReplayTransactionsException : Exception
         {
-            //            switch (type)
-            //            {
-            //                case "BeginTx":
-            //                    disposeTxCtx = _parent.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
-            //                    txCtx.OpenWriteTransaction();
-            //                    break;
-            //                case "Commit":
-            //                    txCtx.Transaction.Commit();
-            //                    disposeTxCtx.Dispose();
-            //                    break;
-            //                case "Rollback":
-            //                    // without commit, rolling back
-            //                    txCtx.Transaction.Dispose();
-            //                    disposeTxCtx.Dispose();
-            //                    break;
-            //                default:
-            //                    item.TryGet(CommandKey, out BlittableJsonReaderObject commandReader);
-            //                    var cmd = ReadCommand(type, commandReader, context);
-            //                    if (cmd == null)
-            //                    {
-            //                        continue;
-            //                    }
-            //                    cmd.Execute(txCtx, _recordingStatus);
-            //                    break;
-            //            }
+            public string Last4Kb { get;}
+
+            public ReplayTransactionsException(string message, PeepingTomStream peepingTomStream)
+            :base(message)
+            {
+                try
+                {
+                    Last4Kb = Encodings.Utf8.GetString(peepingTomStream.PeepInReadStream());
+                }
+                catch (Exception e)
+                {
+                    Last4Kb = "Failed to generated peepedWindow: " + e;
+                }
+                
+            }
         }
     }
 }

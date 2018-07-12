@@ -17,10 +17,9 @@ namespace Raven.Client.Json.Converters
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var blittableReader = reader as BlittableJsonReader;
-            if (blittableReader == null)
+            if (!(reader is BlittableJsonReader blittableReader))
             {
-                throw new Exception($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
+                throw new SerializationException($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
             }
 
             if (blittableReader.Value == null)

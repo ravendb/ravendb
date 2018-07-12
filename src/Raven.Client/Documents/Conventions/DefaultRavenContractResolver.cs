@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Conventions
                 {
                     _currentExtensionGetter -= _getter;
                 }
-                
+
             }
         }
 
@@ -82,8 +82,8 @@ namespace Raven.Client.Documents.Conventions
             _currentExtensionSetter += setter;
             return new ClearExtensionData(setter, null);
         }
-        
-        
+
+
         public static ClearExtensionData RegisterExtensionDataGetter(ExtensionDataGetter getter)
         {
             _currentExtensionGetter += getter;
@@ -92,7 +92,9 @@ namespace Raven.Client.Documents.Conventions
 
         protected override JsonObjectContract CreateObjectContract(Type objectType)
         {
-            JsonObjectContract jsonObjectContract = IsPointerType(objectType)
+            var jsonObjectContract =
+                objectType == typeof(LazyStringValue) ||
+                objectType == typeof(BlittableJsonReaderObject)
                 ? new JsonObjectContract(objectType)
                 : base.CreateObjectContract(objectType);
 
@@ -105,12 +107,6 @@ namespace Raven.Client.Documents.Conventions
             };
             jsonObjectContract.ExtensionDataGetter += (o) => _currentExtensionGetter?.Invoke(o);
             return jsonObjectContract;
-        }
-
-        private static bool IsPointerType(Type objectType)
-        {
-            return objectType == typeof(LazyStringValue) ||
-                   objectType == typeof(BlittableJsonReaderObject);
         }
 
         /// <summary>

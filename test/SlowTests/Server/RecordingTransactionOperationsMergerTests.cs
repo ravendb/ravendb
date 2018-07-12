@@ -185,7 +185,6 @@ namespace SlowTests.Server
 
             var users = names.Select(n => new User { Name = n }).ToArray();
 
-            const string ageKey = "age";
             const int newAge = 34;
 
             //Recording
@@ -203,8 +202,8 @@ namespace SlowTests.Server
                 }
 
                 //Todo To check what that mean "Let's avoid concat of queries, even in test. Use parameters"
-                var query = $"FROM Users UPDATE {{  this.Age = ${ageKey}; }}";
-                var parameters = new Parameters { [ageKey] = newAge };
+                var query = "FROM Users UPDATE {  this.Age = $age; }";
+                var parameters = new Parameters { ["age"] = newAge };
                 store.Operations
                     .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }));
 
