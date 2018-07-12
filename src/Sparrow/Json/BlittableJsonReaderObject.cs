@@ -151,6 +151,8 @@ namespace Sparrow.Json
             throw new ObjectDisposedException("blittable object has been disposed");
         }
 
+        public bool HasParent => _parent != null;
+
         public int Size => _size;
 
         public int Count => _propCount;

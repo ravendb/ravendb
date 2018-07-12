@@ -553,7 +553,16 @@ namespace Raven.Client.Json
             switch (value)
             {
                 case BlittableJsonReaderObject readerObject:
-                    _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(readerObject);
+                    if (false == readerObject.HasParent)
+                    {
+                        _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(readerObject);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("Can't write value of non root blittable");
+//                        var clonedBlittable = readerObject.Clone(_context);
+//                        _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(clonedBlittable);
+                    }
                     return;
                 case LazyStringValue lazyStringValue:
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyStringValue);

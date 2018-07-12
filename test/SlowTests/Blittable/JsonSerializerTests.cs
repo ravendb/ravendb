@@ -170,7 +170,33 @@ namespace SlowTests.Blittable
 
                 //Assert
                 var reader = writer.CreateReader();
-//                Assert.Equal(expected, actual);
+                //                Assert.Equal(expected, actual);
+            }
+        }
+        [Fact]
+        public void JsonSerialize_WhenNestedParentBlittableObjectIsProperty_ShouldSerialize()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonWriter(context))
+            {
+                var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
+                var parentBlittable = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                parentBlittable.TryGet(nameof(data.ParentProperty), out BlittableJsonReaderObject expected);
+                var jsonSerializer = new JsonSerializer
+                {
+                    ContractResolver = new DefaultRavenContractResolver(),
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                };
+
+                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                var command = new Command { BlittableObject = expected };
+                jsonSerializer.Serialize(writer, command);
+                writer.FinalizeDocument();
+
+                //Assert
+                var reader = writer.CreateReader();
+                reader.TryGet(nameof(Command.BlittableObject), out BlittableJsonReaderObject actual);
+                Assert.Equal(parentBlittable, actual);
             }
         }
 
