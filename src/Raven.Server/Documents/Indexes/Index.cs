@@ -1414,6 +1414,8 @@ namespace Raven.Server.Documents.Indexes
             _threadAllocations = NativeMemory.ThreadAllocations.Value;
 
             bool mightBeMore = false;
+
+            using (DocumentDatabase.PreventFromUnloading())
             using (CultureHelper.EnsureInvariantCulture())
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
