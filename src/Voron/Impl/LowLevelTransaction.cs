@@ -217,6 +217,7 @@ namespace Voron.Impl
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = previous._state.Clone();
+            _state.TransactionCounter = _id;
 
             _pageLocator = PersistentContext.AllocatePageLocator(this);
             InitializeRoots();
@@ -242,7 +243,10 @@ namespace Voron.Impl
             PersistentContext = transactionPersistentContext;
             Flags = flags;
 
-            var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
+            _state = env.State.Clone();
+
+            
+            var scratchPagerStates = _state.PagerStatesAllScratchesCache;
             foreach (var scratchPagerState in scratchPagerStates.Values)
             {
                 scratchPagerState.AddRef();
@@ -257,14 +261,15 @@ namespace Voron.Impl
                 // for write transactions, we can use the current one (which == null)
                 _scratchPagerStates = scratchPagerStates;
 
-                _state = env.State.Clone();
 
                 InitializeRoots();
 
-                JournalSnapshots = _journal.GetSnapshots();
+                JournalSnapshots = _state.SnapshotCache;
 
                 return;
             }
+
+            _state.TransactionCounter = Id;
 
             EnsureNoDuplicateTransactionId(id);
             // we keep this copy to make sure that if we use async commit, we have a stable copy of the jounrals
@@ -284,7 +289,6 @@ namespace Voron.Impl
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
 
-            _state = env.State.Clone();
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -1050,8 +1054,8 @@ namespace Voron.Impl
 
             using (_env.PreventNewReadTransactions())
             {
-                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-                _env.Journal.UpdateCacheForJournalSnapshots();
+                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(_state);
+                _env.Journal.UpdateCacheForJournalSnapshots(_state);
             }
 
             RolledBack = true;

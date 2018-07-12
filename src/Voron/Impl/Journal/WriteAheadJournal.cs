@@ -52,7 +52,6 @@ namespace Voron.Impl.Journal
         private LazyTransactionBuffer _lazyTransactionBuffer;
         private readonly DiffPages _diffPage = new DiffPages();
         private readonly Logger _logger;
-        private List<JournalSnapshot> _snapshotCache;
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         private readonly object _writeLock = new object();
@@ -356,12 +355,7 @@ namespace Voron.Impl.Journal
             return _headerAccessor.Get(ptr => ptr->Journal);
         }
 
-        public List<JournalSnapshot> GetSnapshots()
-        {
-            return _snapshotCache;
-        }
-
-        public void UpdateCacheForJournalSnapshots()
+        public void UpdateCacheForJournalSnapshots(StorageEnvironmentState state)
         {
             var items = new List<JournalSnapshot>(_files.Count);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -376,14 +370,15 @@ namespace Voron.Impl.Journal
 
             ValidateNoDuplicateJournals(items);
 
-            var old = _snapshotCache;
-            _snapshotCache = items;
+            var old = state.SnapshotCache;
+            state.SnapshotCache = items;
+
             if (old == null)
                 return;
-
+            
             foreach (var journalSnapshot in old)
             {
-                journalSnapshot.FileInstance.Release();// free the old cache reference
+                journalSnapshot.FileInstance.Release(); // free the old cache reference
             }
         }
 
