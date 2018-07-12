@@ -9,7 +9,7 @@ namespace Raven.Client.ServerWide.Tcp
 {
     public class TcpNegotiation
     {
-        public static TcpFeaturesSupported NegotiateProtocolVersion(JsonOperationContext documentsContext, Stream stream, TcpNegotiateParamaters parameters)
+        public static TcpConnectionHeaderMessage.SupportedFeatures NegotiateProtocolVersion(JsonOperationContext documentsContext, Stream stream, TcpNegotiateParamaters parameters)
         {
             using (var writer = new BlittableJsonTextWriter(documentsContext, stream))
             {
@@ -28,47 +28,18 @@ namespace Raven.Client.ServerWide.Tcp
                     //In this case we usally throw internaly but for completeness we better handle it
                     if (version == -2)
                     {
-                        return new TcpFeaturesSupported(parameters.Operation, -2);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine4000);
                     }
                     var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
                     if (supported)
-                        return new TcpFeaturesSupported(parameters.Operation, version);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
                     if (prevSupported == -1)
-                        return new TcpFeaturesSupported(parameters.Operation, -1);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine4000);
                     currentVersion = prevSupported;
                 }
             }
         }
     }
-
-    public class TcpFeaturesSupported
-    {
-        private int _version;
-        private TcpConnectionHeaderMessage.OperationTypes _type;
-
-        public TcpFeaturesSupported(TcpConnectionHeaderMessage.OperationTypes type, int protocolVersion)
-        {
-            _version = protocolVersion;
-            _type = type;
-        }
-
-        public bool IsMissingAttachmentSupported {
-            get
-            {
-                if (_type != TcpConnectionHeaderMessage.OperationTypes.Replication)
-                    throw new InvalidOperationException($"Was asked about IsAttachmentSupported while this object represents {_type} operation and attachments" +
-                                                        $" are only relevant to {TcpConnectionHeaderMessage.OperationTypes.Replication} protocols");
-                switch (_version)
-                {
-                    case 33:
-                        return true;
-                    default:
-                        return false;
-                }
-            }
-        }
-}
-
     public class TcpNegotiateParamaters
     {
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }

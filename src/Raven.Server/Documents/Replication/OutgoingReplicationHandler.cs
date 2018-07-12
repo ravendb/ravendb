@@ -477,7 +477,10 @@ namespace Raven.Server.Documents.Replication
                 };
                 //This will either throw or return acceptable protocol version.
                 SupportedFeatures = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
-
+#if DEBUG
+                Debug.Assert(SupportedFeatures.ProtocolVersion != -1);
+                Debug.Assert(SupportedFeatures.ProtocolVersion != -2);
+#endif
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
@@ -863,7 +866,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
-        public TcpFeaturesSupported SupportedFeatures { get; private set; }
+        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
         public void Dispose()
         {
