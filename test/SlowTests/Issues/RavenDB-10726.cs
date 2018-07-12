@@ -46,7 +46,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var t = Assert.Throws<InvalidOperationException>(() => store.Database = null);
-                Assert.Equal("You cannot change the default database name after the document store has been initialized", t.Message);
+                Assert.Equal("You cannot set 'Database' after the document store has been initialized.", t.Message);
             }
         }
 
