@@ -309,6 +309,9 @@ class queryCompleter {
                     }
                     return result;
                 case "keyword.clause.clauseAppend":
+                    if (result.keyword) {
+                        result.dividersCount++;
+                    }
                     result.keyword = token.value.toLowerCase();
                     break;
                 case "keyword.asKeyword":

@@ -1705,6 +1705,18 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
         });
     });
 
+    it('from index after index name (Index) without space should complete with prefix', done => {
+        rqlTestUtils.autoComplete("from index Index| as alias", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "Index");
+            assert.deepEqual(wordlist, indexesList);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
     it('from index after index name should complete with after from', done => {
         rqlTestUtils.autoComplete("from index 'Orders/Totals' |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
