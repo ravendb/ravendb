@@ -86,7 +86,6 @@ namespace Raven.Server.Documents.Replication
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-            _protocolVersion = TcpConnectionHeaderMessage.ReplicationTcpVersion;
         }
 
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -477,7 +476,7 @@ namespace Raven.Server.Documents.Replication
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 };
                 //This will either throw or return acceptable protocol version.
-                _protocolVersion = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
+                SupportedFeatures = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
 
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
@@ -864,7 +863,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
-        private int _protocolVersion;
+        public TcpFeaturesSupported SupportedFeatures { get; private set; }
 
         public void Dispose()
         {

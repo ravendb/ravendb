@@ -195,7 +195,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Version = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
                     ReadRespondAndGetVersion = ReadServerRespondAndGetVersion
                 };
-                _protocolVersion = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
+                _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
                
@@ -550,7 +550,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         private DateTime? LastConnectionFailure;
-        private int _protocolVersion;
+        private TcpFeaturesSupported _supportedFeatures;
 
         private void AssertLastConnectionFailure()
         {

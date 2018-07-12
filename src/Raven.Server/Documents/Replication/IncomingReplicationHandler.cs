@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Replication
             _database = options.DocumentDatabase;
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
-            _protocolVersion = options.ProtocolVersion;
+            SupportedFeatures = new TcpFeaturesSupported(TcpConnectionHeaderMessage.OperationTypes.Replication, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
 
@@ -644,7 +644,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
         private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
-        private int _protocolVersion;
+        public TcpFeaturesSupported SupportedFeatures { get; private set; }
 
         private struct ReplicationItem : IDisposable
         {
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         catch (MissingAttachmentException mae)
                                         {
-                                            if (_incoming.SupportMissingAttachments)
+                                            if (_incoming.SupportedFeatures.IsMissingAttachmentSupported)
                                             {
                                                 throw;
                                             }
@@ -1237,20 +1237,6 @@ namespace Raven.Server.Documents.Replication
                 foreach (var disposable in _disposables)
                 {
                     disposable?.Dispose();
-                }
-            }
-        }
-
-        public bool SupportMissingAttachments
-        {
-            get
-            {
-                switch (_protocolVersion)
-                {
-                    case 33:
-                        return true;
-                    default:
-                        return false;
                 }
             }
         }
