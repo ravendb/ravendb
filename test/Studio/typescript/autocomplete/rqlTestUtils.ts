@@ -116,7 +116,37 @@ class rqlTestUtils {
 
     static northwindProvider() {
         const providers: queryCompleterProviders = {
-            terms: (indexName, collection, field, pageSize, callback) => callback([]),
+            terms: (indexName, collection, field, pageSize, callback) => {
+                if (indexName){
+                    // TODO
+                } else {
+                    if (collection === "Orders" && field === "OrderedAt"){
+                        return callback([
+                            "1996-07-04T00:00:00.0000000",
+                            "1996-07-05T00:00:00.0000000",
+                            "1996-07-08T00:00:00.0000000",
+                            "1996-07-09T00:00:00.0000000",
+                            "1996-07-10T00:00:00.0000000",
+                            "1996-07-11T00:00:00.0000000",
+                            "1996-07-12T00:00:00.0000000",
+                            "1996-07-15T00:00:00.0000000",
+                            "1996-07-16T00:00:00.0000000",
+                            "1996-07-17T00:00:00.0000000",
+                            "1996-07-18T00:00:00.0000000",
+                            "1996-07-19T00:00:00.0000000",
+                            "1996-07-22T00:00:00.0000000",
+                            "1996-07-23T00:00:00.0000000",
+                            "1996-07-24T00:00:00.0000000",
+                            "1996-07-25T00:00:00.0000000",
+                            "1996-07-26T00:00:00.0000000",
+                            "1996-07-29T00:00:00.0000000",
+                            "1996-07-30T00:00:00.0000000",
+                            "1996-07-31T00:00:00.0000000"
+                        ]);
+                    }
+                }
+                return callback([]);
+            },
             collections: callback => {
                 callback([
                     "Regions",
