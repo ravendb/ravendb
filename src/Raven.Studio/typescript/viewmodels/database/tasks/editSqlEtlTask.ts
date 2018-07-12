@@ -28,7 +28,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 
 class sqlTaskTestMode {
     
-    performRolledBackTransaction = ko.observable<boolean>(true);
+    performRolledBackTransaction = ko.observable<boolean>(false);
     documentId = ko.observable<string>();
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
     docsIdsAutocompleteSource: docsIdsBasedOnQueryFetcher;
@@ -37,6 +37,8 @@ class sqlTaskTestMode {
     
     validationGroup: KnockoutValidationGroup;
     validateParent: () => boolean;
+
+    testAlreadyExecuted = ko.observable<boolean>(false);
     
     spinners = {
         preview: ko.observable<boolean>(false),
@@ -45,9 +47,21 @@ class sqlTaskTestMode {
 
     loadedDocument = ko.observable<string>();
     loadedDocumentId = ko.observable<string>();
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.SQL.Simulation.TableQuerySummary.CommandData>([]);
-    testAlreadyExecuted = ko.observable<boolean>(false);
-    lastAlert = ko.observable<Raven.Server.NotificationCenter.Notifications.AlertRaised>();
+    
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.SQL.Test.TableQuerySummary.CommandData>([]);
+    debugOutput = ko.observableArray<string>([]);
+    
+    // all kinds of alerts:
+    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+    loadErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+    slowSqlWarnings = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>([]);
+    
+    warningsCount = ko.pureComputed(() => {
+        const transformationCount = this.transformationErrors().length;
+        const loadErrorCount = this.loadErrors().length;
+        const slowSqlCount = this.slowSqlWarnings().length;
+        return transformationCount + loadErrorCount + slowSqlCount;
+    });
     
     constructor(db: KnockoutObservable<database>, validateParent: () => boolean, configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration) {
         this.db = db;
@@ -125,17 +139,23 @@ class sqlTaskTestMode {
                 DocumentId: this.documentId(),
                 PerformRolledBackTransaction: this.performRolledBackTransaction(),
                 Configuration: this.configurationProvider()
-            } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.SimulateSqlEtl;
+            } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
             
             new simulateSqlReplicationCommand(this.db(), dto)
                 .execute()
                 .done(simulationResult => {
                     this.testResults(_.flatMap(simulationResult.Summary, x => x.Commands));
-                    this.lastAlert(simulationResult.LastAlert);
+                    this.debugOutput(simulationResult.DebugOutput);
                     
-                    //TODO: consinder warning about lastAlert - if any 
+                    this.loadErrors(simulationResult.LoadErrors);
+                    this.slowSqlWarnings(simulationResult.SlowSqlWarnings);
+                    this.transformationErrors(simulationResult.TransformationErrors);
                     
-                    $('.test-container a[href="#testResults"]').tab('show');
+                    if (this.warningsCount()) {
+                        $('.test-container a[href="#warnings"]').tab('show');
+                    } else {
+                        $('.test-container a[href="#testResults"]').tab('show');
+                    }
 
                     this.testAlreadyExecuted(true);
                 })

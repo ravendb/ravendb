@@ -318,7 +318,7 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle margin-bottom">
                                     <input id="performRolledBackTransaction" class="styled" type="checkbox" data-bind="checked: performRolledBackTransaction">
-                                    <label for="performRolledBackTransaction" data-placement="right" data-toggle="tooltip" 
+                                    <label for="performRolledBackTransaction" data-placement="top" data-toggle="tooltip" 
                                            title="Option checked:<br />All generated SQL statements will be executed against the target SQL database. This transaction will be rolled back when done. <br />
 Option unchecked: <Br />No execution will take place, only generate the SQL statements. " data-html="true" data-animation="true">
                                         Execute and rollback the test transaction
@@ -352,18 +352,23 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
         <div class="tabs">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" data-bind="visible: loadedDocument">
-                    <a href="#documentPreview" aria-controls="fields" role="tab" data-toggle="tab">
+                    <a href="#documentPreview" role="tab" data-toggle="tab">
                         <i class="icon-preview"></i><span>Document Preview</span>
                     </a>
                 </li>
-                <li role="presentation" data-bind="visible: lastAlert">
-                    <a href="#alert" aria-controls="configure" role="tab" data-toggle="tab">
-                        <i class="icon-exclamation text-danger"></i><span>Warnings</span>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResults" role="tab" data-toggle="tab">
+                        <i class="icon-admin-logs"></i><span>Test Results</span>
                     </a>
                 </li>
-                <li role="presentation" data-bind="visible: testAlreadyExecuted">
-                    <a href="#testResults" aria-controls="configure" role="tab" data-toggle="tab">
-                        <i class="icon-admin-logs"></i><span>Test Results</span>
+                <li role="presentation" data-bind="visible: warningsCount">
+                    <a href="#warnings" role="tab" data-toggle="tab">
+                        <i class="icon-exclamation"></i><span>Warnings</span><span class="label label-warning margin-left margin-left-sm" data-bind="text: warningsCount || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: debugOutput().length">
+                    <a href="#debugOutput" role="tab" data-toggle="tab">
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span><span class="label label-info margin-left margin-left-sm" data-bind="text: debugOutput().length || ''"></span>
                     </a>
                 </li>
             </ul>
@@ -373,8 +378,31 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                 <div class="margin-bottom margin-bottom-sm">Document ID: <strong data-bind="text: loadedDocumentId"></strong></div>
                 <pre data-bind="html: loadedDocument"></pre>
             </div>
-            <div role="tabpanel" class="tab-pane fade" id="alert">
-                TODO:
+            <div role="tabpanel" class="tab-pane fade" id="warnings">
+                <div class="transformation-errors" data-bind="visible: transformationErrors().length">
+                    <h3>Transformation Script Errors:</h3>
+                    <div data-bind="foreach: transformationErrors">
+                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
+                    </div>
+                </div>
+
+                <div class="load-errors" data-bind="visible: loadErrors().length">
+                    <h3>Load Errors:</h3>
+                    <div data-bind="foreach: loadErrors">
+                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
+                    </div>
+                </div>
+
+                <div class="slow-sqls" data-bind="visible: slowSqlWarnings().length">
+                    <h3>Slow SQL:</h3>
+                    <div data-bind="foreach: slowSqlWarnings">
+                        <div class="sql-warning">
+                            <div class="duration text-info" data-bind="text: 'Statement took: ' + Duration.toLocaleString() + ' ms'"></div>
+                            <pre data-bind="text: Statement"></pre>    
+                        </div>
+                        
+                    </div>
+                </div>
             </div>
             <div role="tabpanel" class="tab-pane fade" id="testResults">
                 <h3>Generated SQL statements:</h3>
@@ -382,9 +410,9 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                     <div class="sql-statement panel">
                         <pre data-bind="text: CommandText"></pre>
                         
-                        <h4 class="margin-left" data-bind="visible: Params && Params.length">Parameters:</h4>
+                        <h4 class="margin-left" data-bind="visible: Params && Params.length"><strong>Parameters:</strong></h4>
                         <dl class="dl-horizontal" data-bind="foreach: Params">
-                            <dt data-bind="text: Key"></dt>
+                            <dt data-bind="text: Key, attr: { title: Key }"></dt>
                             <dd data-bind="text: Value"></dd>
                         </dl>
                     </div>    
@@ -392,6 +420,9 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                 <div data-bind="visible: !testResults().length">
                     <i class="icon-info"></i> <span>Simulation returned empty result.</span>
                 </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
+                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
             </div>
         </div>
     </div>

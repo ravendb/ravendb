@@ -427,6 +427,12 @@
     .backdrop {
         .backdrop.show;
     }
+    
+    .sql-statement {
+        pre {
+            white-space: normal;
+        }
+    }
 
     .edit-raven-sql-task {
         & > .flex-row {
@@ -436,4 +442,37 @@
             z-index: @zindex-modal;
         }
     }
+    
+    #debugOutput pre {
+        white-space: pre-wrap;       
+        word-wrap: break-word; 
+    }
+
+    .transformation-errors, .load-errors {
+        pre {
+            white-space: pre-wrap;
+        }
+    } 
+    
+    .slow-sqls {
+        .sql-warning {
+            position: relative;
+            margin-left: @grid-gutter-width / 2;
+            
+            pre {
+                padding-bottom: @grid-gutter-width;
+                white-space: normal;
+            }
+            margin-bottom: @grid-gutter-width / 2;
+        }
+
+        .duration {
+            bottom: @grid-gutter-width / 4;
+            left: @grid-gutter-width / 2;
+            position: absolute;
+            font-size: 12px;
+        }
+    }
+    
+    
 }
