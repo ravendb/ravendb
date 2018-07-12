@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
@@ -11,17 +12,12 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3864 : RavenTestBase
     {
-        private readonly DocumentConventions _conventions = new DocumentConventions
-        {
-            PrettifyGeneratedLinqExpressions = false
-        };
-
         [Fact]
         public void can_use_conventions_with_create_indexes_container()
         {
-            using (var store = GetDocumentStore())
+            using (var store = CreateDocumentStore())
             {
-                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, store, _conventions);
+                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, store, store.Conventions);
                 Assert.True(TestFailed.Value == false);
             }
         }
@@ -29,9 +25,9 @@ namespace SlowTests.Issues
         [Fact]
         public async Task can_use_conventions_with_create_indexes_async_container()
         {
-            using (var store = GetDocumentStore())
+            using (var store = CreateDocumentStore())
             {
-                await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() },  store, _conventions);
+                await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, store, store.Conventions);
                 Assert.True(TestFailed.Value == false);
             }
         }
@@ -39,10 +35,8 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_indexes()
         {
-            using (var store = GetDocumentStore())
+            using (var store = CreateDocumentStore())
             {
-                store.Conventions = _conventions;
-
                 var list = new List<AbstractIndexCreationTask>
                 {
                     new CustomIdInIndexCreationTask(),
@@ -57,10 +51,8 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_indexes_async()
         {
-            using (var store = GetDocumentStore())
+            using (var store = CreateDocumentStore())
             {
-                store.Conventions = _conventions;
-
                 var list = new List<AbstractIndexCreationTask>
                 {
                     new CustomIdInIndexCreationTask(),
@@ -75,10 +67,8 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_side_by_side_indexes()
         {
-            using (var store = GetDocumentStore())
+            using (var store = CreateDocumentStore())
             {
-                store.Conventions = _conventions;
-
                 var list = new List<AbstractIndexCreationTask>
                 {
                     new CustomIdInIndexCreationTask(),
@@ -93,10 +83,8 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_side_by_side_indexes_async()
         {
-            using (var store = GetDocumentStore())
+            using (var store = CreateDocumentStore())
             {
-                store.Conventions = _conventions;
-
                 var list = new List<AbstractIndexCreationTask>
                 {
                     new CustomIdInIndexCreationTask(),
@@ -106,6 +94,14 @@ namespace SlowTests.Issues
                 store.ExecuteIndexesAsync(list);
                 Assert.True(TestFailed.Value == false);
             }
+        }
+
+        private DocumentStore CreateDocumentStore([CallerMemberName] string caller = null)
+        {
+            return GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = store => store.Conventions.PrettifyGeneratedLinqExpressions = false
+            }, caller);
         }
 
         private static readonly AsyncLocal<bool> TestFailed = new AsyncLocal<bool>();

@@ -21,16 +21,14 @@ namespace SlowTests.MailingList.Everett
         [Fact]
         public void query_for_object_with_byte_array_with_TypeNameHandling_All()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions = new DocumentConventions
+                ModifyDocumentStore = s => s.Conventions.CustomizeJsonSerializer = serializer =>
                 {
-                    CustomizeJsonSerializer = serializer =>
-                    {
-                        serializer.TypeNameHandling = TypeNameHandling.All;
-                    },
-                };
-
+                    serializer.TypeNameHandling = TypeNameHandling.All;
+                }
+            }))
+            {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConventions().CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
@@ -85,16 +83,14 @@ namespace SlowTests.MailingList.Everett
         [Fact]
         public void load_object_with_byte_array_with_TypeNameHandling_All()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions = new DocumentConventions
+                ModifyDocumentStore = s => s.Conventions.CustomizeJsonSerializer = serializer =>
                 {
-                    CustomizeJsonSerializer = serializer =>
-                    {
-                        serializer.TypeNameHandling = TypeNameHandling.All;
-                    },
-                };
-
+                    serializer.TypeNameHandling = TypeNameHandling.All;
+                }
+            }))
+            {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConventions().CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
