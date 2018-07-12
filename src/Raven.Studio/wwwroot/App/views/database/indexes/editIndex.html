@@ -151,7 +151,7 @@
                                         <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
                                         <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
                                             <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }">
-                                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
+                                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                                 <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
                                                     <a role="menuitem" tabindex="-1" href="#">
                                                         <span data-bind="text: $data"></span>
@@ -319,7 +319,7 @@
                 <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
                 <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name">
                     <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }">
-                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
                         <li role="presentation" data-bind="click: $parent.name.bind($parent, $data)">
                             <a role="menuitem" tabindex="-1" href="#">
                                 <span data-bind="text: $data"></span>
@@ -543,7 +543,7 @@
                                 <input class="form-control" placeholder="StandardAnalyzer" autocomplete="off"
                                        data-bind="textInput: analyzer, attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()) }">
                                 <ul class="dropdown-menu" role="menu"
-                                    data-bind="autoComplete: '#' + 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: $root.createAnalyzerNameAutocompleter($data.analyzer()),
+                                    data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: $root.createAnalyzerNameAutocompleter($data.analyzer()),
                                                css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
                                     <li role="presentation" data-bind="click: $parent.analyzer.bind($parent, $data)" >
                                         <a role="menuitem" tabindex="-1" href="#">

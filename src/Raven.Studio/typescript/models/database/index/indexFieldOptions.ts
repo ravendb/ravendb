@@ -72,6 +72,7 @@ class indexFieldOptions {
     name = ko.observable<string>();
     
     isDefaultFieldOptions = ko.pureComputed(() => this.name() === indexFieldOptions.DefaultFieldOptions);    
+    isStandardAnalyzer = ko.pureComputed(() => !this.analyzer() || this.analyzer() === 'StandardAnalyzer' || this.analyzer() === 'Lucene.Net.Analysis.Standard.StandardAnalyzer');
 
     parent = ko.observable<indexFieldOptions>();
 
@@ -125,7 +126,7 @@ class indexFieldOptions {
             this.spatial(spatialOptions.empty());
         }
         
-        if (this.indexing() === "Search" && this.analyzer() === 'StandardAnalyzer') {
+        if (this.indexing() === "Search" && this.isStandardAnalyzer()) {
             this.fullTextSearch(true);
             
             if (this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets") {
@@ -243,7 +244,7 @@ class indexFieldOptions {
     }
 
     private computeFullTextSearch() {
-        this.fullTextSearch(this.analyzer() === 'StandardAnalyzer' &&
+        this.fullTextSearch(this.isStandardAnalyzer() &&
             this.indexing() === "Search");
         
         if (this.indexing() === null) {
@@ -265,7 +266,7 @@ class indexFieldOptions {
     
     private computeAnalyzer() {      
         if (this.indexing() === null) {
-            // take analyzer from defulat if indexing is set to 'inherit'
+            // take analyzer from default if indexing is set to 'inherit'
             this.analyzer(this.parent().analyzer());
         }
     }
@@ -297,11 +298,9 @@ class indexFieldOptions {
     }
 
     private initValidation() {
-        this.name.extend({
-            required: {
-                onlyIf: () => !this.isDefaultOptions()
-            }
-        });
+        if (!this.isDefaultOptions()) {
+            this.name.extend({required: true});
+        }
 
         this.validationGroup = ko.validatedObservable({
             name: this.name
@@ -353,8 +352,7 @@ class indexFieldOptions {
 
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
          const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.shortName === this.analyzer()); 
-         const analyzerFullName = analyzer ? analyzer.fullName : this.analyzer() || null;
-         
+         const analyzerFullName = analyzer ? analyzer.fullName : (this.analyzer() || null);
         
         return {
             Analyzer: analyzerFullName, 
