@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.ETL
 
         public List<string> GetDebugOutput()
         {
-            return DocumentScript.DebugOutput;
+            return DocumentScript?.DebugOutput ?? new List<string>();
         }
     }
 }
