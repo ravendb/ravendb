@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Text;
 using FastTests;
 using Orders;
@@ -137,6 +138,12 @@ namespace SlowTests.Issues
                     session.Advanced.Attachments.Move(oldCompany, "file1", newCompany, "file2");
 
                     session.SaveChanges();
+
+                    //var oldAttachments = session.Advanced.Attachments.GetNames(oldCompany);
+                    //Assert.False(oldAttachments.Any(x => x.Name == "file1"));
+
+                    //var newAttachments = session.Advanced.Attachments.GetNames(newCompany);
+                    //Assert.True(newAttachments.Any(x => x.Name == "file1"));
                 }
 
                 stats = store.Maintenance.Send(new GetStatisticsOperation());

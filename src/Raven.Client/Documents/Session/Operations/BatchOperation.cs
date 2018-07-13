@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -41,6 +40,17 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void SetResult(BatchCommandResult result)
         {
+            CommandType GetCommandType(BlittableJsonReaderObject batchResult)
+            {
+                if (batchResult.TryGet(nameof(ICommandData.Type), out string typeAsString) == false)
+                    return CommandType.None;
+
+                if (Enum.TryParse(typeAsString, ignoreCase: true, out CommandType type) == false)
+                    return CommandType.None;
+
+                return type;
+            }
+
             if (result.Results == null) //precaution
             {
                 ThrowOnNullResults();
@@ -60,64 +70,70 @@ namespace Raven.Client.Documents.Session.Operations
                 if (batchResult == null)
                     continue;
 
-                batchResult.TryGet("Type", out string type);
+                var type = GetCommandType(batchResult);
 
-                if (type != "PUT")
-                    continue;
-
-                var entity = _entities[i];
-                if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
-                    continue;
-
-                if (batchResult.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false || changeVector == null)
-                    throw new InvalidOperationException("PUT response is invalid. @change-vector is missing on " + documentInfo.Id);
-
-                if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string id) == false || id == null)
-                    throw new InvalidOperationException("PUT response is invalid. @id is missing on " + documentInfo.Id);
-
-                documentInfo.Metadata.Modifications = null;
-                documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
-
-                foreach (var propertyName in batchResult.GetPropertyNames())
+                switch (type)
                 {
-                    if(propertyName == "Type")
+                    case CommandType.PUT:
+                        HandlePut(i, batchResult);
+                        break;
+                }
+            }
+
+            // DeferredCommands
+            for (var i = _sessionCommandsCount; i < result.Results.Length; i++)
+            {
+                if (result.Results[i] is BlittableJsonReaderObject batchResult)
+                {
+                    if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false ||
+                        batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) == false ||
+                        countersDetail.TryGet("Counters", out BlittableJsonReaderArray counters) == false)
                         continue;
 
-                    documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
+                    UpdateCounterValuesInCache(counters, docId);
                 }
-
-                documentInfo.Id = id;
-                documentInfo.ChangeVector = changeVector;
-                documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
-                documentInfo.Document.Modifications = null;
-                documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
-                {
-                    [Constants.Documents.Metadata.Key] = documentInfo.Metadata
-                };
-                documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
-                documentInfo.MetadataInstance = null;
-
-                _session.DocumentsById.Add(documentInfo);
-                _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
-
-                var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
-                _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
             }
+        }
 
-            for (int i = _sessionCommandsCount; i < result.Results.Length; i++)
+        private void HandlePut(int index, BlittableJsonReaderObject batchResult)
+        {
+            var entity = _entities[index];
+            if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
+                return;
+
+            if (batchResult.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false || changeVector == null)
+                throw new InvalidOperationException("PUT response is invalid. @change-vector is missing on " + documentInfo.Id);
+
+            if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string id) == false || id == null)
+                throw new InvalidOperationException("PUT response is invalid. @id is missing on " + documentInfo.Id);
+
+            documentInfo.Metadata.Modifications = null;
+            documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
+
+            foreach (var propertyName in batchResult.GetPropertyNames())
             {
-                if (!(result.Results[i] is BlittableJsonReaderObject batchResult))
+                if (propertyName == nameof(ICommandData.Type))
                     continue;
 
-                if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false ||
-                    batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) == false ||
-                    countersDetail.TryGet("Counters", out BlittableJsonReaderArray counters) == false)
-                    continue;
-
-                UpdateCounterValuesInCache(counters, docId);
-
+                documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
             }
 
+            documentInfo.Id = id;
+            documentInfo.ChangeVector = changeVector;
+            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
+            documentInfo.Document.Modifications = null;
+            documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+            {
+                [Constants.Documents.Metadata.Key] = documentInfo.Metadata
+            };
+            documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
+            documentInfo.MetadataInstance = null;
+
+            _session.DocumentsById.Add(documentInfo);
+            _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+            var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
+            _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
         }
 
         private void UpdateCounterValuesInCache(BlittableJsonReaderArray counters, string docId)
