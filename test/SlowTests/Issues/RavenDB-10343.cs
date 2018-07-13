@@ -39,15 +39,17 @@ namespace SlowTests.Issues
         private class Build
         {
             public string ProductKey { get; set; }
-            public bool IsPublic { get; set; }
             public string Channel { get; set; }
             public string TeamCityBuildLocalId { get; set; }
+            public bool IsPublic { get; set; }
         }
 
         private class TeamCityBuild : Build
         {
             public List<string> DownloadsIds { get; set; }
             public DateTime BuildDate { get; set; }
+            public NestedObject1 Object1 { get; set; }
+
         }
 
         private class BuildDownload : Build
@@ -61,6 +63,15 @@ namespace SlowTests.Issues
             public IEnumerable<BuildDownload> Downloads { get; set; }
         }
 
+        private class NestedObject1
+        {
+            public NestedObject2 Object2 { get; set; }
+        }
+
+        private class NestedObject2
+        {
+            public string Name { get; set; }
+        }
 
         [Fact]
         public void CanQueryWithLoadFromSelectAndProject()
@@ -1366,6 +1377,300 @@ namespace SlowTests.Issues
                         queryResult[0].DownloadsIds);
                     Assert.Equal(new[] { "buildDownloads/1-A", "buildDownloads/3-A", "buildDownloads/4-A" },
                         queryResult[1].DownloadsIds);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSelectMemberAccessOfLoadedDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/1-A",
+                        IsPublic = true,
+                        Channel = "types/1",
+                        TeamCityBuildLocalId = "teamCityBuilds/1-A"
+
+                    });
+
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/2-A",
+                        IsPublic = true,
+                        Channel = "types/2",
+                        TeamCityBuildLocalId = "teamCityBuilds/2-A"
+
+                    });
+
+                    session.Store(new TeamCityBuild
+                    {
+                        BuildDate = new DateTime(2016, 6, 6)
+                    }, "teamCityBuilds/1-A");
+
+                    session.Store(new TeamCityBuild
+                    {
+                        BuildDate = new DateTime(2018, 1, 1)
+                    }, "teamCityBuilds/2-A");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Build>()
+                        .Select(entry => 
+                            RavenQuery.Load<TeamCityBuild>(entry.TeamCityBuildLocalId)
+                            .BuildDate);
+
+
+                    Assert.Equal("from Builds as entry " +
+                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "select __load.BuildDate"
+                        , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal(new DateTime(2016, 6, 6), queryResult[0]);
+
+                    Assert.Equal(new DateTime(2018, 1, 1), queryResult[1]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSelectNestedMemberOfLoadedDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/1-A",
+                        IsPublic = true,
+                        Channel = "types/1",
+                        TeamCityBuildLocalId = "teamCityBuilds/1-A"
+
+                    });
+
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/2-A",
+                        IsPublic = true,
+                        Channel = "types/2",
+                        TeamCityBuildLocalId = "teamCityBuilds/2-A"
+
+                    });
+
+                    session.Store(new TeamCityBuild
+                    {
+                        Object1 = new NestedObject1
+                        {
+                            Object2 = new NestedObject2
+                            {
+                                Name = "Aviv"
+                            }
+                        }
+                        
+                    }, "teamCityBuilds/1-A");
+
+
+                    session.Store(new TeamCityBuild
+                    {
+                        Object1 = new NestedObject1
+                        {
+                            Object2 = new NestedObject2
+                            {
+                                Name = "Arek"
+                            }
+                        }
+
+                    }, "teamCityBuilds/2-A");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Build>()
+                        .Select(entry =>
+                            RavenQuery.Load<TeamCityBuild>(entry.TeamCityBuildLocalId)
+                            .Object1.Object2.Name);
+
+
+                    Assert.Equal("from Builds as entry " +
+                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "select __load.Object1.Object2.Name"
+                        , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Aviv", queryResult[0]);
+
+                    Assert.Equal("Arek", queryResult[1]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSelectMemberAccessOfLoadedDocumentWhere()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/1-A",
+                        IsPublic = true,
+                        Channel = "types/1",
+                        TeamCityBuildLocalId = "teamCityBuilds/1-A"
+
+                    });
+
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/2-A",
+                        IsPublic = true,
+                        Channel = "types/2",
+                        TeamCityBuildLocalId = "teamCityBuilds/2-A"
+
+                    });
+
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/3-A",
+                        IsPublic = false,
+                        Channel = "types/2",
+                        TeamCityBuildLocalId = "teamCityBuilds/2-A"
+                    });
+
+                    session.Store(new TeamCityBuild
+                    {
+                        BuildDate = new DateTime(2016, 6, 6)
+                    }, "teamCityBuilds/1-A");
+
+                    session.Store(new TeamCityBuild
+                    {
+                        BuildDate = new DateTime(2018, 1, 1)
+                    }, "teamCityBuilds/2-A");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Build>()
+                        .Where(e => e.IsPublic)
+                        .Select(entry =>
+                            RavenQuery.Load<TeamCityBuild>(entry.TeamCityBuildLocalId)
+                            .BuildDate);
+
+
+                    Assert.Equal("from Builds as entry " +
+                                 "where entry.IsPublic = $p0 " +
+                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "select __load.BuildDate"
+                        , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal(new DateTime(2016, 6, 6), queryResult[0]);
+
+                    Assert.Equal(new DateTime(2018, 1, 1), queryResult[1]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanSelectMemberAccessOfLoadedDocumentWhereAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/1-A",
+                        IsPublic = true,
+                        Channel = "types/1",
+                        TeamCityBuildLocalId = "teamCityBuilds/1-A"
+
+                    });
+
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/2-A",
+                        IsPublic = true,
+                        Channel = "types/2",
+                        TeamCityBuildLocalId = "teamCityBuilds/2-A"
+
+                    });
+
+                    session.Store(new Build
+                    {
+                        ProductKey = "products/3-A",
+                        IsPublic = false,
+                        Channel = "types/2",
+                        TeamCityBuildLocalId = "teamCityBuilds/2-A"
+                    });
+
+                    session.Store(new TeamCityBuild
+                    {
+                        BuildDate = new DateTime(2016, 6, 6)
+                    }, "teamCityBuilds/1-A");
+
+                    session.Store(new TeamCityBuild
+                    {
+                        BuildDate = new DateTime(2018, 1, 1)
+                    }, "teamCityBuilds/2-A");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<Build>()
+                        .Where(e => e.IsPublic)
+                        .Select(entry =>
+                            RavenQuery.Load<TeamCityBuild>(entry.TeamCityBuildLocalId)
+                            .BuildDate);
+
+
+                    Assert.Equal("from Builds as entry " +
+                                 "where entry.IsPublic = $p0 " +
+                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "select __load.BuildDate"
+                        , query.ToString());
+
+                    var queryResult = await query.ToListAsync();
+
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal(new DateTime(2016, 6, 6), queryResult[0]);
+
+                    Assert.Equal(new DateTime(2018, 1, 1), queryResult[1]);
+
                 }
             }
         }
