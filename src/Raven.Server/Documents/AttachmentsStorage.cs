@@ -797,24 +797,26 @@ namespace Raven.Server.Documents
             return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream);
         }
 
-        public AttachmentDetails RenameAttachment(DocumentsOperationContext context, string documentId, string name, string newName, LazyStringValue changeVector)
+        public AttachmentDetails MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector)
         {
-            if (string.IsNullOrWhiteSpace(documentId))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(documentId));
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
-            if (string.IsNullOrWhiteSpace(newName))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(newName));
+            if (string.IsNullOrWhiteSpace(sourceDocumentId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(sourceDocumentId));
+            if (string.IsNullOrWhiteSpace(sourceName))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(sourceName));
+            if (string.IsNullOrWhiteSpace(destinationDocumentId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(destinationDocumentId));
+            if (string.IsNullOrWhiteSpace(destinationName))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(destinationName));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Rename", nameof(context));
 
-            var attachment = GetAttachment(context, documentId, name, AttachmentType.Document, changeVector);
+            var attachment = GetAttachment(context, sourceDocumentId, sourceName, AttachmentType.Document, changeVector);
             if (attachment == null)
-                AttachmentDoesNotExistException.ThrowFor(documentId, name);
+                AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
             var hash = attachment.Base64Hash.ToString();
-            var result = PutAttachment(context, documentId, newName, attachment.ContentType, hash, string.Empty, attachment.Stream);
-            DeleteAttachment(context, documentId, name, changeVector);
+            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream);
+            DeleteAttachment(context, sourceDocumentId, sourceName, changeVector);
 
             return result;
         }

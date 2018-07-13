@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Handlers
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
             var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, command.ParsedCommands, options);
-            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand); 
+            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)
             {
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Handlers
                                         });
                                     }
                                 }
-                                
+
                                 break;
                             case CommandType.DELETE:
                                 if (current < _count)
@@ -768,19 +768,20 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
-                        case CommandType.AttachmentRENAME:
-                            var attachmentRenameResult = Database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, cmd.Id, cmd.Name, cmd.NewName, cmd.ChangeVector);
+                        case CommandType.AttachmentMOVE:
+                            var attachmentRenameResult = Database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
 
                             LastChangeVector = attachmentRenameResult.ChangeVector;
 
                             if (_documentsToUpdateAfterAttachmentChange == null)
                                 _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                             _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
+                            _documentsToUpdateAfterAttachmentChange.Add(cmd.DestinationId);
 
                             Reply.Add(new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = attachmentRenameResult.DocumentId,
-                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentRENAME),
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentMOVE),
                                 [nameof(BatchRequestParser.CommandData.Name)] = attachmentRenameResult.Name,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentRenameResult.ChangeVector
                             });

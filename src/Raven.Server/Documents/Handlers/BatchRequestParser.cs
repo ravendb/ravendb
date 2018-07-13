@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.Handlers
             #region Attachment
 
             public string Name;
-            public string NewName;
             public string DestinationId;
             public string DestinationName;
             public string ContentType;
@@ -363,22 +362,6 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                         }
                         break;
-                    case CommandPropertyName.NewName:
-                        while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        switch (state.CurrentTokenType)
-                        {
-                            case JsonParserToken.Null:
-                                commandData.NewName = null;
-                                break;
-                            case JsonParserToken.String:
-                                commandData.NewName = GetStringPropertyValue(state);
-                                break;
-                            default:
-                                ThrowUnexpectedToken(JsonParserToken.String, state);
-                                break;
-                        }
-                        break;
                     case CommandPropertyName.DestinationId:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -636,7 +619,6 @@ namespace Raven.Server.Documents.Handlers
             #region Attachment
 
             Name,
-            NewName,
             DestinationId,
             DestinationName,
             ContentType,
@@ -718,11 +700,6 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[6] == (byte)'l')
                         return CommandPropertyName.FromEtl;
 
-                    if (*(int*)state.StringBuffer == 1316447566 &&
-                        *(short*)(state.StringBuffer + sizeof(int)) == 28001 &&
-                        state.StringBuffer[6] == (byte)'e')
-                        return CommandPropertyName.NewName;
-
                     return CommandPropertyName.NoSuchProperty;
                 case 13:
                     if (*(long*)state.StringBuffer == 8386105380344915268 &&
@@ -779,17 +756,19 @@ namespace Raven.Server.Documents.Handlers
 
                     return CommandType.AttachmentPUT;
                 case 14:
-                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
-                        *(int*)(state.StringBuffer + sizeof(long)) != 1329820782 ||
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) != 22864)
-                        ThrowInvalidProperty(state, ctx);
-
-                    return CommandType.AttachmentCOPY;
-                case 16:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 4993719366250034286)
-                        return CommandType.AttachmentRENAME;
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1329820782 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 22864)
+                        return CommandType.AttachmentCOPY;
+                        
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1330476142 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 17750)
+                        return CommandType.AttachmentMOVE;
 
+                    ThrowInvalidProperty(state, ctx);
+                    return CommandType.None;
+                case 16:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
                         return CommandType.AttachmentDELETE;

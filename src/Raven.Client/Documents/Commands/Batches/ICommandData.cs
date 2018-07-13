@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Commands.Batches
         DELETE,
         AttachmentPUT,
         AttachmentDELETE,
-        AttachmentRENAME,
+        AttachmentMOVE,
         AttachmentCOPY,
         CompareExchangePUT,
         CompareExchangeDELETE,
