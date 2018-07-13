@@ -769,9 +769,9 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
                         case CommandType.AttachmentMOVE:
-                            var attachmentRenameResult = Database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
+                            var attachmentMoveResult = Database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
 
-                            LastChangeVector = attachmentRenameResult.ChangeVector;
+                            LastChangeVector = attachmentMoveResult.ChangeVector;
 
                             if (_documentsToUpdateAfterAttachmentChange == null)
                                 _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -780,10 +780,15 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(new DynamicJsonValue
                             {
-                                [nameof(BatchRequestParser.CommandData.Id)] = attachmentRenameResult.DocumentId,
+                                [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentMOVE),
-                                [nameof(BatchRequestParser.CommandData.Name)] = attachmentRenameResult.Name,
-                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentRenameResult.ChangeVector
+                                [nameof(BatchRequestParser.CommandData.Name)] = cmd.Name,
+                                [nameof(BatchRequestParser.CommandData.DestinationId)] = attachmentMoveResult.DocumentId,
+                                [nameof(BatchRequestParser.CommandData.DestinationName)] = attachmentMoveResult.Name,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentMoveResult.ChangeVector,
+                                [nameof(AttachmentDetails.Hash)] = attachmentMoveResult.Hash,
+                                [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentMoveResult.ContentType,
+                                [nameof(AttachmentDetails.Size)] = attachmentMoveResult.Size
                             });
                             break;
                         case CommandType.AttachmentCOPY:
@@ -800,7 +805,10 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(BatchRequestParser.CommandData.Id)] = attachmentCopyResult.DocumentId,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentCOPY),
                                 [nameof(BatchRequestParser.CommandData.Name)] = attachmentCopyResult.Name,
-                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentCopyResult.ChangeVector
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentCopyResult.ChangeVector,
+                                [nameof(AttachmentDetails.Hash)] = attachmentCopyResult.Hash,
+                                [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentCopyResult.ContentType,
+                                [nameof(AttachmentDetails.Size)] = attachmentCopyResult.Size
                             });
                             break;
                         case CommandType.Counters:
