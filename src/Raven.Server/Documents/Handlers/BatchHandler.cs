@@ -625,7 +625,6 @@ namespace Raven.Server.Documents.Handlers
                 _disposables.Clear();
 
                 DocumentsStorage.PutOperationResults? lastPutResult = null;
-                var counterBatch = new CounterBatch();
 
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
@@ -784,6 +783,23 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentRENAME),
                                 [nameof(BatchRequestParser.CommandData.Name)] = attachmentRenameResult.Name,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentRenameResult.ChangeVector
+                            });
+                            break;
+                        case CommandType.AttachmentCOPY:
+                            var attachmentCopyResult = Database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
+
+                            LastChangeVector = attachmentCopyResult.ChangeVector;
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            _documentsToUpdateAfterAttachmentChange.Add(cmd.DestinationId);
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                [nameof(BatchRequestParser.CommandData.Id)] = attachmentCopyResult.DocumentId,
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentCOPY),
+                                [nameof(BatchRequestParser.CommandData.Name)] = attachmentCopyResult.Name,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentCopyResult.ChangeVector
                             });
                             break;
                         case CommandType.Counters:

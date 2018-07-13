@@ -776,6 +776,27 @@ namespace Raven.Server.Documents
             };
         }
 
+        public AttachmentDetails CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(documentId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
+            if (string.IsNullOrWhiteSpace(destinationId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(destinationId));
+            if (string.IsNullOrWhiteSpace(destinationName))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(destinationName));
+            if (context.Transaction == null)
+                throw new ArgumentException("Context must be set with a valid transaction before calling Copy", nameof(context));
+
+            var attachment = GetAttachment(context, documentId, name, AttachmentType.Document, changeVector);
+            if (attachment == null)
+                AttachmentDoesNotExistException.ThrowFor(documentId, name);
+
+            var hash = attachment.Base64Hash.ToString();
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream);
+        }
+
         public AttachmentDetails RenameAttachment(DocumentsOperationContext context, string documentId, string name, string newName, LazyStringValue changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
