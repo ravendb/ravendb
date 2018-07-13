@@ -20,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new FastTests.Voron.LazyTransactionsRespectPageBoundaries())
+                using (var test = new FastTests.Server.Documents.DocumentsCrud())
                 {
-                   test.CanSyncWhenLazyTransactionsHasBufferedMultipleTransactions();
+                   test.CanQueryByGlobalEtag();
                 }
             }
             catch (Exception e)

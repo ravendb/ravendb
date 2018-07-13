@@ -13,6 +13,7 @@ namespace Voron.Impl
         public long TransactionCounter;
         public List<JournalSnapshot> SnapshotCache;
         public Dictionary<int, PagerState> PagerStatesAllScratchesCache;
+        public object ExternalState;
 
         public long NextPageNumber;
 
@@ -32,14 +33,15 @@ namespace Voron.Impl
         public StorageEnvironmentState Clone()
         {
             return new StorageEnvironmentState
-                {
-                    Root = Root?.Clone(),
-                    NextPageNumber = NextPageNumber,
-                    Options = Options,
-                    SnapshotCache = SnapshotCache,
-                    TransactionCounter = TransactionCounter,
-                    PagerStatesAllScratchesCache = PagerStatesAllScratchesCache
-                };
+            {
+                Root = Root?.Clone(),
+                NextPageNumber = NextPageNumber,
+                Options = Options,
+                SnapshotCache = SnapshotCache,
+                TransactionCounter = TransactionCounter,
+                PagerStatesAllScratchesCache = PagerStatesAllScratchesCache,
+                ExternalState = ExternalState
+            };
         }
     }
 }

@@ -32,13 +32,23 @@ namespace Raven.Server.Documents.Replication
             _log = log;
         }
 
-        public long ConflictsCount => _database.DocumentsStorage?.ConflictsStorage?.ConflictsCount ?? 0;
-
         public void RunConflictResolversOnce()
         {
             UpdateScriptResolvers();
 
-            if (ConflictsCount > 0 && ConflictSolver?.IsEmpty() == false)
+            long conflictsCount = 0;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                if(_database.DocumentsStorage.ConflictsStorage != null)
+                {
+                    using (context.OpenReadTransaction())
+                    {
+                        conflictsCount = _database.DocumentsStorage.ConflictsStorage.GetConflictsCount(context);
+                    }
+                }
+            }
+
+            if (conflictsCount > 0 && ConflictSolver?.IsEmpty() == false)
             {
                 try
                 {
@@ -248,7 +258,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (_database.DocumentsStorage.ConflictsStorage.ConflictsCount == 0)
+            if (_database.DocumentsStorage.ConflictsStorage.GetConflictsCount(context) == 0)
             {
                 var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, resolved.Id, throwOnConflict: false);
                 if (existing.Document != null)

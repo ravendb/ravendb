@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                 stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
                 stats.CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context);
-                stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount;
+                stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsCount(context);
                 stats.SizeOnDisk = size.Data;
                 stats.NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations;
                 stats.CountOfCounters = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context);

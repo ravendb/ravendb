@@ -42,7 +42,11 @@ namespace Raven.Server.Documents
         private readonly DocumentsStorage _documentsStorage;
         private readonly Logger _logger;
 
-        public long ConflictsCount;
+        public class TransactionalExternalState
+        {
+            public long TransactionId;
+            public long ConflictsCount;
+        }
 
         public enum ConflictsTable
         {
@@ -126,7 +130,34 @@ namespace Raven.Server.Documents
             ConflictsSchema.Create(tx, ConflictsSlice, 32);
 
             var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
-            ConflictsCount = conflictsTable.NumberOfEntries;
+            SetNumberOfConflicts(tx, conflictsTable.NumberOfEntries);
+        }
+
+        private void SetNumberOfConflicts(Transaction tx, long conflictsCount)
+        {
+            tx.LowLevelTransaction.State.ExternalState = new TransactionalExternalState
+            {
+                ConflictsCount = conflictsCount,
+                TransactionId = tx.LowLevelTransaction.Id
+            };
+        }
+
+        private void IncrementNumberOfConflict(Transaction tx, int amount)
+        {
+            if(!(tx.LowLevelTransaction.State.ExternalState is TransactionalExternalState tes))
+            {
+
+                SetNumberOfConflicts(tx, amount);
+                return;
+            }
+            // allowed to mutate since we are in the same transaction
+            if( tes.TransactionId == tx.LowLevelTransaction.Id)
+            {
+                tes.ConflictsCount += amount;
+                return;
+            }
+            // need to create a new instance
+            SetNumberOfConflicts(tx, amount + tes.ConflictsCount);
         }
 
         public void AssertFixedSizeTrees(Transaction tx)
@@ -271,10 +302,22 @@ namespace Raven.Server.Documents
         {
             throw new DocumentConflictException($"Conflict detected on '{docId}', conflict must be resolved before the document will be accessible.", docId, etag);
         }
+        public long GetConflictsCount(DocumentsOperationContext context)
+        {
+            Debug.Assert(context.Transaction != null);
+            Debug.Assert(context.Transaction.InnerTransaction != null);
+            Debug.Assert(context.Transaction.InnerTransaction.LowLevelTransaction != null);
+            Debug.Assert(context.Transaction.InnerTransaction.LowLevelTransaction.State != null);
+
+            if (!(context.Transaction.InnerTransaction.LowLevelTransaction.State.ExternalState is TransactionalExternalState tes))
+                return 0;
+
+            return tes.ConflictsCount;
+        }
 
         public long GetConflictsMaxEtagFor(DocumentsOperationContext context, Slice prefixSlice)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return 0;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -290,7 +333,7 @@ namespace Raven.Server.Documents
 
         public bool HasHigherChangeVector(DocumentsOperationContext context, Slice prefixSlice, string expectedChangeVector)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return false;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -306,7 +349,7 @@ namespace Raven.Server.Documents
         public (IReadOnlyList<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
             DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return (null, NonPersistentDocumentFlags.None);
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
@@ -316,7 +359,7 @@ namespace Raven.Server.Documents
         public (List<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
             DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return (null, NonPersistentDocumentFlags.None);
 
             var changeVectors = new List<string>();
@@ -370,11 +413,7 @@ namespace Raven.Server.Documents
             var listCount = changeVectors.Count;
             if (listCount > 0)
             {
-                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
-                {
-                    Interlocked.Add(ref ConflictsCount, -listCount);
-                };
+                IncrementNumberOfConflict(context.Transaction.InnerTransaction, -listCount);
             }
             return (changeVectors, nonPersistentFlags | NonPersistentDocumentFlags.Resolved);
         }
@@ -398,7 +437,7 @@ namespace Raven.Server.Documents
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string changeVector)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -408,11 +447,7 @@ namespace Raven.Server.Documents
                 if (conflictsTable.DeleteByKey(changeVectorSlice) == false)
                     return;
 
-                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
-                {
-                    Interlocked.Decrement(ref ConflictsCount);
-                };
+                IncrementNumberOfConflict(context.Transaction.InnerTransaction, -1);
             }
         }
 
@@ -450,7 +485,7 @@ namespace Raven.Server.Documents
 
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string id)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
@@ -474,7 +509,7 @@ namespace Raven.Server.Documents
 
         public string GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existingChangeVector);
 
             var conflictChangeVectors = DeleteConflictsFor(context, lowerId, null).ChangeVectors;
@@ -596,7 +631,9 @@ namespace Raven.Server.Documents
                             tvb.Add(existingDoc.LastModified.Ticks);
                             tvb.Add((int)existingDoc.Flags);
                             if (conflictsTable.Set(tvb))
-                                Interlocked.Increment(ref ConflictsCount);
+                            {
+                                IncrementNumberOfConflict(tx, 1);
+                            }
                         }
                     }
 
@@ -630,7 +667,9 @@ namespace Raven.Server.Documents
                             tvb.Add(existingTombstone.LastModified.Ticks);
                             tvb.Add((int)existingTombstone.Flags);
                             if (conflictsTable.Set(tvb))
-                                Interlocked.Increment(ref ConflictsCount);
+                            {
+                                IncrementNumberOfConflict(tx, 1);
+                            }
                         }
                     }
 
@@ -710,7 +749,9 @@ namespace Raven.Server.Documents
                     tvb.Add(lastModifiedTicks);
                     tvb.Add((int)flags);
                     if (conflictsTable.Set(tvb))
-                        Interlocked.Increment(ref ConflictsCount);
+                    {
+                        IncrementNumberOfConflict(tx, 1);
+                    }
                 }
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
@@ -868,7 +909,7 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)
         {
-            if (ConflictsCount == 0)
+            if (GetConflictsCount(context) == 0)
                 return 0;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);

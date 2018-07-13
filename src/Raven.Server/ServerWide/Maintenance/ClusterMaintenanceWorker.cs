@@ -187,7 +187,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
-                        report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
+                        report.NumberOfConflicts = documentsStorage.ConflictsStorage.GetConflictsCount(context);
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                         report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                         report.UpTime = now - dbInstance.StartTime;
