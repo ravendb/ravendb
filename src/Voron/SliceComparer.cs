@@ -28,14 +28,15 @@ namespace Voron
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 
+            int r, keyDiff;
             var x1 = x.Content;
             var y1 = y.Content;
-            if (x1 == y1) // Reference equality (specially useful on searching on collections)
-                return 0;
 
-            int r, keyDiff;
             unsafe
             {
+                if (x1._pointer == y1._pointer) // Reference equality (specially useful on searching on collections)
+                    return 0;
+
                 int x1Length = x1.Length;
                 int y1Length = y1.Length;
                 var size = Math.Min(x1Length, y1Length);
@@ -124,14 +125,15 @@ namespace Voron
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 
+            int r, keyDiff;
             var x1 = x.Content;
             var y1 = y.Content;
-            if (x1 == y1) // Reference equality (specially useful on searching on collections)
-                return 0;
 
-            int r, keyDiff;
             unsafe
             {
+                if (x1._pointer == y1._pointer) // Reference equality (specially useful on searching on collections)
+                    return 0;
+
                 int x1Length = x1.Length;
                 int y1Length = y1.Length;
                 var size = Math.Min(x1Length, y1Length);
