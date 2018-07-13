@@ -704,6 +704,39 @@ loadToOrders(orderData);
             Assert.Equal("No `loadTo<CollectionName>()` method call found in 'test' script", errors[0]);
         }
 
+        [Fact]
+        public void Can_load_to_specific_collection_when_applying_to_all_docs()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                AddEtl(src, dest, new string[0], script: @"
+loadToUsers(this);
+", applyToAllDocuments: true);
+
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "James",
+                        LastName = "Smith"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                }
+            }
+        }
+
         private class UserWithAddress : User
         {
             public Address Address { get; set; }

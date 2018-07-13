@@ -848,6 +848,16 @@ namespace Raven.Server.Documents.ETL
                                                     $"while tested ETL script works on the following collections: {string.Join(", ", testScript.Configuration.Transforms[0].Collections)}");
             }
 
+            if (testScript.Configuration.Transforms[0].ApplyToAllDocuments)
+            {
+                // when ETL script has ApplyToAllDocuments then it extracts docs without
+                // providing collection name to ExtractedItem
+                // it is retrieved from metadata then
+                // let's do the same to ensure we have the same behavior in test mode
+
+                docCollection = null;
+            }
+
             List<string> debugOutput;
 
             switch (testScript.Configuration.EtlType)
