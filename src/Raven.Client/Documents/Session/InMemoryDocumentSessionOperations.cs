@@ -1189,7 +1189,8 @@ more responsive application.
             DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
             if (command.Type != CommandType.AttachmentPUT &&
                 command.Type != CommandType.AttachmentDELETE &&
-                command.Type != CommandType.AttachmentRENAME &&
+                command.Type != CommandType.AttachmentCOPY &&
+                command.Type != CommandType.AttachmentMOVE &&
                 command.Type != CommandType.Counters)
                 DeferredCommandsDictionary[(command.Id, CommandType.ClientModifyDocumentCommand, null)] = command;
         }
