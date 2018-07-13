@@ -185,5 +185,54 @@ loadToDifferentCollection(this);"
                 }
             }
         }
+
+        [Fact]
+        public async Task CanTestEmptyScript()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order());
+
+                    await session.SaveChangesAsync();
+
+                    var database = GetDatabase(store.Database).Result;
+
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
+                        {
+                            DocumentId = "orders/1-A",
+                            Configuration = new RavenEtlConfiguration()
+                            {
+                                Name = "simulate",
+                                Transforms =
+                                {
+                                    new Transformation()
+                                    {
+                                        Collections =
+                                        {
+                                            "Orders"
+                                        },
+                                        Name = "OrdersAndLines",
+                                        Script = null
+                                    }
+                                }
+                            }
+                        }, database, database.ServerStore, context);
+
+                        Assert.Equal(0, result.TransformationErrors.Count);
+
+                        Assert.Equal(1, result.Commands.Count);
+
+                        Assert.IsType(typeof(PutCommandDataWithBlittableJson), result.Commands[0]);
+
+                        Assert.Empty(result.DebugOutput);
+                    }
+                }
+            }
+        }
     }
 }
