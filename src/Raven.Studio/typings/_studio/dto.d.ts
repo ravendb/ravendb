@@ -458,5 +458,18 @@ interface virtualBulkInsertItem {
     items: number;
 }
 
-
 type adminLogsHeaderType = "Source" | "Logger";
+
+declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
+    interface SqlEtlTestScriptResult {
+        DebugOutput: Array<string>;
+        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    }
+}
+
+declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
+    interface RavenEtlTestScriptResult extends Raven.Server.Documents.ETL.Test.TestEtlScriptResult {
+        DebugOutput: Array<string>;
+        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    }
+}
