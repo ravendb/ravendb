@@ -82,5 +82,9 @@ namespace Raven.Client.Documents.Session
         /// <param name="name">the attachment name</param>
         /// <param name="newName">the attachment new name</param>
         void Rename(string documentId, string name, string newName);
+
+        void Copy(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
+
+        void Copy(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
     }
 }

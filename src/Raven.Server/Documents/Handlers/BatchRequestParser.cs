@@ -12,9 +12,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -43,6 +41,8 @@ namespace Raven.Server.Documents.Handlers
 
             public string Name;
             public string NewName;
+            public string DestinationId;
+            public string DestinationName;
             public string ContentType;
 
             #endregion
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Handlers
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, default(CancellationToken));
+                    var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, default);
 
                     if (commandData.Type == CommandType.PATCH)
                     {
@@ -379,6 +379,38 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                         }
                         break;
+                    case CommandPropertyName.DestinationId:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.DestinationId = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.DestinationId = GetStringPropertyValue(state);
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
+                    case CommandPropertyName.DestinationName:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.DestinationName = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.DestinationName = GetStringPropertyValue(state);
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
                     case CommandPropertyName.ContentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -588,6 +620,7 @@ namespace Raven.Server.Documents.Handlers
         {
             return ctx.GetLazyString(Encodings.Utf8.GetString(state.StringBuffer, state.StringSize));
         }
+
         private enum CommandPropertyName
         {
             NoSuchProperty,
@@ -604,6 +637,8 @@ namespace Raven.Server.Documents.Handlers
 
             Name,
             NewName,
+            DestinationId,
+            DestinationName,
             ContentType,
 
             #endregion
@@ -689,6 +724,21 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NewName;
 
                     return CommandPropertyName.NoSuchProperty;
+                case 13:
+                    if (*(long*)state.StringBuffer == 8386105380344915268 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1231974249 &&
+                        state.StringBuffer[12] == (byte)'d')
+                        return CommandPropertyName.DestinationId;
+
+                    return CommandPropertyName.NoSuchProperty;
+                case 15:
+                    if (*(long*)state.StringBuffer == 8386105380344915268 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1315860329 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28001 &&
+                        state.StringBuffer[14] == (byte)'e')
+                        return CommandPropertyName.DestinationName;
+
+                    return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
@@ -728,7 +778,13 @@ namespace Raven.Server.Documents.Handlers
                         ThrowInvalidProperty(state, ctx);
 
                     return CommandType.AttachmentPUT;
+                case 14:
+                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
+                        *(int*)(state.StringBuffer + sizeof(long)) != 1329820782 ||
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) != 22864)
+                        ThrowInvalidProperty(state, ctx);
 
+                    return CommandType.AttachmentCOPY;
                 case 16:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4993719366250034286)
