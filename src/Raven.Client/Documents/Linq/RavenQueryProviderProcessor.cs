@@ -1668,8 +1668,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (expression.Arguments[0] is MethodCallExpression mce &&
                 mce.Method.Name == "Select" &&
-                ExpressionHasNestedLambda(mce, out var innerLambda) &&                
-                CheckForLoad(innerLambda, out _))
+                ExpressionHasNestedLambda(mce, out var innerLambda) &&
+                innerLambda.Body is MethodCallExpression innerMce &&
+                CheckForLoad(innerMce))
             {
                 _loadAlias = parameterName;
                 return;
@@ -1678,25 +1679,45 @@ The recommended method is to use full text search (mark the field as Analyzed an
             HandleLoadFromSelectIfNeeded(lambdaExpression);
         }
 
-        private bool CheckForLoad(LambdaExpression lambdaExpression, out MethodCallExpression mce)
+        private bool CheckForLoad(MethodCallExpression mce)
         {
-            if (lambdaExpression.Body is MethodCallExpression innerMce &&
-                innerMce.Method.Name == nameof(RavenQuery.Load) &&
-                (innerMce.Method.DeclaringType == typeof(RavenQuery) ||
-                 innerMce.Object?.Type == typeof(IDocumentSession)))
+            return mce.Method.Name == nameof(RavenQuery.Load) &&
+                   (mce.Method.DeclaringType == typeof(RavenQuery) ||
+                    mce.Object?.Type == typeof(IDocumentSession));
+        }
+
+        private bool CheckForNestedLoad(LambdaExpression lambdaExpression, out MethodCallExpression mce, out string selectPath)
+        {
+            if (lambdaExpression.Body is MemberExpression memberExpression)
             {
-                mce = innerMce;
-                return true;
+                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path) 
+                        is MethodCallExpression methodCallExpression &&
+                    CheckForLoad(methodCallExpression))
+                {
+                    selectPath = path == string.Empty
+                        ? memberExpression.Member.Name
+                        : $"{path}.{memberExpression.Member.Name}";
+                    mce = methodCallExpression;
+                    return true;
+                }
             }
 
+            selectPath = null;
             mce = null;
             return false;
+
         }
 
         private void HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
         {
-            if (CheckForLoad(lambdaExpression, out var innerMce) == false)
-                return;
+            if (CheckForNestedLoad(lambdaExpression, out var mce, out var member) == false)
+            {
+                if (!(lambdaExpression.Body is MethodCallExpression methodCall) ||
+                    CheckForLoad(methodCall) == false)
+                        return;
+                
+                mce = methodCall;
+            }
 
             //add load token
 
@@ -1706,21 +1727,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             string arg;
-            if (innerMce.Arguments[0] is ConstantExpression constantExpression && 
+            if (mce.Arguments[0] is ConstantExpression constantExpression && 
                 constantExpression.Type == typeof(string))
             {
                 arg = _documentQuery.ProjectionParameter(constantExpression.Value);
             }
             else
             {
-                arg = ToJs(innerMce.Arguments[0]);
+                arg = ToJs(mce.Arguments[0]);
             }
 
             _loadTokens.Add(LoadToken.Create(arg, _loadAlias ?? DefaultLoadAlias));
 
             if (_loadAlias == null)
             {
-                AddToFieldsToFetch(DefaultLoadAlias, DefaultLoadAlias);
+                var path = DefaultLoadAlias;
+                if (member != null)
+                {
+                    path = $"{path}.{member}";
+                }
+
+                AddToFieldsToFetch(path, path);
             }
 
             _selectLoad = true;
