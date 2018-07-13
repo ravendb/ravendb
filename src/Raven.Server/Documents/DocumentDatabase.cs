@@ -328,7 +328,12 @@ namespace Raven.Server.Documents
 
         internal void ThrowDatabaseShutdown(Exception e = null)
         {
-            throw new DatabaseDisabledException("The database " + Name + " is shutting down", e);
+            throw CreateDatabaseShutdownException(e);
+        }
+
+        internal DatabaseDisabledException CreateDatabaseShutdownException(Exception e = null)
+        {
+            return new DatabaseDisabledException("The database " + Name + " is shutting down", e);
         }
 
         public struct DatabaseUsage : IDisposable
@@ -806,13 +811,18 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
+                DatabaseDisabledException throwShutDown = null;
+
+                if (_databaseShutdown.IsCancellationRequested && e is DatabaseDisabledException == false)
+                    e = throwShutDown = CreateDatabaseShutdownException(e);
+
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Got exception during StateChanged({index}).", e);
 
-                if (_databaseShutdown.IsCancellationRequested)
-                    ThrowDatabaseShutdown(e);
+                if (throwShutDown != null)
+                    throw throwShutDown;
 
                 throw;
             }
