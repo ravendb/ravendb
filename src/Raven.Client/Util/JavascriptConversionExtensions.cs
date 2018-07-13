@@ -2132,12 +2132,21 @@ namespace Raven.Client.Util
 
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
+            return GetInnermostExpression(expression, out _) as ParameterExpression;
+        }
+
+        public static Expression GetInnermostExpression(MemberExpression expression, out string path)
+        {
+            path = string.Empty;
             while (expression.Expression is MemberExpression memberExpression)
             {
                 expression = memberExpression;
+                path = path == string.Empty 
+                    ? expression.Member.Name 
+                    : $"{expression.Member.Name}.{path}";
             }
 
-            return expression.Expression as ParameterExpression;
+            return expression.Expression;
         }
 
         private static void WriteArguments(JavascriptConversionContext context, IReadOnlyList<Expression> arguments, JavascriptWriter writer, int start = 0)
