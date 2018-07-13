@@ -86,5 +86,9 @@ namespace Raven.Client.Documents.Session
         void Copy(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
 
         void Copy(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
+
+        void Move(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
+
+        void Move(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
     }
 }
