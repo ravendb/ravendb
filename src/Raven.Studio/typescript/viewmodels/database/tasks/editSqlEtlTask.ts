@@ -22,8 +22,8 @@ import jsonUtil = require("common/jsonUtil");
 import document = require("models/database/documents/document");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand")
-import simulateSqlReplicationCommand = require("commands/database/tasks/simulateSqlReplicationCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import testSqlReplicationCommand = require("commands/database/tasks/testSqlReplicationCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 
 class sqlTaskTestMode {
@@ -34,6 +34,7 @@ class sqlTaskTestMode {
     docsIdsAutocompleteSource: docsIdsBasedOnQueryFetcher;
     db: KnockoutObservable<database>;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
+    connectionProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
     
     validationGroup: KnockoutValidationGroup;
     validateParent: () => boolean;
@@ -63,10 +64,13 @@ class sqlTaskTestMode {
         return transformationCount + loadErrorCount + slowSqlCount;
     });
     
-    constructor(db: KnockoutObservable<database>, validateParent: () => boolean, configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration) {
+    constructor(db: KnockoutObservable<database>, validateParent: () => boolean, 
+                configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration,
+                connectionProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString) {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
+        this.connectionProvider = connectionProvider;
         this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(db);
         
         _.bindAll(this, "onAutocompleteOptionSelected");
@@ -138,18 +142,18 @@ class sqlTaskTestMode {
             const dto = {
                 DocumentId: this.documentId(),
                 PerformRolledBackTransaction: this.performRolledBackTransaction(),
-                Configuration: this.configurationProvider()
+                Configuration: this.configurationProvider(),
+                Connection: this.connectionProvider()
             } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
             
-            new simulateSqlReplicationCommand(this.db(), dto)
+            new testSqlReplicationCommand(this.db(), dto)
                 .execute()
-                .done(simulationResult => {
-                    this.testResults(_.flatMap(simulationResult.Summary, x => x.Commands));
-                    this.debugOutput(simulationResult.DebugOutput);
-                    
-                    this.loadErrors(simulationResult.LoadErrors);
-                    this.slowSqlWarnings(simulationResult.SlowSqlWarnings);
-                    this.transformationErrors(simulationResult.TransformationErrors);
+                .done((testResult: Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult) => {
+                    this.testResults(_.flatMap(testResult.Summary, x => x.Commands));
+                    this.debugOutput(testResult.DebugOutput);
+                    this.loadErrors(testResult.LoadErrors);
+                    this.slowSqlWarnings(testResult.SlowSqlWarnings); 
+                    this.transformationErrors(testResult.TransformationErrors);
                     
                     if (this.warningsCount()) {
                         $('.test-container a[href="#warnings"]').tab('show');
@@ -337,6 +341,14 @@ class editSqlEtlTask extends viewModelBase {
             return dto;
         };
         
+        const connectionStringProvider = () => {
+            if (this.createNewConnectionString()) {
+                return this.newConnectionString().toDto();
+            } else {
+                return null;
+            }
+        };
+        
         this.test = new sqlTaskTestMode(this.activeDatabase, () => {
             const transformationValidationGroup = this.isValid(this.editedTransformationScriptSandbox().validationGroup);
             const connectionStringValid = this.connectionStingDefined();
@@ -356,7 +368,7 @@ class editSqlEtlTask extends viewModelBase {
             }
             
             return transformationValidationGroup && connectionStringValid;
-        }, dtoProvider);
+        }, dtoProvider, connectionStringProvider);
         
         this.test.initObservables();
     }

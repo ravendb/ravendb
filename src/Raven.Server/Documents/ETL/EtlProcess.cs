@@ -842,7 +842,7 @@ namespace Raven.Server.Documents.ETL
 
             var docCollection = database.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
 
-            if (testScript.Configuration.Transforms[0].Collections.Contains(docCollection, StringComparer.OrdinalIgnoreCase) == false)
+            if (testScript.Configuration.Transforms[0].ApplyToAllDocuments == false && testScript.Configuration.Transforms[0].Collections.Contains(docCollection, StringComparer.OrdinalIgnoreCase) == false)
             {
                 throw new InvalidOperationException($"Document '{document.Id}' belongs to {docCollection} collection " +
                                                     $"while tested ETL script works on the following collections: {string.Join(", ", testScript.Configuration.Transforms[0].Collections)}");

@@ -83,7 +83,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         } as Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString, true, []);
     }
     
-    toDto() {
+    toDto(): Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString {
         return {
             Type: "Sql",
             Name: this.connectionStringName(),
