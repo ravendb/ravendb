@@ -91,7 +91,6 @@ namespace Voron.Impl
 
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
         public event Action<IPagerLevelTransactionState> OnDispose;
-        public event Action AfterCommitWhenNewReadTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
@@ -1033,7 +1032,6 @@ namespace Voron.Impl
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
-
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
 
@@ -1051,15 +1049,16 @@ namespace Voron.Impl
 
             // release scratch file page allocated for the transaction header
             Allocator.Release(ref _txHeaderMemory);
-
-            using (_env.PreventNewReadTransactions())
-            {
-                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(_state);
-                _env.Journal.UpdateCacheForJournalSnapshots(_state);
-            }
+            _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(_state);
+            _env.Journal.UpdateCacheForJournalSnapshots(_state);
+            // need to update the env state, but the transaction was rolled back,
+            // so we need to go back to the previous tx id
+            _state.TransactionCounter = _env.State.TransactionCounter;
+            _env.State = _state;
 
             RolledBack = true;
         }
+
         public void RetrieveCommitStats(out CommitStats stats)
         {
             _requestedCommitStats = stats = new CommitStats();
@@ -1089,14 +1088,6 @@ namespace Voron.Impl
 
             state = state.CurrentPager.GetPagerStateAndAddRefAtomically(); // state might hold released pagerState, and we want to add ref to the current (i.e. data file was re-allocated and a new state is now available). RavenDB-6950
             _lastState = state;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void OnAfterCommitWhenNewReadTransactionsPrevented()
-        {
-            // the event cannot be called outside this class while we need to call it in 
-            // StorageEnvironment.TransactionAfterCommit
-            AfterCommitWhenNewReadTransactionsPrevented?.Invoke();
         }
 
 

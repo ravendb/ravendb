@@ -1461,20 +1461,16 @@ namespace Raven.Server.Documents.Indexes
                         {
                             tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
 
-                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                            if (writeOperation.IsValueCreated)
                             {
-                                if (writeOperation.IsValueCreated == false)
-                                    return;
-
                                 using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
                                 {
-                                    // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                                    // also we need this to be called when new read transaction are prevented in order to ensure
-                                    // that queries won't get the searcher having 'old' state but see 'new' changes committed here
-                                    // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
+                                    // this is safe to do even if there are transactions opening up now before the
+                                    // tx is actually committed, because we check the tx id whenever we get to the 
+                                    // searcher
                                     IndexPersistence.RecreateSearcher(tx.InnerTransaction);
                                 }
-                            };
+                            }
 
                             tx.Commit();
                             SlowWriteNotification.Notify(commitStats, DocumentDatabase);

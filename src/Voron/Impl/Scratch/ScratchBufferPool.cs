@@ -71,11 +71,6 @@ namespace Voron.Impl.Scratch
                 dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
             }
 
-            // for the lifetime of this cache, we have to hold a reference to the 
-            // pager state, to avoid handing out garbage to transactions
-            // note that this call is protected from running concurrently with the 
-            // call to GetPagerStatesOfAllScratches()
-
             foreach (var pagerState in dic)
             {
                 pagerState.Value.AddRef();

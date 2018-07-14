@@ -84,7 +84,6 @@ namespace Voron
         private NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
-        private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -112,7 +111,7 @@ namespace Voron
 
         public Guid DbId { get; set; }
 
-        public StorageEnvironmentState State { get; private set; } = new StorageEnvironmentState(null, 0);
+        public StorageEnvironmentState State { get; internal set; } = new StorageEnvironmentState(null, 0);
 
         public event Action OnLogsApplied;
 
@@ -672,27 +671,19 @@ namespace Voron
 
                 LowLevelTransaction tx;
 
-                _txCommit.EnterReadLock();
-                try
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
+                tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
+                    context)
                 {
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    FlushInProgressLockTaken = flushInProgressReadLockTaken,
+                };
 
-                    long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
-                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
-                        context)
-                    {
-                        FlushInProgressLockTaken = flushInProgressReadLockTaken,
-                    };
+                if (flags == TransactionFlags.ReadWrite)
+                    tx.CurrentTransactionHolder = _currentWriteTransactionHolder; 
 
-                    if (flags == TransactionFlags.ReadWrite)
-                        tx.CurrentTransactionHolder = _currentWriteTransactionHolder; 
-
-                    ActiveTransactions.Add(tx);
-                }
-                finally
-                {
-                    _txCommit.ExitReadLock();
-                }
+                ActiveTransactions.Add(tx);
 
                 var state = _dataPager.PagerState;
                 tx.EnsurePagerStateReference(state);
@@ -805,12 +796,6 @@ namespace Voron
             return result;
         }
 
-        internal ExitWriteLock PreventNewReadTransactions()
-        {
-            _txCommit.EnterWriteLock();
-            return new ExitWriteLock(_txCommit);
-        }
-
         public struct ExitWriteLock : IDisposable
         {
             readonly ReaderWriterLockSlim _rwls;
@@ -830,23 +815,18 @@ namespace Voron
         {
             if (ActiveTransactions.Contains(tx) == false)
                 return;
+            
+            ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(tx.State);
+            Journal.UpdateCacheForJournalSnapshots(tx.State);
 
-            using (PreventNewReadTransactions())
-            {
-                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(tx.State);
-                Journal.UpdateCacheForJournalSnapshots(tx.State);
+            // We only want to increment the tx counter if the transaction
+            // actully did something. However, the in memory state is still
+            // different, so we need to copy it regardless
+            if (tx.Committed == false ||
+                tx.FlushedToJournal == false)
+                tx.State.TransactionCounter = State.TransactionCounter;
 
-                tx.OnAfterCommitWhenNewReadTransactionsPrevented();
-
-                // We only want to increment the tx counter if the transaction
-                // actully did something. However, the in memory state is still
-                // different, so we need to copy it regardless
-                if (tx.Committed == false ||
-                    tx.FlushedToJournal == false)
-                    tx.State.TransactionCounter = State.TransactionCounter;
-
-                State = tx.State;
-            }
+            State = tx.State;
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)

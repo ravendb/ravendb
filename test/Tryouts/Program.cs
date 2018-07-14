@@ -20,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new FastTests.Server.Documents.DocumentsCrud())
+                using (var test = new SlowTests.Issues.RavenDB_5570())
                 {
-                   test.CanQueryByGlobalEtag();
+                   test.Doing_PUT_without_commit_should_not_cause_NRE_on_subsequent_PUTs();
                 }
             }
             catch (Exception e)
