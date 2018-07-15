@@ -29,7 +29,13 @@ namespace Raven.Client.Json.Converters
 
             if (blittableReader.Value is BlittableJsonReaderObject blittableValue)
             {
-                return blittableValue.Clone(blittableReader.Context);
+                //Skip in order to prevent unnecessary movement inside the blittable
+                //when field\property type is BlittableJsonReaderObject
+                blittableReader.SkipBlittableInside();
+
+                return blittableValue.BelongsToContext(blittableReader.Context) 
+                    ? blittableValue 
+                    : blittableValue.Clone(blittableReader.Context);
             }
             throw new SerializationException($"Try to read {nameof(BlittableJsonReaderObject)} from non {nameof(BlittableJsonReaderObject)} value");
 

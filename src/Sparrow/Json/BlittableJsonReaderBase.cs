@@ -16,6 +16,11 @@ namespace Sparrow.Json
             _context = context;
         }
 
+        public bool BelongsToContext(JsonOperationContext context)
+        {
+            return context == _context;
+        }
+
         public bool NoCache { get; set; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

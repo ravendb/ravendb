@@ -161,7 +161,9 @@ namespace Raven.Client.Json
                     };
                     _items.Push(newObject);
                     newObject.Object.GetPropertiesByInsertionOrder(newObject.Buffers);
-                    SetToken(JsonToken.StartObject);
+
+                    //The value is passed in case the field/property should remains BlittableJsonReaderObject
+                    SetToken(JsonToken.StartObject, value);
                     return true;
                 case BlittableJsonToken.StartArray:
                     var newArray = new CurrentItem
@@ -351,6 +353,11 @@ namespace Raven.Client.Json
             if (str == null)
                 return null;
             return DateTimeOffset.ParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        }
+
+        public void SkipBlittableInside()
+        {
+            _items.Pop();
         }
     }
 }
