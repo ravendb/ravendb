@@ -543,12 +543,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CanCommunicateWithReplicationProtocol(int headerResponseVersion)
-        {
-            return _supportedProtocolVersions.Contains(headerResponseVersion);
-        }
-        
         private static HashSet<int> _supportedProtocolVersions = new HashSet<int>(){31,33};
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
