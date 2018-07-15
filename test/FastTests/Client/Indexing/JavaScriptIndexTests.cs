@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -416,11 +417,60 @@ namespace FastTests.Client.Indexing
                     var res2 = session.Query<CategoryCount>()
                         .ToList();
                     Assert.Equal(res.Count, res2.Count);
-
                 }
 
             }
         }
+
+        [Fact]
+        public void DateCheckMapReduce()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Product_Sales_ByMonth());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine() {ProductName = "Chang"},
+                            new OrderLine() {ProductName = "Aniseed Syrup"},
+                            new OrderLine() {ProductName = "Chef Anton's Cajun Seasoning"}
+                        },
+                        OrderedAt = new DateTime(1998, 5, 6)
+                    });
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine() {ProductName = "Grandma's Boysenberry Spread"},
+                            new OrderLine() {ProductName = "Tofu"},
+                            new OrderLine() {ProductName = "Teatime Chocolate Biscuits"}
+                        },
+                        OrderedAt = new DateTime(1998, 5, 10)
+                    });
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine() {ProductName = "Guaraná Fantástica"},
+                            new OrderLine() {ProductName = "NuNuCa Nuß-Nougat-Creme"},
+                            new OrderLine() {ProductName = "Perth Pasties"},
+                            new OrderLine() {ProductName = "Outback Lager"}
+                        },
+                        OrderedAt = new DateTime(1998, 4, 30)
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var res = session.Query<Product_Sales_ByMonth.Result>("Product/Sales/ByMonth")
+                        .Where(x => x.Count == 6)
+                        .ToList();
+                    Assert.Equal(res[0].Month.Month, 5);
+                }
+            }
+        }
+
 
         private class Category
         {
@@ -738,5 +788,47 @@ namespace FastTests.Client.Indexing
                 OutputReduceToCollection = "CategoryCounts";
             }
         }
+
+        public class Product_Sales_ByMonth : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string Product { get; set; }
+
+                public DateTime Month { get; set; }
+
+                public int Count { get; set; }
+
+            }
+
+            public Product_Sales_ByMonth()
+            {
+                Maps = new HashSet<string>()
+                {
+                    @"map('orders', function(order){
+                            var res = [];
+                            order.Lines.forEach(l => {
+                                res.push({
+                                    Product: l.Product,
+                                    Month: new Date( (new Date(order.OrderedAt)).getFullYear(),(new Date(order.OrderedAt)).getMonth(),1),
+                                    Count: 1,
+                                })
+                            });
+                            return res;
+                        })"
+                };
+
+                Reduce = @"groupBy( x => ({Product: x.Product , Month: x.Month}) )
+                    .aggregate(g => {
+                    return {
+                        Product: g.key.Product,
+                        Month: g.key.Month,
+                        Count: g.values.reduce((sum, x) => x.Count + sum, 0)
+                    }
+                })";
+
+            }
+        }
     }
+
 }
