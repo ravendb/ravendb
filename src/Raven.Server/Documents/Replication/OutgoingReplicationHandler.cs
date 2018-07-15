@@ -496,7 +496,7 @@ namespace Raven.Server.Documents.Replication
                 writer.Flush();
             }
         }
-        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer)
+        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer, Stream stream, string url)
         {
             const int timeout = 2 * 60 * 1000; 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Replication
                 switch (headerResponse.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        break;
+                        return headerResponse.Version;
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
@@ -541,8 +541,6 @@ namespace Raven.Server.Documents.Replication
                         throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }
             }
-
-            return TcpConnectionHeaderMessage.ReplicationTcpVersion;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

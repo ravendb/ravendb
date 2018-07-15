@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -364,7 +365,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate)
+            public override async Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate)
             {
                 TimeSpan time;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -373,7 +374,13 @@ namespace Tests.Infrastructure
                     time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
                 }
                 var tcpClient = await TcpUtils.ConnectAsync(url, time);
-                return (tcpClient.GetStream(), () => tcpClient.Client.Disconnect(false));
+                return new RachisConnection
+                {
+                    Stream = tcpClient.GetStream(),
+
+                    SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine4000),
+                    Disconnect = () => tcpClient.Client.Disconnect(false)
+                };                
             }
         }
 

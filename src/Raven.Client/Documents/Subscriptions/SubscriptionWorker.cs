@@ -210,7 +210,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private int ReadServerRespondAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer)
+        private int ReadServerRespondAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
             //Reading reply from server
             using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
@@ -219,7 +219,7 @@ namespace Raven.Client.Documents.Subscriptions
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        break;
+                        return reply.Version;
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
                     case TcpConnectionStatus.TcpVersionMismatch:
