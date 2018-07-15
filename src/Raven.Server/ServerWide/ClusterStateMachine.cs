@@ -61,7 +61,6 @@ namespace Raven.Server.ServerWide
         private static readonly TableSchema ItemsSchema;
         private static readonly TableSchema CompareExchangeSchema;
         public static readonly TableSchema TransactionCommandsSchema;
-        public static readonly Slice CommandByDatabaseAndCount;
 
         public enum UniqueItems
         {
@@ -84,7 +83,6 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CmpXchg", out CompareExchange);
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
-                Slice.From(ctx, "CommandByDatabaseAndCount", out CommandByDatabaseAndCount);
                 Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsIndex);
             }
             ItemsSchema = new TableSchema();
@@ -105,11 +103,10 @@ namespace Raven.Server.ServerWide
             });
 
             TransactionCommandsSchema = new TableSchema();
-            TransactionCommandsSchema.DefineIndex(new TableSchema.SchemaIndexDef()
+            TransactionCommandsSchema.DefineKey(new TableSchema.SchemaIndexDef()
             {
-                Name = CommandByDatabaseAndCount,
                 StartIndex = 0,
-                Count = 3, // Database, Separator, Commands count
+                Count = 1, // Database, Separator, Commands count
             });
         }
 
@@ -338,7 +335,6 @@ namespace Raven.Server.ServerWide
         {
             var clusterTansaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-
             var error = clusterTansaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
             if (error == null)
             {
@@ -622,7 +618,7 @@ namespace Raven.Server.ServerWide
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             using (ClusterTransactionCommand.GetPrefix(context, databaseName, out var prefixSlice))
             {
-                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndCount], prefixSlice, true, long.MaxValue);
+                transactionsCommands.DeleteByPrimaryKeyPrefix(prefixSlice);
             }
         }
 
@@ -969,8 +965,10 @@ namespace Raven.Server.ServerWide
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
-                   || slice.Content.Match(CompareExchange.Content)
-                   || slice.Content.Match(Identities.Content);
+                    || slice.Content.Match(CompareExchange.Content)
+                    || slice.Content.Match(Identities.Content)
+                    || slice.Content.Match(TransactionCommands.Content) 
+                    || slice.Content.Match(TransactionCommandsIndex.Content);
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
@@ -1566,6 +1564,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public const string SnapshotInstalled = "SnapshotInstalled";
+        public const string InstallUpdatedServerCertificateCommandType = "InstallUpdatedServerCertificateCommand";
+
         public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, ServerStore serverStore)
         {
             using (context.OpenWriteTransaction())
@@ -1589,7 +1590,9 @@ namespace Raven.Server.ServerWide
                     TaskExecutor.Execute(_ =>
                     {
                         foreach (var db in listOfDatabaseName)
-                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                        {
+                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                        }
                     }, null);
                 }
 
@@ -1598,7 +1601,7 @@ namespace Raven.Server.ServerWide
                 {
                     TaskExecutor.Execute(_ =>
                     {
-                        onValueChanged.Invoke(this, (lastIncludedIndex, "InstallUpdatedServerCertificateCommand"));
+                        onValueChanged.Invoke(this, (lastIncludedIndex, InstallUpdatedServerCertificateCommandType));
                     }, null);
                 }
                 context.Transaction.Commit();

@@ -190,28 +190,25 @@ namespace Raven.Server.ServerWide.Commands
             var commandsIndexTree = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsIndex);
             var commands = SerializedDatabaseCommands.Clone(context);
 
-            using (Slice.From(context.Allocator, Database.ToLowerInvariant(), out Slice databaseSlice))
+            var count = commandsIndexTree.ReadLong(CommandsCountKey) ?? 0;
+
+            using (GetPrefix(context, Database, out var prefixSlice, count))
             using (items.Allocate(out TableValueBuilder tvb))
             {
-                var count = commandsIndexTree.ReadLong(CommandsCountKey) ?? 0;
-
-                tvb.Add(databaseSlice.Content.Ptr, databaseSlice.Size);
-                tvb.Add(Separator);
-                tvb.Add(Bits.SwapBytes(count));
+                tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
                 tvb.Add(commands.BasePointer, commands.Size);
                 tvb.Add(index);
                 items.Insert(tvb);
 
-                using (commandsIndexTree.DirectAdd(CommandsCountKey, sizeof(long), out byte* ptr))
+                using (commandsIndexTree.DirectAdd(CommandsCountKey, sizeof(long), out var ptr))
                     *(long*)ptr = count + DatabaseCommandsCount;
             }
         }
 
         public enum TransactionCommandsColumn
         {
-            Database,
-            Saparator,
-            PreviousCount,
+            // Database, Separator, PrevCount
+            Key,
             Commands,
             RaftIndex,
         }
@@ -221,12 +218,10 @@ namespace Raven.Server.ServerWide.Commands
             var items = serverContext.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(serverContext, database, out var prefixSlice))
             {
-                var indexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndCount];
-                var reader = items.SeekOneForwardFromPrefix(indexDef, prefixSlice);
-                if (reader == null)
+                if(items.SeekOnePrimaryKeyPrefix(prefixSlice,out var reader) == false)
                     return 0;
-                var value = *(long*)reader.Reader.Read((int)TransactionCommandsColumn.PreviousCount, out var _);
-                return Bits.SwapBytes(value);
+                var value = reader.Read((int)TransactionCommandsColumn.Key, out var size);
+                return Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
             }
         }
 
@@ -288,12 +283,10 @@ namespace Raven.Server.ServerWide.Commands
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out Slice prefixSlice))
             {
-                var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndCount];
-                var commandsBulk = items.SeekForwardFrom(schemaIndexDef, prefixSlice, 0);
-
+                var commandsBulk = items.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0);
                 foreach (var command in commandsBulk)
                 {
-                    var reader = command.Result.Reader;
+                    var reader = command.Value.Reader;
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         yield break;
@@ -321,17 +314,16 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             var index = *(long*)reader.Read((int)TransactionCommandsColumn.RaftIndex, out _);
-            var count = *(long*)reader.Read((int)TransactionCommandsColumn.PreviousCount, out _);
+            var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out size);
+            var database = Encoding.UTF8.GetString(keyPtr, size - sizeof(long) - 1);
 
-            var databasePtr = reader.Read((int)TransactionCommandsColumn.Database, out size);
-            var databse = new LazyStringValue(null, databasePtr, size, context);
             return new SingleClusterDatabaseCommand
             {
                 Options = options,
                 Commands = array,
                 Index = index,
-                PreviousCount = Bits.SwapBytes(count),
-                Database = databse
+                PreviousCount = Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long))),
+                Database = database
             };
         }
 

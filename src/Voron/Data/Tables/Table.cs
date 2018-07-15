@@ -1348,7 +1348,7 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
-        public bool DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null)
+        public bool DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder, bool> shouldAbort = null)
         {
             AssertWritableTable();
 
@@ -1364,20 +1364,24 @@ namespace Voron.Data.Tables
                     if (it.Seek(it.RequiredPrefix) == false)
                         return deleted;
 
-                    deleted = true;
                     long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
 
-                    if (beforeDelete != null)
+                    if (beforeDelete != null || shouldAbort != null)
                     {
                         int size;
                         var ptr = DirectRead(id, out size);
                         if (tableValueHolder == null)
                             tableValueHolder = new TableValueHolder();
                         tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                        beforeDelete(tableValueHolder);
+                        if (shouldAbort?.Invoke(tableValueHolder) == true)
+                        {
+                            return deleted;
+                        }
+                        beforeDelete?.Invoke(tableValueHolder);
                     }
 
                     Delete(id);
+                    deleted = true;
                 }
             }
         }

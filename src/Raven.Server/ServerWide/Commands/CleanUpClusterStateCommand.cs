@@ -25,18 +25,14 @@ namespace Raven.Server.ServerWide.Commands
                 var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
                 using (ClusterTransactionCommand.GetPrefix(context, database, out var prefixSlice))
                 {
-                    var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndCount];
-                    var deleted = items.DeleteForwardFrom(schemaIndexDef, prefixSlice, 
-                        startsWith: true, 
-                        numberOfEntriesToDelete: long.MaxValue,
-                        shouldAbort: (tvb) =>
-                        {
-                            var value = *(long*)tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.PreviousCount, out var _);
-                            var currentIndex = Bits.SwapBytes(value);
-                            return currentIndex > upToIndex;
-                        });
-
-                    if (deleted > 0)
+                    var deleted = items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
+                    {
+                        var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
+                        var currentIndex = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
+                        return currentIndex > upToIndex;
+                    });
+                   
+                    if (deleted)
                     {
                         affectedDatabases.Add(database, upToIndex);
                     }
