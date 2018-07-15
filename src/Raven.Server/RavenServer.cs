@@ -1136,6 +1136,9 @@ namespace Raven.Server
                                             return;
                                         }
 
+                                        if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+                                            break;
+
                                     }                                    
 
                                     var (isSupported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion);
