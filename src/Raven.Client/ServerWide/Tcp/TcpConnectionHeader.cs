@@ -27,21 +27,21 @@ namespace Raven.Client.ServerWide.Tcp
 
         public string Info { get; set; }
         
-        public static readonly int PingBaseLine4000 = -1;
-        public static readonly int NoneBaseLine4000 = -1;
-        public static readonly int DropBaseLine4000 = -2;
-        public static readonly int ClusterBaseLine4000 = 10;
-        public static readonly int HeartbeatsBaseLine4000 = 20;
-        public static readonly int ReplicationBaseLine4000 = 31;
-        public static readonly int ReplicationAttachmentMissing = 33;
-        public static readonly int SubscriptionBaseLine4000 = 40;
-        public static readonly int TestConnectionBaseLine4000 = 50;
+        public static readonly int PingBaseLine40000 = -1;
+        public static readonly int NoneBaseLine40000 = -1;
+        public static readonly int DropBaseLine40000 = -2;
+        public static readonly int ClusterBaseLine40100 = 10;
+        public static readonly int HeartbeatsBaseLine40200 = 20;
+        public static readonly int ReplicationBaseLine40301 = 31;
+        public static readonly int ReplicationAttachmentMissing = 40303;
+        public static readonly int SubscriptionBaseLine40400 = 40;
+        public static readonly int TestConnectionBaseLine40500 = 50;
 
-        public static readonly int ClusterTcpVersion = ClusterBaseLine4000;
-        public static readonly int HeartbeatsTcpVersion = HeartbeatsBaseLine4000;
+        public static readonly int ClusterTcpVersion = ClusterBaseLine40100;
+        public static readonly int HeartbeatsTcpVersion = HeartbeatsBaseLine40200;
         public static readonly int ReplicationTcpVersion = ReplicationAttachmentMissing;
-        public static readonly int SubscriptionTcpVersion = SubscriptionBaseLine4000;
-        public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine4000;
+        public static readonly int SubscriptionTcpVersion = SubscriptionBaseLine40400;
+        public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine40500;
 
         public class SupportedFeatures
         {            
@@ -114,51 +114,51 @@ namespace Raven.Client.ServerWide.Tcp
         private static readonly Dictionary<(OperationTypes,int), List<SupportedFeatures>> OperationsToSupportedProtocolVersions
             = new Dictionary<(OperationTypes, int), List<SupportedFeatures>>
             {
-                [(OperationTypes.Ping, PingBaseLine4000)] = 
+                [(OperationTypes.Ping, PingBaseLine40000)] = 
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(PingBaseLine4000){Ping = new SupportedFeatures.PingFeatures()}
+                        new SupportedFeatures(PingBaseLine40000){Ping = new SupportedFeatures.PingFeatures()}
                     },
-                [(OperationTypes.None, NoneBaseLine4000)] = 
+                [(OperationTypes.None, NoneBaseLine40000)] = 
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(NoneBaseLine4000){None = new SupportedFeatures.NoneFeatures()}
+                        new SupportedFeatures(NoneBaseLine40000){None = new SupportedFeatures.NoneFeatures()}
                     },
-                [(OperationTypes.Drop, DropBaseLine4000)] = 
+                [(OperationTypes.Drop, DropBaseLine40000)] = 
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(DropBaseLine4000) { Drop = new SupportedFeatures.DropFeatures() }
+                        new SupportedFeatures(DropBaseLine40000) { Drop = new SupportedFeatures.DropFeatures() }
                     },
-                [(OperationTypes.Subscription, SubscriptionBaseLine4000)] = 
+                [(OperationTypes.Subscription, SubscriptionBaseLine40400)] = 
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(SubscriptionBaseLine4000){Subscription = new SupportedFeatures.SubscriptionFeatures()}
+                        new SupportedFeatures(SubscriptionBaseLine40400){Subscription = new SupportedFeatures.SubscriptionFeatures()}
                     },
                 [(OperationTypes.Replication, ReplicationAttachmentMissing)] = 
                     new List<SupportedFeatures>
                     {
                         new SupportedFeatures(ReplicationAttachmentMissing){Replication = new SupportedFeatures.ReplicationFeatures{MissingAttachments = true}},
-                        new SupportedFeatures(ReplicationBaseLine4000){Replication = new SupportedFeatures.ReplicationFeatures()}
+                        new SupportedFeatures(ReplicationBaseLine40301){Replication = new SupportedFeatures.ReplicationFeatures()}
                     },
-                [(OperationTypes.Replication, ReplicationBaseLine4000)] =
+                [(OperationTypes.Replication, ReplicationBaseLine40301)] =
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(ReplicationBaseLine4000){Replication = new SupportedFeatures.ReplicationFeatures()}
+                        new SupportedFeatures(ReplicationBaseLine40301){Replication = new SupportedFeatures.ReplicationFeatures()}
                     },
-                [(OperationTypes.Cluster, ClusterBaseLine4000)] =
+                [(OperationTypes.Cluster, ClusterBaseLine40100)] =
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(ClusterBaseLine4000) {Cluster = new SupportedFeatures.ClusterFeatures()}
+                        new SupportedFeatures(ClusterBaseLine40100) {Cluster = new SupportedFeatures.ClusterFeatures()}
                     },
-                [(OperationTypes.Heartbeats, HeartbeatsBaseLine4000)] =
+                [(OperationTypes.Heartbeats, HeartbeatsBaseLine40200)] =
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(HeartbeatsBaseLine4000) { Cluster = new SupportedFeatures.ClusterFeatures()}
+                        new SupportedFeatures(HeartbeatsBaseLine40200) { Cluster = new SupportedFeatures.ClusterFeatures()}
                     },
-                [(OperationTypes.TestConnection, TestConnectionBaseLine4000)] =
+                [(OperationTypes.TestConnection, TestConnectionBaseLine40500)] =
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(TestConnectionBaseLine4000) { TestConnection = new SupportedFeatures.TestConnectionFeatures()}
+                        new SupportedFeatures(TestConnectionBaseLine40500) { TestConnection = new SupportedFeatures.TestConnectionFeatures()}
                     },
             };
         public static (bool Supported, int PrevSupported) OperationVersionSupported(OperationTypes operationType, int version)

@@ -30,13 +30,13 @@ namespace Raven.Client.ServerWide.Tcp
                     //In this case we usally throw internaly but for completeness we better handle it
                     if (version == -2)
                     {
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine4000);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine40000);
                     }
                     var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
                     if (supported)
                         return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
                     if (prevSupported == -1)
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine4000);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine40000);
                     currentVersion = prevSupported;
                 }
             }
@@ -72,13 +72,13 @@ namespace Raven.Client.ServerWide.Tcp
                     //In this case we usally throw internaly but for completeness we better handle it
                     if (version == -2)
                     {
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine4000);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine40000);
                     }
                     var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
                     if (supported)
                         return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
                     if (prevSupported == -1)
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine4000);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine40000);
                     currentVersion = prevSupported;
                 }
             }
