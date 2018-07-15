@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Tcp
         public int OperationVersion { get; set; }
 
         public string Info { get; set; }
-        
+
         public static readonly int PingBaseLine40000 = -1;
         public static readonly int NoneBaseLine40000 = -1;
         public static readonly int DropBaseLine40000 = -2;
@@ -44,7 +44,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine40500;
 
         public class SupportedFeatures
-        {            
+        {
             public readonly int ProtocolVersion;
 
             public SupportedFeatures(int version)
@@ -52,7 +52,7 @@ namespace Raven.Client.ServerWide.Tcp
                 ProtocolVersion = version;
             }
 
-            public PingFeatures Ping { get; set; }           
+            public PingFeatures Ping { get; set; }
             public NoneFeatures None { get; set; }
             public DropFeatures Drop { get; set; }
             public SubscriptionFeatures Subscription { get; set; }
@@ -111,30 +111,30 @@ namespace Raven.Client.ServerWide.Tcp
         /// and we want to add a new protocol '6' it should look like this:
         /// OperationsToSupportedProtocolVersions[('Foo',6)] = new List<SupportedFeatures> {SupportedFeatures6, SupportedFeatures5}
         /// </summary>
-        private static readonly Dictionary<(OperationTypes,int), List<SupportedFeatures>> OperationsToSupportedProtocolVersions
+        private static readonly Dictionary<(OperationTypes, int), List<SupportedFeatures>> OperationsToSupportedProtocolVersions
             = new Dictionary<(OperationTypes, int), List<SupportedFeatures>>
             {
-                [(OperationTypes.Ping, PingBaseLine40000)] = 
+                [(OperationTypes.Ping, PingBaseLine40000)] =
                     new List<SupportedFeatures>
                     {
                         new SupportedFeatures(PingBaseLine40000){Ping = new SupportedFeatures.PingFeatures()}
                     },
-                [(OperationTypes.None, NoneBaseLine40000)] = 
+                [(OperationTypes.None, NoneBaseLine40000)] =
                     new List<SupportedFeatures>
                     {
                         new SupportedFeatures(NoneBaseLine40000){None = new SupportedFeatures.NoneFeatures()}
                     },
-                [(OperationTypes.Drop, DropBaseLine40000)] = 
+                [(OperationTypes.Drop, DropBaseLine40000)] =
                     new List<SupportedFeatures>
                     {
                         new SupportedFeatures(DropBaseLine40000) { Drop = new SupportedFeatures.DropFeatures() }
                     },
-                [(OperationTypes.Subscription, SubscriptionBaseLine40400)] = 
+                [(OperationTypes.Subscription, SubscriptionBaseLine40400)] =
                     new List<SupportedFeatures>
                     {
                         new SupportedFeatures(SubscriptionBaseLine40400){Subscription = new SupportedFeatures.SubscriptionFeatures()}
                     },
-                [(OperationTypes.Replication, ReplicationAttachmentMissing)] = 
+                [(OperationTypes.Replication, ReplicationAttachmentMissing)] =
                     new List<SupportedFeatures>
                     {
                         new SupportedFeatures(ReplicationAttachmentMissing){Replication = new SupportedFeatures.ReplicationFeatures{MissingAttachments = true}},
@@ -161,13 +161,14 @@ namespace Raven.Client.ServerWide.Tcp
                         new SupportedFeatures(TestConnectionBaseLine40500) { TestConnection = new SupportedFeatures.TestConnectionFeatures()}
                     },
             };
+
         public static (bool Supported, int PrevSupported) OperationVersionSupported(OperationTypes operationType, int version)
         {
             var prev = -1;
             if (OperationsToSupportedProtocolVersions.TryGetValue((operationType, version), out var supportedProtocols) == false)
                 return (false, prev);
-            
-            for (var i =0; i< supportedProtocols.Count; prev = supportedProtocols[i].ProtocolVersion, i++)
+
+            for (var i = 0; i < supportedProtocols.Count; prev = supportedProtocols[i].ProtocolVersion, i++)
             {
                 var current = supportedProtocols[i].ProtocolVersion;
                 if (current == version)
@@ -179,7 +180,6 @@ namespace Raven.Client.ServerWide.Tcp
 
             return (false, prev);
         }
-
 
         public static int GetOperationTcpVersion(OperationTypes operationType)
         {
@@ -195,11 +195,11 @@ namespace Raven.Client.ServerWide.Tcp
                 case OperationTypes.Replication:
                     return ReplicationTcpVersion;
                 case OperationTypes.Cluster:
-                    return  ClusterTcpVersion;
+                    return ClusterTcpVersion;
                 case OperationTypes.Heartbeats:
-                    return  HeartbeatsTcpVersion;
+                    return HeartbeatsTcpVersion;
                 case OperationTypes.TestConnection:
-                    return  TestConnectionTcpVersion;
+                    return TestConnectionTcpVersion;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(operationType), operationType, null);
             }

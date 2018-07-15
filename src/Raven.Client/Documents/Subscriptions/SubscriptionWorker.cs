@@ -193,12 +193,12 @@ namespace Raven.Client.Documents.Subscriptions
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     Version = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                    ReadRespondAndGetVersion = ReadServerRespondAndGetVersion
+                    ReadResponseAndGetVersion = ReadServerResponseAndGetVersion
                 };
                 _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
-               
+
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 
                 await _stream.FlushAsync().ConfigureAwait(false);
@@ -210,7 +210,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private int ReadServerRespondAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
+        private int ReadServerResponseAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
             //Reading reply from server
             using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Subscriptions
                 return reply.Version;
             }
 
-            
+
         }
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)

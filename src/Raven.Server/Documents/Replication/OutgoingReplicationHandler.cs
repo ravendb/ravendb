@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -30,7 +29,6 @@ using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Security;
-using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -105,7 +103,7 @@ namespace Raven.Server.Documents.Replication
         public void Start()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);            
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
@@ -218,7 +216,7 @@ namespace Raven.Server.Documents.Replication
                             throw;
                         }
 
-                        DateTime nextReplicateAt = default(DateTime);
+                        DateTime nextReplicateAt = default;
 
                         while (_cts.IsCancellationRequested == false)
                         {
@@ -315,7 +313,7 @@ namespace Raven.Server.Documents.Replication
                                         SendHeartbeat(null);
                                     }
                                     else
-                                    {                                        
+                                    {
                                         //Send a heartbeat first so we will get an updated CV of the destination
                                         var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                                         SendHeartbeat(null);
@@ -359,7 +357,7 @@ namespace Raven.Server.Documents.Replication
                         HandleIOException(ioe);
                     }
                 }
-                
+
                 HandleException(e);
             }
             catch (OperationCanceledException e)
@@ -392,7 +390,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (e.InnerException is SocketException)
                         _log.Info($"SocketException was thrown from the connection to remote node ({FromToString}). " +
-                                  $"This might mean that the remote node is done or there is a network issue.", e);
+                                  "This might mean that the remote node is done or there is a network issue.", e);
                     else
                         _log.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
                 }
@@ -403,7 +401,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Unexpected exception occurred on replication thread ({FromToString}). " +
-                              $"Replication stopped (will be retried later).", e);
+                              "Replication stopped (will be retried later).", e);
                 Failed?.Invoke(this, e);
             }
         }
@@ -454,7 +452,7 @@ namespace Raven.Server.Documents.Replication
             {
                 _database.NotificationCenter.AddAfterTransactionCommit(
                     AlertRaised.Create(
-                        _database.Name, 
+                        _database.Name,
                         AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)),
                     txw);
 
@@ -472,7 +470,7 @@ namespace Raven.Server.Documents.Replication
                     Database = Destination.Database,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
                     NodeTag = _parent._server.NodeTag,
-                    ReadRespondAndGetVersion = ReadHeaderResponseAndThrowIfUnAuthorized,
+                    ReadResponseAndGetVersion = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 };
                 //This will either throw or return acceptable protocol version.
@@ -498,7 +496,7 @@ namespace Raven.Server.Documents.Replication
         }
         private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer, Stream stream, string url)
         {
-            const int timeout = 2 * 60 * 1000; 
+            const int timeout = 2 * 60 * 1000;
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
@@ -529,7 +527,7 @@ namespace Raven.Server.Documents.Replication
                         //Kindly request the server to drop the connection
                         jsonContext.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, 
+                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
                             [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
                             [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                             [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
@@ -543,7 +541,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static HashSet<int> _supportedProtocolVersions = new HashSet<int>(){31,33};
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
             while (true)
@@ -613,26 +610,26 @@ namespace Raven.Server.Documents.Replication
             {
                 if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
                     context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                
+
                 var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
                     context.LastDatabaseChangeVector);
 
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);                
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);
                 if (result.IsValid)
                 {
-                    if(context.LastReplicationEtagFrom == null)
+                    if (context.LastReplicationEtagFrom == null)
                         context.LastReplicationEtagFrom = new Dictionary<string, long>();
 
                     if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
                     {
                         context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
                     }
-                    
+
                     context.LastDatabaseChangeVector = result.ChangeVector;
-                    
+
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                     {
                         try
@@ -875,7 +872,7 @@ namespace Raven.Server.Documents.Replication
             _cts.Cancel();
 
             DisposeTcpClient();
-            
+
             _connectionDisposed.Set();
 
             if (_longRunningSendingWork != null && _longRunningSendingWork != PoolOfThreads.LongRunningWork.Current)
@@ -887,7 +884,7 @@ namespace Raven.Server.Documents.Replication
                     DisposeTcpClient();
                 }
             }
-            
+
             try
             {
                 _cts.Dispose();
