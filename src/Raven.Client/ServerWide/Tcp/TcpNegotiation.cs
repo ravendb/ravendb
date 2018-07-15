@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Json;
@@ -26,7 +24,7 @@ namespace Raven.Client.ServerWide.Tcp
                         [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
                     });
                     writer.Flush();
-                    var version = parameters.ReadRespondAndGetVersion(documentsContext, writer, stream, parameters.Url);
+                    var version = parameters.ReadResponseAndGetVersion(documentsContext, writer, stream, parameters.Url);
                     //In this case we usally throw internaly but for completeness we better handle it
                     if (version == -2)
                     {
@@ -43,13 +41,13 @@ namespace Raven.Client.ServerWide.Tcp
         }
 
         public static async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsync(JsonOperationContext documentsContext, Stream stream, TcpNegotiateParamaters parameters)
-        {            
+        {
             using (var writer = new BlittableJsonTextWriter(documentsContext, stream))
             {
                 var currentVersion = parameters.Version;
                 while (true)
                 {
-                    if(parameters.CancellationToken.IsCancellationRequested)
+                    if (parameters.CancellationToken.IsCancellationRequested)
                         throw new OperationCanceledException($"Stoped Tcp negotiation for {parameters.Operation} because of cancelation request");
 
                     documentsContext.Write(writer, new DynamicJsonValue
@@ -61,13 +59,13 @@ namespace Raven.Client.ServerWide.Tcp
                     });
                     writer.Flush();
                     int version;
-                    if (parameters.ReadRespondAndGetVersionAsync == null)
+                    if (parameters.ReadResponseAndGetVersionAsync == null)
                     {
-                        version = parameters.ReadRespondAndGetVersion(documentsContext, writer, stream, parameters.Url);
+                        version = parameters.ReadResponseAndGetVersion(documentsContext, writer, stream, parameters.Url);
                     }
                     else
                     {
-                        version = await parameters.ReadRespondAndGetVersionAsync(documentsContext, writer, stream, parameters.Url, parameters.CancellationToken).ConfigureAwait(false);                        
+                        version = await parameters.ReadResponseAndGetVersionAsync(documentsContext, writer, stream, parameters.Url, parameters.CancellationToken).ConfigureAwait(false);
                     }
                     //In this case we usally throw internaly but for completeness we better handle it
                     if (version == -2)
@@ -84,6 +82,7 @@ namespace Raven.Client.ServerWide.Tcp
             }
         }
     }
+
     public class TcpNegotiateParamaters
     {
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
@@ -95,7 +94,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public CancellationToken CancellationToken { get; set; }
 
-        public Func<JsonOperationContext, BlittableJsonTextWriter,Stream,string, int> ReadRespondAndGetVersion { get; set; }
-        public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, CancellationToken, Task<int>> ReadRespondAndGetVersionAsync { get; set; }
+        public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, int> ReadResponseAndGetVersion { get; set; }
+        public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, CancellationToken, Task<int>> ReadResponseAndGetVersionAsync { get; set; }
     }
 }

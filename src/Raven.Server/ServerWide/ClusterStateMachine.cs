@@ -1380,7 +1380,8 @@ namespace Raven.Server.ServerWide
             Debug.Assert(size == sizeof(long));
             return size;
         }
-        private int ClusterReadRespondAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
+
+        private int ClusterReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
         {            
             using (var response = ctx.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
             {
@@ -1437,7 +1438,7 @@ namespace Raven.Server.ServerWide
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                    ReadRespondAndGetVersion = ClusterReadRespondAndGetVersion,
+                    ReadResponseAndGetVersion = ClusterReadResponseAndGetVersion,
                     Url = info.Url
                 };
 

@@ -333,7 +333,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         Database = null,
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
                         Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
-                        ReadRespondAndGetVersionAsync = SupervisorReadRespondAndGetVersionAsync,
+                        ReadResponseAndGetVersionAsync = SupervisorReadResponseAndGetVersionAsync,
                         Url = tcpConnectionInfo.Url
                     };
                     supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, connection, paramaters).ConfigureAwait(false);
@@ -350,7 +350,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 };
             }
 
-            private async Task<int> SupervisorReadRespondAndGetVersionAsync(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url, CancellationToken ct)
+            private async Task<int> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url, CancellationToken ct)
             {
                 using (var responseJson = await ctx.ReadForMemoryAsync(stream, _readStatusUpdateDebugString + "/Read-Handshake-Response"))
                 {
