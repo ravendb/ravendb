@@ -105,11 +105,19 @@ namespace Raven.Server.Documents
                         if (task.IsCompleted)
                         {
                             NotifyDatabaseAboutStateChange(databaseName, task, index);
+                            if (type == ClusterStateMachine.SnapshotInstalled)
+                            {
+                                NotifyPendingClusterTransaction(databaseName, task, index);
+                            }
                             return;
                         }
                         task.ContinueWith(done =>
                         {
                             NotifyDatabaseAboutStateChange(databaseName, done, index);
+                            if (type == ClusterStateMachine.SnapshotInstalled)
+                            {
+                                NotifyPendingClusterTransaction(databaseName, done, index);
+                            }
                         });
                         break;
                     case ClusterDatabaseChangeType.ValueChanged:
