@@ -10,6 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Sparrow.Json;
@@ -130,9 +131,14 @@ namespace Raven.Client.Documents.Conventions
         {
             if (info is EventInfo)
                 return true;
-            var fieldInfo = info as FieldInfo;
-            if (fieldInfo != null && !fieldInfo.IsPublic)
-                return true;
+            if (info is FieldInfo fieldInfo)
+            {
+                if (false == fieldInfo.IsPublic &&
+                    false == fieldInfo.CustomAttributes.Any(a => a.AttributeType == typeof(JsonPropertyAttribute)))
+                {
+                    return true;
+                }
+            }
             return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
         }
     }

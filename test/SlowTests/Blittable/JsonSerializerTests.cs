@@ -22,6 +22,55 @@ namespace SlowTests.Blittable
             //        public BlittableJsonReaderArray BlittableArray { get; set; }
             public BlittableJsonReaderObject BlittableObject { get; set; }
             public LazyStringValue LazyString { get; set; }
+
+            [JsonProperty]
+            private readonly int _id;
+
+            public Command()
+            {
+
+            }
+
+            public Command(int id = 0)
+            {
+                _id = id;
+            }
+
+            public int GetId()
+            {
+                return _id;
+            }
+        }
+
+        [Fact]
+        public void JsonDeserialize_WhenHasPrivateReadOnlyField_ShouldResultInCommandWithTheField()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                Command actual;
+                const int expected = 32;
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    var jsonSerializer = new JsonSerializer
+                    {
+                        ContractResolver = new DefaultRavenContractResolver(),
+                    };
+
+                    var command = new Command(id: expected);
+                    jsonSerializer.Serialize(writer, command);
+                    writer.FinalizeDocument();
+
+                    var toDeseialize = writer.CreateReader();
+
+                    using (var reader = new BlittableJsonReader(context))
+                    {
+                        reader.Init(toDeseialize);
+                        actual = jsonSerializer.Deserialize<Command>(reader);
+                    }
+                }
+
+                Assert.Equal(expected, actual.GetId());
+            }
         }
 
         [Fact]
@@ -174,7 +223,7 @@ namespace SlowTests.Blittable
             }
         }
         [Fact]
-        public void JsonSerialize_WhenNestedParentBlittableObjectIsProperty_ShouldSerialize()
+        public void JsonSerialize_WhenNestedBlittableObjectIsProperty_ShouldSerialize()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonWriter(context))
