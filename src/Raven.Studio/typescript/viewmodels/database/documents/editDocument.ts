@@ -94,6 +94,7 @@ class editDocument extends viewModelBase {
 
     canViewAttachments: KnockoutComputed<boolean>;
     canViewCounters: KnockoutComputed<boolean>;
+    canViewRelated: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -383,11 +384,15 @@ class editDocument extends viewModelBase {
         });
 
         this.canViewAttachments = ko.pureComputed(() => {
-            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
         });
 
         this.canViewCounters = ko.pureComputed(() => {
-            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+        });
+
+        this.canViewRelated = ko.pureComputed(() => {
+            return !this.isDeleteRevision();
         });
     }
 
@@ -829,7 +834,9 @@ class editDocument extends viewModelBase {
     }
     
     private setActiveTab() {
-        if (!this.canViewAttachments() || !this.canViewCounters()) {
+        if (this.isDeleteRevision()) {
+            this.connectedDocuments.activateRevisions(true);
+        } else if (!this.canViewAttachments() || !this.canViewCounters()) {
             this.connectedDocuments.activateRecent();
         } else if (this.inReadOnlyMode()) { // revision mostly..
             this.connectedDocuments.activateRevisions(false);
