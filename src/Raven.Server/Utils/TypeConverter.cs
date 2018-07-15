@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Jint.Native;
 using Jint.Native.Object;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -165,6 +166,13 @@ namespace Raven.Server.Utils
 
             if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
                 return value;
+
+            if (value is JsValue js)
+            {
+                if (js.IsDate())
+                    return js.AsDate().ToDateTime();
+            }
+
 
             if (value is Guid)
                 return ((Guid)value).ToString("D");
