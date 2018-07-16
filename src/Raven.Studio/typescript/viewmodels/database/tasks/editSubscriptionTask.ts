@@ -232,9 +232,14 @@ class editSubscriptionTask extends viewModelBase {
                 if (column instanceof textColumn) {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {
-                        const json = JSON.stringify(value, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                        onValue(html, json);
+                        if (column.header === "Exception" && _.isString(value)) {
+                            const formattedValue = _.replace(value, "\r\n", "<Br />");
+                            onValue(formattedValue, value);
+                        } else {
+                            const json = JSON.stringify(value, null, 4);
+                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            onValue(html, json);
+                        }
                     }
                 }
             });
