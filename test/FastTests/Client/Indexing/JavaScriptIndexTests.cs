@@ -471,6 +471,29 @@ namespace FastTests.Client.Indexing
             }
         }
 
+        [Fact]
+        public void CanQueryBySubObjectAsString()
+        {
+            var address = new Address
+            {
+                Line1 = "Home",
+                Line2 = "sweet home"
+            };
+            var addressStr = "{\"line1\":\"home\",\"line2\":\"sweet home\"}";
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Users_ByAddress());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User{Name = "Foo", Address = address });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    WaitForUserToContinueTheTest(store);
+                    var user = session.Query<User>("Users/ByAddress").Single(u => u.Address.ToString() == addressStr);
+                    Assert.Equal("Foo", user.Name);
+                }
+            }
+        }
 
         private class Category
         {
@@ -497,8 +520,14 @@ namespace FastTests.Client.Indexing
             public bool IsActive { get; set; }
             public string Product { get; set; }
             public string[] PhoneNumbers { get; set; }
+            public Address Address { get; set; }
         }
 
+        private class Address
+        {
+            public string Line1 { get; set; }
+            public string Line2 { get; set; }
+        }
         private class Product
         {
             public string Name { get; set; }
@@ -826,6 +855,22 @@ namespace FastTests.Client.Indexing
                         Count: g.values.reduce((sum, x) => x.Count + sum, 0)
                     }
                 })";
+
+            }
+        }
+
+        public class Users_ByAddress : AbstractJavaScriptIndexCreationTask
+        {
+
+
+            public Users_ByAddress()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('users', function(u){
+                            return {Address: u.Address}
+                        })"
+                };
 
             }
         }
