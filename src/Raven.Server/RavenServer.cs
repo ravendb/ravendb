@@ -1097,6 +1097,7 @@ namespace Raven.Server
                             TcpConnectionHeaderMessage header = null;
                             string error = null;
                             bool matchingVersion = false;
+                            int count = 0, maxRetries = 100;
                             using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
                                 while (true)
@@ -1113,6 +1114,10 @@ namespace Raven.Server
                                         maxSize: 1024 * 2
                                     ))
                                     {
+                                        if (count++ > maxRetries)
+                                        {
+                                            throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
+                                        }
                                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
 
                                         if (Logger.IsInfoEnabled)
