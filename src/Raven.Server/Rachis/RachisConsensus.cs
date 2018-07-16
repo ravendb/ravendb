@@ -91,7 +91,7 @@ namespace Raven.Server.Rachis
             StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, _serverStore);
         }
 
-        public override Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
+        public override Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
         {
             return StateMachine.ConnectToPeer(url, certificate);
         }
@@ -1615,7 +1615,7 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
         }
 
-        public abstract Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
+        public abstract Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
 
         public class BootstrapOptions
         {

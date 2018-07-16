@@ -24,6 +24,8 @@ using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.ServerWide.Tcp;
+using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -58,6 +60,7 @@ namespace Raven.Server.Documents.Replication
             _database = options.DocumentDatabase;
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
+            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
 
@@ -645,6 +648,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
         private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
+        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
         public struct ReplicationItem : IDisposable
         {
@@ -1124,7 +1128,25 @@ namespace Raven.Server.Documents.Replication
                                         //the other side will receive negative ack and will retry sending again.
                                         document = new BlittableJsonReaderObject(_buffer + item.Position, item.DocumentSize, context);
                                         document.BlittableValidation();
-                                        AssertAttachmentsFromReplication(context, item.Id, document);                                        
+                                        try
+                                        {
+                                            AssertAttachmentsFromReplication(context, item.Id, document);
+                                        }
+                                        catch (MissingAttachmentException mae)
+                                        {
+                                            if (_incoming.SupportedFeatures.Replication.MissingAttachments)
+                                            {
+                                                throw;
+                                            }
+
+                                            _incoming._database.NotificationCenter.Add(AlertRaised.Create(
+                                                _incoming._database.Name,
+                                                IncomingReplicationStr,
+                                                $"Detected missing attachments for document {item.Id} with the following hashes:" +
+                                                $" ({string.Join(',', GetAttachmentsHashesFromDocumentMetadata(document))}).",
+                                                AlertType.ReplicationMissingAttachments,
+                                                NotificationSeverity.Warning));
+                                        }
                                     }
 
                                     if (item.Flags.Contain(DocumentFlags.Revision))
@@ -1262,7 +1284,22 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
+            public readonly string IncomingReplicationStr = "Incoming Replication";
+
             public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+            {
+                foreach (LazyStringValue hash in GetAttachmentsHashesFromDocumentMetadata(document))
+                {
+                    if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
+                    {
+                        var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "uknown"}' " +
+                                  $"listed as one of his attachments but it doesn't exist in the attachment storage";
+                        throw new MissingAttachmentException(msg);
+                    }
+                }
+            }
+
+            public IEnumerable<LazyStringValue> GetAttachmentsHashesFromDocumentMetadata(BlittableJsonReaderObject document)
             {
                 if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
@@ -1271,13 +1308,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash))
                         {
-                            if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
-                            {
-                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue name);
-                                var msg = $"Document '{id}' has attachment '{name?.ToString() ?? "uknown"}' " +
-                                          $"listed as one of his attachments but it doesn't exist in the attachment storage";
-                                throw new MissingAttachmentException(msg);
-                            }
+                            yield return hash;
                         }
                     }
                 }

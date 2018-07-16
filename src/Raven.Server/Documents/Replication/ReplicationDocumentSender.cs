@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 lastTransactionMarker = item.TransactionMarker;
 
-                                if (_parent._legacyReplicationMode == LegacyReplicationMode.V40)
+                                if (_parent.SupportedFeatures.Replication.CountersAndClusterTransaction == false)
                                 {
                                     AssertLegalReplicationItemInLegacyMode(item);
                                 }
@@ -461,7 +461,7 @@ namespace Raven.Server.Documents.Replication
 
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && 
-                _parent._legacyReplicationMode == LegacyReplicationMode.V40)
+                _parent.SupportedFeatures.Replication.CountersAndClusterTransaction == false)
             {
                 // skip counter tombstones in legacy mode
                 skippedReplicationItemsInfo.Update(item);

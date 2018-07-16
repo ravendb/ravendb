@@ -113,7 +113,9 @@ namespace Raven.Server.Rachis
                         {
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
-                                (stream, disconnect) = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                var connection = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                stream = connection.Stream;
+                                disconnect = connection.Disconnect;
                             }
 
                             if (_candidate.Running == false)
