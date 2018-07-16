@@ -28,11 +28,11 @@
                                 </button>
                             </div>
                             <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled">
-                                <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
+                                <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }, disable: disableToggle">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }">
                                 </label>
                                 <button type="button" class="btn pull-right btn-toggle"
-                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
+                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }, disable: disableToggle() && !enabled()">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
@@ -295,6 +295,19 @@
                 </div>
             </div>
         </div>
+        
+        <div data-bind="with: selectedRestorePoint">
+            <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && isEncrypted">
+                <i class="icon-info"></i>
+                <div class="margin-left">Selected restore point is encrypted. Please provide encryption key in 'Encryption' tab.</div>
+            </div>
+
+            <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && !isEncrypted">
+                <i class="icon-info"></i>
+                <div class="margin-left">Selected restore point is not encrypted. 'Encyption' tab was disabled.</div>
+            </div>
+        </div>
+        
     </div>
 </script>
 

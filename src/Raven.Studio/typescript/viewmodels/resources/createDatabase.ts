@@ -163,10 +163,12 @@ class createDatabase extends dialogViewModelBase {
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
-                if (section.alwaysEnabled || enabled) {
-                    this.currentAdvancedSection(section.id);
-                } else if (!enabled && this.currentAdvancedSection() === section.id) {
-                    this.currentAdvancedSection(createDatabase.defaultSection);
+                if (!this.databaseModel.lockActiveTab()) {
+                    if (section.alwaysEnabled || enabled) {
+                        this.currentAdvancedSection(section.id);
+                    } else if (!enabled && this.currentAdvancedSection() === section.id) {
+                        this.currentAdvancedSection(createDatabase.defaultSection);
+                    }
                 }
             });
         });
@@ -302,6 +304,8 @@ class createDatabase extends dialogViewModelBase {
     }
 
     showAdvancedConfigurationFor(sectionName: availableConfigurationSectionId) {
+        const targetSection = this.getAvailableSections().find(x => x.id === sectionName);
+        
         this.currentAdvancedSection(sectionName);
 
         const sectionConfiguration = this.databaseModel.configurationSections.find(x => x.id === sectionName);
