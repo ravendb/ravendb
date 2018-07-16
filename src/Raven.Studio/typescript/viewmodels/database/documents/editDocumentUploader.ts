@@ -14,6 +14,14 @@ class editDocumentUploader {
     private document: KnockoutObservable<document>;
     private db: KnockoutObservable<database>;
     private afterUpload: () => void;
+    currentUpload = ko.observable<attachmentUpload>();
+    
+    uploadButtonText = ko.pureComputed(() => {
+        if (this.currentUpload()) {
+            return "Uploading (" + this.currentUpload().textualProgress() + ")";
+        }
+        return "Add Attachment";
+    });
 
     spinners = {
         upload: ko.observable<boolean>(false)
@@ -58,6 +66,8 @@ class editDocumentUploader {
 
         const upload = attachmentUpload.forFile(this.db(), this.document().getId(), file.name);
         
+        this.currentUpload(upload);
+        
         notificationCenter.instance.monitorAttachmentUpload(upload);
 
         const command = new uploadAttachmentCommand(file, this.document().getId(), this.db(), event => upload.updateProgress(event));
@@ -71,7 +81,10 @@ class editDocumentUploader {
                 // remove progress notification - failure notification will be shown instead.
                 notificationCenter.instance.databaseNotifications.remove(upload);
             })
-            .always(() => this.spinners.upload(false));
+            .always(() => {
+                this.spinners.upload(false);
+                this.currentUpload(null);
+            });
      
         upload.abort = () => command.abort(); 
     }
