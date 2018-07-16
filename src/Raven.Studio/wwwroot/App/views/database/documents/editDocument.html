@@ -211,7 +211,7 @@
         <div class="input-group file-input">
             <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
             <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary btn-block" data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
-                <i class="icon-attachment"></i> <span>Add Attachment</span>
+                <i class="icon-attachment"></i> <span data-bind="text: uploadButtonText"></span>
             </label>
         </div>
     </div>
