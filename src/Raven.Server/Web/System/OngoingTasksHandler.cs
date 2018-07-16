@@ -267,9 +267,11 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public Task GetConfiguration()
         {
+            // FullPath removes the trailing '/' so adding it back for the studio
+            var localRootFullPath = ServerStore.Configuration.Backup.LocalRootPath?.FullPath + Path.DirectorySeparatorChar;
             var result = new DynamicJsonValue
             {
-                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = ServerStore.Configuration.Backup.LocalRootPath?.FullPath,
+                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
                 [nameof(ServerStore.Configuration.Backup.AllowedAwsRegions)] = ServerStore.Configuration.Backup.AllowedAwsRegions,
                 [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations
             };
