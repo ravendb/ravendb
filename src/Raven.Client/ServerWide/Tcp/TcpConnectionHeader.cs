@@ -32,10 +32,9 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int DropBaseLine40000 = -2;
         public static readonly int ClusterBaseLine40100 = 10;
         public static readonly int HeartbeatsBaseLine40200 = 20;
-        public static readonly int ReplicationBaseLine40301 = 31;
-        public static readonly int ReplicationCounterAndClusterTransaction = 32; /*We had nightlies out with this protocol version*/        
-        public static readonly int ReplicationAttachmentMissing = 40303;
-        public static readonly int ReplicationAttachmentMissingVersion41 = 41304;
+        public static readonly int ReplicationBaseLine40301 = 31;    
+        public static readonly int ReplicationAttachmentMissing = 40300;
+        public static readonly int ReplicationAttachmentMissingVersion41 = 41300;
         public static readonly int SubscriptionBaseLine40400 = 40;
         public static readonly int TestConnectionBaseLine40500 = 50;
 
@@ -142,13 +141,6 @@ namespace Raven.Client.ServerWide.Tcp
                         new SupportedFeatures(ReplicationAttachmentMissingVersion41){Replication = new SupportedFeatures.ReplicationFeatures{CountersAndClusterTransaction = true, MissingAttachments = true}},
                         /*While counter is a newer feature 'ReplicationAttachmentMissing' is a newer release and we must check the version by the order of the release*/
                         new SupportedFeatures(ReplicationAttachmentMissing){Replication = new SupportedFeatures.ReplicationFeatures{MissingAttachments = true}},
-                        new SupportedFeatures(ReplicationCounterAndClusterTransaction){Replication = new SupportedFeatures.ReplicationFeatures{CountersAndClusterTransaction = true}},                        
-                        new SupportedFeatures(ReplicationBaseLine40301){Replication = new SupportedFeatures.ReplicationFeatures()}
-                    },
-                [(OperationTypes.Replication, ReplicationCounterAndClusterTransaction)] =
-                    new List<SupportedFeatures>
-                    {
-                        new SupportedFeatures(ReplicationCounterAndClusterTransaction){Replication = new SupportedFeatures.ReplicationFeatures{CountersAndClusterTransaction = true}},
                         new SupportedFeatures(ReplicationBaseLine40301){Replication = new SupportedFeatures.ReplicationFeatures()}
                     },
                 [(OperationTypes.Replication, ReplicationAttachmentMissing)] =
