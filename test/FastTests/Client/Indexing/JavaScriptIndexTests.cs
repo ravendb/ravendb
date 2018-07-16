@@ -488,7 +488,6 @@ namespace FastTests.Client.Indexing
                     session.Store(new User{Name = "Foo", Address = address });
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    WaitForUserToContinueTheTest(store);
                     var user = session.Query<User>("Users/ByAddress").Single(u => u.Address.ToString() == addressStr);
                     Assert.Equal("Foo", user.Name);
                 }
