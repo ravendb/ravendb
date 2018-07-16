@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Client.Json;
@@ -24,9 +26,10 @@ namespace Raven.Client.Documents.Session.Operations
         public BatchCommand CreateRequest()
         {
             var result = _session.PrepareForSaveChanges();
-            _sessionCommandsCount = result.SessionCommands.Count;
             result.SessionCommands.AddRange(result.DeferredCommands);
-            if (result.SessionCommands.Count == 0)
+
+            _sessionCommandsCount = result.SessionCommands.Count;
+            if (_sessionCommandsCount == 0)
                 return null;
 
             _session.ValidateClusterTransaction(result);
@@ -77,21 +80,154 @@ namespace Raven.Client.Documents.Session.Operations
                     case CommandType.PUT:
                         HandlePut(i, batchResult);
                         break;
+                    case CommandType.DELETE:
+                        HandleDelete(batchResult);
+                        break;
+                    case CommandType.PATCH:
+                        HandlePatch(batchResult);
+                        break;
+                    case CommandType.AttachmentPUT:
+                        HandleAttachmentPut(batchResult);
+                        break;
+                    case CommandType.AttachmentDELETE:
+                        HandleAttachmentDelete(batchResult);
+                        break;
+                    case CommandType.AttachmentMOVE:
+                        HandleAttachmentMove(batchResult);
+                        break;
+                    case CommandType.AttachmentCOPY:
+                        HandleAttachmentCopy(batchResult);
+                        break;
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        break;
+                    case CommandType.Counters:
+                        HandleCounters(batchResult);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Command '{type}' is not supported.");
                 }
             }
+        }
 
-            // DeferredCommands
-            for (var i = _sessionCommandsCount; i < result.Results.Length; i++)
+        private void HandleAttachmentCopy(BlittableJsonReaderObject batchResult)
+        {
+            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentCOPY, nameof(CopyAttachmentCommandData.Id), nameof(CopyAttachmentCommandData.Name));
+        }
+
+        private void HandleAttachmentMove(BlittableJsonReaderObject batchResult)
+        {
+            HandleAttachmentDeleteInternal(batchResult, CommandType.AttachmentMOVE, nameof(MoveAttachmentCommandData.Id), nameof(MoveAttachmentCommandData.Name));
+            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentMOVE, nameof(MoveAttachmentCommandData.DestinationId), nameof(MoveAttachmentCommandData.DestinationName));
+        }
+
+        private void HandleAttachmentDelete(BlittableJsonReaderObject batchResult)
+        {
+            HandleAttachmentDeleteInternal(batchResult, CommandType.AttachmentDELETE, Constants.Documents.Metadata.Id, nameof(DeleteAttachmentCommandData.Name));
+        }
+
+        private void HandleAttachmentDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName)
+        {
+            var id = GetStringField(batchResult, type, idFieldName);
+
+            if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+                return;
+
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsJson) == false || attachmentsJson == null ||
+                attachmentsJson.Length == 0)
+                return;
+
+            var name = GetStringField(batchResult, type, attachmentNameFieldName);
+
+            documentInfo.Metadata.Modifications = null;
+            documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
+
+            var attachments = new DynamicJsonArray();
+            documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+
+            foreach (BlittableJsonReaderObject attachment in attachmentsJson)
             {
-                if (result.Results[i] is BlittableJsonReaderObject batchResult)
-                {
-                    if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false ||
-                        batchResult.TryGet(nameof(CountersBatchCommandData.Id), out string docId) == false ||
-                        countersDetail.TryGet("Counters", out BlittableJsonReaderArray counters) == false)
-                        continue;
+                var attachmentName = GetStringField(attachment, type, nameof(AttachmentDetails.Name));
+                if (string.Equals(attachmentName, name))
+                    continue;
 
-                    UpdateCounterValuesInCache(counters, docId);
-                }
+                attachments.Add(attachment);
+                break;
+            }
+
+            documentInfo.MetadataInstance = null;
+            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
+        }
+
+        private void HandleAttachmentPut(BlittableJsonReaderObject batchResult)
+        {
+            HandleAttachmentPutInternal(batchResult, CommandType.AttachmentPUT, nameof(PutAttachmentCommandData.Id), nameof(PutAttachmentCommandData.Name));
+        }
+
+        private void HandleAttachmentPutInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName)
+        {
+            var id = GetStringField(batchResult, type, idFieldName);
+
+            if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+                return;
+
+            documentInfo.Metadata.Modifications = null;
+            documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
+
+            var attachments = documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsJson)
+                ? new DynamicJsonArray(attachmentsJson)
+                : new DynamicJsonArray();
+
+            documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+
+            attachments.Add(new DynamicJsonValue
+            {
+                [nameof(AttachmentDetails.ChangeVector)] = GetStringField(batchResult, type, nameof(AttachmentDetails.ChangeVector)),
+                [nameof(AttachmentDetails.ContentType)] = GetStringField(batchResult, type, nameof(AttachmentDetails.ContentType)),
+                [nameof(AttachmentDetails.Hash)] = GetStringField(batchResult, type, nameof(AttachmentDetails.Hash)),
+                [nameof(AttachmentDetails.Name)] = GetStringField(batchResult, type, attachmentNameFieldName),
+                [nameof(AttachmentDetails.Size)] = GetLongField(batchResult, type, nameof(AttachmentDetails.Size))
+            });
+
+            documentInfo.MetadataInstance = null;
+            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
+        }
+
+        private void HandlePatch(BlittableJsonReaderObject batchResult)
+        {
+            if (batchResult.TryGet(nameof(PatchStatus), out string statusAsString) == false)
+                ThrowMissingField(CommandType.PATCH, nameof(PatchStatus));
+
+            if (Enum.TryParse(statusAsString, ignoreCase: true, out PatchStatus status) == false)
+                ThrowMissingField(CommandType.PATCH, nameof(PatchStatus));
+
+            switch (status)
+            {
+                case PatchStatus.Created:
+                case PatchStatus.Patched:
+                    HandleDeleteInternal(batchResult, CommandType.PATCH); // deleting because it is impossible to know what was in the patch
+                    break;
+            }
+        }
+
+        private void HandleDelete(BlittableJsonReaderObject batchResult)
+        {
+            HandleDeleteInternal(batchResult, CommandType.DELETE);
+        }
+
+        private void HandleDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type)
+        {
+            var id = GetStringField(batchResult, type, nameof(ICommandData.Id));
+
+            if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+                return;
+
+            _session.DocumentsById.Remove(id);
+
+            if (documentInfo.Entity != null)
+            {
+                _session.DocumentsByEntity.Remove(documentInfo.Entity);
+                _session.DeletedEntities.Remove(documentInfo.Entity);
             }
         }
 
@@ -101,11 +237,8 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
                 return;
 
-            if (batchResult.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false || changeVector == null)
-                throw new InvalidOperationException("PUT response is invalid. @change-vector is missing on " + documentInfo.Id);
-
-            if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string id) == false || id == null)
-                throw new InvalidOperationException("PUT response is invalid. @id is missing on " + documentInfo.Id);
+            var id = GetStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.Id);
+            var changeVector = GetStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.ChangeVector);
 
             documentInfo.Metadata.Modifications = null;
             documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
@@ -136,8 +269,16 @@ namespace Raven.Client.Documents.Session.Operations
             _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
         }
 
-        private void UpdateCounterValuesInCache(BlittableJsonReaderArray counters, string docId)
+        private void HandleCounters(BlittableJsonReaderObject batchResult)
         {
+            var docId = GetStringField(batchResult, CommandType.Counters, nameof(CountersBatchCommandData.Id));
+
+            if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false)
+                ThrowMissingField(CommandType.Counters, nameof(CountersDetail));
+
+            if (countersDetail.TryGet(nameof(CountersDetail.Counters), out BlittableJsonReaderArray counters) == false)
+                ThrowMissingField(CommandType.Counters, nameof(CountersDetail.Counters));
+
             if (_session.CountersByDocId.TryGetValue(docId, out var cache) == false)
             {
                 cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
@@ -152,6 +293,27 @@ namespace Raven.Client.Documents.Session.Operations
 
                 cache.Values[name] = value;
             }
+        }
+
+        private static string GetStringField(BlittableJsonReaderObject json, CommandType type, string fieldName)
+        {
+            if (json.TryGet(fieldName, out string value) == false || value == null)
+                ThrowMissingField(type, fieldName);
+
+            return value;
+        }
+
+        private static long GetLongField(BlittableJsonReaderObject json, CommandType type, string fieldName)
+        {
+            if (json.TryGet(fieldName, out long longValue) == false)
+                ThrowMissingField(type, fieldName);
+
+            return longValue;
+        }
+
+        private static void ThrowMissingField(CommandType type, string fieldName)
+        {
+            throw new InvalidOperationException($"{type} response is invalid. Field '{fieldName}' is missing.");
         }
 
         private static void ThrowOnNullResults()

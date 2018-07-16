@@ -19,6 +19,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
@@ -691,8 +692,8 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.PATCH),
-                                ["PatchStatus"] = patchResult.Status.ToString(),
-                                ["Debug"] = patchResult.Debug
+                                [nameof(PatchStatus)] = patchResult.Status,
+                                [nameof(PatchResult.Debug)] = patchResult.Debug
                             });
                             break;
                         case CommandType.DELETE:
