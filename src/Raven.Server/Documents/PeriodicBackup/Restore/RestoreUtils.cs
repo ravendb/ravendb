@@ -2,10 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.System;
+using Voron.Impl.Backup;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -18,6 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public static void FetchRestorePoints(
             string directoryPath,
             SortedList<DateTime, RestorePoint> sortedList,
+            TransactionOperationContext context,
             bool assertLegacyBackups = false)
         {
             const string legacyEsentBackupFile = "RavenDB.Backup";
@@ -47,6 +53,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var filesCount = 0;
             var firstFile = true;
             var snapshotRestore = false;
+            var isEncrypted = false;
+            
             foreach (var filePath in files)
             {
                 var extension = Path.GetExtension(filePath);
@@ -54,6 +62,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (firstFile)
                 {
                     snapshotRestore = isSnapshot;
+                    isEncrypted = CheckIfBackupIsEncrypted(filePath, context);
                 }
                 else if (isSnapshot)
                 {
@@ -77,11 +86,43 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     FileName = Path.GetFileName(filePath),
                     IsSnapshotRestore = snapshotRestore,
                     IsIncremental = IsIncremetal(extension),
+                    IsEncrypted = isEncrypted,
                     FilesToRestore = filesCount,
                     DatabaseName = folderDetails.DatabaseName,
                     NodeTag = folderDetails.NodeTag
                 });
             }
+        }
+
+        private static bool CheckIfBackupIsEncrypted(string filePath, TransactionOperationContext context)
+        {
+            using (var zip = ZipFile.Open(filePath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            {
+                foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
+                {
+                    var directory = zipEntries.Key;
+
+                    if (string.IsNullOrWhiteSpace(directory))
+                    {
+                        foreach (var zipEntry in zipEntries)
+                        {
+                            if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                using (var entryStream = zipEntry.Open())
+                                {
+                                    var json = context.Read(entryStream, "read database settings");
+                                    json.BlittableValidation();
+
+                                    RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                    return restoreSettings.DatabaseRecord.Encrypted;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            throw new InvalidOperationException("Can't find settings file in backup archive.");
         }
 
         public static bool IsBackupOrSnapshot(string filePath)

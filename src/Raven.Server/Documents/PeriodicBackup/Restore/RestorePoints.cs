@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public string FileName { get; set; }
 
         public bool IsSnapshotRestore { get; set; }
+        
+        public bool IsEncrypted { get; set; }
 
         public bool IsIncremental { get; set; }
 
