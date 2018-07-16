@@ -139,7 +139,7 @@
                                     Error: <span data-bind="text: errorDetailsShort"></span>
                                 </div>
                                 <div class="flex-separator"></div>
-                                <span class="margin margin-right">
+                                <span class="margin margin-right" data-bind="visible: errorDetailsShort() !== errorDetails()">
                                     <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">Show details</a>
                                 </span>
                             </div>
