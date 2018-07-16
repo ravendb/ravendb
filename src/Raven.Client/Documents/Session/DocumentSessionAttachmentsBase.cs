@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+            if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSession(entity);
 
             if (document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
@@ -50,27 +50,27 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(name));
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.DELETE, null)))
-                ThrowException(documentId, name, "store", "delete");
+                ThrowOtherDeferredCommandException(documentId, name, "store", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
-                ThrowException(documentId, name, "store", "create");
+                ThrowOtherDeferredCommandException(documentId, name, "store", "create");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
-                ThrowException(documentId, name, "store", "delete");
+                ThrowOtherDeferredCommandException(documentId, name, "store", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentMOVE, name)))
-                ThrowException(documentId, name, "store", "rename");
+                ThrowOtherDeferredCommandException(documentId, name, "store", "rename");
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
-                throw new InvalidOperationException($"Can't store attachment '{name}' of document '{documentId}', the document was already deleted in this session.");
+                ThrowDocumentAlreadyDeleted(documentId, name, "store", null, documentId);
 
             Defer(new PutAttachmentCommandData(documentId, name, stream, contentType, null));
         }
 
         public void Store(object entity, string name, Stream stream, string contentType = null)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+            if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSession(entity);
 
             Store(document.Id, name, stream, contentType);
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session
 
         public void Delete(object entity, string name)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+            if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSession(entity);
 
             Delete(document.Id, name);
@@ -105,10 +105,10 @@ namespace Raven.Client.Documents.Session
                 return; // no-op
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
-                ThrowException(documentId, name, "delete", "create");
+                ThrowOtherDeferredCommandException(documentId, name, "delete", "create");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentMOVE, name)))
-                ThrowException(documentId, name, "delete", "rename");
+                ThrowOtherDeferredCommandException(documentId, name, "delete", "rename");
 
             Defer(new DeleteAttachmentCommandData(documentId, name, null));
         }
@@ -155,22 +155,22 @@ namespace Raven.Client.Documents.Session
                 return; // no-op
 
             if (DocumentsById.TryGetValue(sourceDocumentId, out DocumentInfo sourceDocument) && DeletedEntities.Contains(sourceDocument.Entity))
-                throw new InvalidOperationException($"Can't move attachment '{sourceName}' of document '{sourceDocumentId}', the document was already deleted in this session.");
+                ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "move", destinationDocumentId, sourceDocumentId);
 
             if (DocumentsById.TryGetValue(destinationDocumentId, out DocumentInfo destinationDocument) && DeletedEntities.Contains(destinationDocument.Entity))
-                throw new InvalidOperationException($"Can't move attachment '{sourceName}' of document '{sourceDocumentId}', the document '{destinationDocumentId}' was already deleted in this session.");
+                ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "move", destinationDocumentId, destinationDocumentId);
 
             if (DeferredCommandsDictionary.ContainsKey((sourceDocumentId, CommandType.AttachmentDELETE, sourceName)))
-                ThrowException(sourceDocumentId, sourceName, "rename", "delete");
+                ThrowOtherDeferredCommandException(sourceDocumentId, sourceName, "rename", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((sourceDocumentId, CommandType.AttachmentMOVE, sourceName)))
-                ThrowException(sourceDocumentId, sourceName, "rename", "rename");
+                ThrowOtherDeferredCommandException(sourceDocumentId, sourceName, "rename", "rename");
 
             if (DeferredCommandsDictionary.ContainsKey((destinationDocumentId, CommandType.AttachmentDELETE, destinationName)))
-                ThrowException(sourceDocumentId, destinationName, "rename", "delete");
+                ThrowOtherDeferredCommandException(sourceDocumentId, destinationName, "rename", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((destinationDocumentId, CommandType.AttachmentMOVE, destinationName)))
-                ThrowException(sourceDocumentId, destinationName, "rename", "rename");
+                ThrowOtherDeferredCommandException(sourceDocumentId, destinationName, "rename", "rename");
 
             Defer(new MoveAttachmentCommandData(sourceDocumentId, sourceName, destinationDocumentId, destinationName, null));
         }
@@ -207,27 +207,32 @@ namespace Raven.Client.Documents.Session
                 return; // no-op
 
             if (DocumentsById.TryGetValue(sourceDocumentId, out DocumentInfo sourceDocument) && DeletedEntities.Contains(sourceDocument.Entity))
-                throw new InvalidOperationException($"Can't copy attachment '{sourceName}' of document '{sourceDocumentId}' to '{destinationDocumentId}', the document '{sourceDocumentId}' was already deleted in this session.");
+                ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "copy", destinationDocumentId, sourceDocumentId);
 
             if (DocumentsById.TryGetValue(destinationDocumentId, out DocumentInfo destinationDocument) && DeletedEntities.Contains(destinationDocument.Entity))
-                throw new InvalidOperationException($"Can't copy attachment '{sourceName}' of document '{sourceDocumentId}' to '{destinationDocumentId}', the document '{destinationDocumentId}' was already deleted in this session.");
+                ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "copy", destinationDocumentId, destinationDocumentId);
 
             if (DeferredCommandsDictionary.ContainsKey((sourceDocumentId, CommandType.AttachmentDELETE, sourceName)))
-                ThrowException(sourceDocumentId, sourceName, "copy", "delete");
+                ThrowOtherDeferredCommandException(sourceDocumentId, sourceName, "copy", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((sourceDocumentId, CommandType.AttachmentMOVE, sourceName)))
-                ThrowException(sourceDocumentId, sourceName, "copy", "rename");
+                ThrowOtherDeferredCommandException(sourceDocumentId, sourceName, "copy", "rename");
 
             if (DeferredCommandsDictionary.ContainsKey((destinationDocumentId, CommandType.AttachmentDELETE, destinationName)))
-                ThrowException(destinationDocumentId, destinationName, "copy", "delete");
+                ThrowOtherDeferredCommandException(destinationDocumentId, destinationName, "copy", "delete");
 
             if (DeferredCommandsDictionary.ContainsKey((destinationDocumentId, CommandType.AttachmentMOVE, destinationName)))
-                ThrowException(destinationDocumentId, destinationName, "copy", "rename");
+                ThrowOtherDeferredCommandException(destinationDocumentId, destinationName, "copy", "rename");
 
             Defer(new CopyAttachmentCommandData(sourceDocumentId, sourceName, destinationDocumentId, destinationName, null));
         }
 
-        private static void ThrowException(string documentId, string name, string operation, string previousOperation)
+        private static void ThrowDocumentAlreadyDeleted(string documentId, string name, string operation, string destinationDocumentId, string deletedDocumentId)
+        {
+            throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}'{(destinationDocumentId != null ? $" to '{destinationDocumentId}'" : string.Empty)}', the document '{deletedDocumentId}' was already deleted in this session.");
+        }
+
+        private static void ThrowOtherDeferredCommandException(string documentId, string name, string operation, string previousOperation)
         {
             throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}', there is a deferred command registered to {previousOperation} an attachment with '{name}' name.");
         }
