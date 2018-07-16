@@ -179,7 +179,9 @@ class createDatabase extends dialogViewModelBase {
 
         const encryption = this.databaseModel.configurationSections.find(x => x.id === "encryption");
         encryption.enabled.subscribe(encryptionEnabled => {
-            if (encryptionEnabled) {
+            const creationMode = this.databaseModel.creationMode;
+            const canUseManualMode = creationMode === "newDatabase";
+            if (encryptionEnabled && canUseManualMode) {
                 this.databaseModel.replication.dynamicMode(false);
                 this.databaseModel.replication.manualMode(true);
             }
