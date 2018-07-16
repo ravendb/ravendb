@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public TcpClient TcpClient;
 
+        public int ProtocolVersion;
+
         public TcpConnectionOptions()
         {
             _bytesReceivedMetric = new MeterMetric();

@@ -75,9 +75,6 @@ namespace Raven.Server.Documents.Replication
         private OutgoingReplicationStatsAggregator _lastStats;
         private readonly TcpConnectionInfo _connectionInfo;
 
-
-        internal LegacyReplicationMode _legacyReplicationMode;
-
         public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
             _parent = parent;
@@ -484,15 +481,21 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                documentsContext.Write(writer, new DynamicJsonValue
+                var parameters = new TcpNegotiateParamaters
                 {
-                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, // _parent.Database.Name,
-                    [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ReplicationTcpVersion
-                });
-                writer.Flush();
-                ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
+                    Database = Destination.Database,
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
+                    NodeTag = _parent._server.NodeTag,
+                    ReadResponseAndGetVersion = ReadHeaderResponseAndThrowIfUnAuthorized,
+                    Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
+                };
+
+                //This will either throw or return acceptable protocol version.
+                SupportedFeatures = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
+#if DEBUG
+                Debug.Assert(SupportedFeatures.ProtocolVersion != -1);
+                Debug.Assert(SupportedFeatures.ProtocolVersion != -2);
+#endif
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
@@ -509,9 +512,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ReadHeaderResponseAndThrowIfUnAuthorized(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer)
+        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer, Stream stream, string url)
         {
-            const int timeout = 2 * 60 * 1000; 
+            const int timeout = 2 * 60 * 1000;
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
@@ -531,36 +534,18 @@ namespace Raven.Server.Documents.Replication
                 switch (headerResponse.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        break;
+                        return headerResponse.Version;
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (_legacyReplicationMode == LegacyReplicationMode.None &&
-                            headerResponse.Version == TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion)
+                        if (headerResponse.Version != -1)
                         {
-                            // Downgrade replication version to match the other side
-                            _legacyReplicationMode = LegacyReplicationMode.V40;
-                            if (_log.IsInfoEnabled)
-                                _log.Info($"{Node.FromString()} downgraded it's replication version " +
-                                          $"to {TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion}, in order to match the replication version of " +
-                                          $"destination {Destination.FromString()}.");
-
-                            documentsContext.Write(writer, new DynamicJsonValue
-                            {
-                                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
-                                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.Legacy.V40ReplicationTcpVersion
-                            });
-                            writer.Flush();
-                            ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
-                            return;
+                            return headerResponse.Version;
                         }
-
                         //Kindly request the server to drop the connection
-                        documentsContext.Write(writer, new DynamicJsonValue
+                        jsonContext.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, 
+                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
                             [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
                             [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                             [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
@@ -573,7 +558,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
         }
-
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
             while (true)
@@ -889,6 +873,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
+        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
         public void Dispose()
         {

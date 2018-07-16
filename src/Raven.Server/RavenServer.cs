@@ -1116,13 +1116,12 @@ namespace Raven.Server
                         {
                             TcpConnectionHeaderMessage header = null;
                             string error = null;
-                            int version = 0;
                             bool matchingVersion = false;
+                            int count = 0, maxRetries = 100;
                             using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
-                                int retries = TcpConnectionHeaderMessage.NumberOfRetriesForSendingTcpHeader;
-                                while (retries > 0)
-                                {
+                                while (true)
+                                {                                    
                                     using (var headerJson = await context.ParseToMemoryAsync(
                                         stream,
                                         "tcp-header",
@@ -1135,7 +1134,12 @@ namespace Raven.Server
                                         maxSize: 1024 * 2
                                     ))
                                     {
+                                        if (count++ > maxRetries)
+                                        {
+                                            throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
+                                        }
                                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+
                                         if (Logger.IsInfoEnabled)
                                         {
                                             Logger.Info(
@@ -1156,40 +1160,45 @@ namespace Raven.Server
 
                                             return;
                                         }
+
+                                        if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+                                            break;
+
                                     }
 
-                                    matchingVersion = MatchingOperationVersion(header, out error, out version);
-                                    if (matchingVersion == false)
+                                    var (isSupported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion);
+                                    if (isSupported)
+                                        break;
+
+                                    if (prevSupported == -1)
                                     {
-                                        RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
+                                        if (_tcpAuditLog != null)
+                                            _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'." +
+                                                              $" Dropping connection because we could not agree on a {header.OperationVersion} protocol version we both support.");
                                         if (Logger.IsInfoEnabled)
                                         {
                                             Logger.Info(
-                                                $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
-                                                $" {error} retries left:{retries}");
+                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
+                                                $"reason: Dropping connection because we could not agree on a {header.OperationVersion} protocol version we both support.");
                                         }
 
-                                        retries--;
-                                        continue;
+                                        return;
                                     }
+                                    if (Logger.IsInfoEnabled)
+                                    {
+                                        Logger.Info(
+                                            $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
+                                            $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {prevSupported}.");
+                                    }
+                                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, prevSupported);
 
-                                    break;
-                                }
-
-                                if (matchingVersion == false)
-                                {
-                                    if (_tcpAuditLog != null)
-                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because coudln't agree on a matching operation version for {header.Operation} on {header.DatabaseName}.");
-
-                                    //Couldn't agree on tcp operation version, will drop the connection now.
-                                    return;
                                 }
 
                                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
                                 //At this stage the error is not relevant.
                                 RespondToTcpConnection(stream, context, null,
-                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, 
-                                    version);
+                                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
+                                    header.OperationVersion);
 
                                 if (authSuccessful == false)
                                 {
@@ -1205,6 +1214,8 @@ namespace Raven.Server
 
                                     return; // cannot proceed
                                 }
+
+                                tcp.ProtocolVersion = header.OperationVersion;
                             }
 
                             if (_tcpAuditLog != null)
@@ -1257,20 +1268,6 @@ namespace Raven.Server
                 writer.Flush();
             }
         }
-
-        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error, out int version)
-        {
-            version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation, header.OperationVersion);
-            if (version == header.OperationVersion)
-            {
-                error = null;
-                return true;
-            }
-
-            error = $"Message of type {header.Operation} version should be {version} but got a message with version {header.OperationVersion}";
-            return false;
-        }
-
         private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
         {
             var tcpStream = tcp?.Stream;

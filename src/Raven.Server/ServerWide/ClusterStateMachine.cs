@@ -1479,7 +1479,38 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        public override async Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate)
+        private int ClusterReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
+        {
+            using (var response = ctx.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+            {
+                var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
+                switch (reply.Status)
+                {
+                    case TcpConnectionStatus.Ok:
+                        return reply.Version;
+                    case TcpConnectionStatus.AuthorizationFailed:
+                        throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
+                    case TcpConnectionStatus.TcpVersionMismatch:
+                        if (reply.Version != -1)
+                        {
+                            return reply.Version;
+                        }
+                        //Kindly request the server to drop the connection
+                        ctx.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop,
+                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion,
+                            [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
+                        });
+                        throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
+                }
+            }
+
+            return TcpConnectionHeaderMessage.ClusterTcpVersion;
+        }
+
+        public override async Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -1501,60 +1532,39 @@ namespace Raven.Server.ServerWide
                 tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
 
+                var paramaters = new TcpNegotiateParamaters
+                {
+                    Database = null,
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                    Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
+                    ReadResponseAndGetVersion = ClusterReadResponseAndGetVersion,
+                    Url = info.Url
+                };
+
+                TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var msg = new DynamicJsonValue
-                    {
-                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion
-                    };
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
-                    using (var msgJson = context.ReadObject(msg, "message"))
-                    {
-                        context.Write(writer, msgJson);
-                    }
-                    using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
-                    {
-                        var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        switch (reply.Status)
-                        {
-                            case TcpConnectionStatus.Ok:
-                                break;
-                            case TcpConnectionStatus.AuthorizationFailed:
-                                throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
-                            case TcpConnectionStatus.TcpVersionMismatch:
-                                //Kindly request the server to drop the connection
-                                msg = new DynamicJsonValue
-                                {
-                                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                                    [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop,
-                                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                                    [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
-                                };
-                                using (var writer = new BlittableJsonTextWriter(context, stream))
-                                using (var msgJson = context.ReadObject(msg, "message"))
-                                {
-                                    context.Write(writer, msgJson);
-                                }
-                                throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
-                        }
-                    }
+                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, paramaters);
                 }
-                return (stream, () =>
+
+                return new RachisConnection
                 {
+                    Stream = stream,
+                    SupportedFeatures = supportedFeatures,
+                    Disconnect = () =>
                     {
-                        try
                         {
-                            tcpClient.Client.Disconnect(false);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            //Happens, we don't really care at this point
+                            try
+                            {
+                                tcpClient.Client.Disconnect(false);
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                //Happens, we don't really care at this point
+                            }
                         }
                     }
-                }
-                );
+                };
             }
             catch (Exception)
             {
