@@ -87,7 +87,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                         }
 
-                        if (actualValue.AsObject().TryGetValue("$spatial", out var inner))
+                        var objectValue = actualValue.AsObject();
+                        if (objectValue.HasOwnProperty("$spatial") && objectValue.TryGetValue("$spatial", out var inner))
                         {
 
                             SpatialField spatialField;
@@ -98,11 +99,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                 spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
                                 spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
                             }
-                            else if (inner.IsObject() && inner.AsObject().TryGetValue("Lat", out var lat)
-                                                      && lat.IsNumber() && inner.AsObject().TryGetValue("Lng", out var lng) && lng.IsNumber())
+                            else if (inner.IsObject())
                             {
-                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                var innerObject = inner.AsObject();
+                                if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
+                                    && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
+                                {
+                                    spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                    spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                }
+                                else
+                                {
+                                    continue; //Ignoring bad spatial field 
+                                }
                             }
                             else
                             {
@@ -207,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
             else if (jsValue.IsObject())
             {
-                return JavaScriptIndexUtils.StringifyObject(jsValue);
+                return JavaScriptIndexUtils.StringifyObject(jsValue).ToString();
             }
             ThrowInvalidObject(jsValue);
             return null;
