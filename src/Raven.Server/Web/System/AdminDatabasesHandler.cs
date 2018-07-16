@@ -532,13 +532,13 @@ namespace Raven.Server.Web.System
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, assertLegacyBackups: true);
+                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, context, assertLegacyBackups: true);
                 }
                 else
                 {
                     foreach (var directory in directories)
                     {
-                        RestoreUtils.FetchRestorePoints(directory, sortedList);
+                        RestoreUtils.FetchRestorePoints(directory, sortedList, context);
                     }
                 }
 
