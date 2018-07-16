@@ -33,7 +33,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ClusterBaseLine40100 = 10;
         public static readonly int HeartbeatsBaseLine40200 = 20;
         public static readonly int ReplicationBaseLine40301 = 31;
-        public static readonly int ReplicationAttachmentMissing = 40303;
+        public static readonly int ReplicationAttachmentMissing = 40300;
         public static readonly int SubscriptionBaseLine40400 = 40;
         public static readonly int TestConnectionBaseLine40500 = 50;
 
