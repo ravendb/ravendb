@@ -135,7 +135,8 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            var key = ShouldTryToExtractBySourceAliasName(selectFieldName.Value, selectField)
+            var bySourceAlias = ShouldTryToExtractBySourceAliasName(selectFieldName.Value, selectField);
+            var key = bySourceAlias
                     ? selectField.SourceAlias
                     : selectFieldName;
 
@@ -145,7 +146,12 @@ namespace Raven.Server.Documents.Queries
             if (extract)
                 anyExtractableFromIndex = true;
 
-            return new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
+            if (bySourceAlias == false)
+            {
+                extract |= indexDefinition.HasDynamicFields;
+            }
+
+            return new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract, isDocumentId: false);
         }
 
         private static bool ShouldTryToExtractBySourceAliasName(string selectFieldName, SelectField selectField)
