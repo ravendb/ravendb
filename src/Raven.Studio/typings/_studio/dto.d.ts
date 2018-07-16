@@ -170,6 +170,7 @@ interface availableConfigurationSection {
     name: string;
     id: availableConfigurationSectionId;
     alwaysEnabled: boolean;
+    disableToggle: KnockoutObservable<boolean>;
     enabled: KnockoutObservable<boolean>;
     validationGroup?: KnockoutValidationGroup;
 }

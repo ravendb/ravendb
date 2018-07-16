@@ -9,8 +9,6 @@ using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.System;
-using Voron.Impl.Backup;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -62,7 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (firstFile)
                 {
                     snapshotRestore = isSnapshot;
-                    isEncrypted = CheckIfBackupIsEncrypted(filePath, context);
+                    isEncrypted = isSnapshot && CheckIfSnapshotIsEncrypted(filePath, context);
                 }
                 else if (isSnapshot)
                 {
@@ -94,29 +92,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private static bool CheckIfBackupIsEncrypted(string filePath, TransactionOperationContext context)
+        private static bool CheckIfSnapshotIsEncrypted(string filePath, TransactionOperationContext context)
         {
             using (var zip = ZipFile.Open(filePath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
-                foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
+                foreach (var zipEntry in zip.Entries)
                 {
-                    var directory = zipEntries.Key;
-
-                    if (string.IsNullOrWhiteSpace(directory))
+                    if (string.Equals(zipEntry.FullName, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (var zipEntry in zipEntries)
+                        using (var entryStream = zipEntry.Open())
                         {
-                            if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                using (var entryStream = zipEntry.Open())
-                                {
-                                    var json = context.Read(entryStream, "read database settings");
-                                    json.BlittableValidation();
+                            var json = context.Read(entryStream, "read database settings");
+                            json.BlittableValidation();
 
-                                    RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-                                    return restoreSettings.DatabaseRecord.Encrypted;
-                                }
-                            }
+                            RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                            return restoreSettings.DatabaseRecord.Encrypted;
                         }
                     }
                 }
