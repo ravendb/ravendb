@@ -268,7 +268,8 @@ namespace Raven.Server.Web.System
         public Task GetConfiguration()
         {
             // FullPath removes the trailing '/' so adding it back for the studio
-            var localRootFullPath = ServerStore.Configuration.Backup.LocalRootPath?.FullPath + Path.DirectorySeparatorChar;
+            var localRootPath = ServerStore.Configuration.Backup.LocalRootPath;
+            var localRootFullPath = localRootPath != null ? localRootPath.FullPath + Path.DirectorySeparatorChar : null;
             var result = new DynamicJsonValue
             {
                 [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
