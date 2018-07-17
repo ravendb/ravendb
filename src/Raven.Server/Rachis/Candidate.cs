@@ -94,17 +94,7 @@ namespace Raven.Server.Rachis
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                         {
-                            ElectionTerm = _engine.CurrentTerm;
-
-                            // timeout? 
-                            if (IsForcedElection)
-                            {
-                                CastVoteForSelf(ElectionTerm + 1, "Timeout during forced elections", setStateChange: false);
-                            }
-                            else
-                            {
-                                ElectionTerm = ElectionTerm + 1;
-                            }
+                            ElectionTerm = _engine.CurrentTerm + 1;
                             _engine.RandomizeTimeout(extend: true);
 
                             StateChange(); // will wake ambassadors and make them ping peers again
@@ -172,6 +162,7 @@ namespace Raven.Server.Rachis
 
                             var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
                             string msg = $"Was elected by {realElectionsCount} nodes for leadership in term {ElectionTerm} with cluster version of {minimalVersion}";
+
                             _engine.SwitchToLeaderState(ElectionTerm, minimalVersion, msg, connections);
                             break;
                         }
