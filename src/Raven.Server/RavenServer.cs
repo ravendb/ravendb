@@ -30,6 +30,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -268,6 +269,8 @@ namespace Raven.Server
                             }
                         }
                     }
+
+                    RegisterWellKnownCerts();
                 }
 
                 if (Logger.IsInfoEnabled)
@@ -286,6 +289,68 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+
+        private void RegisterWellKnownCerts()
+        {
+            var wellKnown = Configuration.Security.WellKnownAdminCertificates;
+
+            foreach (var thumbprint in wellKnown)
+            {
+                var certKey = Constants.Certificates.Prefix + thumbprint;
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    var certDef = new CertificateDefinition
+                    {
+                        Name = "Well Known Cert " + thumbprint,
+                        Permissions = new Dictionary<string, DatabaseAccess>(),
+                        SecurityClearance = SecurityClearance.ClusterAdmin,
+                        NotAfter = DateTime.UtcNow.Date.AddYears(5),
+                        Thumbprint = thumbprint
+                    };
+
+                    try
+                    {
+                        if (ServerStore.CurrentRachisState == RachisState.Passive)
+                        {
+                            BlittableJsonReaderObject existing;
+                            using (ctx.OpenReadTransaction())
+                                existing = ServerStore.Cluster.GetLocalState(ctx, certKey);
+
+                            if (existing != null) // already registered
+                                continue;
+
+                            using (var certificate = ctx.ReadObject(certDef.ToJson(), "Server/Certificate/Definition"))
+                            using (var tx = ctx.OpenWriteTransaction())
+                            {
+                                ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                                tx.Commit();
+                            }
+                        }
+                        else
+                        {
+                            using (ctx.OpenReadTransaction())
+                            {
+                                var existing = ServerStore.Cluster.ItemsStartingWith(ctx, certKey, 0, int.MaxValue);
+                                if (existing != null && existing.Any()) // already registered
+                                    continue;
+                            }
+
+                            var putResult = ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, certDef)).Result;
+                            ServerStore.Cluster.WaitForIndexNotification(putResult.Index).Wait();
+                        }
+
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Certificate with thumbprint {thumbprint} from 'Security.WellKnownCertificates.Admin' is now registered in the server by the name: {certDef.Name}");
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to register certificate from 'Security.WellKnownCertificates.Admin' with thumbprint {thumbprint} in the server." + e);
+                    }
+                }
             }
         }
 
@@ -833,7 +898,7 @@ namespace Raven.Server
             {
                 Certificate = certificate
             };
-            var wellKnown = Configuration.Security.WellKnownAdminCertificates;
+
             if (certificate == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
@@ -847,10 +912,6 @@ namespace Raven.Server
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
             else if (certificate.Equals(Certificate.Certificate))
-            {
-                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-            }
-            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
