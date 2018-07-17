@@ -227,42 +227,24 @@ namespace Raven.Server.Rachis
                             continue;
                         }
 
-                        bool declineVote = false;
-                        string declineReason = null;
-                        long votedTerm;
-
+                        HandleVoteResult result;
                         using (context.OpenWriteTransaction())
                         {
-                            (whoGotMyVoteIn, votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
-                            if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
-                            {
-                                declineVote = true;
-                                declineReason = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}";
-                            }
-                            else if(votedTerm >= rv.Term)
-                            {
-                                declineVote = true;
-                                declineReason = $"Already voted in {rv.LastLogTerm}, for another node in higher term: {votedTerm}";
-                            }
-                            else if(lastTerm == rv.LastLogTerm && lastIndex > rv.LastLogIndex)
-                            {
-                                declineVote = true;
-                                declineReason = $"Vote declined because my log {lastIndex} is more up to date than yours {rv.LastLogIndex}";
-                            }
-                            else
+                            result = ShouldGrantVote(context, lastIndex, rv, lastTerm);
+                            if(result.DeclineVote == false)
                             {
                                 _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
                                 context.Transaction.Commit();
                             }
                         }
 
-                        if (declineVote)
+                        if (result.DeclineVote)
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
-                                Term = votedTerm,
+                                Term = result.VotedTerm,
                                 VoteGranted = false,
-                                Message = declineReason
+                                Message = result.DeclineReason
                             });
                         }
                         else
@@ -301,6 +283,49 @@ namespace Raven.Server.Rachis
                     _connection.Dispose();
                 }
             }
+        }
+
+        private class HandleVoteResult
+        {
+            public string DeclineReason;
+            public bool DeclineVote;
+            public long VotedTerm;
+        }
+
+        private HandleVoteResult ShouldGrantVote(TransactionOperationContext context, long lastIndex, RequestVote rv, long lastTerm)
+        {
+            var result = new HandleVoteResult();
+            var lastEntryUnderWriteLock = _engine.GetLastEntryIndex(context);
+            if (lastEntryUnderWriteLock != lastIndex)
+            {
+                result.DeclineVote = true;
+                result.DeclineReason = "Log was changed";
+                return result;
+            }
+
+            var (whoGotMyVoteIn, votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+            result.VotedTerm = votedTerm;
+
+            if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
+            {
+                result.DeclineVote = true;
+                result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}";
+                return result;
+            }
+            if (votedTerm >= rv.Term)
+            {
+                result.DeclineVote = true;
+                result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for another node in higher term: {votedTerm}";
+                return result;
+            }
+            if (lastTerm == rv.LastLogTerm && lastIndex > rv.LastLogIndex)
+            {
+                result.DeclineVote = true;
+                result.DeclineReason = $"Vote declined because my log {lastIndex} is more up to date than yours {rv.LastLogIndex}";
+                return result;
+            }
+
+            return result;
         }
     }
 }
