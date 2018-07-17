@@ -14,7 +14,8 @@ $DEV_BUILD_NUMBER = 41
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
-    } else {
+    }
+    else {
         $result = $DEV_BUILD_NUMBER
     }
 
@@ -24,7 +25,8 @@ function GetBuildNumber () {
 function GetBuildType () {
     if ($env:BUILD_TYPE) {
         $result = $env:BUILD_TYPE
-    } else {
+    }
+    else {
         $result = "custom";
     }
 
@@ -41,7 +43,8 @@ function SetVersionInfo($projectDir) {
     if ($buildType.ToLower() -eq 'nightly') {
         $versionSuffix = "$buildType-$builtAtString"
         $buildNumber = $DEV_BUILD_NUMBER
-    } else {
+    }
+    else {
         $versionSuffix = "$buildType-$buildNumber"
     }
 
@@ -56,13 +59,13 @@ function SetVersionInfo($projectDir) {
     SetBuiltAtEnvironmentVariableInTeamCity $builtAt
     
     $versionInfo = @{ 
-        Version = $version;
+        Version       = $version;
         VersionPrefix = $versionPrefix;
         VersionSuffix = $versionSuffix;
-        BuildNumber = $buildNumber;
-        BuiltAt = $builtAt;
+        BuildNumber   = $buildNumber;
+        BuiltAt       = $builtAt;
         BuiltAtString = $builtAtString;
-        BuildType = $buildType;
+        BuildType     = $buildType;
     }
 
     New-Item -Path $RELEASE_INFO_FILE -Force -Type File
@@ -81,39 +84,51 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
         return
     }
 
-    $repoOwner = "ravendb"
-    $repo = "ravendb"
-    $branch = "v4.1"
-    $remoteFilePath = 'src/CommonAssemblyInfo.cs'
-    
-    write-host "Build file URI for: $repoOwner/$($repo):$($remoteFilePath)"
-    $fileUri = GetGitHubFileUri $repoOwner $repo $remoteFilePath
-    $githubFileData = GetFileDataFromGitHub $fileUri $branch
-    
     write-host "Calculate new version"
-    $newVersion = SemverMinor $version
+    $newVersion = SemverMinor $versionPrefix
     write-host "New version is: $newVersion"
-    
-    write-host "Get updated file contents for $fileUri"
-    $assemblyInfoFileContent = GetAssemblyInfoWithBumpedVersion $projectDir $newVersion $githubFileData.content
 
-    if (!$assemblyInfoFileContent) {
-        return
+    $repo = @{
+        "Owner"  = "ravendb"
+        "Name"   = "ravendb"
+        "Branch" = "v4.1"
     }
-    
-    $commitMessage = "Bump version to $newVersion"
-    
-    if ($dryRun) {
-        write-host "DRY RUN: Bumped version in the repository $repoOwner/$repo ($branch) to $newVersion."
-    }
-    else {
-        UpdateFileInGitHub $fileUri $assemblyInfoFileContent $commitMessage $branch $githubFileData
-        write-host "Bumped version in the repository $repoOwner/$repo ($branch) to $newVersion."
-    }
+
+    $remoteFilePath = 'src/CommonAssemblyInfo.cs'
+    $fileUri = GetGitHubFileUri $repo $remoteFilePath
+    $githubFileData = GetFileDataFromGitHub $fileUri $repo.Branch
+    $contents = GetAssemblyInfoWithBumpedVersion $projectDir $newVersion $githubFileData.content
+    BumpVersionInRemoteRepo $fileUri $contents $repo $githubFileData $newVersion $dryRun
+
+    $remoteFilePath = 'src/Raven.Client/Properties/VersionInfo.cs'
+    $fileUri = GetGitHubFileUri $repo $remoteFilePath
+    $githubFileData = GetFileDataFromGitHub $fileUri $repo.Branch
+    $contents = GetVersionInfoWithBumpedVersion $projectDir $newVersion $githubFileData.content
+    BumpVersionInRemoteRepo $fileUri $contents $repo $githubFileData $newVersion $dryRun
 }
 
+function BumpVersionInRemoteRepo($fileUri, $contents, $repo, $githubFileData, $newVersion, $dryRun) {
+    $commitMessage = "Bump version in $remoteFilePath to $newVersion"
+    if ($dryRun) {
+        write-host "DRY RUN: Bumped version in the repository $($repo.Owner)/$($repo.Name) $($repo.Branch) to $newVersion."
+        write-host "DRY RUN: Updated contents for $($fileUri): "
+        write-host $contents
+        write-host "DRY RUN: Commit msg: $commitMessage"
 
-function GetGithubFileUri($repoOwner, $repoName, $filePath) {
+        return
+    }
+
+    UpdateFileInGitHub $fileUri $contents $commitMessage $repo.Branch $githubFileData
+    write-host "Bumped version in the repository $($repo.Owner)/$($repo.Name) $($repo.Branch) to $newVersion."
+}
+
+function GetGithubFileUri($repoInfo, $filePath) {
+
+    $repoOwner = $repoInfo.Owner
+    $repoName = $repoInfo.Name
+
+    write-host "Build file URI for: $repoOwner/$($repoName):$($filePath)"
+
     if (!$repoOwner) {
         throw "Repository owner is required."
     }
@@ -126,12 +141,14 @@ function GetGithubFileUri($repoOwner, $repoName, $filePath) {
         throw "File path to update is required."
     }
 
-    $fileUri = "https://api.github.com/repos/$repoOwner/$repoName/contents/$filepath"
-    
-    $fileUri
+    return "https://api.github.com/repos/$repoOwner/$repoName/contents/$filepath"
 }
 
 function UpdateFileInGitHub($fileUri, $newFileContent, $commitMessage, $branch, $githubFileInfo) {
+
+    if (!$githubFileInfo) {
+        throw "Github file info is required."
+    }
 
     if (!$commitMessage) {
         throw "Commit message is required."
@@ -146,14 +163,14 @@ function UpdateFileInGitHub($fileUri, $newFileContent, $commitMessage, $branch, 
     }
     
     $bodyJson = ConvertTo-Json @{
-        path = $githubFileInfo.path
-        sha = $githubFileInfo.sha
-        branch = $branch
+        path    = $githubFileInfo.path
+        sha     = $githubFileInfo.sha
+        branch  = $branch
         message = $commitMessage
         content = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($newFileContent))
     }
 
-    $creds = "{0}:{1}" -f $env:GITHUB_USER,$env:GITHUB_ACCESS_TOKEN
+    $creds = "{0}:{1}" -f $env:GITHUB_USER, $env:GITHUB_ACCESS_TOKEN
     $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($creds))
     $headers = @{
         Authorization = "Basic $encodedCreds"
@@ -173,31 +190,58 @@ function GetAssemblyInfoContent($fileUri, $branch) {
 }
 
 function GetFileDataFromGitHub($fileUri, $branch) {
+    if (!$branch) {
+        throw "Branch is mandatory."
+    }
+
     $data = Invoke-RestMethod -TimeoutSec 120 "$fileUri`?ref=$branch"
     $data
 }
 
 function GetAssemblyInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileContent) {
-    Write-Host "Set version in $assemblyInfoFile..."
+    Write-Host "Set version in CommonAssemblyInfo.cs ..."
 
     $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
 
     $assemblyVersionPattern = [regex]'\[assembly: AssemblyVersion\(".*"\)\]'
     $result = $assemblyVersionPattern.Replace($result, "[assembly: AssemblyVersion(""$newVersion"")]")
 
-    $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]';
-    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.40"")]"); 
+    $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]'
+    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.41"")]")
 
     $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
     $result = $assemblyInfoVersionPattern.Replace($result, "[assembly: AssemblyInformationalVersion(""$newVersion"")]")
+
+    if (!$result) {
+        throw "Could not get assembly info file contents with bumped version."
+    }
+
+    return $result
+}
+
+function GetVersionInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileContent) {
+    Write-Host "Set version in VersionInfo.cs ..."
+
+    $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
+
+    $pattern = [regex]'\[assembly: RavenVersion\(Build = "41", CommitHash = "([^"]*)", Version = "4.1", FullVersion = "[^"]*"\)\]'
+    $m = $pattern.Match($result)
+    $commit = $m.Groups[1]
+    $result = $pattern.Replace(
+        $result,
+        "[assembly: RavenVersion(Build = ""41"", CommitHash = ""$commit"", Version = ""4.1"", FullVersion = ""$newVersion-custom-41"")]")
+
+    if (!$result) {
+        throw "Could not get VersionInfo.cs file contents with bumped version."
+    }
 
     return $result
 }
 
 function SemverMinor ($versionPrefix) {
     $versionStrings = $versionPrefix.split('.')
-    $versionNumbers = foreach($number in $versionStrings) {
-            [int]::parse($number)
+    $versionNumbers = foreach ($number in $versionStrings) {
+        [int]::parse($number)
     }
 
     $versionNumbers[2] += 1
