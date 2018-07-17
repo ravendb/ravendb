@@ -259,14 +259,16 @@ class queryCompleter {
     
         let liveAutoCompleteSkippedTriggerToken = false;
         let isFieldPrefixMode = 0;
-        let isBeforeCommaOrBinaryOperation = false;
+        let isBeforeComma = false;
+        let isBeforeBinaryOperation = false;
+        let afterCommaDividersCount = 0;
 
         let lastRow: number;
         let lastToken: AceAjax.TokenInfo;
         const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, pos.row, pos.column);
         do {
             const row = iterator.getCurrentTokenRow();
-            if (!isBeforeCommaOrBinaryOperation && lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
+            if (!isBeforeComma && !isBeforeBinaryOperation && lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
                 result.dividersCount++;
                 lastToken.type = "space";
             }
@@ -293,7 +295,8 @@ class queryCompleter {
                     }
                 }
             }
-
+            
+            console.debug(token.type + ": " + token.value);
             switch (token.type) {
                 case "keyword.clause":
                     const keyword = token.value.toLowerCase();
@@ -310,30 +313,31 @@ class queryCompleter {
                     result.keyword = token.value.toLowerCase();
                     break;
                 case "keyword.asKeyword":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.asSpecified = true;
                     }
                     break;
                 case "keyword.notKeyword":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.notSpecified = true;
                         result.dividersCount--;
                     }
                     break;
                 case "operations.type.binary":
-                    if (!isBeforeCommaOrBinaryOperation && !result.binaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation && !result.binaryOperation) {
                         result.binaryOperation = token.value.toLowerCase();
-                        isBeforeCommaOrBinaryOperation = true;
+                        isBeforeBinaryOperation = true;
                     }
                     break;
                 case "function.where":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                case "keyword.whereOperators":
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.whereFunction = token.value.toLowerCase();
                     }
                     break;
                 case "identifier":
                 case "identifier.whereFunction":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         if (isFieldPrefixMode === 1) {
                             result.fieldPrefix.push(token.value);
                         } else if(!result.fieldName) {
@@ -342,7 +346,7 @@ class queryCompleter {
                     }
                     break;
                 case "string":
-                    if (!isBeforeCommaOrBinaryOperation && !result.fieldName) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation && !result.fieldName) {
                         const lastChar = token.value[token.value.length - 1];
                         if (lastChar === "'" ||
                             lastChar === '"') {
@@ -356,17 +360,22 @@ class queryCompleter {
                     break;
                 case "paren.lparen":
                 case "paren.lparen.whereFunction":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeBinaryOperation) {
                         result.parentheses++;
                         
                         if (token.type === "paren.lparen.whereFunction") {
                             result.whereFunctionParameters++;
                         }
+                        
+                        if (isBeforeComma){
+                            isBeforeComma = false;
+                            result.dividersCount = 0;
+                        } 
                     }
                     break;
                 case "paren.rparen":
                 case "paren.rparen.whereFunction":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.parentheses--;
 
                         if (!lastToken || lastToken.type !== "space") {
@@ -377,7 +386,10 @@ class queryCompleter {
                     }
                     break;
                 case "space":
-                    if (!isBeforeCommaOrBinaryOperation && !result.keyword) {
+                    if (isBeforeComma) {
+                        afterCommaDividersCount++;
+                    }
+                    else if (!isBeforeBinaryOperation && !result.keyword) {
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
                         }
@@ -388,17 +400,17 @@ class queryCompleter {
                     }
                     break;
                 case "text":
-                    if (!isBeforeCommaOrBinaryOperation && !result.whereFunction) {
-                        const text = token.value;
-                        if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) { // TODO: Intorudce regex rule for fieldPrefix /(?:.|[].)/
-                            isFieldPrefixMode = 1;
-                            result.fieldPrefix = [];
-                        }
-                    }
+                     if (!isBeforeComma && !isBeforeBinaryOperation) {
+                         const text = token.value;
+                         if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) { // TODO: Intorudce regex rule for fieldPrefix /(?:.|[].)/
+                             isFieldPrefixMode = 1;
+                             result.fieldPrefix = [];
+                         }
+                     }
                     break;
                 case "comma":
-                    if (!isBeforeCommaOrBinaryOperation) {
-                        isBeforeCommaOrBinaryOperation = true;
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
+                        isBeforeComma = true;
 
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
@@ -411,7 +423,7 @@ class queryCompleter {
                     }
                     break;
                 case "operator.where":
-                    if (!isBeforeCommaOrBinaryOperation && result.fieldName) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation && result.fieldName) {
                         result.fieldName = null;
                     }
                     break;
@@ -479,6 +491,8 @@ class queryCompleter {
              pos: AceAjax.Position,
              prefix: string,
              callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
+
+        console.group("complete");
 
         this.session = session;
         this.callback = callback;
@@ -612,27 +626,16 @@ class queryCompleter {
                     if (!lastKeyword.info.collection && !lastKeyword.info.index) {
                         return this.completeError("no collection or index specified");
                     }
+                    
+                    if (lastKeyword.whereFunction) {
+                        if (this.lastKeyword.parentheses == 0){
+                            return this.completeError("in | should not complete anything");
+                        }
 
-                    this.getIndexFields()
-                        .done((wordList) => {
-                            let fieldName = this.trimValue(lastKeyword.fieldName);
-                            if (!wordList.find(x => x.caption === fieldName)) {
-                                return this.completeError("Field not in the words list");
-                            }
+                        return this.completeTerms();
+                    } 
 
-                            this.providers.terms(lastKeyword.info.index, lastKeyword.info.collection, fieldName, 20, terms => {
-                                if (terms && terms.length) {
-                                    return this.completeWords(terms.map(term => ({
-                                        caption: term,
-                                        value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
-                                        score: 1,
-                                        meta: "term"
-                                    })));
-                                }
-                                
-                                return this.completeError("No terms");
-                            });
-                        });
+                    return this.completeTerms();
                 }
 
                 return this.completeError("Failed to complete");
@@ -790,6 +793,30 @@ class queryCompleter {
         }
 
         this.callback(null, keywords);
+    }
+
+    private completeTerms() {
+        const lastKeyword = this.lastKeyword;
+        this.getIndexFields()
+            .done((wordList) => {
+                let fieldName = this.trimValue(lastKeyword.fieldName);
+                if (!wordList.find(x => x.caption === fieldName)) {
+                    return this.completeError("Field not in the words list");
+                }
+
+                this.providers.terms(lastKeyword.info.index, lastKeyword.info.collection, fieldName, 20, terms => {
+                    if (terms && terms.length) {
+                        return this.completeWords(terms.map(term => ({
+                            caption: term,
+                            value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
+                            score: 1,
+                            meta: "term"
+                        })));
+                    }
+
+                    return this.completeError("No terms");
+                });
+            });
     }
     
     static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: rqlQueryType) {
