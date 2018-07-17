@@ -15,12 +15,27 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
     {
         public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
         {
-            return Enumerable.GroupBy(source, keySelector).Select(inner => new DynamicArray.DynamicGrouping(inner));
+            return Enumerable.Select(Enumerable.GroupBy(source, keySelector), inner => new DynamicArray.DynamicGrouping(inner));
         }
 
         public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> resultSelector)
         {
-            return Enumerable.GroupBy(source, keySelector, resultSelector).Select(inner => new DynamicArray.DynamicGrouping(inner));
+            return Enumerable.Select(Enumerable.GroupBy(source, keySelector, resultSelector), inner => new DynamicArray.DynamicGrouping(inner));
+        }
+
+        public static IEnumerable<dynamic> Select(this IEnumerable<dynamic> source, Func<object, object> func)
+        {
+            return new DynamicArray(source.Select<object, object>(func));
+        }
+
+        public static IEnumerable<dynamic> Select(this IEnumerable<dynamic> source, Func<IGrouping<object, object>, object> func)
+        {
+            return new DynamicArray(Enumerable.Select(source, o => func((IGrouping<object, object>)o)));
+        }
+
+        public static IEnumerable<dynamic> Select(this IEnumerable<dynamic> source, Func<object, int, object> func)
+        {
+            return new DynamicArray(source.Select<object, object>(func));
         }
 
         public static IEnumerable<dynamic> SelectMany(this object source,
