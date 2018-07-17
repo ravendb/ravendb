@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Object;
-using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -81,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                             else
                             {
-                                value = GetValue(val);
+                                value = TypeConverter.ToBlittableSupportedType(val);
                                 newFields += GetRegularFields(instance, field, value, indexContext);
                                 continue;
                             }
@@ -123,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         }
                     }
 
-                    value = GetValue(propertyDescriptor.Value);
+                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value);
                     newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
                 }                                
             }
@@ -181,52 +179,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return value;
         }
 
-        private object GetValue(JsValue jsValue)
-        {
-            if (jsValue.IsNull() || jsValue.IsUndefined())
-                return null;
-            if (jsValue.IsString())
-                return jsValue.AsString();
-            if (jsValue.IsBoolean())
-                return jsValue.AsBoolean().ToString(); // avoid boxing the boolean
-            if (jsValue.IsNumber())
-                return jsValue.AsNumber();
-            if (jsValue.IsDate())
-                return jsValue.AsDate().ToDateTime();
-            //object wrapper is an object so it must come before the object
-            if (jsValue is ObjectWrapper ow)
-            {
-                var target = ow.Target;
-                switch (target)
-                {
-                    case LazyStringValue lsv:                    
-                        return lsv;
-                    case LazyCompressedStringValue lcsv:
-                        return lcsv;
-                    case LazyNumberValue lnv:
-                        return lnv; //should be already blittable supported type.
-                }
-                ThrowInvalidObject(jsValue);
-            }
-            //Array is an object in Jint
-            else if (jsValue.IsArray())
-            {
-                var arr = jsValue.AsArray();
-                return EnumerateArray(arr);
-            }
-            else if (jsValue.IsObject())
-            {
-                return JavaScriptIndexUtils.StringifyObject(jsValue).ToString();
-            }
-            ThrowInvalidObject(jsValue);
-            return null;
-        }
-
-        private static void ThrowInvalidObject(JsValue jsValue)
-        {
-            throw new InvalidOperationException("Invalid type " + jsValue);
-        }
-
         private IEnumerable<JsValue> EnumerateValues(JsValue jv)
         {
             if (jv.IsArray())
@@ -244,18 +196,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 yield return jv;
             }
-            
-        }
 
-        private IEnumerable EnumerateArray(ArrayInstance arr)
-        {
-            foreach ((var key, var val) in arr.GetOwnProperties())
-            {
-                if (key == "length")
-                    continue;
-
-                yield return GetValue(val.Value);
-            }
         }
 
     }

@@ -5,12 +5,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Jint;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Object;
+using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;
@@ -142,6 +144,47 @@ namespace Raven.Server.Utils
             {
                 NestingLevelTooDeep(root);
             }
+             if (value is JsValue js)
+            {
+                if (js.IsNull() || js.IsUndefined())
+                    return null;
+                if (js.IsString())
+                    return js.AsString();
+                if (js.IsBoolean())
+                    return js.AsBoolean().ToString(); // avoid boxing the boolean
+                if (js.IsNumber())
+                    return js.AsNumber();
+                if (js.IsDate())
+                    return js.AsDate().ToDateTime();
+                //object wrapper is an object so it must come before the object
+                if (js is ObjectWrapper ow)
+                {
+                    var target = ow.Target;
+                    switch (target)
+                    {
+                        case LazyStringValue lsv:
+                            return lsv;
+                        case LazyCompressedStringValue lcsv:
+                            return lcsv;
+                        case LazyNumberValue lnv:
+                            return lnv; //should be already blittable supported type.
+                    }
+                    ThrowInvalidObject(js);
+                }
+                //Array is an object in Jint
+                else if (js.IsArray())
+                {
+                    var arr = js.AsArray();
+                    return EnumerateArray(arr);
+                }
+                else if (js.IsObject())
+                {
+                    return JavaScriptIndexUtils.StringifyObject(js);
+                }
+                ThrowInvalidObject(js);
+                return null;
+            }
+
             if (value == null || value is DynamicNullObject)
                 return null;
 
@@ -166,13 +209,6 @@ namespace Raven.Server.Utils
 
             if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
                 return value;
-
-            if (value is JsValue js)
-            {
-                if (js.IsDate())
-                    return js.AsDate().ToDateTime();
-            }
-
 
             if (value is Guid)
                 return ((Guid)value).ToString("D");
@@ -235,6 +271,22 @@ namespace Raven.Server.Utils
             }
 
             return inner;
+        }
+
+        private static void ThrowInvalidObject(JsValue jsValue)
+        {
+            throw new InvalidOperationException("Invalid type " + jsValue);
+        }
+
+        private static IEnumerable EnumerateArray(ArrayInstance arr)
+        {
+            foreach ((var key, var val) in arr.GetOwnProperties())
+            {
+                if (key == "length")
+                    continue;
+
+                yield return TypeConverter.ToBlittableSupportedType(val.Value);
+            }
         }
 
         private static void NestingLevelTooDeep(object value)
