@@ -1022,27 +1022,49 @@ where OrderedAt = 'companies/1-A'|`, northwindProvider(), (errors, wordlist, pre
         });
     });
 
-    it.skip('After where field and in operator | ?????????????????????????????', done => {
+    it('After where field and in operator | before ( should not list anything', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt in |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.whereFunction, "in");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
+            assert.equal(lastKeyword.parentheses, 0);
 
             done();
         });
     });
 
-    it.skip('After where field and in operator | ?????????????????????????????', done => {
+    it('After where field and in operator | after ( should list terms', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt in (|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.whereFunction, "in");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
+            assert.equal(lastKeyword.parentheses, 1);
+
+            done();
+        });
+    });
+
+    it('After where field and in operator | after (, should list terms', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where OrderedAt in ('1996-07-18T00:00:00.0000000', |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.whereFunction, "in");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
+            assert.equal(lastKeyword.parentheses, 1);
 
             done();
         });
