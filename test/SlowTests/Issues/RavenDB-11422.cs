@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Globalization;
+using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
             public Index1()
             {
                 Map = users => from user in users
-                                select new
-                                {
-                                    user.Name, user.LastName
-                                };
+                               select new
+                               {
+                                   user.Name,
+                                   user.LastName
+                               };
 
             }
         }
@@ -92,7 +94,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.Equal(0, indexScore);
                     }
                 }
             }
@@ -132,7 +137,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
@@ -174,7 +182,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
@@ -219,7 +230,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
@@ -268,7 +282,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
@@ -308,7 +325,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.Equal(0, indexScore);
                     }
                 }
             }
@@ -349,7 +369,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
@@ -391,7 +414,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
@@ -440,7 +466,10 @@ namespace SlowTests.Issues
 
                     foreach (dynamic r in results)
                     {
-                        Assert.NotNull(r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore]);
+                        var indexScoreAsString = r[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.IndexScore];
+                        Assert.NotNull(indexScoreAsString);
+                        var indexScore = float.Parse(indexScoreAsString.ToString(), CultureInfo.InvariantCulture);
+                        Assert.True(indexScore > 0);
                     }
                 }
             }
