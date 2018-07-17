@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void HandleAttachmentDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName)
         {
-            var id = GetStringField(batchResult, type, idFieldName);
+            var id = GetLazyStringField(batchResult, type, idFieldName);
 
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
@@ -141,7 +141,7 @@ namespace Raven.Client.Documents.Session.Operations
                 attachmentsJson.Length == 0)
                 return;
 
-            var name = GetStringField(batchResult, type, attachmentNameFieldName);
+            var name = GetLazyStringField(batchResult, type, attachmentNameFieldName);
 
             documentInfo.Metadata.Modifications = null;
             documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
@@ -151,8 +151,8 @@ namespace Raven.Client.Documents.Session.Operations
 
             foreach (BlittableJsonReaderObject attachment in attachmentsJson)
             {
-                var attachmentName = GetStringField(attachment, type, nameof(AttachmentDetails.Name));
-                if (string.Equals(attachmentName, name))
+                var attachmentName = GetLazyStringField(attachment, type, nameof(AttachmentDetails.Name));
+                if (attachmentName == name)
                     continue;
 
                 attachments.Add(attachment);
@@ -170,7 +170,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void HandleAttachmentPutInternal(BlittableJsonReaderObject batchResult, CommandType type, string idFieldName, string attachmentNameFieldName)
         {
-            var id = GetStringField(batchResult, type, idFieldName);
+            var id = GetLazyStringField(batchResult, type, idFieldName);
 
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
@@ -186,10 +186,10 @@ namespace Raven.Client.Documents.Session.Operations
 
             attachments.Add(new DynamicJsonValue
             {
-                [nameof(AttachmentDetails.ChangeVector)] = GetStringField(batchResult, type, nameof(AttachmentDetails.ChangeVector)),
-                [nameof(AttachmentDetails.ContentType)] = GetStringField(batchResult, type, nameof(AttachmentDetails.ContentType)),
-                [nameof(AttachmentDetails.Hash)] = GetStringField(batchResult, type, nameof(AttachmentDetails.Hash)),
-                [nameof(AttachmentDetails.Name)] = GetStringField(batchResult, type, attachmentNameFieldName),
+                [nameof(AttachmentDetails.ChangeVector)] = GetLazyStringField(batchResult, type, nameof(AttachmentDetails.ChangeVector)),
+                [nameof(AttachmentDetails.ContentType)] = GetLazyStringField(batchResult, type, nameof(AttachmentDetails.ContentType)),
+                [nameof(AttachmentDetails.Hash)] = GetLazyStringField(batchResult, type, nameof(AttachmentDetails.Hash)),
+                [nameof(AttachmentDetails.Name)] = GetLazyStringField(batchResult, type, attachmentNameFieldName),
                 [nameof(AttachmentDetails.Size)] = GetLongField(batchResult, type, nameof(AttachmentDetails.Size))
             });
 
@@ -221,7 +221,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void HandleDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type)
         {
-            var id = GetStringField(batchResult, type, nameof(ICommandData.Id));
+            var id = GetLazyStringField(batchResult, type, nameof(ICommandData.Id));
 
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
@@ -246,8 +246,8 @@ namespace Raven.Client.Documents.Session.Operations
                     return;
             }
 
-            var id = GetStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.Id);
-            var changeVector = GetStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.ChangeVector);
+            var id = GetLazyStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.Id);
+            var changeVector = GetLazyStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.ChangeVector);
 
             if (isDeferred)
             {
@@ -290,7 +290,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private void HandleCounters(BlittableJsonReaderObject batchResult)
         {
-            var docId = GetStringField(batchResult, CommandType.Counters, nameof(CountersBatchCommandData.Id));
+            var docId = GetLazyStringField(batchResult, CommandType.Counters, nameof(CountersBatchCommandData.Id));
 
             if (batchResult.TryGet(nameof(CountersDetail), out BlittableJsonReaderObject countersDetail) == false)
                 ThrowMissingField(CommandType.Counters, nameof(CountersDetail));
@@ -314,9 +314,9 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
-        private static string GetStringField(BlittableJsonReaderObject json, CommandType type, string fieldName)
+        private static LazyStringValue GetLazyStringField(BlittableJsonReaderObject json, CommandType type, string fieldName)
         {
-            if (json.TryGet(fieldName, out string value) == false || value == null)
+            if (json.TryGet(fieldName, out LazyStringValue value) == false || value == null)
                 ThrowMissingField(type, fieldName);
 
             return value;
