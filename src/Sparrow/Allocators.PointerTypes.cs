@@ -30,7 +30,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan()
         {
-            return new Span<byte>(Ptr, Size);
+            return new Span<byte>(Ptr, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -58,7 +58,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, Size);
+            return new ReadOnlySpan<byte>(Ptr, (int)Size);
         }
 
 
@@ -121,7 +121,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan()
         {
-            return new Span<T>(Ptr, Size);
+            return new Span<T>(Ptr, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -147,7 +147,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, Size);
+            return new ReadOnlySpan<byte>(Ptr, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -237,7 +237,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan()
         {
-            return new Span<byte>(Ptr, Size);
+            return new Span<byte>(Ptr, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -265,7 +265,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, Size);
+            return new ReadOnlySpan<byte>(Ptr, (int)Size);
         }
 
 
@@ -342,7 +342,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan()
         {
-            return new Span<T>(Ptr, Size);
+            return new Span<T>(Ptr, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -368,7 +368,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, Size);
+            return new ReadOnlySpan<byte>(Ptr, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -32,9 +32,24 @@ namespace Sparrow
 
             public int ItemsPerLane => 4;
             public int BlockSize => 4 * Constants.Size.Kilobyte;
-            public bool AcceptOnlyBlocks => true;
+            public bool AcceptOnlyBlocks => false;
+
             public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
         }
+
+        public struct FixedSizeDefault : IThreadAffineBlockOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public int ItemsPerLane => 4;
+            public int BlockSize => 4 * Constants.Size.Kilobyte;
+            public bool AcceptOnlyBlocks => true;
+
+            public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
+        }
+
     }
 
     public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
@@ -52,7 +67,7 @@ namespace Sparrow
             public IntPtr Block4;
         }
 
-        public int Allocated { get; }
+        public long Allocated { get; }
 
         public void Initialize(ref ThreadAffineBlockAllocator<TOptions> allocator)
         {
@@ -183,7 +198,7 @@ namespace Sparrow
                     var localPtr = new Pointer(ptr.ToPointer(), allocator._options.BlockSize);
                     allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref localPtr);
                 }
-
+                
                 ptr = Interlocked.CompareExchange(ref container.Block3, IntPtr.Zero, container.Block3);
                 if (ptr != IntPtr.Zero)
                 {

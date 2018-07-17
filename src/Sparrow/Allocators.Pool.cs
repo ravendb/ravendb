@@ -10,6 +10,7 @@ namespace Sparrow
     {
         int MaxPoolMemoryInBytes { get; }
 
+        bool HasOwnership { get; }
         IAllocatorComposer<Pointer> CreateAllocator();
     }
 
@@ -23,6 +24,7 @@ namespace Sparrow
 
             public int MaxPoolMemoryInBytes => 256 * Constants.Size.Megabyte;
 
+            public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<Default>>();
         }
     }
@@ -32,7 +34,7 @@ namespace Sparrow
     /// that means this allocator can leak if used improperly. 
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
-    /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can)</remarks>
+    /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
     public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
@@ -41,8 +43,8 @@ namespace Sparrow
         private BlockPointer[] _freed;
         private IAllocatorComposer<Pointer> _internalAllocator;
 
-        public int Allocated { get; private set; }    
-        public int Used { get; private set; }
+        public long Allocated { get; private set; }    
+        public long Used { get; private set; }
 
         public void Initialize(ref PoolAllocator<TOptions> allocator)
         {
@@ -67,7 +69,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BlockPointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
-            int vsize = Bits.NextPowerOf2(size);
+            int vsize = Bits.NextPowerOf2(Math.Max(sizeof(BlockPointer), size));
 
             var index = Bits.MostSignificantBit(vsize) - 1;
             if (_freed[index].IsValid)
@@ -85,7 +87,7 @@ namespace Sparrow
             allocator.Used += size;
             allocator.Allocated += vsize;
 
-            var ptr =  _internalAllocator.Allocate(vsize);
+            var ptr = _internalAllocator.Allocate(vsize);
             return new BlockPointer(ptr.Ptr, size, size);
         }
 
@@ -97,7 +99,7 @@ namespace Sparrow
 
             int originalSize = ptr.Size;
 
-            int size = Bits.NextPowerOf2(ptr.Size);
+            int size = Bits.NextPowerOf2(ptr.BlockSize);
             var index = Bits.MostSignificantBit(size) - 1;
             
             // Allocating more than 2^26 (100MB should not be pooled, chunks are big enough to clutter the allocator)
@@ -133,21 +135,21 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew(ref PoolAllocator<TOptions> allocator)
         {
-            if (!allocator._isMemoryLow)
-                return;
+            if (allocator._isMemoryLow)
+                ReleaseMemoryPool(ref allocator);
 
-            // We are low on memory, we will release the whole pool.
-            ReleasePoolMemory(ref allocator);
+            _internalAllocator.Renew();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(ref PoolAllocator<TOptions> allocator)
         {
-            if (!allocator._isMemoryLow)
-                return;
+            if (allocator._options.HasOwnership)
+                ReleaseMemoryPool(ref allocator);
+            else
+                ResetMemoryPool(ref allocator);
 
-            // We are low on memory, we will release the whole pool.
-            ReleasePoolMemory(ref allocator);
+            _internalAllocator.Reset();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -164,8 +166,11 @@ namespace Sparrow
 
         public void Dispose()
         {
-            // We are going to be disposed, we then release all holded memory. 
-            ReleasePoolMemory(ref this);
+            if (this._options.HasOwnership)
+                // We are going to be disposed, we then release all holded memory. 
+                ReleaseMemoryPool(ref this);
+
+            this._internalAllocator.Dispose();
         }
 
         public void NotifyLowMemory(ref PoolAllocator<TOptions> allocator)
@@ -178,9 +183,21 @@ namespace Sparrow
             allocator._isMemoryLow = false;
         }
 
-        private void ReleasePoolMemory(ref PoolAllocator<TOptions> allocator)
+        private void ResetMemoryPool(ref PoolAllocator<TOptions> allocator)
         {
-            for (int i = 0; i < 32; i++)
+            // We dont own the memory pool, so we just reset the state and let the owner give us memory again on the next cycle.
+            // This is the typical mode of operation when the underlying allocator is able to reuse memory (ex. ArenaAllocator).
+            for (int i = 0; i < _freed.Length; i++)
+            {
+                allocator._freed[i] = new BlockPointer();
+            }
+        }
+
+        private void ReleaseMemoryPool(ref PoolAllocator<TOptions> allocator)
+        {
+            // We own the memory pool, so we have to release all the pointers that we have to the parent allocator.
+            // This is the typical mode of operation when the underlying allocator is leaky (ex. NativeAllocator). 
+            for (int i = 0; i < _freed.Length; i++)
             {
                 ref var section = ref _freed[i];
                 while (section.IsValid)

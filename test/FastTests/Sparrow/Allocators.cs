@@ -276,7 +276,7 @@ namespace FastTests.Sparrow
             {
             }
 
-            public int Allocated
+            public long Allocated
             {
                 get;
                 private set;

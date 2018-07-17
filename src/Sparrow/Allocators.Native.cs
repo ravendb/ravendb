@@ -68,7 +68,7 @@ namespace Sparrow
                 throw new NotSupportedException($"{nameof(TConfig)} is asking for secure, electric fenced memory. The combination is not supported.");
         }
 
-        public int Allocated
+        public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get;

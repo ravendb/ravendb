@@ -39,13 +39,17 @@ namespace Sparrow
 
         TPointerType Allocate(int size);
         void Release(ref TPointerType ptr);
+
+        void Renew();
+        void Reset();
+        void Dispose();
     }
 
     public interface IAllocator<T, TPointerType>
         where T : struct, IAllocator, IDisposable
         where TPointerType : struct, IPointerType
     {
-        int Allocated { get; }
+        long Allocated { get; }
 
         void Initialize(ref T allocator);
 
@@ -87,7 +91,7 @@ namespace Sparrow
                 b.AfterInitialize(ref _allocator);
         }
 
-        public int Allocated
+        public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _allocator.Allocated; }
@@ -214,7 +218,7 @@ namespace Sparrow
                 b.AfterInitialize(ref _allocator);
         }
 
-        public int Allocated
+        public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _allocator.Allocated; }
@@ -347,7 +351,7 @@ namespace Sparrow
                 b.AfterInitialize(ref _allocator);
         }
 
-        public int Allocated
+        public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _allocator.Allocated; }
