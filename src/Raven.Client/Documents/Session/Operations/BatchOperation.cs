@@ -22,14 +22,17 @@ namespace Raven.Client.Documents.Session.Operations
 
         private List<object> _entities;
         private int _sessionCommandsCount;
+        private int _allCommandsCount;
 
         public BatchCommand CreateRequest()
         {
             var result = _session.PrepareForSaveChanges();
-            result.SessionCommands.AddRange(result.DeferredCommands);
-
             _sessionCommandsCount = result.SessionCommands.Count;
-            if (_sessionCommandsCount == 0)
+
+            result.SessionCommands.AddRange(result.DeferredCommands);
+            _allCommandsCount = result.SessionCommands.Count;
+
+            if (_allCommandsCount == 0)
                 return null;
 
             _session.ValidateClusterTransaction(result);
@@ -67,18 +70,19 @@ namespace Raven.Client.Documents.Session.Operations
                         $"Cluster transaction was send to a node that is not supporting it. So it was executed ONLY on the requested node on {_session.RequestExecutor.Url}.");
             }
 
-            for (var i = 0; i < _sessionCommandsCount; i++)
+            for (var i = 0; i < _allCommandsCount; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
                 if (batchResult == null)
                     continue;
 
+                var isDeferred = i >= _sessionCommandsCount;
                 var type = GetCommandType(batchResult);
 
                 switch (type)
                 {
                     case CommandType.PUT:
-                        HandlePut(i, batchResult);
+                        HandlePut(i, batchResult, isDeferred);
                         break;
                     case CommandType.DELETE:
                         HandleDelete(batchResult);
@@ -231,14 +235,27 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
-        private void HandlePut(int index, BlittableJsonReaderObject batchResult)
+        private void HandlePut(int index, BlittableJsonReaderObject batchResult, bool isDeferred)
         {
-            var entity = _entities[index];
-            if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
-                return;
+            object entity = null;
+            DocumentInfo documentInfo = null;
+            if (isDeferred == false)
+            {
+                entity = _entities[index];
+                if (_session.DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                    return;
+            }
 
             var id = GetStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.Id);
             var changeVector = GetStringField(batchResult, CommandType.PUT, Constants.Documents.Metadata.ChangeVector);
+
+            if (isDeferred)
+            {
+                if (_session.DocumentsById.TryGetValue(id, out documentInfo) == false)
+                    return;
+
+                entity = documentInfo.Entity;
+            }
 
             documentInfo.Metadata.Modifications = null;
             documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
@@ -263,7 +280,9 @@ namespace Raven.Client.Documents.Session.Operations
             documentInfo.MetadataInstance = null;
 
             _session.DocumentsById.Add(documentInfo);
-            _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+            if (entity != null)
+                _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
             var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
             _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
