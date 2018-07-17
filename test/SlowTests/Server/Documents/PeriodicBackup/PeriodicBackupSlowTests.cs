@@ -451,7 +451,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromSeconds(15));
 
-                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
+                var backupStatus = store.Maintenance.Send(operation);
+                var backupOperationId = backupStatus.Status.LastOperationId;
+
+                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+
+                var backupResult = backupOperation.Result as BackupResult;
+                Assert.True(backupResult.Counters.Processed);
+                Assert.Equal(1, backupResult.Counters.ReadCount);
+                
+                var etagForBackups = backupStatus.Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
