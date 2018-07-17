@@ -32,7 +32,16 @@ namespace Raven.Client.ServerWide.Tcp
                     }
                     var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
                     if (supported)
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
+                    {
+                        //We are done
+                        if (currentVersion == version)
+                        {
+                            return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
+                        }
+                        //Here we support the requested version but need to inform the otherside we agree
+                        currentVersion = version;
+                        continue;
+                    }
                     if (prevSupported == -1)
                         return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine40000);
                     currentVersion = prevSupported;
