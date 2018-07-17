@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -140,6 +141,11 @@ namespace Raven.Server.Rachis
                                 // on raft protocol violation propagate the error and close this follower. 
                                 throw;
                             }
+                            catch (ConcurrencyException)
+                            {
+                                // the term was changed
+                                throw;
+                            }
                             catch (Exception e)
                             {
                                 if (_engine.Log.IsInfoEnabled)
@@ -244,6 +250,8 @@ namespace Raven.Server.Rachis
 
             using (var tx = context.OpenWriteTransaction())
             {
+                _engine.ValidateTerm(_term);
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"{ToString()}: Tx running in {sp.Elapsed}");
@@ -278,7 +286,7 @@ namespace Raven.Server.Rachis
                 }
 
                 lastLogIndex = _engine.GetLastEntryIndex(context);
-               
+
                 var lastEntryIndexToCommit = Math.Min(
                     lastLogIndex,
                     appendEntries.LeaderCommit);
@@ -407,14 +415,16 @@ namespace Raven.Server.Rachis
             _debugRecorder.Record("Snapshot received");
             using (context.OpenWriteTransaction())
             {
-                var lastCommitIndex = _engine.GetLastCommitIndex(context);
-                if (snapshot.LastIncludedIndex < lastCommitIndex)
+                var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
+                var lastCommitIndex = _engine.GetLastEntryIndex(context);
+                if (snapshot.LastIncludedTerm == lastTerm && snapshot.LastIncludedIndex < lastCommitIndex)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info(
                             $"{ToString()}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
                     }
+
                     //This is okay to ignore because we will just get the committed entries again and skip them
                     ReadInstallSnapshotAndIgnoreContent(context);
                 }
@@ -425,6 +435,7 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info(
                             $"{ToString()}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
                     }
+
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                     _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                 }
@@ -693,7 +704,7 @@ namespace Raven.Server.Rachis
                         Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                         Message = "No entries at all here, give me everything from the start",
                         CurrentTerm = _term,
-                        LastLogIndex = 0
+                        LastLogIndex = 0,
                     });
 
                     return; // leader will know where to start from here
@@ -709,13 +720,31 @@ namespace Raven.Server.Rachis
                 midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
 
-
-            while (minIndex < maxIndex)
+            while ((midpointTerm == negotiation.PrevLogTerm && midpointIndex == negotiation.PrevLogIndex) == false)
             {
                 _engine.Timeout.Defer(_connection.Source);
 
                 _engine.ValidateTerm(_term);
-                
+
+                if (midpointIndex == negotiation.PrevLogIndex && midpointTerm != negotiation.PrevLogTerm)
+                {
+                    // our appended entries has been diverged, same index with different terms.
+                    var msg = $"Our appended entries has been diverged, same index with different terms. " +
+                              $"My index/term {midpointIndex}/{midpointTerm}, while yours is {negotiation.PrevLogIndex}/{negotiation.PrevLogTerm}.";
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{ToString()}: {msg}");
+                    }
+                    connection.Send(context, new LogLengthNegotiationResponse
+                    {
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                        Message = msg,
+                        CurrentTerm = _term,
+                        LastLogIndex = 0
+                    });
+                    return;
+                }
+
                 connection.Send(context, new LogLengthNegotiationResponse
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Negotiation,
@@ -728,10 +757,10 @@ namespace Raven.Server.Rachis
                     MidpointTerm = midpointTerm
                 });
 
-                var response = connection.Read<LogLengthNegotiation>(context);
+                negotiation = connection.Read<LogLengthNegotiation>(context);
 
                 _engine.Timeout.Defer(_connection.Source);
-                if (response.Truncated)
+                if (negotiation.Truncated)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -748,7 +777,7 @@ namespace Raven.Server.Rachis
                 }
                 using (context.OpenReadTransaction())
                 {
-                    if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
+                    if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
                     {
                         minIndex = Math.Min(midpointIndex + 1, maxIndex);
                     }
@@ -761,20 +790,20 @@ namespace Raven.Server.Rachis
                 using (context.OpenReadTransaction())
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
+
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {_term}");
+                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {midpointTerm}");
             }
+
             connection.Send(context, new LogLengthNegotiationResponse
             {
                 Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                 Message = $"Found a log index / term match at {midpointIndex} with term {midpointTerm}",
                 CurrentTerm = _term,
-                LastLogIndex = midpointIndex
+                LastLogIndex = midpointIndex,
             });
         }
-
-        
         
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
