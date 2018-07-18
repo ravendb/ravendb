@@ -54,7 +54,7 @@
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">
             <div class="scroll flex-grow">
-                <div class="panel panel-info certificate-item" data-bind="visible: wellKnownCerts().length">
+                <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCerts().length">
                     <div class="padding padding-sm flex-horizontal">
                         <div class="certificate-name">
                             <div class="flex-horizontal">
@@ -65,7 +65,7 @@
                                     <h3 class="no-margin">Well known admin certificates defined by system administrator</h3>    
                                 </div>
                             </div>
-                            <div class="thumbprint" title="Certificates thumbprints" data-bind="foreach: wellKnownCerts">
+                            <div class="thumbprint" title="Certificates thumbprints" data-bind="foreach: wellKnownAdminCerts">
                                 <span data-bind="text: $data"></span> <br />
                             </div>
                         </div>
