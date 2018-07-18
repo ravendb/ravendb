@@ -451,7 +451,7 @@ namespace Raven.Client.Documents.Linq
             }
         }
 
-        public static string RemoveTransparentIdentifiersIfNeeded(string path)
+        internal static string RemoveTransparentIdentifiersIfNeeded(string path)
         {
             while (path.StartsWith(TransparentIdentifier))
             {
