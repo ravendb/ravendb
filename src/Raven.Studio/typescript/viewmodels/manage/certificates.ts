@@ -42,6 +42,7 @@ class certificates extends viewModelBase {
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     serverCertificateThumbprint = ko.observable<string>();
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
+    wellKnownCerts = ko.observableArray<string>([]);
     
     domainsForServerCertificate = ko.observableArray<string>([]);
     
@@ -359,6 +360,7 @@ class certificates extends viewModelBase {
                 this.updateCache(mergedCertificates);
                 this.certificates(mergedCertificates); 
                 this.filterCertificates();
+                this.wellKnownCerts(certificatesInfo.WellKnownCerts || []);
             });
     }
     
