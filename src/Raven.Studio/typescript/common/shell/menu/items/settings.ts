@@ -32,7 +32,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/settings/conflictResolution",
             title: "Conflict Resolution",
             nav: true,
-            css: 'icon-conflicts',
+            css: 'icon-conflicts-resolution',
             dynamicHash: appUrls.conflictResolution,
             enabled: access.enableConflictResolutionMenuItem
         }),
@@ -41,7 +41,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/clientConfiguration',
             title: 'Client Configuration',
             nav: true,
-            css: 'icon-client-configuration',
+            css: 'icon-database-client-configuration',
             dynamicHash: appUrls.clientConfiguration
         }),
         new leafMenuItem({

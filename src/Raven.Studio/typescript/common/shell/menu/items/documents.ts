@@ -41,7 +41,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/query/query',
             title: 'Query',
             nav: true,
-            css: 'icon-query',
+            css: 'icon-documents-query',
             alias: true,
             dynamicHash: appUrls.query('')
         }),

@@ -147,14 +147,16 @@
 .make-icon(demote, "\e9d2");
 .make-icon(promote, "\e9d3");
 .make-icon(client-configuration, "\e9d4");
+.make-icon(database-client-configuration, "\e9d4");
 .make-icon(manage-connection-strings, "\e9d1");
-.make-icon(manage-exit-fullscreen, "\e9d0");
-.make-icon(manage-fullscreen, "\e997");
-.make-icon(manage-other, "\e9be");
+.make-icon(exit-fullscreen, "\e9d0");
+.make-icon(fullscreen, "\e997");
+.make-icon(other, "\e9be");
 .make-icon(memory, "\e9bd");
 .make-icon(snapshot-backup, "\e971");
 .make-icon(stepdown, "\e973");
 .make-icon(conflicts, "\e990");
+.make-icon(conflicts-resolution, "\e990");
 .make-icon(revisions-bin, "\e994");
 .make-icon(refresh-stats, "\e968");
 .make-icon(zombie, "\e963");
@@ -231,6 +233,7 @@
 .make-icon(license, "\e953");
 .make-icon(restore, "\e954");
 .make-icon(revisions, "\e954");
+.make-icon(replication-stats, "\e954");
 .make-icon(server-smuggling, "\e955");
 .make-icon(traffic, "\e955");
 .make-icon(server-topology, "\e956");
@@ -260,6 +263,9 @@
 .make-icon(index-fields, "\e977");
 .make-icon(metrics, "\e979");
 .make-icon(queries, "\e97a");
+.make-icon(query, "\e97a");
+.make-icon(documents-query, "\e97a");
+.make-icon(indexes-query, "\e97a");
 .make-icon(query, "\e97a");
 .make-icon(tasks-list, "\e97b");
 .make-icon(changes, "\e97c");
@@ -321,6 +327,7 @@
 .make-icon(circle, "\e915");
 .make-icon(circle-filled, "\e916");
 .make-icon(edited, "\e917");
+.make-icon(arrow, "\e9bb");
 .make-icon(arrow-down, "\e918");
 .make-icon(arrow-filled-down, "\e919");
 .make-icon(arrow-filled-left, "\e91a");
@@ -371,57 +378,71 @@
 
 /* ONLY MENU ICON COLORS */
 #main-menu {
-    .make-icon-color(resources, #f9d291, #f9d291);
+    .make-icon-color(resources, @color-3, @color-3);
 }
 
 /* MENU AND TOPBAR ICON COLORS*/
 
 #main-menu, .inputs-container, .stats {
+    .make-icon-color(documents, @color-4, @color-4);
+    .make-icon-color(indexing, @color-5, @color-5);
+    .make-icon-color(settings, @color-1, @color-1);
+    .make-icon-color(stats, @color-2, @color-2);
+    .make-icon-color(dashboard, @color-3-1, @color-3-1);
+    .make-icon-color(manage-server, @color-3-2, @color-3-2);
+    .make-icon-color(info, @color-3-3, @color-3-3);
+    //Documents section
+    .make-icon-color(recent, @color-4-1, @color-4-1);
+    .make-icon-color(patch, @color-4-2, @color-4-2);
+    .make-icon-color(documents-query, @color-4-3, @color-4-3);
+    .make-icon-color(conflicts, @color-5, @color-5);
+    .make-icon-color(cmp-xchg, @color-5-1, @color-5-1);
+    //Indexes section
+    .make-icon-color(indexes-query, @color-5, @color-5);
+    .make-icon-color(list-of-indexes, @color-5-1, @color-5-1);
+    .make-icon-color(index-batch-size, @color-5-2, @color-5-2);
+    .make-icon-color(map-reduce-visualizer, @color-5-3, @color-5-3);
+    .make-icon-color(index-errors, @color-1, @color-1);
+    //Settings section
+    .make-icon-color(database-settings, @color-1, @color-1);
+    .make-icon-color(manage-connection-strings, @color-1-1, @color-1-1);
+    .make-icon-color(conflicts-resolution, @color-1-2, @color-1-2);
+    .make-icon-color(database-client-configuration, @color-1-3, @color-1-3);
+    .make-icon-color(revisions, @color-2, @color-2);
+    .make-icon-color(document-expiration, @color-2-1, @color-2-1);
+    .make-icon-color(manage-dbgroup, @color-2-2, @color-2-2);
+    .make-icon-color(import-database, @color-2-3, @color-2-3);
+    .make-icon-color(export-database, @color-3, @color-3);
+    .make-icon-color(create-sample-data, @color-3-1, @color-3-1);
+    .make-icon-color(manage-ongoing-tasks, @color-3-2, @color-3-2);
+    //Stats section
+    .make-icon-color(io-test, @color-2-1, @color-2-1);
+    .make-icon-color(storage, @color-2-2, @color-2-2);
+    .make-icon-color(replication-stats, @color-2-3, @color-2-3);
+
+    //Manage server section
+    .make-icon-color(cluster, @color-3-2, @color-3-2);
+    .make-icon-color(client-configuration, @color-3-3, @color-3-3);
+    .make-icon-color(administrator-js-console, @color-4, @color-4);
+    .make-icon-color(certificate, @color-4-1, @color-4-1);
+    .make-icon-color(admin-logs, @color-4-2, @color-4-2);
+    .make-icon-color(traffic-watch, @color-4-3, @color-4-3);
+    .make-icon-color(gather-debug-information, @color-5, @color-5);
+    .make-icon-color(debug-advanced, @color-5-1, @color-5-1);
+    //other
     .make-icon-color(system, #3c6fb4, #3c6fb4);
-    .make-icon-color(recent, #29fffa, #29fffa);
     .make-icon-color(plus, #b0d47d, #b0d47d);
     .make-icon-color(list, #ef5450, #ef5450);
-    .make-icon-color(documents, #34b3e4, #34b3e4);
-    .make-icon-color(indexing, #b968c7, #b968c7);
-    .make-icon-color(index-batch-size, #ec407a, #ec407a);
     .make-icon-color(index-stats, #5c6bc0, #5c6bc0);
-    .make-icon-color(query, #2bd8bb, #2bd8bb);
     .make-icon-color(etl, #ff346f, #ff346f);
     .make-icon-color(new, #d9e021, #d9e021);
     .make-icon-color(tasks, #fbb03b, #fbb03b);
-    .make-icon-color(settings, #8fb1cc, #8fb1cc);
-    .make-icon-color(stats, #7cb82f, #7cb82f);
-    .make-icon-color(manage-server, #008cc9, #008cc9);
     .make-icon-color(license, #e9eaea, #e9eaea);
-    .make-icon-color(import-database, #e64a19, #e64a19);
-    .make-icon-color(export-database, #ff9900, #ff9900);
-    .make-icon-color(create-sample-data, #b0b42c, #b0b42c);
-    .make-icon-color(manage-ongoing-tasks, #2cb495, #2cb495);
     .make-icon-color(database, @brand-database-color, @brand-database-color);
     .make-icon-color(replication, #9c28b1, #9c28b1);
     .make-icon-color(sql-replication, #673bb7, #673bb7);
-    //SETTINGS
-    //Database Record
-    .make-icon-color(database-settings, #1f8fff, #1f8fff);
-    //Connection Strings
-    .make-icon-color(manage-connection-strings, #5f57ff, #5f57ff);
-    //Document Revisions
-    .make-icon-color(revisions, #a766cc, #a766cc);
-    //Client Configuration
-    .make-icon-color(client-configuration, #ff4d8e, #ff4d8e);
-    //Manage database group
     .make-icon-color(topology, #ff756b, #ff756b);
     .make-icon-color(custom-functions, #b881ff, #b881ff);
-    .make-icon-color(storage, #536d7a, #536d7a);
-    .make-icon-color(io-test, #bdbdbd, #bdbdbd);
-    .make-icon-color(index-errors, #e63935, #e63935);
-    .make-icon-color(map-reduce-visualizer, #9f9d26, #9f9d26);
     .make-icon-color(periodic-export, #018390, #018390);
-    .make-icon-color(dashboard, #4fc2f8, #4fc2f8);
-    .make-icon-color(patch, #ffd782, #ffd782);
-    .make-icon-color(conflicts, #ff6e6d, #ff6e6d);
     .make-icon-color(subscriptions, #35f9ff, #35f9ff);
-    .make-icon-color(cluster, #5bbaff, #5bbaff);
-    .make-icon-color(administrator-js-console, #5ed86e, #5ed86e);
-    .make-icon-color(gather-debug-information, #e8e467, #e8e467);
 }
