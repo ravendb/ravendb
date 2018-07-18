@@ -7,13 +7,13 @@ class getCertificatesCommand extends commandBase {
         super();
     }
     
-    execute(): JQueryPromise<{ Certificates: Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>, LoadedServerCert: string }> {
+    execute(): JQueryPromise<{ Certificates: Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>, LoadedServerCert: string, WellKnownCerts: Array<string> }> {
         const args = {
             secondary: this.includeSecondary
         };
         const url = endpoints.global.adminCertificates.adminCertificates + this.urlEncodeArgs(args);
         
-        return this.query(url, null, null, x => ({ Certificates: x.Results, LoadedServerCert: x.LoadedServerCert }))
+        return this.query(url, null, null, x => ({ Certificates: x.Results, LoadedServerCert: x.LoadedServerCert, WellKnownCerts: x.WellKnownCerts }))
             .fail((response: JQueryXHR) => this.reportError("Unable to get list of certificates", response.responseText, response.statusText));
     }
 }
