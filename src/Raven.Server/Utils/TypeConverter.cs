@@ -210,9 +210,9 @@ namespace Raven.Server.Utils
 
                     var objectEnumerable = value as IEnumerable<object>;
                     if (objectEnumerable != null)
-                        items = objectEnumerable.Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
+                        items = Enumerable.Select(objectEnumerable, x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
                     else
-                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
+                        items = Enumerable.Select(enumerable.Cast<object>(), x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
 
                     return new DynamicJsonArray(flattenArrays ? Flatten(items) : items);
                 }
@@ -227,7 +227,7 @@ namespace Raven.Server.Utils
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1)));
+                    inner[property.Key] = new DynamicJsonArray(Enumerable.Select(propertyValueAsEnumerable, x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1)));
                     continue;
                 }
 
