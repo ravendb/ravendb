@@ -43,6 +43,7 @@ class certificates extends viewModelBase {
     serverCertificateThumbprint = ko.observable<string>();
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
     wellKnownCerts = ko.observableArray<string>([]);
+    wellKnowsCertsVisible = ko.observable<boolean>(false);
     
     domainsForServerCertificate = ko.observableArray<string>([]);
     
@@ -113,8 +114,19 @@ class certificates extends viewModelBase {
         this.certificates().forEach(certificate => {
             const nameMatch = !certificate || certificate.Name.toLocaleLowerCase().includes(filter);
             const clearanceMatch = !clearance || certificate.SecurityClearance === clearance;
-            certificate.Visible(nameMatch && clearanceMatch);
+            const thumbprintMatch = !certificate || _.some(certificate.Thumbprints, x => x.toLocaleLowerCase().includes(filter));
+            certificate.Visible((nameMatch || thumbprintMatch) && clearanceMatch);
         });
+        
+        const wellKnownCerts = this.wellKnownCerts();
+        
+        if (wellKnownCerts.length) {
+            const clearanceMatch = !clearance || clearance === "ClusterAdmin";
+            const thumbprintMatch = _.some(wellKnownCerts, x => x.toLocaleLowerCase().includes(filter));
+            this.wellKnowsCertsVisible(thumbprintMatch && clearanceMatch);
+        } else {
+            this.wellKnowsCertsVisible(false);
+        }
     }
     
     private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
@@ -358,9 +370,9 @@ class certificates extends viewModelBase {
                 
                 mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
                 this.updateCache(mergedCertificates);
-                this.certificates(mergedCertificates); 
-                this.filterCertificates();
+                this.certificates(mergedCertificates);
                 this.wellKnownCerts(certificatesInfo.WellKnownCerts || []);
+                this.filterCertificates();
             });
     }
     
