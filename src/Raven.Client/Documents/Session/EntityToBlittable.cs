@@ -2,9 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
@@ -47,7 +45,7 @@ namespace Raven.Client.Documents.Session
             _missingDictionary.TryGetValue(o, out var props);
             return props;
         }
-        
+
         internal static BlittableJsonReaderObject ConvertEntityToBlittable(
             object entity,
             DocumentConventions conventions,
@@ -92,7 +90,7 @@ namespace Raven.Client.Documents.Session
 
             if (changes)
             {
-                using (var old = reader)
+                using (reader)
                 {
                     reader = context.ReadObject(reader, "convert/entityToBlittable");
                 }
@@ -203,6 +201,34 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public void PopulateEntity(object entity, LazyStringValue id, BlittableJsonReaderObject document, JsonSerializer serializer)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+            if (serializer == null)
+                throw new ArgumentNullException(nameof(serializer));
+
+            try
+            {
+                using (var reader = new BlittableJsonReader())
+                {
+                    reader.Init(document);
+
+                    serializer.Populate(reader, entity);
+
+                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not populate entity {id}", ex);
+            }
+        }
+
         private static bool TryRemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConventions conventions)
         {
             var identityProperty = conventions.GetIdentityProperty(entityType);
@@ -223,8 +249,7 @@ namespace Raven.Client.Documents.Session
             {
                 var propertyValue = document[propertyName];
 
-                var propertyArray = propertyValue as BlittableJsonReaderArray;
-                if (propertyArray != null)
+                if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {
                     simplified |= TrySimplifyJson(propertyArray);
                     continue;

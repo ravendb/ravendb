@@ -185,6 +185,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     result.ChangeVector = putResult.Value.ChangeVector;
                     result.Collection = putResult.Value.Collection.Name;
+                    result.LastModified = putResult.Value.LastModified;
                 }
 
                 PatchResult = result;

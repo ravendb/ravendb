@@ -11,6 +11,52 @@ namespace SlowTests.Issues
     public class RavenDB_11552 : RavenTestBase
     {
         [Fact]
+        public void PatchWillUpdateTrackedDocumentAfterSaveChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+
+                    session.Advanced.Patch(company, c => c.Name, "CF");
+
+                    var cv = session.Advanced.GetChangeVectorFor(company);
+                    var lastModified = session.Advanced.GetLastModifiedFor(company);
+
+                    session.SaveChanges();
+
+                    Assert.Equal("CF", company.Name);
+
+                    Assert.NotEqual(cv, session.Advanced.GetChangeVectorFor(company));
+                    Assert.NotEqual(lastModified, session.Advanced.GetLastModifiedFor(company));
+
+                    company.Fax = "123";
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+
+                    Assert.Equal("CF", company.Name);
+                    Assert.Equal("123", company.Fax);
+                }
+            }
+        }
+
+        [Fact]
         public void DeleteWillWork()
         {
             using (var store = GetDocumentStore())
@@ -79,14 +125,16 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    Assert.False(session.Advanced.IsLoaded("companies/1"));
+                    Assert.True(session.Advanced.IsLoaded("companies/1"));
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
-                    company = session.Load<Company>("companies/1");
+                    var company2 = session.Load<Company>("companies/1");
 
-                    Assert.NotNull(company);
+                    Assert.NotNull(company2);
                     Assert.True(session.Advanced.IsLoaded("companies/1"));
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                    Assert.Equal(company, company2);
+                    Assert.Equal("HR2", company2.Name);
                 }
             }
         }

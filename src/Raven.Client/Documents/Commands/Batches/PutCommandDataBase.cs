@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -11,12 +12,20 @@ namespace Raven.Client.Documents.Commands.Batches
             : base(id, changeVector, document)
         {
         }
+
+        public override void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
+        {
+        }
     }
 
     public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
         public PutCommandData(string id, string changeVector, DynamicJsonValue document)
             : base(id, changeVector, document)
+        {
+        }
+
+        public override void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
         {
         }
     }
@@ -49,5 +58,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Type)] = Type.ToString()
             };
         }
+
+        public abstract void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session);
     }
 }

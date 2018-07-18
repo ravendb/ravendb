@@ -795,13 +795,14 @@ more responsive application.
                 // additional values during the same SaveChanges call
                 result.DeferredCommands.AddRange(DeferredCommands);
                 foreach (var item in DeferredCommandsDictionary)
-                {
                     result.DeferredCommandsDictionary[item.Key] = item.Value;
-                }
 
                 DeferredCommands.Clear();
                 DeferredCommandsDictionary.Clear();
             }
+
+            foreach (var deferredCommand in result.DeferredCommands)
+                deferredCommand.OnBeforeSaveChanges(this);
 
             return result;
         }
@@ -1336,7 +1337,7 @@ more responsive application.
             }
             else
             {
-                RegisterCountersInternal(resultCounters, countersToInclude: null, fromQueryResult : false, gotAll : gotAll);
+                RegisterCountersInternal(resultCounters, countersToInclude: null, fromQueryResult: false, gotAll: gotAll);
             }
 
             RegisterMissingCounters(ids, countersToInclude);
