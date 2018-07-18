@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -41,6 +42,10 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString()
             };
+        }
+
+        public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
+        {
         }
     }
 }

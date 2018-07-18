@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -195,6 +196,12 @@ namespace Raven.Client.Documents.Session.Operations
 
             documentInfo.MetadataInstance = null;
             documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
+            documentInfo.Document.Modifications = null;
+            documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+            {
+                [Constants.Documents.Metadata.Key] = documentInfo.Metadata
+            };
+            documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
         }
 
         private void HandlePatch(BlittableJsonReaderObject batchResult)
@@ -209,7 +216,39 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 case PatchStatus.Created:
                 case PatchStatus.Patched:
-                    HandleDeleteInternal(batchResult, CommandType.PATCH); // deleting because it is impossible to know what was in the patch
+                    if (batchResult.TryGet(nameof(PatchResult.ModifiedDocument), out BlittableJsonReaderObject document) == false)
+                        return;
+
+                    var id = GetLazyStringField(batchResult, CommandType.PATCH, nameof(ICommandData.Id));
+
+                    if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+                        return;
+
+                    var changeVector = GetLazyStringField(batchResult, CommandType.PUT, nameof(Constants.Documents.Metadata.ChangeVector));
+                    var lastModified = GetLazyStringField(batchResult, CommandType.PUT, nameof(Constants.Documents.Metadata.LastModified));
+
+                    documentInfo.ChangeVector = changeVector;
+
+                    documentInfo.Metadata.Modifications = null;
+                    documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata)
+                    {
+                        [Constants.Documents.Metadata.Id] = id,
+                        [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                        [Constants.Documents.Metadata.LastModified] = lastModified
+                    };
+
+                    documentInfo.MetadataInstance = null;
+                    documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
+                    documentInfo.Document = document;
+                    documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+                    {
+                        [Constants.Documents.Metadata.Key] = documentInfo.Metadata
+                    };
+                    documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
+
+                    if (documentInfo.Entity != null)
+                        _session.EntityToBlittable.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
+
                     break;
             }
         }

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
@@ -58,6 +59,8 @@ namespace Raven.Client.Documents.Operations
         /// Additional debugging information (if requested).
         /// </summary>
         public BlittableJsonReaderObject Debug { get; set; }
+
+        public DateTime LastModified;
 
         public string ChangeVector;
 

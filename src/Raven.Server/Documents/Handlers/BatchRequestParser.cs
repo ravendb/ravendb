@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.Handlers
             public bool IdPrefixed;
             public long Index;
             public bool FromEtl;
+            public bool ReturnDocument;
 
             public PatchDocumentCommand PatchCommand;
 
@@ -465,6 +466,17 @@ namespace Raven.Server.Documents.Handlers
 
                         commandData.IdPrefixed = state.CurrentTokenType == JsonParserToken.True;
                         break;
+                    case CommandPropertyName.ReturnDocument:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.ReturnDocument = state.CurrentTokenType == JsonParserToken.True;
+                        break;
                     case CommandPropertyName.Counters:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -615,6 +627,7 @@ namespace Raven.Server.Documents.Handlers
             PatchIfMissing,
             IdPrefixed,
             Index,
+            ReturnDocument,
 
             #region Attachment
 
@@ -670,12 +683,17 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.Index;
                     return CommandPropertyName.NoSuchProperty;
                 case 14:
-                    if (*(int*)state.StringBuffer != 1668571472 ||
-                        *(long*)(state.StringBuffer + 4) != 7598543892411468136 ||
-                        *(short*)(state.StringBuffer + 12) != 26478)
-                        return CommandPropertyName.NoSuchProperty;
-                    return CommandPropertyName.PatchIfMissing;
+                    if (*(int*)state.StringBuffer == 1668571472 ||
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 ||
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
+                        return CommandPropertyName.PatchIfMissing;
 
+                    if (*(int*)state.StringBuffer == 1970562386 ||
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 ||
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
+                        return CommandPropertyName.ReturnDocument;
+
+                    return CommandPropertyName.NoSuchProperty;
                 case 10:
                     if (*(long*)state.StringBuffer == 8676578743001572425 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 25701)

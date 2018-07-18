@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -80,6 +81,10 @@ namespace Raven.Client.Documents.Commands.Batches
                 result[nameof(FromEtl)] = FromEtl;
 
             return result;
+        }
+
+        public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
+        {
         }
     }
 }

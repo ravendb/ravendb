@@ -687,14 +687,20 @@ namespace Raven.Server.Documents.Handlers
                             if (patchResult.Collection != null)
                                 ModifiedCollections?.Add(patchResult.Collection);
 
-                            Reply.Add(new DynamicJsonValue
+                            var patchReply = new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
+                                [nameof(Constants.Documents.Metadata.LastModified)] = patchResult.LastModified,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.PATCH),
                                 [nameof(PatchStatus)] = patchResult.Status,
                                 [nameof(PatchResult.Debug)] = patchResult.Debug
-                            });
+                            };
+
+                            if (cmd.ReturnDocument)
+                                patchReply[nameof(PatchResult.ModifiedDocument)] = patchResult.ModifiedDocument;
+
+                            Reply.Add(patchReply);
                             break;
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
