@@ -11,8 +11,16 @@
                         <span>Refresh</span>
                     </button>
                 </div>
+                <div>
+                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
+                </div>
                 <div data-bind="visible: !noLeader()">Term: <span data-bind="text: topology().currentTerm().toLocaleString()"></span></div>
                 <div class="flex-separator"></div>
+                <div>
+                    <button class="btn btn-default" data-bind="click: exportToFile">
+                        <i class="icon-export"></i><span>Export</span>
+                    </button>
+                </div>
                 <div data-bind="visible: !noLeader()">
                     <button class="btn btn-default" title="Cluster observer won't be making any decisions"
                             data-bind="click: suspendObserver, visible: !$root.observerSuspended(), enable: !spinners.toggleObserver(), css: { 'btn-spinner': spinners.toggleObserver() }">
