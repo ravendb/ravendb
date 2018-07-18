@@ -209,6 +209,15 @@ class rqlTestUtils {
                                     "P2": "String"
                                 });
                                 break;
+                            case "Lines":
+                                callback({
+                                    "Discount": "Number",
+                                    "PricePerUnit": "Number",
+                                    "Product": "String",
+                                    "ProductName": "String",
+                                    "Quantity": "Number"
+                                });
+                                break;
                             default:
                                 callback({
                                     "Company": "String",

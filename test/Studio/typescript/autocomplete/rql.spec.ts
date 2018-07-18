@@ -778,6 +778,26 @@ select ShipTo.Location.NestedObject.|`, northwindProvider(), (errors, wordlist, 
         });
     });
 
+    it('from Collection select nested fields of array | without sapce should list fields with the Lines[]. field prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select Lines[].|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, [
+                {caption: "Discount", value: "Discount ", score: 105, meta: "number field"},
+                {caption: "PricePerUnit", value: "PricePerUnit ", score: 104, meta: "number field"},
+                {caption: "Product", value: "Product ", score: 103, meta: "string field"},
+                {caption: "ProductName", value: "ProductName ", score: 102, meta: "string field"},
+                {caption: "Quantity", value: "Quantity ", score: 101, meta: "number field"}
+            ]);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["Lines"]);
+
+            done();
+        });
+    });
+
     it('from Collection select nested field | after should list as keyword and next keywords', done => {
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {

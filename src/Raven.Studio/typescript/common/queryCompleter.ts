@@ -130,8 +130,13 @@ class queryCompleter {
                     asSpecified = false;
                     break;
                 }
+                case "field":
+                    identifier = token.value.split('.').pop();
+                    handleAfterNextToken = true;
+                    break;
                 case "string":
-                case "identifier": {
+                case "identifier":
+                case "text": {
                     identifier = token.value;
 
                     if (token.type === "string") {
@@ -165,7 +170,8 @@ class queryCompleter {
         let prefixSpecified = false;
         let prefixToSend: string;
         if (lastKeyword.fieldPrefix) {
-            key += lastKeyword.fieldPrefix.join(".");
+            prefixToSend = lastKeyword.fieldPrefix.join(".");
+            key += prefixToSend;
             prefixSpecified = true;
 
             if (lastKeyword.info.aliases) {
@@ -174,10 +180,6 @@ class queryCompleter {
                 if (lastKeyword.info.aliases[alias]) {
                     lastKeyword.fieldPrefix.splice(last, 1);
                 }
-            }
-
-            if (lastKeyword.fieldPrefix.length > 0) {
-                prefixToSend = lastKeyword.fieldPrefix.reverse().join(".");
             }
         }
         
@@ -258,7 +260,6 @@ class queryCompleter {
         };
     
         let liveAutoCompleteSkippedTriggerToken = false;
-        let isFieldPrefixMode = 0;
         let isBeforeComma = false;
         let isBeforeBinaryOperation = false;
         let afterCommaDividersCount = 0;
@@ -287,16 +288,9 @@ class queryCompleter {
                 if (token.type === "identifier") {
                     lastToken = token;
                     continue;
-                } else if (token.type === "text") {
-                    const firstToken = token.value.trim();
-                    if (firstToken !== "" && firstToken !== "," && firstToken !== "." && firstToken !== "[].") {
-                        lastToken = token;
-                        continue;
-                    }
                 }
             }
             
-            console.debug(token.type + ": " + token.value);
             switch (token.type) {
                 case "keyword.clause":
                     const keyword = token.value.toLowerCase();
@@ -338,10 +332,21 @@ class queryCompleter {
                 case "identifier":
                 case "identifier.whereFunction":
                     if (!isBeforeComma && !isBeforeBinaryOperation) {
-                        if (isFieldPrefixMode === 1) {
-                            result.fieldPrefix.push(token.value);
-                        } else if(!result.fieldName) {
+                        if (!result.fieldName) {
                             result.fieldName = token.value;
+                        }
+                    }
+                    break;
+                case "field":
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
+                        const text = token.value;
+                        let fieldPrefix = text
+                            .split(".")
+                            .map(field => field.endsWith("[]") ? field.substring(0, field.length - 2) : field);
+
+                        result.fieldName = fieldPrefix.pop();
+                        if (fieldPrefix.length > 0){
+                            result.fieldPrefix = fieldPrefix;
                         }
                     }
                     break;
@@ -393,20 +398,7 @@ class queryCompleter {
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
                         }
-
-                        if (isFieldPrefixMode === 1) {
-                            isFieldPrefixMode = 2;
-                        }
                     }
-                    break;
-                case "text":
-                     if (!isBeforeComma && !isBeforeBinaryOperation) {
-                         const text = token.value;
-                         if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) { // TODO: Intorudce regex rule for fieldPrefix /(?:.|[].)/
-                             isFieldPrefixMode = 1;
-                             result.fieldPrefix = [];
-                         }
-                     }
                     break;
                 case "comma":
                     if (!isBeforeComma && !isBeforeBinaryOperation) {
@@ -491,8 +483,6 @@ class queryCompleter {
              pos: AceAjax.Position,
              prefix: string,
              callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
-
-        console.group("complete");
 
         this.session = session;
         this.callback = callback;
