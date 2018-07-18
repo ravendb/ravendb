@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                             else
                             {
-                                value = TypeConverter.ToBlittableSupportedType(val);
+                                value = TypeConverter.ToBlittableSupportedType(val,false, indexContext, documentToProcess.Engine);
                                 newFields += GetRegularFields(instance, field, value, indexContext);
                                 continue;
                             }
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         }
                     }
 
-                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value);
+                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, false, indexContext, documentToProcess.Engine);
                     newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
                 }                                
             }
