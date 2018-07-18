@@ -47,7 +47,7 @@
                         </div>
                     </div>
                     <div class="query-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
+                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': isLoading }">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
