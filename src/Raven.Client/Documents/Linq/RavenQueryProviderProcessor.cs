@@ -559,9 +559,13 @@ namespace Raven.Client.Documents.Linq
             selectPath = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(selectPath);
 
             var indexOf = selectPath.IndexOf('.');
-            var parameter = selectPath.Substring(0, indexOf);
+            string alias = null;
+            if (indexOf != -1)
+            {
+                alias = selectPath.Substring(0, indexOf);
+                selectPath = selectPath.Substring(indexOf + 1);
+            }
 
-            selectPath = selectPath.Substring(indexOf + 1);
             selectPath = CastingRemover.Replace(selectPath, string.Empty); // removing cast remains
 
             if (type == ExpressionType.ArrayLength)
@@ -575,20 +579,18 @@ namespace Raven.Client.Documents.Linq
                 : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
                     selectPath);
 
-            return NeedToRemoveAlias(parameter)
-                ? propertyName
-                : $"{parameter}.{propertyName}";
+            return AddAliasToPathIfNeeded(alias, propertyName);
         }
 
-        private bool NeedToRemoveAlias(string parameter)
+        private string AddAliasToPathIfNeeded(string alias, string prop)
         {
-            if (parameter == null ||
-                parameter == _fromAlias ||
-                _loadTokens != null &&
-                _loadTokens.Select(lt => lt.Alias).Contains(parameter))
-                return false;
+            if (alias != null &&
+                (alias == _fromAlias ||
+                 _loadTokens != null &&
+                 _loadTokens.Select(lt => lt.Alias).Contains(alias)))
+                return $"{alias}.{prop}";
 
-            return true;
+            return prop;
         }
 
         private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
