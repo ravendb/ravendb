@@ -96,6 +96,11 @@ class databaseSwitcher {
     }
 
     private shouldConsumeHideEvent(e: Event) {
+        if ($(e.target).parents(".resources-link").length) {
+            e.stopPropagation();
+            return true;
+        }
+        
         return $(e.target).parents(".database-switcher-container").length === 0
             && !$(e.target).hasClass(".database-switcher");
     }
