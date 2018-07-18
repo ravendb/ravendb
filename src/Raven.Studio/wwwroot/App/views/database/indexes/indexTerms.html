@@ -18,7 +18,7 @@
             
 
             <div class="collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
-                <div class="field-terms">
+                <div class="field-terms" data-bind="css: { 'no-entries': !terms().length }">
                     <h3 class="text-center" data-bind="visible: !terms().length"><i class="icon-empty-set"></i><span>No entries were found.</span></h3>
                     <ul class="terms-list" data-bind="visible: terms().length">
                         <!-- ko foreach: terms -->
