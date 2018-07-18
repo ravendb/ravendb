@@ -65,12 +65,12 @@
                     </ul>
                 </div>
                 
-                <div data-bind="visible: detailsGraph.viewActive">
-                    <button data-bind="click: detailsGraph.goToMasterView, if: detailsGraph.viewActive" class="btn btn-default btn-sm">
+                <div data-bind="visible: detailsGraph.viewActive" class="flex-horizontal">
+                    <button data-bind="click: detailsGraph.goToMasterView, if: detailsGraph.viewActive" class="btn btn-default margin-right">
                         <i class="icon-arrow-left"></i> <span>Back</span>
                     </button>
 
-                    <span data-bind="if: detailsGraph.currentTree">Reduce tree for key: <span data-bind="text: detailsGraph.currentTree().displayName"></span></span>
+                    <div data-bind="if: detailsGraph.currentTree">Reduce tree for key: <code class="margin-left margin-sm" data-bind="text: detailsGraph.currentTree().displayName"></code></div>
                 </div>
 
             </div>
