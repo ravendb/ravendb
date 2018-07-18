@@ -1405,7 +1405,11 @@ namespace Raven.Client.Http
         private static void ThrowNameMismatchException(object sender, X509Certificate cert)
         {
             var hostname = ((HttpRequestMessage)sender).RequestUri.DnsSafeHost;
+#if NETSTANDARD1_3
             var cert2 = new X509Certificate2(cert.Handle);
+#else
+            var cert2 = new X509Certificate2(cert);
+#endif 
             var cn = cert2.Subject;
             var san = new List<string>();
 
