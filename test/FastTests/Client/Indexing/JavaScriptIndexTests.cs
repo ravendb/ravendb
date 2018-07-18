@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -488,7 +489,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new User{Name = "Foo", Address = address });
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    var user = session.Query<User>("Users/ByAddress").Single(u => u.Address.ToString() == addressStr);
+                    var user = session.Query<User>("Users/ByAddress").Single(u => u.Address == address);
                     Assert.Equal("Foo", user.Name);
                 }
             }

@@ -13,6 +13,7 @@ using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;
@@ -133,12 +134,12 @@ namespace Raven.Server.Utils
             return hasProperties & isSupported;
         }
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, JsonOperationContext context = null, Engine scriptEngin = null)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, 0);
+            return ToBlittableSupportedType(value, value, flattenArrays, 0, context, scriptEngin);
         }
 
-        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel)
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel, JsonOperationContext context = null, Engine scriptEngin = null)
         {
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
             {
@@ -151,7 +152,7 @@ namespace Raven.Server.Utils
                 if (js.IsString())
                     return js.AsString();
                 if (js.IsBoolean())
-                    return js.AsBoolean().ToString(); // avoid boxing the boolean
+                    return js.AsBoolean();
                 if (js.IsNumber())
                     return js.AsNumber();
                 if (js.IsDate())
@@ -175,11 +176,11 @@ namespace Raven.Server.Utils
                 else if (js.IsArray())
                 {
                     var arr = js.AsArray();
-                    return EnumerateArray(arr);
+                    return new DynamicJsonArray(flattenArrays ? Flatten(EnumerateArray(arr)) : EnumerateArray(arr));
                 }
                 else if (js.IsObject())
                 {
-                    return JavaScriptIndexUtils.StringifyObject(js);
+                    return JsBlittableBridge.Translate(context, scriptEngin, js.AsObject());
                 }
                 ThrowInvalidObject(js);
                 return null;
@@ -278,9 +279,9 @@ namespace Raven.Server.Utils
             throw new InvalidOperationException("Invalid type " + jsValue);
         }
 
-        private static IEnumerable EnumerateArray(ArrayInstance arr)
+        private static IEnumerable<object> EnumerateArray(ArrayInstance arr)
         {
-            foreach ((var key, var val) in arr.GetOwnProperties())
+            foreach (var (key, val) in arr.GetOwnProperties())
             {
                 if (key == "length")
                     continue;
