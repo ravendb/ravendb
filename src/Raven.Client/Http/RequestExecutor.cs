@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Runtime.ExceptionServices;
 using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -1402,7 +1403,12 @@ namespace Raven.Client.Http
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
             if (onServerCertificateCustomValidationCallback == null ||
                 onServerCertificateCustomValidationCallback.Length == 0)
+            {
+                if (errors == SslPolicyErrors.RemoteCertificateNameMismatch)
+                    ThrowNameMismatchException(sender, cert);
+
                 return errors == SslPolicyErrors.None;
+            }
 
             for (var i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
             {
@@ -1411,6 +1417,25 @@ namespace Raven.Client.Http
                     return true;
             }
             return false;
+        }
+
+        private static void ThrowNameMismatchException(object sender, X509Certificate cert)
+        {
+            const string sanOid = "2.5.29.17";
+            var hostname = ((HttpRequestMessage)sender).RequestUri.DnsSafeHost;
+            var cert2 = new X509Certificate2(cert);
+            var cn = cert2.Subject;
+            var san = new List<string>();
+
+            foreach (X509Extension extension in cert2.Extensions)
+            {
+                if (extension.Oid.Value.Equals(sanOid) == false)
+                    continue;
+                var asnData = new AsnEncodedData(extension.Oid, extension.RawData);
+                san.Add(asnData.Format(false));
+            }
+
+            throw new NameMismatchException($"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
         }
 
         public class NodeStatus : IDisposable
