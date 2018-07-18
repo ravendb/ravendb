@@ -515,6 +515,8 @@ namespace Raven.Server.Web.Authentication
                         }
                     }
 
+                    var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
+
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
@@ -525,6 +527,8 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteComma();
                         writer.WritePropertyName("LoadedServerCert");
                         writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
+                        writer.WriteComma();
+                        writer.WriteArray("WellKnownCerts", wellKnown);
                         writer.WriteEndObject();
                     }
                 }
@@ -554,35 +558,53 @@ namespace Raven.Server.Web.Authentication
                 BlittableJsonReaderObject certificate;
                 using (ctx.OpenReadTransaction())
                     certificate = ServerStore.Cluster.Read(ctx, Constants.Certificates.Prefix + clientCert.Thumbprint);
-                
-                if (certificate == null && clientCert.Equals(Server.Certificate.Certificate))
+
+
+                if (certificate == null)
                 {
-                    var certKey = Constants.Certificates.Prefix + clientCert.Thumbprint;
-                    using (ctx.OpenReadTransaction())
-                        certificate = ServerStore.Cluster.Read(ctx, certKey) ??
-                                  ServerStore.Cluster.GetLocalState(ctx, certKey);
+                    var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
 
-                    if (certificate == null && Server.Certificate.Certificate != null)
+                    if (clientCert.Equals(Server.Certificate.Certificate))
                     {
-                        // Since we didn't go through EnsureNotPassive(), the server certificate is not registered yet so we'll add it to the local state.
-                        var serverCertDef = new CertificateDefinition
-                        {
-                            Name = "Server Certificate",
-                            Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
-                            Permissions = new Dictionary<string, DatabaseAccess>(),
-                            SecurityClearance = SecurityClearance.ClusterNode,
-                            Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                            NotAfter = Server.Certificate.Certificate.NotAfter
-                        };
+                        var certKey = Constants.Certificates.Prefix + clientCert.Thumbprint;
+                        using (ctx.OpenReadTransaction())
+                            certificate = ServerStore.Cluster.Read(ctx, certKey) ??
+                                          ServerStore.Cluster.GetLocalState(ctx, certKey);
 
-                        certificate = ctx.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
-                        using (var tx = ctx.OpenWriteTransaction())
+                        if (certificate == null && Server.Certificate.Certificate != null)
                         {
-                            ServerStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + Server.Certificate.Certificate.Thumbprint, certificate);
-                            tx.Commit();
+                            // Since we didn't go through EnsureNotPassive(), the server certificate is not registered yet so we'll add it to the local state.
+                            var serverCertDef = new CertificateDefinition
+                            {
+                                Name = "Server Certificate",
+                                Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
+                                Permissions = new Dictionary<string, DatabaseAccess>(),
+                                SecurityClearance = SecurityClearance.ClusterNode,
+                                Thumbprint = Server.Certificate.Certificate.Thumbprint,
+                                NotAfter = Server.Certificate.Certificate.NotAfter
+                            };
+
+                            certificate = ctx.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
+                            using (var tx = ctx.OpenWriteTransaction())
+                            {
+                                ServerStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + Server.Certificate.Certificate.Thumbprint, certificate);
+                                tx.Commit();
+                            }
                         }
                     }
+                    else if (wellKnown != null && wellKnown.Contains(clientCert.Thumbprint, StringComparer.OrdinalIgnoreCase))
+                    {
+                        var serverCertDef = new CertificateDefinition
+                        {
+                            Name = "Well Known Certificate",
+                            Permissions = new Dictionary<string, DatabaseAccess>(),
+                            SecurityClearance = SecurityClearance.ClusterAdmin,
+                            Thumbprint = clientCert.Thumbprint,
+                        };
+                        certificate = ctx.ReadObject(serverCertDef.ToJson(), "WellKnown/Certificate/Definition");
+                    }
                 }
+
                 using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
                 {
                     writer.WriteObject(certificate);
