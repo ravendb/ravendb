@@ -71,6 +71,7 @@ namespace Raven.Embedded
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 UseShellExecute = false
             };
 
