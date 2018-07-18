@@ -528,7 +528,7 @@ namespace Raven.Server.Web.Authentication
                         writer.WritePropertyName("LoadedServerCert");
                         writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
                         writer.WriteComma();
-                        writer.WriteArray("WellKnownCerts", wellKnown);
+                        writer.WriteArray("WellKnownAdminCerts", wellKnown);
                         writer.WriteEndObject();
                     }
                 }
@@ -596,7 +596,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         var serverCertDef = new CertificateDefinition
                         {
-                            Name = "Well Known Certificate",
+                            Name = "Well Known Admin Certificate",
                             Permissions = new Dictionary<string, DatabaseAccess>(),
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = clientCert.Thumbprint,
