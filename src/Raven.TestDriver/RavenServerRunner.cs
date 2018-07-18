@@ -73,6 +73,7 @@ namespace Raven.TestDriver
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
+                    RedirectStandardInput = true,
                     UseShellExecute = false,
                 };
             }
