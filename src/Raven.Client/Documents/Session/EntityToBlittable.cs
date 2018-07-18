@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Session
 
             if (changes)
             {
-                using (reader)
+                using (var old = reader)
                 {
                     reader = context.ReadObject(reader, "convert/entityToBlittable");
                 }
@@ -201,7 +201,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public void PopulateEntity(object entity, LazyStringValue id, BlittableJsonReaderObject document, JsonSerializer serializer)
+        internal void PopulateEntity(object entity, LazyStringValue id, BlittableJsonReaderObject document, JsonSerializer serializer)
         {
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));

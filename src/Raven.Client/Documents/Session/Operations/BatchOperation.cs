@@ -71,19 +71,42 @@ namespace Raven.Client.Documents.Session.Operations
                         $"Cluster transaction was send to a node that is not supporting it. So it was executed ONLY on the requested node on {_session.RequestExecutor.Url}.");
             }
 
-            for (var i = 0; i < _allCommandsCount; i++)
+            for (var i = 0; i < _sessionCommandsCount; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
                 if (batchResult == null)
                     continue;
 
-                var isDeferred = i >= _sessionCommandsCount;
                 var type = GetCommandType(batchResult);
 
                 switch (type)
                 {
                     case CommandType.PUT:
-                        HandlePut(i, batchResult, isDeferred);
+                        HandlePut(i, batchResult, isDeferred: false);
+                        break;
+                    case CommandType.DELETE:
+                        HandleDelete(batchResult);
+                        break;
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        break;
+                    default:
+                        throw new NotSupportedException($"Command '{type}' is not supported.");
+                }
+            }
+
+            for (var i = _sessionCommandsCount; i < _allCommandsCount; i++)
+            {
+                var batchResult = result.Results[i] as BlittableJsonReaderObject;
+                if (batchResult == null)
+                    continue;
+
+                var type = GetCommandType(batchResult);
+
+                switch (type)
+                {
+                    case CommandType.PUT:
+                        HandlePut(i, batchResult, isDeferred: true);
                         break;
                     case CommandType.DELETE:
                         HandleDelete(batchResult);
