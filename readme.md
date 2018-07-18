@@ -32,7 +32,8 @@ Requirements:
 - [Gulp](https://github.com/gulpjs/gulp/blob/master/docs/getting-started.md)
 - [WiX Toolset 3.7 or higher](http://wixtoolset.org/releases/)
 
-The easiest way to build is to execute `build.cmd` or `quick.ps1`. Just ensure that you can execute PowerShell scripts, if you can't then you might want to execute `Set-ExecutionPolicy Unrestricted` in PowerShell as an Administrator.
+
+Executing `build.cmd` or `quick.ps1` is a way to build. If you cannot execute PowerShell scripts, you will execute `Set-ExecutionPolicy Unrestricted` in PowerShell as an Administrator.
 
 Want to contribute?
 -------------------
