@@ -49,7 +49,7 @@ namespace Sparrow
             public int GetGrowthSize(long allocated, long used)
             {
                 // Always multiply by 2
-                return (int)allocated * 2;
+                return (int)used * 2;
             }
         }
 
@@ -64,7 +64,7 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetGrowthSize(long allocated, long used)
             {
-                return Bits.NextPowerOf2((int)allocated + 1);              
+                return Bits.NextPowerOf2((int)used + 1);              
             }
         }
 
@@ -162,7 +162,7 @@ namespace Sparrow
             allocator._ptrStart = (byte*)newBuffer.Ptr;
             allocator._ptrCurrent = (byte*)newBuffer.Ptr;
 
-            allocator._allocated += newSize;
+            allocator._allocated = newSize;
             allocator._used = 0;            
         }
 
@@ -202,6 +202,7 @@ namespace Sparrow
         public void Initialize(ref ArenaAllocator<TOptions> allocator)
         {
             allocator._nativeAllocator.Initialize(ref allocator._nativeAllocator);
+            allocator.Renew(ref allocator);
         }
 
         public void Reset(ref ArenaAllocator<TOptions> allocator)

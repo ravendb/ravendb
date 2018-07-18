@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Global;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -215,6 +216,107 @@ namespace FastTests.Sparrow
 
             Assert.Equal(pointerAddress, (long)ptr.Ptr);
         }
+
+
+        public struct FixedSize : IArenaAllocatorOptions
+        {
+            private struct Internal : IArenaGrowthStrategy
+            {
+                public int GetPreferredSize(long allocated, long used)
+                {
+                    return 10 * Constants.Size.Kilobyte;
+                }
+
+                public int GetGrowthSize(long allocated, long used)
+                {
+                    return 10 * Constants.Size.Kilobyte;
+                }
+            }
+
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            // TODO: Check if this call gets devirtualized. 
+            public IArenaGrowthStrategy GrowthStrategy => default(Internal);
+            public int InitialArenaSize => 1 * Constants.Size.Megabyte;
+            public int MaxArenaSize => 64 * Constants.Size.Megabyte;
+        }
+
+        [Fact]
+        public void Alloc_ArenaReturnBlockBytes()
+        {
+            var allocator = new Allocator<ArenaAllocator<FixedSize>>();
+            allocator.Initialize(default(FixedSize));
+
+            int size = 1000;
+
+            long[] addresses = new long[5];
+            var pointers = new Pointer[5];
+            for (int i = 0; i < 5; i++)
+            {
+                var ptr = allocator.Allocate(size);
+                Assert.Equal(size, ptr.Size);
+                Assert.True(ptr.IsValid);
+
+                pointers[i] = ptr;
+                addresses[i] = (long)ptr.Ptr;
+            }
+
+            for (int i = 4; i >= 0; i--)
+            {
+                allocator.Release(ref pointers[i]);
+                Assert.False(pointers[i].IsValid);
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var ptr = allocator.Allocate(size);
+                Assert.Contains((long)ptr.Ptr, addresses);
+            }
+
+            var nonReusedPtr = allocator.Allocate(size);
+            Assert.Equal(size, nonReusedPtr.Size);
+            Assert.True(nonReusedPtr.IsValid);
+            // Cannot check for actual different addresses because the memory system may return it back to us again. 
+        }
+
+        [Fact]
+        public void Alloc_ArenaGrowMultiple()
+        {
+            var allocator = new Allocator<ArenaAllocator<FixedSize>>();
+            allocator.Initialize(default(FixedSize));
+
+            int size = 9000;
+            Pointer ptr;
+
+            int length = 10;
+
+            long[] addresses = new long[length];
+            var pointers = new Pointer[length];
+            for (int i = 0; i < length; i++)
+            {
+                ptr = allocator.Allocate(size);
+                Assert.Equal(size, ptr.Size);
+                Assert.True(ptr.IsValid);
+
+                pointers[i] = ptr;
+                addresses[i] = (long)ptr.Ptr;
+            }
+
+            for (int i = length - 1; i >= 0; i--)
+            {
+                allocator.Release(ref pointers[i]);
+                Assert.False(pointers[i].IsValid);
+            }
+
+            allocator.Reset();
+
+            ptr = allocator.Allocate(size);
+            Assert.Equal(size, ptr.Size);
+            Assert.True(ptr.IsValid);
+        }
+
 
         [Fact]
         public void Alloc_ThreadAffinePoolReturnBlockBytes()
