@@ -42,8 +42,8 @@ class certificates extends viewModelBase {
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     serverCertificateThumbprint = ko.observable<string>();
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
-    wellKnownCerts = ko.observableArray<string>([]);
-    wellKnowsCertsVisible = ko.observable<boolean>(false);
+    wellKnownAdminCerts = ko.observableArray<string>([]);
+    wellKnownAdminCertsVisible = ko.observable<boolean>(false);
     
     domainsForServerCertificate = ko.observableArray<string>([]);
     
@@ -118,14 +118,14 @@ class certificates extends viewModelBase {
             certificate.Visible((nameMatch || thumbprintMatch) && clearanceMatch);
         });
         
-        const wellKnownCerts = this.wellKnownCerts();
+        const wellKnownAdminCerts = this.wellKnownAdminCerts();
         
-        if (wellKnownCerts.length) {
+        if (wellKnownAdminCerts.length) {
             const clearanceMatch = !clearance || clearance === "ClusterAdmin";
-            const thumbprintMatch = _.some(wellKnownCerts, x => x.toLocaleLowerCase().includes(filter));
-            this.wellKnowsCertsVisible(thumbprintMatch && clearanceMatch);
+            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(filter));
+            this.wellKnownAdminCertsVisible(thumbprintMatch && clearanceMatch);
         } else {
-            this.wellKnowsCertsVisible(false);
+            this.wellKnownAdminCertsVisible(false);
         }
     }
     
@@ -371,7 +371,7 @@ class certificates extends viewModelBase {
                 mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
                 this.updateCache(mergedCertificates);
                 this.certificates(mergedCertificates);
-                this.wellKnownCerts(certificatesInfo.WellKnownCerts || []);
+                this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
                 this.filterCertificates();
             });
     }
