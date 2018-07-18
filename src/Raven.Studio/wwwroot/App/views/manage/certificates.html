@@ -53,7 +53,37 @@
     </div>
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">
-            <div class="scroll flex-grow" data-bind="foreach: certificates">
+            <div class="scroll flex-grow">
+                <div class="panel panel-info certificate-item" data-bind="visible: wellKnownCerts().length">
+                    <div class="padding padding-sm flex-horizontal">
+                        <div class="certificate-name">
+                            <div class="flex-horizontal">
+                                <div>
+                                    <i class="icon-certificate"></i>    
+                                </div>
+                                <div>
+                                    <h3 class="no-margin">Well known admin certificates defined by system administrator</h3>    
+                                </div>
+                            </div>
+                            <div class="thumbprint" title="Certificates thumbprints" data-bind="foreach: wellKnownCerts">
+                                <span data-bind="text: $data"></span> <br />
+                            </div>
+                        </div>
+                        <div class="flex-grow"></div>
+                    </div>
+                    <div class="panel-addon">
+                        <div class="padding padding-sm flex-horizontal">
+                            <div class="margin-right clearance"><i class="icon-clearance"></i><span data-bind="text: $root.clearanceLabelFor('ClusterAdmin')"></span></div>
+                            <div class="flex-horizontal">
+                                <div><i class="icon-database"></i></div>
+                                <div class="flex-horizontal flex-wrap">
+                                    <div>All</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ko foreach: certificates -->
                 <div class="panel certificate-item">
                     <div class="padding padding-sm flex-horizontal">
                         <div class="certificate-name">
@@ -105,6 +135,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- /ko -->
             </div>
         </div>
         <div class="col-sm-12 col-lg-5 flex-vertical" data-bind="with: model">
