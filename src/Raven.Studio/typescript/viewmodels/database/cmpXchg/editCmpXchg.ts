@@ -305,6 +305,7 @@ class editCmpXchg extends viewModelBase {
     
     private onDeleteCompleted(success: boolean) {
         if (success) {
+            this.dirtyFlag().reset();
             router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
         } else {
             this.displayExternalChange(true);
