@@ -10,7 +10,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/query/query',
             title: 'Query',
             nav: true,
-            css: 'icon-query',
+            css: 'icon-indexes-query',
             dynamicHash: appUrls.query('')
         }),
         new leafMenuItem({

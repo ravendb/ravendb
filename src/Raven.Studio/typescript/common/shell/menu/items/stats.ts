@@ -38,7 +38,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/replicationStats',
             title: 'Replication Stats',
             nav: true,
-            css: 'icon-revisions',
+            css: 'icon-replication-stats',
             dynamicHash: appUrls.replicationStats
         }),
         /* TODO
