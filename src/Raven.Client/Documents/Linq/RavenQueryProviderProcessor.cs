@@ -534,21 +534,50 @@ namespace Raven.Client.Documents.Linq
             var convertMatch = ConvertRemover.Match(result.Path);
             if (convertMatch.Success)
                 result.Path = result.Path.Replace(convertMatch.Groups[1].Value, convertMatch.Groups[2].Value);
-            result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
-            result.Path = CastingRemover.Replace(result.Path, string.Empty); // removing cast remains
 
-            if (expression.NodeType == ExpressionType.ArrayLength)
-                result.Path += ".Length";
+            var propertyName = GetPropertyName(result.Path, expression.NodeType);
 
-            var propertyName = IndexName == null && _collectionName != null
-                                   ? QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
-                                                                                                result.Path)
-                                   : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
-                                                                                         result.Path);
             return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath)
             {
                 MaybeProperty = result.MaybeProperty
             };
+        }
+
+        private string GetPropertyName(string selectPath, ExpressionType type)
+        {
+            selectPath = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(selectPath);
+
+            var indexOf = selectPath.IndexOf('.');
+            var parameter = selectPath.Substring(0, indexOf);
+
+            selectPath = selectPath.Substring(indexOf + 1);
+            selectPath = CastingRemover.Replace(selectPath, string.Empty); // removing cast remains
+
+            if (type == ExpressionType.ArrayLength)
+            {
+                selectPath += ".Length";
+            }
+
+            var propertyName = IndexName == null && _collectionName != null
+                ? QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
+                    selectPath)
+                : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                    selectPath);
+
+            return NeedToRemoveAlias(parameter)
+                ? propertyName
+                : $"{parameter}.{propertyName}";
+        }
+
+        private bool NeedToRemoveAlias(string parameter)
+        {
+            if (parameter == null ||
+                parameter == _fromAlias ||
+                _loadTokens != null &&
+                _loadTokens.Select(lt => lt.Alias).Contains(parameter))
+                return false;
+
+            return true;
         }
 
         private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
@@ -1867,9 +1896,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
-                    var selectPath = RemoveTransparentIdentifiersIfNeeded(memberExpression);
+                    var selectPath = GetSelectPath(memberExpression);
 
                     AddToFieldsToFetch(selectPath, selectPath);
+
                     if (_insideSelect == false)
                     {
                         foreach (var fieldToFetch in FieldsToFetch)
@@ -1995,18 +2025,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
-        }
-
-        private string RemoveTransparentIdentifiersIfNeeded(MemberExpression memberExpression)
-        {
-            var selectPath = GetSelectPath(memberExpression);
-            while (selectPath.StartsWith(TransparentIdentifier))
-            {
-                var indexOf = selectPath.IndexOf(".", StringComparison.Ordinal);
-                selectPath = selectPath.Substring(indexOf + 1);
-            }
-
-            return selectPath;
         }
 
         private string GetSelectPathOrConstantValue(MemberExpression member)

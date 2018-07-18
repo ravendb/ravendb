@@ -30,6 +30,8 @@ namespace Raven.Client.Documents.Linq
 
         private readonly DocumentConventions _conventions;
 
+        public const string TransparentIdentifier = "<>h__TransparentIdentifier";
+
         public LinqPathProvider(DocumentConventions conventions)
         {
             _conventions = conventions;
@@ -411,6 +413,17 @@ namespace Raven.Client.Documents.Linq
                 }
                 cur = cur.Expression as MemberExpression;
             }
+        }
+
+        public static string RemoveTransparentIdentifiersIfNeeded(string path)
+        {
+            while (path.StartsWith(TransparentIdentifier))
+            {
+                var indexOf = path.IndexOf(".", StringComparison.Ordinal);
+                path = path.Substring(indexOf + 1);
+            }
+
+            return path;
         }
     }
 }
