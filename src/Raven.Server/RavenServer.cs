@@ -848,7 +848,7 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
-            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint))
+            else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.OrdinalIgnoreCase))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
