@@ -102,7 +102,7 @@ namespace Raven.Server.Smuggler.Migration
                 buildInfo.TryGet(nameof(BuildInfo.FullVersion), out string fullVersion);
 
                 MajorVersion version;
-                if (buildVersion == 40 || buildVersion > 40000)
+                if ((buildVersion >= 40 && buildVersion <= 49) || buildVersion > 40000)
                 {
                     version = MajorVersion.V4;
                 }
