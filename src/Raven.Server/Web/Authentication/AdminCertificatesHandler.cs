@@ -417,7 +417,7 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var certificates = new List<(string ItemName, BlittableJsonReaderObject Value)>();
+                var certificateList = new List<(string ItemName, BlittableJsonReaderObject Value)>();
                 try
                 {
                     if (string.IsNullOrEmpty(thumbprint))
@@ -428,10 +428,10 @@ namespace Raven.Server.Web.Authentication
                             using (context.OpenReadTransaction())
                                 localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
                             
+                            // The server cert is not part of the local state certificates, we add it to the list separately
                             var serverCertKey = Constants.Certificates.Prefix + Server.Certificate.Certificate?.Thumbprint;
-                            if (Server.Certificate.Certificate != null && localCertKeys.Contains(serverCertKey) == false)
+                            if (Server.Certificate.Certificate != null)
                             {                            
-                                // Since we didn't go through EnsureNotPassive(), the server certificate is not registered yet so we'll add it to the local state.
                                 var serverCertDef = new CertificateDefinition
                                 {
                                     Name = "Server Certificate",
@@ -443,12 +443,8 @@ namespace Raven.Server.Web.Authentication
                                 };
 
                                 var serverCert = context.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
-                                using (var tx = context.OpenWriteTransaction())
-                                {
-                                    ServerStore.Cluster.PutLocalState(context, Constants.Certificates.Prefix + Server.Certificate.Certificate.Thumbprint, serverCert);
-                                    tx.Commit();
-                                }
-                                certificates.Add((serverCertKey, serverCert));
+                                
+                                certificateList.Add((serverCertKey, serverCert));
                             }
 
                             foreach (var localCertKey in localCertKeys)
@@ -463,7 +459,7 @@ namespace Raven.Server.Web.Authentication
                                 var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
 
                                 if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                    certificates.Add((localCertKey, localCertificate));
+                                    certificateList.Add((localCertKey, localCertificate));
                                 else
                                     localCertificate.Dispose();
                             }
@@ -472,12 +468,13 @@ namespace Raven.Server.Web.Authentication
                         {
                             using (context.OpenReadTransaction())
                             {
+                                // Since we're not passive, the server cert is part of the cluster certificates
                                 foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
                                 {
                                     var def = JsonDeserializationServer.CertificateDefinition(item.Value);
 
                                     if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                        certificates.Add(item);
+                                        certificateList.Add(item);
                                     else
                                         item.Value.Dispose();
                                 }
@@ -511,7 +508,7 @@ namespace Raven.Server.Web.Authentication
                                 }
                             }
 
-                            certificates.Add((key, certificate));
+                            certificateList.Add((key, certificate));
                         }
                     }
 
@@ -520,7 +517,7 @@ namespace Raven.Server.Web.Authentication
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray(context, "Results", certificates.ToArray(), (w, c, cert) =>
+                        writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) =>
                         {
                             c.Write(w, cert.Value);
                         });
@@ -534,7 +531,7 @@ namespace Raven.Server.Web.Authentication
                 }
                 finally
                 {
-                    foreach (var cert in certificates)
+                    foreach (var cert in certificateList)
                         cert.Value?.Dispose();
                 }
             }
@@ -554,26 +551,23 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-
+                var certKey = Constants.Certificates.Prefix + clientCert.Thumbprint;
                 BlittableJsonReaderObject certificate;
                 using (ctx.OpenReadTransaction())
-                    certificate = ServerStore.Cluster.Read(ctx, Constants.Certificates.Prefix + clientCert.Thumbprint);
-
+                    certificate = ServerStore.Cluster.Read(ctx, certKey) ??
+                                  ServerStore.Cluster.GetLocalState(ctx, certKey);
 
                 if (certificate == null)
                 {
+                    // The client certificate is not registered in the ServerStore.
+                    // Let's check if the client is using the server certificate or one of the well known admin certs.
+
                     var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
 
                     if (clientCert.Equals(Server.Certificate.Certificate))
                     {
-                        var certKey = Constants.Certificates.Prefix + clientCert.Thumbprint;
-                        using (ctx.OpenReadTransaction())
-                            certificate = ServerStore.Cluster.Read(ctx, certKey) ??
-                                          ServerStore.Cluster.GetLocalState(ctx, certKey);
-
-                        if (certificate == null && Server.Certificate.Certificate != null)
+                        if (Server.Certificate.Certificate != null)
                         {
-                            // Since we didn't go through EnsureNotPassive(), the server certificate is not registered yet so we'll add it to the local state.
                             var serverCertDef = new CertificateDefinition
                             {
                                 Name = "Server Certificate",
@@ -585,11 +579,6 @@ namespace Raven.Server.Web.Authentication
                             };
 
                             certificate = ctx.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
-                            using (var tx = ctx.OpenWriteTransaction())
-                            {
-                                ServerStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + Server.Certificate.Certificate.Thumbprint, certificate);
-                                tx.Commit();
-                            }
                         }
                     }
                     else if (wellKnown != null && wellKnown.Contains(clientCert.Thumbprint, StringComparer.OrdinalIgnoreCase))
