@@ -12,6 +12,7 @@ namespace Raven.Server.Commercial
 {
     public class SetupInfo
     {
+        public bool EnableExperimentalFeatures { get; set; }
         public bool RegisterClientCert { get; set; }
         public License License { get; set; }
         public string Email { get; set; }
@@ -27,6 +28,7 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
+                [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures,
                 [nameof(License)] = License.ToJson(),
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
@@ -84,6 +86,7 @@ namespace Raven.Server.Commercial
 
     public class UnsecuredSetupInfo
     {
+        public bool EnableExperimentalFeatures { get; set; }
         public List<string> Addresses { get; set; }
         public int Port { get; set; }
         public int TcpPort { get; set; }
@@ -94,7 +97,8 @@ namespace Raven.Server.Commercial
             {
                 [nameof(Addresses)] = new DynamicJsonArray(Addresses),
                 [nameof(Port)] = Port,
-                [nameof(TcpPort)] = TcpPort
+                [nameof(TcpPort)] = TcpPort,
+                [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures
             };
         }
     }
