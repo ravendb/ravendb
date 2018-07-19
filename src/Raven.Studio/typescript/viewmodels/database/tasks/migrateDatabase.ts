@@ -82,6 +82,7 @@ class migrateDatabase extends viewModelBase {
                     this.model.serverMajorVersion.clearError();
                     this.model.buildVersion(info.BuildVersion);
                     this.model.fullVersion(info.FullVersion);
+                    this.model.productVersion(info.ProductVersion);
                     this.model.databaseNames(info.DatabaseNames);
                     this.model.fileSystemNames(info.FileSystemNames);
                     this.model.authorized(info.Authorized);
@@ -93,6 +94,7 @@ class migrateDatabase extends viewModelBase {
                     this.model.serverMajorVersion(null);
                     this.model.buildVersion(null);
                     this.model.fullVersion(null);
+                    this.model.productVersion(null);
                     this.model.databaseNames([]);
                     this.model.fileSystemNames([]);
                     this.model.authorized(true);
