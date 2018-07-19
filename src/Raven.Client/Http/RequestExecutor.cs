@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
 using System.Security.Authentication;
 using System.Security.Cryptography;
@@ -1387,8 +1388,8 @@ namespace Raven.Client.Http
             if (onServerCertificateCustomValidationCallback == null ||
                 onServerCertificateCustomValidationCallback.Length == 0)
             {
-                if (errors == SslPolicyErrors.RemoteCertificateNameMismatch)
-                    ThrowNameMismatchException(sender, cert);
+                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == SslPolicyErrors.RemoteCertificateNameMismatch)
+                    ThrowCertificateNameMismatchException(sender, cert);
 
                 return errors == SslPolicyErrors.None;
             }
@@ -1399,16 +1400,19 @@ namespace Raven.Client.Http
                 if (result)
                     return true;
             }
+
+            if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == SslPolicyErrors.RemoteCertificateNameMismatch)
+                ThrowCertificateNameMismatchException(sender, cert);
+
             return false;
         }
 
-        private static void ThrowNameMismatchException(object sender, X509Certificate cert)
+        private static void ThrowCertificateNameMismatchException(object sender, X509Certificate cert)
         {
-            var hostname = ((HttpRequestMessage)sender).RequestUri.DnsSafeHost;
 #if NETSTANDARD1_3
-            var cert2 = new X509Certificate2(cert.Handle);
+            var cert2 = cert as X509Certificate2 ?? new X509Certificate2(cert.Handle);
 #else
-            var cert2 = new X509Certificate2(cert);
+            var cert2 = cert as X509Certificate2 ?? new X509Certificate2(cert);
 #endif 
             var cn = cert2.Subject;
             var san = new List<string>();
@@ -1422,7 +1426,29 @@ namespace Raven.Client.Http
                 san.Add(asnData.Format(false));
             }
 
-            throw new NameMismatchException($"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
+            // The sender parameter passed to the RemoteCertificateValidationCallback can be a host string name or an object derived
+            // from WebRequest. When using WebSockets, the sender parameter will be of type SslStream, but we cannot extract the
+            // hostname from there so instead let's throw a generic error by default
+
+            string hostname;
+            switch (sender)
+            {
+                case HttpRequestMessage message:
+                    hostname = message.RequestUri.DnsSafeHost;
+                    break;
+                case string host:
+                    hostname = host;
+                    break;
+#if !NETSTANDARD1_3
+                case WebRequest request:
+                    hostname = request.RequestUri.DnsSafeHost;
+                    break;
+#endif            
+                default:
+                    throw new CertificateNameMismatchException($"The hostname of the server URL must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
+            }
+
+            throw new CertificateNameMismatchException($"You are trying to contact host {hostname} but the hostname must match one of the CN or SAN properties of the server certificate: {cn}, {string.Join(", ", san)}");
         }
 
         public class NodeStatus : IDisposable
