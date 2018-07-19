@@ -36,7 +36,12 @@ namespace FastTests.Server.Documents.Revisions
                 }
             };
 
-            return await SetupRevisions(serverStore, database, configuration);
+            var index = await SetupRevisions(serverStore, database, configuration);
+
+            var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, serverStore.Engine.OperationTimeout);
+
+            return index;
         }
 
         private static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, RevisionsConfiguration configuration)
@@ -44,8 +49,8 @@ namespace FastTests.Server.Documents.Revisions
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
-                (long etag, _) =  await serverStore.ModifyDatabaseRevisions(context, database, configurationJson);
-                return etag;
+                (var index, _) = await serverStore.ModifyDatabaseRevisions(context, database, configurationJson);
+                return index;
             }
         }
     }
