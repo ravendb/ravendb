@@ -35,6 +35,8 @@ namespace Raven.Server.Smuggler.Migration
 
         public int BuildVersion { get; set; }
 
+        public string ProductVersion { get; set; }
+
         public string ServerUrl { get; set; }
 
         public string UserName { get; set; }
