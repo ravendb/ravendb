@@ -40,50 +40,5 @@ namespace FastTests.Client
                 }
             }
         }
-
-        [Fact]
-        public async Task Should_not_allow_to_execute_more_than_one_async_loads_at_the_same_time()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/2");
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/3");
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/4");
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/5");
-
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var load1 = session.LoadAsync<User>("users/1");
-                    var load2 = session.LoadAsync<User>("users/2");
-                    var load3 = session.LoadAsync<User>("users/3");
-                    var load4 = session.LoadAsync<User>("users/4");
-                    var load5 = session.LoadAsync<User>("users/5");
-
-                    await Assert.ThrowsAsync<InvalidOperationException>(
-                        async () =>
-                        {
-                            try
-                            {
-                                await Task.WhenAll(load1, load2, load3, load4, load5);
-                            }
-                            catch (InvalidOperationException)
-                            {
-                                throw;
-                            }
-                            catch (Exception)
-                            {
-                                // we do not have a choice, we are accessing session in a concurrent way
-                                // and it contains e.g. Dictionary that can throw NRE
-                            }
-                        });
-                }
-            }
-        }
     }
 }
