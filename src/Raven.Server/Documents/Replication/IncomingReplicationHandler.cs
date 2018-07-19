@@ -565,7 +565,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
                     }
-                }                
+                }
                 throw;
             }
             finally
@@ -742,7 +742,7 @@ namespace Raven.Server.Documents.Replication
 
                 var changeVectorSize = *(int*)ReadExactly(sizeof(int));
 
-                if(changeVectorSize != 0)
+                if (changeVectorSize != 0)
                     item.ChangeVector = Encoding.UTF8.GetString(ReadExactly(changeVectorSize), changeVectorSize);
 
                 item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
@@ -807,7 +807,7 @@ namespace Raven.Server.Documents.Replication
 
                     var nameSize = *(int*)ReadExactly(sizeof(int));
                     item.CounterName = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
-                        
+
                     item.CounterValue = *(long*)ReadExactly(sizeof(long));
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
@@ -1106,7 +1106,7 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
                             {
-                                database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, item.Collection, 
+                                database.DocumentsStorage.CountersStorage.DeleteCounter(context, item.Key, item.Collection,
                                     item.LastModifiedTicks,
                                     // we force the tombstone because we have to replicate it further
                                     forceTombstone: true);
@@ -1132,7 +1132,7 @@ namespace Raven.Server.Documents.Replication
                                         {
                                             AssertAttachmentsFromReplication(context, item.Id, document);
                                         }
-                                        catch (MissingAttachmentException mae)
+                                        catch (MissingAttachmentException)
                                         {
                                             if (_incoming.SupportedFeatures.Replication.MissingAttachments)
                                             {
@@ -1193,7 +1193,7 @@ namespace Raven.Server.Documents.Replication
 #if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
 #endif
-                                                database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks, 
+                                                database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
                                                     rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                             }
                                             else
@@ -1264,7 +1264,7 @@ namespace Raven.Server.Documents.Replication
                             }
                         }
                     }
-                   
+
                     Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
