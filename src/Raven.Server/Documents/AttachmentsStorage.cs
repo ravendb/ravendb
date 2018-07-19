@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
+        public static long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
@@ -499,6 +499,25 @@ namespace Raven.Server.Documents
                 }
             }
             return attachments;
+        }
+
+        public IEnumerable<DynamicJsonValue> GetAttachmentsMetadataForDocumenWithCounts(DocumentsOperationContext context, string lowerDocumentId)
+        {
+            using(Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
+            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            {
+                foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
+                {                    
+                    yield return new DynamicJsonValue
+                    {
+                        [nameof(AttachmentName.Name)] = attachment.Name,
+                        [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
+                        [nameof(AttachmentName.ContentType)] = attachment.ContentType,
+                        [nameof(AttachmentName.Size)] = attachment.Size,
+                        ["Count"] = GetCountOfAttachmentsForHash(context, attachment.Base64Hash)
+                    };
+                }
+            }
         }
 
         public bool AttachmentExists(DocumentsOperationContext context, LazyStringValue hash)
