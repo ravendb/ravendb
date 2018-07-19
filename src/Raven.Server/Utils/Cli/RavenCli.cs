@@ -176,7 +176,7 @@ namespace Raven.Server.Utils.Cli
         private class SingleAction
         {
             public int NumOfArgs;
-            public Func<List<string>, RavenCli, bool> DelegateFync;
+            public Func<List<string>, RavenCli, bool> DelegateFunc;
             public bool Experimental { get; set; }
         }
 
@@ -403,7 +403,7 @@ namespace Raven.Server.Utils.Cli
         private static bool CommandLog(List<string> args, RavenCli cli)
         {
             var withConsole = !(args.Count == 2 && args[1].Equals("no-console"));
-                        
+
             switch (args.First())
             {
                 case "on":
@@ -497,6 +497,8 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
+            WriteText($"Experimental features are now {(isOn ? "enabled" : "disabled")}.", TextColor, cli);
+
             return isOn; // here rc is not an exit code, it is a setter to _experimental
         }
 
@@ -513,7 +515,7 @@ namespace Raven.Server.Utils.Cli
 
             var name = args[0];
             var path = args[1];
-            
+
             X509Certificate2 cert;
             try
             {
@@ -561,7 +563,7 @@ namespace Raven.Server.Utils.Cli
                     Thumbprint = cert.Thumbprint,
                     NotAfter = cert.NotAfter
                 };
-                
+
                 try
                 {
                     if (cli._server.ServerStore.CurrentRachisState == RachisState.Passive)
@@ -647,10 +649,10 @@ namespace Raven.Server.Utils.Cli
                     Thumbprint = cert.Thumbprint,
                     NotAfter = cert.NotAfter
                 };
-                
+
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password,  cli._server.ServerStore, ctx).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
                 }
                 catch (Exception e)
                 {
@@ -710,7 +712,7 @@ namespace Raven.Server.Utils.Cli
             }
             catch (Exception e)
             {
-                WriteError("Failed save the generated certificate to path: "+ certPath + e, cli);
+                WriteError("Failed save the generated certificate to path: " + certPath + e, cli);
                 return false;
             }
 
@@ -718,7 +720,7 @@ namespace Raven.Server.Utils.Cli
 
             return true;
         }
-        
+
         private static bool CommandReplaceClusterCert(List<string> args, RavenCli cli)
         {
             if (args.Count < 2 || args.Count > 4)
@@ -800,7 +802,7 @@ namespace Raven.Server.Utils.Cli
             }
 
             var replaceImmediately = args[0] != null && args[0].Equals("-replaceImmediately");
-            
+
             try
             {
                 cli._server.RefreshClusterCertificate(replaceImmediately);
@@ -1077,32 +1079,32 @@ namespace Raven.Server.Utils.Cli
 
         private readonly Dictionary<Command, SingleAction> _actions = new Dictionary<Command, SingleAction>
         {
-            [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrompt },
-            [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
-            [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
-            [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandGc },
-            [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
-            [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
-            [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustServerCert },
-            [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustClientCert },
-            [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandGenerateClientCert },
-            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert},
-            [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTriggerCertificateRefresh},
-            [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
-            [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
-            [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
-            [Command.Script] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandScript },
-            [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
-            [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTimer },
-            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
-            [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
-            [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandShutdown },
-            [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
+            [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandPrompt },
+            [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandHelpPrompt },
+            [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandStats },
+            [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandGc },
+            [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandLog },
+            [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandClear },
+            [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustServerCert },
+            [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustClientCert },
+            [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandGenerateClientCert },
+            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandReplaceClusterCert },
+            [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTriggerCertificateRefresh },
+            [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandInfo },
+            [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLogo },
+            [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandExperimental },
+            [Command.Script] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandScript },
+            [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLowMem },
+            [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTimer },
+            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandResetServer },
+            [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLogout },
+            [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandShutdown },
+            [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandHelp },
 
             // experimental, will not appear in 'help':
-            [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
-            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true },
-            [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true }, // test cli
+            [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandImportDir, Experimental = true },
+            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandCreateDb, Experimental = true },
+            [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandPrint, Experimental = true }, // test cli
         };
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
@@ -1273,7 +1275,7 @@ namespace Raven.Server.Utils.Cli
                                 continue;
                             }
                         }
-                        lastRc = cmd.DelegateFync.Invoke(parsedCommand.Args, this);
+                        lastRc = cmd.DelegateFunc.Invoke(parsedCommand.Args, this);
 
                         if (parsedCommand.Command == Command.Prompt && lastRc)
                             _promptArgs = parsedCommand.Args;
