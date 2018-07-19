@@ -299,13 +299,13 @@ namespace Raven.Server.Documents.Patch
             private static JsValue GetLastModified(JsValue self, JsValue[] args)
             {
                 if (args.Length != 1)
-                    throw new InvalidOperationException("id(doc) must be called with a single argument");
+                    throw new InvalidOperationException("lastModified(doc) must be called with a single argument");
 
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
 
                 if (args[0].IsObject() == false)
-                    throw new InvalidOperationException("id(doc) must be called with an object argument");
+                    throw new InvalidOperationException("lastModified(doc) must be called with an object argument");
 
                 if (args[0].AsObject() is BlittableObjectInstance doc)
                 {
