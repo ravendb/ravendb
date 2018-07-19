@@ -91,6 +91,7 @@ namespace Raven.Server.Documents.Handlers
             if (_properties == null)
             {
                 _properties = GetPropertiesRecursive((Empty, Empty), res.Data).ToArray();
+
             }
             writeHeader = false;
             foreach ((var property, var path) in _properties)
@@ -101,9 +102,13 @@ namespace Raven.Server.Documents.Handlers
             _csvWriter.NextRecord();
         }
 
-        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj)
+        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj, bool addId = true)
         {
             var inMetadata = Constants.Documents.Metadata.Key.Equals(propertyTuple.ParentPath);
+            if (addId)
+            {
+                yield return (Constants.Documents.Metadata.Id, Constants.Documents.Metadata.Id);
+            }
             foreach (var propery in obj.GetPropertyNames())
             {
                 //skip properties starting with '@' unless we are in the metadata and we need to export @metadata.@collection
@@ -116,7 +121,7 @@ namespace Raven.Server.Documents.Handlers
                 object res;
                 if (obj.TryGetMember(propery, out res) && res is BlittableJsonReaderObject)
                 {
-                    foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject))
+                    foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject, addId:false))
                     {
                         yield return nested;
                     }
