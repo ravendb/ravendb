@@ -52,7 +52,7 @@ namespace Sparrow
 
     }
 
-    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
+    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, Pointer>, IAllocator, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
             where TOptions : struct, IThreadAffineBlockOptions
     {
         private TOptions _options;
@@ -162,20 +162,17 @@ namespace Sparrow
 
         public void Reset(ref ThreadAffineBlockAllocator<TOptions> allocator)
         {
-            throw new NotSupportedException($"{nameof(ThreadAffineBlockAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+           // When we reset if we are in a low memory condition we will cleanup the pool 
+           if (Allocator.LowMemoryFlag.IsRaised())
+               CleanupPool(ref allocator);
         }
 
         public void OnAllocate(ref ThreadAffineBlockAllocator<TOptions> allocator, Pointer ptr) { }
         public void OnRelease(ref ThreadAffineBlockAllocator<TOptions> allocator, Pointer ptr) { }
 
-        public void Dispose()
+        public void Dispose(ref ThreadAffineBlockAllocator<TOptions> allocator)
         {
-            CleanupPool(ref this);
-        }
-
-        public void NotifyLowMemory(ref ThreadAffineBlockAllocator<TOptions> allocator)
-        {
-            CleanupPool(ref allocator);
+            allocator.CleanupPool(ref allocator);
         }
 
         private void CleanupPool(ref ThreadAffineBlockAllocator<TOptions> allocator)
@@ -215,9 +212,12 @@ namespace Sparrow
             }
         }
 
-        public void NotifyLowMemoryOver(ref ThreadAffineBlockAllocator<TOptions> allocator)
+        public void NotifyLowMemory(ref ThreadAffineBlockAllocator<TOptions> allocator)
         {
-            // Nothing to do here. 
+            // We will try to release as much as we can. 
+            CleanupPool(ref allocator);
         }
+
+        public void NotifyLowMemoryOver(ref ThreadAffineBlockAllocator<TOptions> allocator) {}
     }
 }

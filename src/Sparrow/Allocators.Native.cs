@@ -51,7 +51,7 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can)</remarks>
-    public unsafe struct NativeAllocator<TOptions> : IAllocator<NativeAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<NativeAllocator<TOptions>>
+    public unsafe struct NativeAllocator<TOptions> : IAllocator<NativeAllocator<TOptions>, Pointer>, IAllocator
         where TOptions : struct, INativeOptions
     {
         private TOptions _options;
@@ -134,18 +134,6 @@ namespace Sparrow
             // This allocator does not keep track of anything.
         }
 
-        public void NotifyLowMemory(ref NativeAllocator<TOptions> allocator)
-        {
-            // This allocator cannot do anything with this signal.
-        }
-
-        public void NotifyLowMemoryOver(ref NativeAllocator<TOptions> allocator)
-        {
-            // This allocator cannot do anything with this signal.
-        }
-
-        public void Dispose()
-        {
-        }
+        public void Dispose(ref NativeAllocator<TOptions> allocator) {}
     }
 }

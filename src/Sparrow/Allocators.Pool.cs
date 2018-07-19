@@ -35,11 +35,10 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
-    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, BlockPointer>, IAllocator, IDisposable, ILowMemoryHandler<PoolAllocator<TOptions>>, IRenewable<PoolAllocator<TOptions>>
+    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, BlockPointer>, IAllocator, IRenewable<PoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
-        private bool _isMemoryLow;
         private BlockPointer[] _freed;
         private IAllocatorComposer<Pointer> _internalAllocator;
 
@@ -94,7 +93,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref PoolAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
-            if (allocator._isMemoryLow || allocator.Used > allocator._options.MaxPoolMemoryInBytes)
+            if (allocator.Used > allocator._options.MaxPoolMemoryInBytes || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
 
             int originalSize = ptr.Size;
@@ -135,7 +134,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew(ref PoolAllocator<TOptions> allocator)
         {
-            if (allocator._isMemoryLow)
+            if (Allocator.LowMemoryFlag.IsRaised())
                 ReleaseMemoryPool(ref allocator);
 
             _internalAllocator.Renew();
@@ -164,23 +163,18 @@ namespace Sparrow
             // Nothing to do here.
         }
 
+        public void Dispose(ref PoolAllocator<TOptions> allocator)
+        {
+            if (allocator._options.HasOwnership)
+                // We are going to be disposed, we then release all holded memory. 
+                allocator.ReleaseMemoryPool(ref allocator);
+
+            allocator._internalAllocator.Dispose();
+        }
+
         public void Dispose()
         {
-            if (this._options.HasOwnership)
-                // We are going to be disposed, we then release all holded memory. 
-                ReleaseMemoryPool(ref this);
 
-            this._internalAllocator.Dispose();
-        }
-
-        public void NotifyLowMemory(ref PoolAllocator<TOptions> allocator)
-        {
-            allocator._isMemoryLow = true;
-        }
-
-        public void NotifyLowMemoryOver(ref PoolAllocator<TOptions> allocator)
-        {
-            allocator._isMemoryLow = false;
         }
 
         private void ResetMemoryPool(ref PoolAllocator<TOptions> allocator)

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Global;
 
@@ -81,7 +80,7 @@ namespace Sparrow
         }
     }
 
-    public unsafe struct ArenaAllocator<TOptions> : IAllocator<ArenaAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<ArenaAllocator<TOptions>>, IRenewable<ArenaAllocator<TOptions>>
+    public unsafe struct ArenaAllocator<TOptions> : IAllocator<ArenaAllocator<TOptions>, Pointer>, IAllocator, IRenewable<ArenaAllocator<TOptions>>
         where TOptions : struct, IArenaAllocatorOptions
     {
         private TOptions _options;
@@ -132,9 +131,14 @@ namespace Sparrow
 
         private void GrowArena( ref ArenaAllocator<TOptions> allocator, int requestedSize)
         {
-            int newSize = allocator._options.GrowthStrategy.GetGrowthSize(allocator._allocated, requestedSize);
+            int newSize = allocator._options.GrowthStrategy.GetGrowthSize(allocator._allocated, allocator._used);            
             if (newSize > allocator._options.MaxArenaSize)
                 newSize = allocator._options.MaxArenaSize;
+
+            // We could be requesting to allocate less than what the app requested (for big requests) so 
+            // we account for that in case it happens. We would override also the MaxArenaSize in those cases
+            // and resort to straight memory block allocation
+            newSize = Math.Max(requestedSize, newSize);
 
             Pointer newBuffer;
             try
@@ -146,8 +150,7 @@ namespace Sparrow
             {
                 // we were too eager with memory allocations?
                 newBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, requestedSize);                
-                newSize = requestedSize;
-                
+                newSize = requestedSize;           
             }            
 
             if (allocator._currentBuffer.IsValid)
@@ -241,10 +244,12 @@ namespace Sparrow
                 Pointer ptr = unusedBuffer;
                 allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
             }
-
             allocator._olderBuffers.Clear();
-            if (allocator._used <= allocator._allocated)
+
+            // If we didnt use more memory than the currently allocated or we are in low memory mode
+            if (allocator._used <= allocator._allocated || Allocator.LowMemoryFlag.IsRaised())            
             {
+                // Go on with the current setup
                 allocator._used = 0;
                 allocator.Allocated = 0;
                 return;
@@ -288,33 +293,23 @@ namespace Sparrow
             // This allocator does not keep track of anything.
         }
 
-        public void NotifyLowMemory(ref ArenaAllocator<TOptions> allocator)
-        {
-            // TODO: Implement the proper low memory handling
-        }
-
-        public void NotifyLowMemoryOver(ref ArenaAllocator<TOptions> allocator)
-        {
-            // TODO: Implement the proper low memory handling
-        }
-
-        public void Dispose()
+        public void Dispose(ref ArenaAllocator<TOptions> allocator)
         {
             // Free old buffers not being used anymore
-            foreach (var unusedBuffer in _olderBuffers)
+            foreach (var unusedBuffer in allocator._olderBuffers)
             {
                 _used += unusedBuffer.Size;
 
                 Pointer ptr = unusedBuffer;
-                _nativeAllocator.Release(ref _nativeAllocator, ref ptr);
+                allocator._nativeAllocator.Release(ref _nativeAllocator, ref ptr);
             }
 
             if (_ptrStart != null)
             {
-                _nativeAllocator.Release(ref _nativeAllocator, ref _currentBuffer);
+                allocator._nativeAllocator.Release(ref _nativeAllocator, ref _currentBuffer);
             }
 
-            _nativeAllocator.Dispose();
+            allocator._nativeAllocator.Dispose(ref allocator._nativeAllocator);
         }
     }
 }

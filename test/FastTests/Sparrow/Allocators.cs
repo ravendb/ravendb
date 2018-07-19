@@ -369,7 +369,7 @@ namespace FastTests.Sparrow
             Assert.Throws<NotSupportedException>(() => allocator.LowMemoryOver());
         }
 
-        public struct StubAllocator<TOptions> : IAllocator<StubAllocator<TOptions>, Pointer>, IAllocator, IDisposable, ILowMemoryHandler<StubAllocator<TOptions>>, IRenewable<StubAllocator<TOptions>>, ILifecycleHandler<StubAllocator<TOptions>>
+        public struct StubAllocator<TOptions> : IAllocator<StubAllocator<TOptions>, Pointer>, IAllocator, ILowMemoryHandler<StubAllocator<TOptions>>, IRenewable<StubAllocator<TOptions>>, ILifecycleHandler<StubAllocator<TOptions>>
             where TOptions : struct, INativeOptions
         {
             private TOptions Options;
@@ -419,7 +419,7 @@ namespace FastTests.Sparrow
             {
             }
 
-            public void Dispose()
+            public void Dispose(ref StubAllocator<TOptions> allocator)
             {
             }
 

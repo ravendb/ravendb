@@ -14,7 +14,7 @@ namespace Sparrow
         int BlockSize { get; }
     }
 
-    public interface ILifecycleHandler<TAllocator> where TAllocator : struct, IAllocator, IDisposable
+    public interface ILifecycleHandler<TAllocator> where TAllocator : struct, IAllocator
     {
         void BeforeInitialize(ref TAllocator allocator);
         void AfterInitialize(ref TAllocator allocator);
@@ -22,13 +22,13 @@ namespace Sparrow
         void BeforeFinalization(ref TAllocator allocator);
     }
 
-    public interface ILowMemoryHandler<TAllocator> where TAllocator : struct, IAllocator, IDisposable
+    public interface ILowMemoryHandler<TAllocator> where TAllocator : struct, IAllocator
     {
         void NotifyLowMemory(ref TAllocator allocator);
         void NotifyLowMemoryOver(ref TAllocator allocator);
     }
 
-    public interface IRenewable<TAllocator> where TAllocator : struct, IAllocator, IDisposable
+    public interface IRenewable<TAllocator> where TAllocator : struct, IAllocator
     {
         void Renew(ref TAllocator allocator);
     }
@@ -45,8 +45,8 @@ namespace Sparrow
         void Dispose();
     }
 
-    public interface IAllocator<T, TPointerType>
-        where T : struct, IAllocator, IDisposable
+    public interface IAllocator<T, TPointerType> : IAllocator
+        where T : struct, IAllocator
         where TPointerType : struct, IPointerType
     {
         long Allocated { get; }
@@ -61,10 +61,17 @@ namespace Sparrow
 
         void OnAllocate(ref T allocator, TPointerType ptr);
         void OnRelease(ref T allocator, TPointerType ptr);
+
+        void Dispose(ref T allocator);
+    }
+
+    public static class Allocator
+    {
+        public static readonly SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
     }
 
     public sealed class Allocator<TAllocator> : IAllocatorComposer<Pointer>, IDisposable, ILowMemoryHandler
-        where TAllocator : struct, IAllocator<TAllocator, Pointer>, IAllocator, IDisposable
+        where TAllocator : struct, IAllocator<TAllocator, Pointer>
     {
         private TAllocator _allocator;
         private readonly SingleUseFlag _disposeFlag = new SingleUseFlag();
@@ -86,6 +93,9 @@ namespace Sparrow
 
             _allocator.Initialize(ref _allocator);
             _allocator.Configure(ref _allocator, ref options);
+
+            if (_allocator is ILowMemoryHandler<TAllocator>)
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
             if (_allocator is ILifecycleHandler<TAllocator> b)
                 b.AfterInitialize(ref _allocator);
@@ -170,7 +180,7 @@ namespace Sparrow
         public void Dispose()
         {
             if (_disposeFlag.Raise())
-                _allocator.Dispose();
+                _allocator.Dispose(ref _allocator);
 
             GC.SuppressFinalize(this);
         }
@@ -191,7 +201,7 @@ namespace Sparrow
     }
 
     public sealed class BlockAllocator<TAllocator> : IAllocatorComposer<BlockPointer>, IDisposable, ILowMemoryHandler
-        where TAllocator : struct, IAllocator<TAllocator, BlockPointer>, IAllocator, IDisposable
+        where TAllocator : struct, IAllocator<TAllocator, BlockPointer>, IAllocator
     {
         private TAllocator _allocator;
         private readonly SingleUseFlag _disposeFlag = new SingleUseFlag();
@@ -214,8 +224,12 @@ namespace Sparrow
             _allocator.Initialize(ref _allocator);
             _allocator.Configure(ref _allocator, ref options);
 
+            if (_allocator is ILowMemoryHandler<TAllocator>)
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+
             if (_allocator is ILifecycleHandler<TAllocator> b)
                 b.AfterInitialize(ref _allocator);
+            
         }
 
         public long Allocated
@@ -297,7 +311,7 @@ namespace Sparrow
         public void Dispose()
         {
             if (_disposeFlag.Raise())
-                _allocator.Dispose();
+                _allocator.Dispose(ref _allocator);
 
             GC.SuppressFinalize(this);
         }
@@ -318,7 +332,7 @@ namespace Sparrow
     }
 
     public sealed class FixedSizeAllocator<TAllocator> : IDisposable, ILowMemoryHandler
-        where TAllocator : struct, IAllocator<TAllocator, Pointer>, IAllocator, IDisposable
+        where TAllocator : struct, IAllocator<TAllocator, Pointer>, IAllocator
     {
         private int _blockSize;
         private TAllocator _allocator;
@@ -346,6 +360,9 @@ namespace Sparrow
 
             _allocator.Initialize(ref _allocator);
             _allocator.Configure(ref _allocator, ref options);
+
+            if (_allocator is ILowMemoryHandler<TAllocator>)
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
             if (_allocator is ILifecycleHandler<TAllocator> b)
                 b.AfterInitialize(ref _allocator);
@@ -430,7 +447,7 @@ namespace Sparrow
         public void Dispose()
         {
             if (_disposeFlag.Raise())
-                _allocator.Dispose();
+                _allocator.Dispose(ref _allocator);
 
             GC.SuppressFinalize(this);
         }
