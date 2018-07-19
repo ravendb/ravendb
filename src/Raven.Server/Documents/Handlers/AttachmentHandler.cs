@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers
             return GetAttachment(false);
         }
 
-        [RavenAction("/databases/*/attachments/ref-count-by-hash", "GET", AuthorizationStatus.ValidUser,isDebugInformationEndpoint:true)]
+        [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser,isDebugInformationEndpoint:true)]
         public Task Exists()
         {
             var hash = GetStringQueryString("hash");
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/attachments/attachment-metadata-by-document-id", "GET", AuthorizationStatus.ValidUser, isDebugInformationEndpoint: true)]
+        [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser, isDebugInformationEndpoint: true)]
         public Task GetDocumentsAttachmentMetadataWithCounts()
         {
             var id = GetStringQueryString("id", false);
