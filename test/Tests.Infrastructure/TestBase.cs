@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
@@ -212,9 +211,6 @@ namespace FastTests
                     Servers.Add(_localServer);
                     _doNotReuseServer = false;
 
-                    if (_globalServer == null)
-                        _globalServer = _localServer;
-
                     return _localServer;
                 }
 
@@ -248,7 +244,7 @@ namespace FastTests
             }
         }
 
-        private void UnloadServer(AssemblyLoadContext obj)
+        private static void UnloadServer(AssemblyLoadContext obj)
         {
             try
             {
