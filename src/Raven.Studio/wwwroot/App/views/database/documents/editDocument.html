@@ -183,7 +183,7 @@
                 </div>
                 <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode()">
                     <div class="padding padding-xs margin-top margin-top-sm">
-                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: $root.connectedDocuments.setCounter">
+                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.connectedDocuments.setCounter, null)">
                             <i class="icon-new-counter"></i>
                             <span>Add Counter</span>
                         </button>
