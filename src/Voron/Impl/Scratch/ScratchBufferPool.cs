@@ -76,7 +76,7 @@ namespace Voron.Impl.Scratch
                 pagerState.Value.AddRef();
             }
             var old = state.PagerStatesAllScratchesCache;
-            state.PagerStatesAllScratchesCache = dic;
+            state.PagerStatesAllScratchesCache = new System.Collections.ObjectModel.ReadOnlyDictionary<int, PagerState>(dic);
             if (old == null)
                 return;
 

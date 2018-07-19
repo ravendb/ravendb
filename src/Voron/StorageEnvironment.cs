@@ -290,7 +290,7 @@ namespace Voron
                 NextPageNumber = nextPageNumber,
                 Options = Options,
                 TransactionCounter = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId,
-                SnapshotCache = new List<JournalSnapshot>() 
+                SnapshotCache = new List<JournalSnapshot>().AsReadOnly()
             };
 
             var transactionPersistentContext = new TransactionPersistentContext(true);

@@ -26,6 +26,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Global;
+using System.Collections.ObjectModel;
 
 namespace Voron.Impl.Journal
 {
@@ -304,7 +305,7 @@ namespace Voron.Impl.Journal
         }
 
 
-        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
+        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, ReadOnlyDictionary<int, PagerState> scratchPagerStates)
         {
             // read transactions have to read from journal snapshots
             if (tx.Flags == TransactionFlags.Read)
@@ -371,7 +372,7 @@ namespace Voron.Impl.Journal
             ValidateNoDuplicateJournals(items);
 
             var old = state.SnapshotCache;
-            state.SnapshotCache = items;
+            state.SnapshotCache = new System.Collections.ObjectModel.ReadOnlyCollection<JournalSnapshot>(items);
 
             if (old == null)
                 return;

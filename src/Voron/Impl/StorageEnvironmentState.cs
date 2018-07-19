@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 
@@ -11,8 +12,8 @@ namespace Voron.Impl
         public StorageEnvironmentOptions Options;
         
         public long TransactionCounter;
-        public List<JournalSnapshot> SnapshotCache;
-        public Dictionary<int, PagerState> PagerStatesAllScratchesCache;
+        public ReadOnlyCollection<JournalSnapshot> SnapshotCache;
+        public ReadOnlyDictionary<int, PagerState> PagerStatesAllScratchesCache;
         public object ExternalState;
 
         public long NextPageNumber;
@@ -26,8 +27,8 @@ namespace Voron.Impl
             if (root != null)
                 Root = root.State;
             NextPageNumber = nextPageNumber;
-            SnapshotCache = new List<JournalSnapshot>();
-            PagerStatesAllScratchesCache = new Dictionary<int, PagerState>();
+            SnapshotCache = new List<JournalSnapshot>().AsReadOnly();
+            PagerStatesAllScratchesCache = new ReadOnlyDictionary<int, PagerState>(new Dictionary<int, PagerState>());
         }
 
         public StorageEnvironmentState Clone()
