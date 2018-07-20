@@ -62,8 +62,6 @@ class cmpXchg extends viewModelBase {
         super.activate(args);
 
         continueTest.default.init(args);
-        //TODO: this.updateHelpLink("");
-
     }
 
     fetchValues(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>> {

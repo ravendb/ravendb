@@ -362,7 +362,7 @@ class appUrl {
 
     static forMigrateDatabase(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/import/migrate?" + databasePart;//TODO: update? 
+        return "#databases/tasks/import/migrate?" + databasePart;
     }
 
     static forOngoingTasks(db: database | databaseInfo): string {

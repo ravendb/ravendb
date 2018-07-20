@@ -313,7 +313,6 @@ class query extends viewModelBase {
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
 
         this.staleResult = ko.pureComputed(() => {
-            //TODO: return false for test index
             const stats = this.queryStats();
             return stats ? stats.IsStale : false;
         });

@@ -695,8 +695,6 @@ class databaseGroupGraph {
 
         const tasksToDelete = this.data.tasks.filter(x => !_.includes(newTasksIds, x.taskId));
         _.pullAll(this.data.tasks, tasksToDelete);
-        
-        //TODO: process subscripitons - bundled for now
     }
      
     onResize() {

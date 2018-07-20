@@ -66,7 +66,6 @@ class queryUtil {
                 new getIndexEntriesFieldsCommand(indexName, db)
                     .execute()
                     .done((fields) => {
-                        //TODO: self.isTestIndex(result.IsTestIndex);
                         outputFields(fields.Results);
                     });
             }

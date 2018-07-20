@@ -677,7 +677,6 @@ class ioStats extends viewModelBase {
             env.Files.forEach(file => {
                 file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {
 
-                    // TODO: Maybe create algorithm to calculate the exact color to be painted in the brush section for the Accumulated Data,
                     //       Similar to what I did in indexing performance....  For now a default high color is used                       
                     context.fillStyle = this.calcItemColor(recentItem, false);
 

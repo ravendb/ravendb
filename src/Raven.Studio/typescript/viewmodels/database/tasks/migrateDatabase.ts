@@ -49,12 +49,6 @@ class migrateDatabase extends viewModelBase {
         return deferred;
     }
 
-    attached() {
-        super.attached();
-
-        this.updateHelpLink("YD9M1R"); //TODO: this is probably stale!
-    }
-
     detectServerVersion(showVersionSpinner: boolean) {
         if (!this.isValid(this.model.versionCheckValidationGroup)) {
             this.model.serverMajorVersion(null);

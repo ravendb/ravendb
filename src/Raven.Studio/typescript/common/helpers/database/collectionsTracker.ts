@@ -51,7 +51,6 @@ class collectionsTracker {
         _.remove(collections, c => !c.documentCount());
         collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 
-        //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
         this.collections([allDocsCollection].concat(collections));
 
@@ -68,7 +67,7 @@ class collectionsTracker {
         return matchedCollection ? matchedCollection.documentCount() : 0;
     }
     
-    getCollectionColorIndex(collectionName: string) { //TODO: remove and compute based on collection name
+    getCollectionColorIndex(collectionName: string) {
         return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) + 5) % 6;
         // 6 is the number of classes that I have defined in etl.less for colors...
     }    

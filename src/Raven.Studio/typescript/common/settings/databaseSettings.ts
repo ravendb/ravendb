@@ -14,7 +14,6 @@ class databaseSettings extends abstractSettings {
     }
 
     get storageKey() {
-        //TODO: register for disposal, after db is deleted
         return storageKeyProvider.storageKeyFor("settings." + this.db.name);
     }
 

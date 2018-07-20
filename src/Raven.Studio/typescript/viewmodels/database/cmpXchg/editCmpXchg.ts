@@ -62,7 +62,6 @@ class editCmpXchg extends viewModelBase {
 
     activate(navigationArgs: { database: string, key: string }) {
         super.activate(navigationArgs);
-        //TODO: this.updateHelpLink('');
 
         if (!navigationArgs || !navigationArgs.key) {
             return this.editNewValue();

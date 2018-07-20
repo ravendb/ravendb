@@ -453,9 +453,6 @@ class connectedDocuments {
     }
 
     private setCounter(counter: counterItem) {
-        
-        // todo -  get counter info again from edit ep again upon edit ? or show what there is already ? 
-        
         const setCounterView = new setCounterDialog(counter, this.document().getId(), this.db());        
                 
         app.showBootstrapDialog(setCounterView);

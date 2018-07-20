@@ -77,7 +77,6 @@ class setupEncryptionKey {
     }
 
     copyEncryptionKeyToClipboard() {
-        // TODO: Investigate why the \r\n line feed characters not working when copying to clipboard
         const container = document.getElementById("newDatabase");
         copyToClipboard.copy(this.keyDataText(), "Encryption key data was copied to clipboard", container);
     }
