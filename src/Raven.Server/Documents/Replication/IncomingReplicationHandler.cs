@@ -1078,7 +1078,7 @@ namespace Raven.Server.Documents.Replication
                                         {
                                             AssertAttachmentsFromReplication(context, item.Id, document);
                                         }
-                                        catch (MissingAttachmentException mae)
+                                        catch (MissingAttachmentException)
                                         {
                                             if (_incoming.SupportedFeatures.Replication.MissingAttachments)
                                             {

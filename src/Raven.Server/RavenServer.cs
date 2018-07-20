@@ -67,7 +67,7 @@ namespace Raven.Server
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
-                
+
         public readonly RavenConfiguration Configuration;
 
         public Timer ServerMaintenanceTimer;
@@ -255,7 +255,7 @@ namespace Raven.Server
                         // See: https://github.com/dotnet/corefx/issues/30693#issuecomment-401062377
                         var chain = new X509Chain();
                         chain.Build(Certificate.Certificate);
-                        
+
                         using (X509Store intermediates = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
                         {
                             // Not supported on macOS:
@@ -345,7 +345,7 @@ namespace Raven.Server
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Server failed to contact itself @ {url}. " +
@@ -472,7 +472,7 @@ namespace Raven.Server
                 {
                     throw new InvalidOperationException("Tried to load certificate as part of refresh check, but got an error!", e);
                 }
-                
+
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
@@ -512,7 +512,7 @@ namespace Raven.Server
                 // but if we have less than 20 days, we'll try anyway
                 if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
                     return;
-                
+
                 if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
                 {
                     msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
@@ -657,7 +657,7 @@ namespace Raven.Server
                     throw new InvalidOperationException($"Your license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
                                                         $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl.Value.UriValue}." +
                                                         "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
-                
+
                 throw new InvalidOperationException("PublicServerUrl is empty. Cannot automatically renew the Lets Encrypt certificate. Please contact support.");
             }
 
@@ -1032,7 +1032,7 @@ namespace Raven.Server
         public IPAddress[] GetListenIpAddresses(string host)
         {
             if (IPAddress.TryParse(host, out IPAddress ipAddress))
-                return new[] {ipAddress};
+                return new[] { ipAddress };
 
             switch (host)
             {
@@ -1116,9 +1116,7 @@ namespace Raven.Server
 
                         try
                         {
-                            TcpConnectionHeaderMessage header = null;
-                            string error = null;
-                            bool matchingVersion = false;
+                            TcpConnectionHeaderMessage header;
                             int count = 0, maxRetries = 100;
                             using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
@@ -1166,13 +1164,13 @@ namespace Raven.Server
                                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
                                             break;
 
-                                    }                                    
+                                    }
 
                                     var (isSupported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion);
                                     if (isSupported)
                                         break;
 
-                                    if ( prevSupported == -1)
+                                    if (prevSupported == -1)
                                     {
                                         if (_tcpAuditLog != null)
                                             _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'." +
@@ -1193,7 +1191,7 @@ namespace Raven.Server
                                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {prevSupported}.");
                                     }
                                     RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, prevSupported);
-                                    
+
                                 }
 
                                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
@@ -1444,13 +1442,13 @@ namespace Raven.Server
             if (Certificate.Certificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
-                    // it is fine that the client doesn't have a cert, we just care that they
-                    // are connecting to us securely. At any rate, we'll ensure that if certificate
-                    // is required, we'll validate that it is one of the expected ones on the server
-                    // and that the client is authorized to do so. 
-                    // Otherwise, we'll generate an error, but we'll do that at a higher level then
-                    // SSL, because that generate a nicer error for the user to read then just aborted
-                    // connection because SSL negotation failed.
+                        // it is fine that the client doesn't have a cert, we just care that they
+                        // are connecting to us securely. At any rate, we'll ensure that if certificate
+                        // is required, we'll validate that it is one of the expected ones on the server
+                        // and that the client is authorized to do so. 
+                        // Otherwise, we'll generate an error, but we'll do that at a higher level then
+                        // SSL, because that generate a nicer error for the user to read then just aborted
+                        // connection because SSL negotation failed.
                         true);
 
                 await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, SslProtocols.Tls12, false);

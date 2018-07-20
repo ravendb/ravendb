@@ -15,11 +15,11 @@
     <EmbeddedResource Include="Data\*.json" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0-preview-20180610-02" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0-rc.1.build4038" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
     <PackageReference Include="Microsoft.DotNet.xunit.performance.runner.cli" Version="1.0.0-alpha-build0041" />
-    <PackageReference Include="xunit" Version="2.4.0-rc.1.build4038" />
+    <PackageReference Include="xunit" Version="2.4.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
