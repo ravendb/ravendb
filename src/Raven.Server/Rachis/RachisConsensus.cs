@@ -795,15 +795,24 @@ namespace Raven.Server.Rachis
                 {
                     var clusterTopology = GetTopology(context);
                     if (clusterTopology.TopologyId == null ||
-                        clusterTopology.Members.ContainsKey(_tag) == false)
+                        clusterTopology.AllNodes.ContainsKey(_tag) == false)
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info("We are not a part of the cluster so moving to passive");
+                            Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
                         }
 
                         SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive" );
                         ctx.Commit();
+                        return;
+                    }
+                    if (clusterTopology.Members.ContainsKey(_tag) == false)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
+                        }
+                        // we aren't a member, nothing that we can do here
                         return;
                     }
                     if (clusterTopology.Members.Count == 1)
@@ -1057,6 +1066,8 @@ namespace Raven.Server.Rachis
 
         private void ValidateElectionTimeout(RachisHello initialMessage)
         {
+            if (Debugger.IsAttached)
+                return; // don't check here
             var max = ElectionTimeout.TotalMilliseconds * 1.1;
             var min = ElectionTimeout.TotalMilliseconds * 0.9;
             var rcvdTimeout = initialMessage.ElectionTimeout;
