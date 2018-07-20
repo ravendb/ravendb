@@ -467,6 +467,8 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            // we might have moved from passive node, so we need to start the timeout clock
+            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             _debugRecorder.Record("Snapshot installed");
             //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
             //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
@@ -756,7 +758,8 @@ namespace Raven.Server.Rachis
         
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
-            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+            if(_engine.CurrentState != RachisState.Passive)
+                _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             
             // if leader / candidate, this remove them from play and revert to follower mode
             _engine.SetNewState(RachisState.Follower, this, _term,
