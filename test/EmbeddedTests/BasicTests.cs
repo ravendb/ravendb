@@ -5,7 +5,7 @@ using Raven.Embedded;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace EmbeddedTests.Issues
+namespace EmbeddedTests
 {
     public class BasicTests : RavenTestBase
     {

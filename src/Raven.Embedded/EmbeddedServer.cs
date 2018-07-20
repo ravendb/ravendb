@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents;
@@ -163,15 +164,67 @@ namespace Raven.Embedded
         {
             var process = RavenServerRunner.Run(options);
             if (_logger.IsInfoEnabled)
-            {
                 _logger.Info($"Starting global server: { process.Id }");
-            }
 
             string url = null;
-            var output = process.StandardOutput;
-            var sb = new StringBuilder(); // TODO: listen to standard error as well
-
             var startupDuration = Stopwatch.StartNew();
+
+            var outputString = await ReadOutput(process.StandardOutput, startupDuration, options, async (line, builder) =>
+            {
+                if (line == null)
+                {
+                    var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
+
+                    KillSlavedServerProcess(process);
+
+                    throw new InvalidOperationException(BuildStartupExceptionMessage(builder.ToString(), errorString));
+                }
+
+                const string prefix = "Server available on: ";
+                if (line.StartsWith(prefix))
+                {
+                    url = line.Substring(prefix.Length);
+                    return true;
+                }
+
+                return false;
+            }).ConfigureAwait(false);
+
+            if (url == null)
+            {
+                var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
+
+                KillSlavedServerProcess(process);
+
+                throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
+            }
+
+            return (new Uri(url), process);
+        }
+
+        private static string BuildStartupExceptionMessage(string outputString, string errorString)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Unable to start the RavenDB Server");
+
+            if (string.IsNullOrWhiteSpace(errorString) == false)
+            {
+                sb.AppendLine("Error:");
+                sb.AppendLine(errorString);
+            }
+
+            if (string.IsNullOrWhiteSpace(outputString) == false)
+            {
+                sb.AppendLine("Output:");
+                sb.AppendLine(outputString);
+            }
+
+            return sb.ToString();
+        }
+
+        private static async Task<string> ReadOutput(StreamReader output, Stopwatch startupDuration, ServerOptions options, Func<string, StringBuilder, Task<bool>> onLine)
+        {
+            var sb = new StringBuilder();
 
             Task<string> readLineTask = null;
             while (true)
@@ -182,7 +235,7 @@ namespace Raven.Embedded
                 var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 if (startupDuration.Elapsed > options.MaxServerStartupTimeDuration)
-                    break;
+                    return null;
 
                 if (hasResult == false)
                     continue;
@@ -191,32 +244,21 @@ namespace Raven.Embedded
 
                 readLineTask = null;
 
-                sb.AppendLine(line);
+                if (line != null)
+                    sb.AppendLine(line);
+
+                var shouldStop = false;
+                if (onLine != null)
+                    shouldStop = await onLine(line, sb).ConfigureAwait(false);
+
+                if (shouldStop)
+                    break;
 
                 if (line == null)
-                {
-                    KillSlavedServerProcess(process);
-
-                    throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
-                }
-                const string prefix = "Server available on: ";
-                if (line.StartsWith(prefix))
-                {
-                    url = line.Substring(prefix.Length);
                     break;
-                }
             }
 
-            if (url == null)
-            {
-                var log = sb.ToString();
-
-                KillSlavedServerProcess(process);
-
-                throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + log);
-            }
-
-            return (new Uri(url), process);
+            return sb.ToString();
         }
 
         public void OpenStudioInBrowser()
