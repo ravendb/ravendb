@@ -179,7 +179,7 @@
             //box-shadow: 0 0 0 1px @gray-darker;
         }
 
-        &:disabled + label {
+        &:disabled + label, &.disabled + label {
             opacity: 0.45;
             cursor: not-allowed;
 
@@ -289,7 +289,7 @@
             margin-top: 12px;
         }
 
-        &:disabled + label {
+        &:disabled + label, &.disabled + label {
             opacity: 0.65;
 
             &::before {
@@ -342,6 +342,7 @@
 
     &.nocheck {
         padding-left: @grid-gutter-width/2 !important;
+
         input {
             display: none;
         }
@@ -408,7 +409,7 @@
             height: floor(@line-height-computed/4*3);
             left: 0;
             margin-left: -22px;
-            margin-top:2px;
+            margin-top: 2px;
             border: 1px solid @gray;
             border-radius: 50%;
             background-color: @gray-dark;
@@ -449,7 +450,7 @@
             border-color: @gray;
         }
 
-        &:disabled + label {
+        &:disabled + label, &.disabled + label {
             opacity: 0.65;
 
             &::before {

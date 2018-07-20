@@ -447,7 +447,7 @@ class importDatabaseFromSql extends viewModelBase {
     onToggleAllClick(_: any, $event: JQueryMouseEventObject) {
         if (this.model.getSelectedTablesCount()) {
             
-            this.confirmationMessage("Deselect all tables", "To maintain connections integrity, all references with action 'link' will be set to 'skip'. Do you want to proceed? ", ["Cancel", "Set references to 'skip' and deselect all"])
+            this.confirmationMessage("Deselect all tables", "To maintain connections integrity, all references with action <strong>'link'</strong> will be set to <strong>'skip'</strong>.<br/> Do you want to proceed? ", ["Cancel", "Set references to 'skip' and deselect all"])
                 .done(result => {
                     if (result.can) {
                         this.model.setAllLinksToSkip();
@@ -597,9 +597,9 @@ class importDatabaseFromSql extends viewModelBase {
     }
 
     private provideSelectTablePopoverText(reference: sqlReference) {
-        return 'Target table is currently not selected. <br />'
-            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click to select target table</button><br />'
-            + ' before creating link to <strong>' + reference.targetTable.tableName + '</strong>';
+        return '<div class="text-center"><strong class="text-capitalize"><i class="icon-table"></i> ' + reference.targetTable.tableName + '</strong> table is currently not included. <br />'
+            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click here to include <strong>'+ reference.targetTable.tableName +'</strong> to migration</button><br />'
+            + ' before creating link</div>';
     }
     
     private initTableCheckboxHints() {
@@ -626,7 +626,7 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     private provideTableCheckboxHint(incomingLinksCount: number) {
-        return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em>Skip</em> or <em>embed</em> all of them before continue.<br/> "
+        return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em><strong>Skip</strong></em> or <em><strong>embed</strong></em> all of them before proceeding.<br/> "
             + "<small class='text-info'><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
     }
     
