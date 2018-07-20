@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
@@ -400,7 +399,7 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     goToReverseReference(reference: sqlReference, animate = true) {
-        const originalTopPosition = $("[data-ref-id=" + reference.id + "]").offset().top;
+        const originalTopPosition = $("[data-ref-id=" + reference.id + "] .key:visible").offset().top;
         const reverseReference = this.model.findReverseReference(reference);
         
         this.searchText(""); // make sure table is visible
@@ -414,7 +413,7 @@ class importDatabaseFromSql extends viewModelBase {
             this.setCurrentPage(page);
             
             // navigate exactly to reference position
-            const $revReference = $("[data-ref-id=" + reverseReference.id + "] td:eq(0)");
+            const $revReference = $("[data-ref-id=" + reverseReference.id + "] .key:visible");
             
             $(".js-scroll-tables").scrollTop($revReference.offset().top - originalTopPosition);
             
@@ -564,8 +563,8 @@ class importDatabaseFromSql extends viewModelBase {
         const $secondStep = $("#js-second-step");
         
         $secondStep.on("mouseenter", ".js-btn-link", event => {
-            const target = $(event.target);
-
+            const target = $(event.currentTarget);
+            
             const reference = ko.dataFor(target[0]) as sqlReference;
 
             if (!target.data('bs.popover')) {

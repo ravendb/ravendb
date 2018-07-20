@@ -297,6 +297,18 @@
                 cursor: not-allowed;
             }
         }
+
+        &:checked:disabled + label, &:checked.disabled + label {
+             &::before {
+                 background-color: @gray !important;
+                 border-color: @gray !important;
+                 opacity: .3;
+             }
+   
+             &::after {
+                 opacity: .4
+             }
+        }
     }
 
     &.checkbox-table-selector {

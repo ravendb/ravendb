@@ -20,19 +20,19 @@
                         <div data-bind="template: { name: 'in-use-reference-template' }">
                         </div>
                     </td>
-                    <td width="180">
+                    <td width="240">
                         <div class="btn-group link-actions">
                             <button class="btn btn-sm btn-default"
                                     data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')">
-                                skip
+                                <i class="icon-skip"></i> <span>skip</span>
                             </button>
                             <button class="btn btn-sm btn-default"
                                     data-bind="css: { active: action() === 'link' }, click: _.partial($root.onActionClicked, $data, 'link')">
-                                link
+                                <i class="icon-link"></i> <span>link</span>
                             </button>
                             <button class="btn btn-sm btn-default"
                                     data-bind="css: { active: action() === 'embed' }, click: _.partial($root.onActionClicked, $data, 'embed')">
-                                embed
+                                <i class="icon-embed"></i> <span>embed</span>
                             </button>
                         </div>
                     </td>
