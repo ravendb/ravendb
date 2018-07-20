@@ -19,9 +19,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new AttachmentFailover())
+                using (var test = new Jordan())
                 {
-                    await test.PutAttachmentsWithFailover_Session();
+                    await test.CanTranslateToRql();
                 }
             }
             catch (Exception e)
