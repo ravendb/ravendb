@@ -132,7 +132,6 @@ class indexingSpeedSection {
             items: this.table
         }), () => {
             return [
-                //TODO:  new checkedColumn(true),
                 new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => appUrl.forIndexPerformance(x.database()), "Database", "30%"),
                 new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond() != null ? x.indexedPerSecond() : "n/a", "Indexed / sec", "15%", {
                     extraClass: item => item.indexedPerSecond() != null ? "" : "na"
@@ -339,7 +338,6 @@ class trafficSection {
             items: this.table
         }), () => {
             return [
-                //TODO: new checkedColumn(true),
                 new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forTrafficWatch(x.database()), "Database", "30%"),
                 new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "20%"),
                 new textColumn<trafficItem>(grid, x => x.writesPerSecond(), "Writes / s", "25%"),

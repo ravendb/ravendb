@@ -83,10 +83,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     activate() {
-        //TODO: if !!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true" preselect periodic export
-        //TODO: fetchClusterWideConfig
-        //TODO: fetchCustomBundles
-
         const getTopologyTask = new getClusterTopologyCommand()
             .execute()
             .done(topology => {

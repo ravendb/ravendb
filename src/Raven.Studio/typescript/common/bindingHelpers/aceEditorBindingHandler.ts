@@ -263,7 +263,6 @@ class aceEditorBindingHandler {
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
             $(element).off('keyup', aceFocusElement);
             $(element).off('focus', aceFocusElement);
-            //TODO: $(element).resizable("destroy");
             aceEditor.getSession().setUseWorker(false);
             aceEditor.destroy();
             

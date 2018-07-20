@@ -56,11 +56,6 @@ class editIndex extends viewModelBase {
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
 
-    /* TODO
-    canSaveSideBySideIndex: KnockoutComputed<boolean>;
-     mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
-    */
-
     constructor() {
         super();
 
@@ -78,16 +73,6 @@ class editIndex extends viewModelBase {
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
-
-        /* TODO: side by side
-        this.canSaveSideBySideIndex = ko.computed(() => {
-            if (!this.isEditingExistingIndex()) {
-                return false;
-            }
-            var loadedIndex = this.loadedIndexName(); // use loaded index name
-            var editedName = this.editedIndex().name();
-            return loadedIndex === editedName;
-        });*/
     }
 
     private initializeObservables() {
@@ -161,9 +146,6 @@ class editIndex extends viewModelBase {
     }
 
     private initValidation() {
-
-        //TODO: aceValidation: true for map and reduce
-
         this.editedIndex().name.extend({
             validation: [
                 {
@@ -572,21 +554,6 @@ class editIndex extends viewModelBase {
             .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, "csharp")));
     }
 
-    /* TODO
-    refreshIndex() {
-        eventsCollector.default.reportEvent("index", "refresh");
-        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
-        canContinue.done(() => {
-            this.fetchIndexData(this.originalIndexName)
-                .done(() => {
-                    this.initializeDirtyFlag();
-                    this.editedIndex().name.valueHasMutated();
-            });
-        });
-    }
-
-    //TODO: copy index
-    */
     formatIndex(mapIndex: number) {
         eventsCollector.default.reportEvent("index", "format-index");
         const index: indexDefinition = this.editedIndex();
@@ -687,83 +654,6 @@ class editIndex extends viewModelBase {
             return true;
         });
     }
-    
-    /* TODO
-
-    replaceIndex() {
-        eventsCollector.default.reportEvent("index", "replace");
-        var indexToReplaceName = this.editedIndex().name();
-        var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
-
-        replaceDialog.replaceSettingsTask.done((replaceDocument: any) => {
-            if (!this.editedIndex().isSideBySideIndex()) {
-                this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
-            }
-
-            var indexDef = this.editedIndex().toDto();
-            var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
-
-            this.saveIndex(indexDef)
-                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
-                .done(() => {
-                    new saveDocumentCommand(replaceDocumentKey, replaceDocument, this.activeDatabase(), false)
-                        .execute()
-                        .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText))
-                        .done(() => messagePublisher.reportSuccess("Successfully saved side-by-side index"));
-                })
-                .always(() => dialog.close(replaceDialog));
-        });
-
-        app.showBootstrapDialog(replaceDialog);
-    }*/
-
-    //TODO: below we have functions for remaining features: 
-
-    /* TODO test index
-    makePermanent() {
-        eventsCollector.default.reportEvent("index", "make-permanent");
-        if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
-            this.editedIndex().isTestIndex(false);
-            // trim Test prefix
-            var indexToDelete = this.editedIndex().name();
-            this.editedIndex().name(this.editedIndex().name().substr(index.TestIndexPrefix.length));
-            var indexDef = this.editedIndex().toDto();
-
-            this.saveIndex(indexDef)
-                .done(() => {
-                    new deleteIndexCommand(indexToDelete, this.activeDatabase()).execute();
-                });
-        }
-    }
-*/
-
-    /* TODO side by side
-
-    cancelSideBySideIndex() {
-        eventsCollector.default.reportEvent("index", "cancel-side-by-side");
-        var indexName = this.originalIndexName;
-        if (indexName) {
-            var db = this.activeDatabase();
-            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([indexName], db);
-            cancelSideBySideIndexViewModel.cancelTask.done(() => {
-                //prevent asking for unsaved changes
-                this.dirtyFlag().reset(); // Resync Changes
-                router.navigate(appUrl.forIndexes(db));
-            });
-
-            dialog.show(cancelSideBySideIndexViewModel);
-        }
-    }
-
-    */
-
-    /*TODO merged indexes
-   private deleteMergedIndexes(indexesToDelete: string[]) {
-       var db = this.activeDatabase();
-       var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
-       dialog.show(deleteViewModel);
-   }*/
-
 }
 
 export = editIndex;

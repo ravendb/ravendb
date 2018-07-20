@@ -11,7 +11,6 @@ class welcome extends setupStep {
         return $.when<any>(this.fetchLocalNodeIps(), this.fetchSetupParameters())
             .done((localIpsResult, setupParamsResult) => {
                 this.model.init(setupParamsResult[0]);
-                // todo: make the server endpoint return well defined classes    
 
                 const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip,  '.').length === 4);
                 const ipV6 = _.difference(localIpsResult[0],  ipV4);

@@ -32,7 +32,6 @@ class conflictItem {
     changeVector = ko.observable<changeVectorItem[]>();
 
     constructor(dto: Raven.Client.Documents.Commands.GetConflictsResult.Conflict, useLongChangeVectorFormat: boolean) {
-        //TODO: use change vector? probably yes - latest db id from change vector allows us to get information on which node the modification was made. 
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             this.originalValue(json);
@@ -48,12 +47,6 @@ class conflictItem {
 }
 
 class conflicts extends viewModelBase {
-
-    //TODO: map db is from change vector to some meaningful names? 
-    //TODO: handle conflicts on deletion
-    //TODO: detect change in grid
-    //TODO: subscribe to changes api for conflicts (with throttle)
-    //TODO: spiners - block ace editor when saving/deleting?
 
     hasDetailsLoaded = ko.observable<boolean>(false);
     changeVectorsVisible = ko.observable<boolean>(false);

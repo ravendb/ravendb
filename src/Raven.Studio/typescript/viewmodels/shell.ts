@@ -44,8 +44,6 @@ import clientCertificateModel = require("models/auth/clientCertificateModel");
 import certificateModel = require("models/auth/certificateModel");
 import serverTime = require("common/helpers/database/serverTime");
 
-//TODO: extract cluster related logic to separate class
-//TODO: extract api key related logic to separate class 
 class shell extends viewModelBase {
 
     private router = router;
@@ -61,7 +59,6 @@ class shell extends viewModelBase {
 
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
-    windowHeightObservable: KnockoutObservable<number>; //TODO: delete?
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;

@@ -115,8 +115,6 @@ class columnPreviewPlugin<T> {
         const $cell = $(e.target).closest(".cell");
         const cellOffset = $cell.offset();
 
-        //TODO: add copy value button ?
-
         const parentWidth = $parent.outerWidth();
         const parentHeight = $parent.outerHeight(); //TODO: i think we sould use virtual grid height here!
 
