@@ -478,8 +478,33 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+
+            _engine.Timeout.Defer(_connection.Source);
+            _debugRecorder.Record("Invoking StateMachine.SnapshotInstalled");
+
+            // notify the state machine, we do this in an async manner, and start
+            // the operator in a separate thread to avoid timeouts while this is
+            // going on
+
+            var task = Task.Run(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex));
+
+            var sp = Stopwatch.StartNew();
+
+            var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
+
+            while (task.Wait(timeToWait) == false)
+            {
+                // this may take a while, so we let the other side know that
+                // we are still processing, and we reset our own timer while
+                // this is happening
+                MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
+            }
+
+            _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
+
             // we might have moved from passive node, so we need to start the timeout clock
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+
             _debugRecorder.Record("Snapshot installed");
             //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
             //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
@@ -489,11 +514,6 @@ namespace Raven.Server.Rachis
                 CurrentTerm = _term,
                 LastLogIndex = snapshot.LastIncludedIndex
             });
-
-            _engine.Timeout.Defer(_connection.Source);
-
-            // notify the state machine
-            _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
 
             _engine.Timeout.Defer(_connection.Source);
         }
