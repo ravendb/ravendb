@@ -1477,8 +1477,9 @@ namespace Raven.Server.ServerWide
         }
 
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, ServerStore serverStore)
+        public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
         {
+            using(serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
@@ -1517,7 +1518,7 @@ namespace Raven.Server.ServerWide
 
             // reload license can send a notification which will open a write tx
             serverStore.LicenseManager.ReloadLicense();
-            AsyncHelpers.RunSync(() => serverStore.LicenseManager.CalculateLicenseLimits());
+            await serverStore.LicenseManager.CalculateLicenseLimits();
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
