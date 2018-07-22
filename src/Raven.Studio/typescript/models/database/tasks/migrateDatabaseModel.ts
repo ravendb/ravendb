@@ -103,8 +103,7 @@ class migrateDatabaseModel {
             ApiKey: this.showApiKeyCredentialInputs() ? this.apiKey() : null, 
             EnableBasicAuthenticationOverUnsecuredHttp: this.apiKey() ? this.enableBasicAuthenticationOverUnsecuredHttp() : false, 
             BuildMajorVersion: this.serverMajorVersion(),
-            BuildVersion: this.buildVersion(),
-            ProductVersion: this.productVersion()
+            BuildVersion: this.buildVersion()
         };
     }
 
