@@ -214,9 +214,14 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 lastTransactionMarker = item.TransactionMarker;
 
-                                if (_parent.SupportedFeatures.Replication.CountersAndClusterTransaction == false)
+                                if (_parent.SupportedFeatures.Replication.Counters == false)
+                                {                                    
+                                    AssertNotCounterForLegacyReplication(item);
+                                }
+
+                                if (_parent.SupportedFeatures.Replication.ClusterTransaction == false )
                                 {
-                                    AssertLegalReplicationItemInLegacyMode(item);
+                                    AssertNotClusterTransactionDocumentForLegacyReplication(item);
                                 }
 
                                 // Include the attachment's document which is right after its latest attachment.
@@ -350,7 +355,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void AssertLegalReplicationItemInLegacyMode(ReplicationBatchItem item)
+        private void AssertNotCounterForLegacyReplication(ReplicationBatchItem item)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
             {
@@ -365,10 +370,13 @@ namespace Raven.Server.Documents.Replication
 
                 throw new LegacyReplicationViolationException(message);
             }
+        }
 
+        private void AssertNotClusterTransactionDocumentForLegacyReplication(ReplicationBatchItem item)
+        {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                 item.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
-            {
+            {                
                 // the other side doesn't support cluster transactions, stopping replication
                 var message = $"{_parent.Node.FromString()} found a document {item.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
                               "while we are in legacy mode (downgraded our replication version to match the destination). " +
@@ -461,7 +469,7 @@ namespace Raven.Server.Documents.Replication
 
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && 
-                _parent.SupportedFeatures.Replication.CountersAndClusterTransaction == false)
+                _parent.SupportedFeatures.Replication.Counters == false)
             {
                 // skip counter tombstones in legacy mode
                 skippedReplicationItemsInfo.Update(item);
