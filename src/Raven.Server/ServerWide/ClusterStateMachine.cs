@@ -1446,6 +1446,11 @@ namespace Raven.Server.ServerWide
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
                     supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, paramaters);
+                    if (supportedFeatures.ProtocolVersion <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"state machine ConnectToPeer {url}: TCP negotiation resulted with an invalid protocol version:{supportedFeatures.ProtocolVersion}");
+                    }
                 }
 
                 return new RachisConnection
