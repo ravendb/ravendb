@@ -19,9 +19,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        private readonly string CreatedFieldValuePropertyName = "$value";
-        private readonly string CreatedFieldOptionsPropertyName = "$options";
-        private readonly string CreatedFieldNamePropertyName = "$name";
+        private const string CreatedFieldValuePropertyName = "$value";
+        private const string CreatedFieldOptionsPropertyName = "$options";
+        private const string CreatedFieldNamePropertyName = "$name";
 
         protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
-            foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
+            foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 if (_fields.TryGetValue(property, out var field) == false)
                 {
@@ -62,10 +62,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 var obj = propertyDescriptor.Value;
-                object value;
                 foreach (var v in EnumerateValues(obj))
                 {
                     var actualValue = v;
+                    object value;
                     if (actualValue.IsObject() && actualValue.IsArray() == false)
                     {
                         //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' witht the actual property name 
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                             else
                             {
-                                value = TypeConverter.ToBlittableSupportedType(val,false, indexContext, documentToProcess.Engine);
+                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
                                 newFields += GetRegularFields(instance, field, value, indexContext);
                                 continue;
                             }
@@ -121,9 +121,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         }
                     }
 
-                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, false, indexContext, documentToProcess.Engine);
+                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
                     newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
-                }                                
+                }
             }
 
             return newFields;
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static readonly string[] StoreFieldValues = { "store", "Store" };
 
-        private JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
+        private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
             if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName) ||
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return value;
         }
 
-        private IEnumerable<JsValue> EnumerateValues(JsValue jv)
+        private static IEnumerable<JsValue> EnumerateValues(JsValue jv)
         {
             if (jv.IsArray())
             {
@@ -196,8 +196,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 yield return jv;
             }
-
         }
-
     }
 }
