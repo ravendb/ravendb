@@ -94,7 +94,7 @@ namespace Raven.Client.ServerWide.Tcp
             }
             public class ReplicationFeatures
             {
-                public bool BaseLine4000 = true, MissingAttachments, CountersAndClusterTransaction;
+                public bool BaseLine4000 = true, MissingAttachments, Counters, ClusterTransaction;
             }
         }
 
@@ -138,7 +138,7 @@ namespace Raven.Client.ServerWide.Tcp
                 [(OperationTypes.Replication, ReplicationAttachmentMissingVersion41)] =
                     new List<SupportedFeatures>
                     {
-                        new SupportedFeatures(ReplicationAttachmentMissingVersion41){Replication = new SupportedFeatures.ReplicationFeatures{CountersAndClusterTransaction = true, MissingAttachments = true}},
+                        new SupportedFeatures(ReplicationAttachmentMissingVersion41){Replication = new SupportedFeatures.ReplicationFeatures{Counters= true, ClusterTransaction = true, MissingAttachments = true}},
                         /*While counter is a newer feature 'ReplicationAttachmentMissing' is a newer release and we must check the version by the order of the release*/
                         new SupportedFeatures(ReplicationAttachmentMissing){Replication = new SupportedFeatures.ReplicationFeatures{MissingAttachments = true}},
                         new SupportedFeatures(ReplicationBaseLine40301){Replication = new SupportedFeatures.ReplicationFeatures()}

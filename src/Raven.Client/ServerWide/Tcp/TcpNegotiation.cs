@@ -112,6 +112,14 @@ namespace Raven.Client.ServerWide.Tcp
 
         public CancellationToken CancellationToken { get; set; }
 
+        /// <summary>
+        /// ReadResponseAndGetVersion Function should take care reading the TcpConnectionHeaderResponse respond from the input 'stream'
+        /// And return the version of the supported TCP protocol.
+        ///
+        /// If the respond is 'Drop' the function should throw.
+        /// If the respond is 'None' the function should throw.
+        /// If the respond is 'TcpMissMatch' the function should return the read version.
+        /// </summary>
         public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, int> ReadResponseAndGetVersion { get; set; }
         public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, CancellationToken, Task<int>> ReadResponseAndGetVersionAsync { get; set; }
     }

@@ -196,6 +196,12 @@ namespace Raven.Client.Documents.Subscriptions
                 };
                 _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
 
+                if (_supportedFeatures.ProtocolVersion <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
+                }
+
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
 
                 await _stream.WriteAsync(options, 0, options.Length, token).ConfigureAwait(false);
