@@ -475,10 +475,11 @@ namespace Raven.Server.Documents.Replication
                 };
                 //This will either throw or return acceptable protocol version.
                 SupportedFeatures = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
-#if DEBUG
-                Debug.Assert(SupportedFeatures.ProtocolVersion != -1);
-                Debug.Assert(SupportedFeatures.ProtocolVersion != -2);
-#endif
+                if (SupportedFeatures.ProtocolVersion <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{OutgoingReplicationThreadName}: TCP negotiation resulted with an invalid protocol version:{SupportedFeatures.ProtocolVersion}");
+                }
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
