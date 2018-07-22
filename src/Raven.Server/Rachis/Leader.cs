@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,7 +16,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Threading;
 using Voron.Exceptions;
@@ -37,8 +37,8 @@ namespace Raven.Server.Rachis
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private readonly ConcurrentDictionary<long, CommandState> _entries =
-            new ConcurrentDictionary<long, CommandState>();
+        private readonly Sparrow.Collections.LockFree.ConcurrentDictionary<long, CommandState> _entries =
+            new Sparrow.Collections.LockFree.ConcurrentDictionary<long, CommandState>();
 
         private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -606,37 +606,45 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task<(long Index, object Result)> PutAsync(CommandBase cmd, TimeSpan timeout)
+        private readonly ConcurrentQueue<CommandBase> _commandsQueue = new ConcurrentQueue<CommandBase>();
+        private readonly ConcurrentDictionary<CommandBase, CommandState> _completedCommands = new ConcurrentDictionary<CommandBase, CommandState>();
+
+        public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
 
-            Task<(long Index, object Result)> task;
-            long index;
+            _commandsQueue.Enqueue(command);
+
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
             {
-                _engine.InvokeBeforeAppendToRaftLog(context, cmd);
+                while (_commandsQueue.TryDequeue(out var cmd))
+                {
+                    _engine.InvokeBeforeAppendToRaftLog(context, cmd);
 
-                var djv = cmd.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
+                    var djv = cmd.ToJson(context);
+                    var cmdJson = context.ReadObject(djv, "raft/command");
 
-                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                    var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                    var state = AddToEntries(index, GetConvertResult(cmd));
+                    _completedCommands[cmd] = state;
+                }
                 context.Transaction.Commit();
-                task = AddToEntries(index, GetConvertResult(cmd));
             }
 
             _newEntry.Set();
 
-            if (await task.WaitWithTimeout(timeout) == false)
+            if (_completedCommands.TryRemove(command, out var myCommand) == false)
             {
-                if (_entries.TryGetValue(index, out CommandState state))
-                {
-                    state.ConvertResult?.AboutToTimeout();
-                }
-
+                throw new ArgumentException($"Who took my command?");
+            }
+            
+            if (await myCommand.TaskCompletionSource.Task.WaitWithTimeout(timeout) == false)
+            {
+                myCommand.ConvertResult?.AboutToTimeout();
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
             }
 
-            return await task;
+            return await myCommand.TaskCompletionSource.Task;
         }
 
         private static ConvertResultAction GetConvertResult(CommandBase cmd)
@@ -652,20 +660,18 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task<(long Index, object Result)> AddToEntries(long index, ConvertResultAction convertResult)
+        public CommandState AddToEntries(long index, ConvertResultAction convertResult)
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            _entries[index] =
-                new
-                    CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
-                    {
-                        CommandIndex = index,
-                        TaskCompletionSource = tcs,
-                        ConvertResult = convertResult
-                    };
-
-            return tcs.Task;
+            var state = new
+                CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
+                {
+                    CommandIndex = index,
+                    TaskCompletionSource = tcs,
+                    ConvertResult = convertResult
+                };
+            _entries[index] = state;
+            return state;
         }
 
         public System.Collections.Concurrent.ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
@@ -952,7 +958,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private class CommandState
+        public class CommandState
         {
             public long CommandIndex;
             public object Result;
