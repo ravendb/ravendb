@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
             public string LastName { get; set; }
             public string GroupId { get; set; }
         }
-        public class UserIndex : AbstractIndexCreationTask<User>
+        public class UserIndex : AbstractIndexCreationTask<User, UserIndex.ReduceResult>
         {
             public UserIndex()
             {
@@ -48,6 +48,8 @@ namespace SlowTests.MailingList
                                {
                                    GroupId = user.Group.Id
                                };
+
+                Store(x => x.GroupId, FieldStorage.Yes);
             }
 
             public class ReduceResult
@@ -72,6 +74,10 @@ namespace SlowTests.MailingList
                 await InsertDocuments(store);
                 var results = await RunBuggedQuery(store);
                 Assert.Equal(6, results.Count());
+                foreach (var item in results)
+                {
+                    Assert.NotNull(item.GroupId);
+                }
             }
         }
 
@@ -89,7 +95,6 @@ namespace SlowTests.MailingList
                         LastName = user.LastName,
                         GroupId = user.Group.Id
                     });
-
                 var results = await query.ToListAsync();
                 return results;
             }
