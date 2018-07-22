@@ -123,7 +123,7 @@ namespace Raven.Client.Exceptions
             if (schema.Type.Contains(nameof(DocumentConflictException))) // temporary!
                 throw DocumentConflictException.From(json);
 
-            throw new ConcurrencyException(schema.Message);
+            throw new ConcurrencyException(schema.Error);
         }
 
         public static Type GetType(string typeAsString)

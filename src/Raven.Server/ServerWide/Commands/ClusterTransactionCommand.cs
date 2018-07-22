@@ -184,14 +184,15 @@ namespace Raven.Server.ServerWide.Commands
         public unsafe void SaveCommandsBatch(TransactionOperationContext context, long index)
         {
             if (SerializedDatabaseCommands == null || DatabaseCommandsCount == 0)
+            {
                 return;
+            }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsIndexTree = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsIndex);
             var commands = SerializedDatabaseCommands.Clone(context);
 
             var count = commandsIndexTree.ReadLong(CommandsCountKey) ?? 0;
-
             using (GetPrefix(context, Database, out var prefixSlice, count))
             using (items.Allocate(out TableValueBuilder tvb))
             {
@@ -213,15 +214,15 @@ namespace Raven.Server.ServerWide.Commands
             RaftIndex,
         }
 
-        public static unsafe long ReadFirstClusterTransaction(TransactionOperationContext serverContext, string database)
+        public static unsafe SingleClusterDatabaseCommand ReadFirstClusterTransaction(TransactionOperationContext context, string database)
         {
-            var items = serverContext.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-            using (GetPrefix(serverContext, database, out var prefixSlice))
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+            using (GetPrefix(context, database, out var prefixSlice))
             {
                 if(items.SeekOnePrimaryKeyPrefix(prefixSlice,out var reader) == false)
-                    return 0;
-                var value = reader.Read((int)TransactionCommandsColumn.Key, out var size);
-                return Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
+                    return null;
+
+                return ReadCommand(context, reader);
             }
         }
 
