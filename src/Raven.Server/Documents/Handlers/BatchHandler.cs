@@ -442,11 +442,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Cluster Transactions");
-
-                var global = DocumentsStorage.GetDatabaseChangeVector(context);
+                var global = context.LastDatabaseChangeVector ??
+                             (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
                 var dbGrpId = Database.DatabaseGroupId;
                 var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
-
                 if (Options.WaitForIndexesTimeout != null)
                 {
                     ModifiedCollections = new HashSet<string>();
@@ -458,6 +457,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         _count++;
                         var changeVector = $"RAFT:{_count}-{dbGrpId}";
+
                         var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                         switch (cmd.Type)
@@ -475,6 +475,11 @@ namespace Raven.Server.Documents.Handlers
                                     try
                                     {
                                         var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
+                                        if (item.Missing)
+                                        {
+                                            var missingMsg = $"This shouldn't happened and probably a bug! Missing id: {cmd.Id}, doc: {_count}, raft:{current} on {context.DocumentDatabase.ServerStore.NodeTag}";
+                                            throw new InvalidDataException(missingMsg);
+                                        }
                                         var collection = GetCollection(context, item);
                                         AddPutResult(new DocumentsStorage.PutOperationResults
                                         {

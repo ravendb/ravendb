@@ -274,26 +274,27 @@ namespace Tests.Infrastructure
         {
             var retires = 5;
             Exception lastException;
-            using (var cts = new CancellationTokenSource())
+            
+            do
             {
-                do
+                try
                 {
-                    try
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
                     {
                         var tasks = RachisConsensuses.Select(x => x.WaitForState(RachisState.Leader, cts.Token));
                         await Task.WhenAny(tasks);
                         var leader = RachisConsensuses.Single(x => x.CurrentState == RachisState.Leader);
                         return action(leader);
                     }
-                    catch (Exception e)
-                    {
-                        lastException = e;
-                    }
-                } while (retires-- > 0);
-            }
+                }
+                catch (Exception e)
+                {
+                    lastException = e;
+                }
+            } while (retires-- > 0);
 
             if (lastException != null)
-                throw lastException;
+                throw new InvalidOperationException("Gave up after 5 retires", lastException);
 
             throw new InvalidOperationException("Should never happened!");
         }

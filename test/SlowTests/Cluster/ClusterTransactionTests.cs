@@ -73,35 +73,64 @@ namespace SlowTests.Cluster
             return new string(str);
         }
 
-        [Fact]
-        public void CanPreformSeveralClusterTransactions()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(3)]
+        [InlineData(5)]
+        public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
         {
-            using (var store = GetDocumentStore())
+            var numOfSessions = 10;
+            var docsPerSession = 2;
+            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            using (var store = GetDocumentStore(new Options
             {
-                for (int j = 0; j < 10; j++)
+                Server = leader,
+                ReplicationFactor = numberOfNodes
+            }))
+            {
+                for (int j = 0; j < numOfSessions; j++)
                 {
-                    using (var session = store.OpenSession(new SessionOptions
-                    {
-                        TransactionMode = TransactionMode.ClusterWide
-                    }))
-                    {
-                        for (int i = 0; i < 25; i++)
+                    
+                        var retry = false;
+                        do
                         {
-                            var user = new User
+                            try
                             {
-                                LastName = RandomString(2048),
-                                Age = i
-                            };
-                            session.Store(user, "users/" + (25 * j + i));
-                        }
-                        session.SaveChanges();
+                                using (var session = store.OpenAsyncSession(new SessionOptions
+                                {
+                                    TransactionMode = TransactionMode.ClusterWide
+                                }))
+                                {
+                                    for (int i = 0; i < docsPerSession; i++)
+                                    {
+                                        var user = new User
+                                        {
+                                            LastName = RandomString(2048),
+                                            Age = i
+                                        };
+                                        await session.StoreAsync(user, "users/" + (docsPerSession * j + i));
+                                    }
+
+                                    if (numberOfNodes > 1)
+                                        await ActionWithLeader(l =>
+                                        {
+                                            l.ServerStore.Engine.CurrentLeader.StepDown();
+                                            return Task.CompletedTask;
+                                        });
+                                    await session.SaveChangesAsync();
+                                }
+                            }
+                            catch (Exception e) when (e is ConcurrencyException)
+                            {
+                                retry = true;
+                            }
+                        } while (retry);
                     }
-                }
 
                 using (var session = store.OpenSession())
                 {
                     var res = session.Query<User>().ToArray();
-                    Assert.Equal(250, res.Length);
+                    Assert.Equal(numOfSessions * docsPerSession, res.Length);
                 }
             }
         }
@@ -359,7 +388,7 @@ namespace SlowTests.Cluster
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        return ClusterTransactionCommand.ReadFirstClusterTransaction(ctx, store.Database);
+                        return ClusterTransactionCommand.ReadFirstClusterTransaction(ctx, store.Database)?.PreviousCount ?? 0;
                     }
                 }, 0);
 

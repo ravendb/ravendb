@@ -92,7 +92,7 @@ namespace Raven.Server.Smuggler.Documents
                 return;
             }
 
-            _database.ServerStore.DatabasesLandlord.ExecutePendingClusterTransactions(_database, 0, WaitForClusterTransactionCompletion);
+            _database.ServerStore.DatabasesLandlord.ExectueClusterTransactionOnDatabase(_database, WaitForClusterTransactionCompletion);
 
             void WaitForClusterTransactionCompletion(IReadOnlyList<Task> transactionTasks)
             {

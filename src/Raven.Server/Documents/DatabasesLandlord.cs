@@ -47,6 +47,20 @@ namespace Raven.Server.Documents
             _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Server");
             CatastrophicFailureHandler = new CatastrophicFailureHandler(this, _serverStore);
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    ExecutePendingClusterTransactions();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info("An error occurred during cluster transaction execution.", e);
+                    }
+                }
+            }, null, "Cluster transaction thread");
         }
 
         public CatastrophicFailureHandler CatastrophicFailureHandler { get; }
@@ -107,7 +121,7 @@ namespace Raven.Server.Documents
                             NotifyDatabaseAboutStateChange(databaseName, task, index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                NotifyPendingClusterTransaction(databaseName, task, index);
+                                NotifyPendingClusterTransaction(databaseName, task);
                             }
                             return;
                         }
@@ -116,7 +130,7 @@ namespace Raven.Server.Documents
                             NotifyDatabaseAboutStateChange(databaseName, done, index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                NotifyPendingClusterTransaction(databaseName, done, index);
+                                NotifyPendingClusterTransaction(databaseName, done);
                             }
                         });
                         break;
@@ -135,14 +149,14 @@ namespace Raven.Server.Documents
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                         if (task.IsCompleted)
                         {
-                            NotifyPendingClusterTransaction(databaseName, task, index);
+                            NotifyPendingClusterTransaction(databaseName, task);
                             return;
                         }
-
                         task.ContinueWith(done =>
                         {
-                            NotifyPendingClusterTransaction(databaseName, done, index);
+                            NotifyPendingClusterTransaction(databaseName, done);
                         });
+                        
                         break;
                     default:
                         ThrowUnknownClusterDatabaseChangeType(changeType);
@@ -165,71 +179,92 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyPendingClusterTransaction(string databaseName, Task<DocumentDatabase> task, long index)
-        {
-            DocumentDatabase database;
-            try
-            {
-                database = task.Result;
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to load database '{databaseName}'", e);
-                }
-                return;
-            }
+        private readonly ConcurrentDictionary<string, long> _clusterTxCount = new ConcurrentDictionary<string, long>();
+        private readonly ConcurrentDictionary<string, Task<DocumentDatabase>> _pendingClusterTx = new ConcurrentDictionary<string, Task<DocumentDatabase>>();
+        private readonly ManualResetEventSlim _newClusterTx = new ManualResetEventSlim(false);
 
-            try
+        public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task)
+        {
+            _pendingClusterTx[name] = task;
+            _newClusterTx.Set();
+        }
+
+        private void ExecutePendingClusterTransactions()
+        {
+            while (_serverStore.ServerShutdown.IsCancellationRequested == false)
             {
-                ExecutePendingClusterTransactions(database, index);
-            }
-            catch (Exception e)
-            {
-                // nothing we can do
-                if (_logger.IsInfoEnabled)
+                _newClusterTx.Wait(_serverStore.ServerShutdown);
+                if (_serverStore.ServerShutdown.IsCancellationRequested)
+                    return;
+
+                _newClusterTx.Reset();
+
+                var didWork = true;
+                while (true)
                 {
-                    _logger.Info($"Failed enqueue cluster transaction command for database: '{databaseName}'", e);
+                    if (didWork == false)
+                    {
+                        Thread.Sleep(500);
+                    }
+
+                    didWork = false;
+                    var keys = _pendingClusterTx.Keys;
+                    if (keys.Count == 0)
+                        break;
+                    
+                    foreach (var key in keys)
+                    {
+                        if (_pendingClusterTx.TryRemove(key, out var dbtask))
+                        {
+                            if (dbtask.IsCompleted == false)
+                            {
+                                _pendingClusterTx[key] = dbtask;
+                                continue;
+                            }
+                        }
+
+                        // avoid tight loop when the database is loading
+                        didWork = true;
+
+                        try
+                        {
+                            var database = dbtask.Result;
+                            ExectueClusterTransactionOnDatabase(database);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Can't perform cluster transaction on database '{key}', failed to load.", e);
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        public void ExecutePendingClusterTransactions(DocumentDatabase database, long index, Action<List<Task>> customWait = null)
+        public void ExectueClusterTransactionOnDatabase(DocumentDatabase database, Action<List<Task>> customWait = null)
         {
             var transactionsTasks = new List<Task>();
-            string global;
-
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
-            using (docContext.OpenReadTransaction())
-            {
-                global = DocumentsStorage.GetDatabaseChangeVector(docContext);
-            }
-
-            var dbGrpId = database.DatabaseGroupId;
-            var lastDocFromClusterTransaction = ChangeVectorUtils.GetEtagById(global, dbGrpId);
-
+            using (database.PreventFromUnloading())
             using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
-                // TODO: There is a race between replication the transaction result from other node and executing the transaction on this one.
-                // If the above occur, the user will wait for ever for a result. 
-                // we need to correlate between the TaskId and the already executed cluster transactions (maybe use the Raft Index?).
-                // As a work around we pass 'fromCount: 0'
-                var commands = ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, fromCount: 0).ToList();
+                var currentCount = _clusterTxCount.GetOrAdd(database.Name, 0);
+                var commands = ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, fromCount: currentCount).ToList();
+                if (commands.Count == 0)
+                {
+                    return;
+                }
+
+                _clusterTxCount[database.Name] = commands.Last().PreviousCount;
 
                 foreach (var command in commands)
                 {
                     var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
                     var task = database.TxMerger.Enqueue(mergedCommands);
                     transactionsTasks.Add(task);
-                    NotifyDatabaseAfterCompletion(database, index, task, mergedCommands);
-                }
-
-                if (transactionsTasks.Count == 0)
-                {
-                    database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                    return;
+                    NotifyDatabaseAfterCompletion(database, command.Index, task, mergedCommands);
                 }
 
                 if (customWait != null)
@@ -681,6 +716,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
                 documentDatabase.Initialize();
+
                 AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, _serverStore);
                 if (_logger.IsInfoEnabled)

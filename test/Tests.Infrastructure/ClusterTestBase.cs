@@ -144,39 +144,41 @@ namespace Tests.Infrastructure
             Exception err = null;
             while (retries-- > 0)
             {
-                if (retries != 4)
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500));
-                }
-
                 try
                 {
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
-                    if (leader == null)
-                        continue;
-                    await act(leader);
-                    return leader;
+                    if (leader != null)
+                    {
+                        await act(leader);
+                        return leader;
+                    }
                 }
                 catch (RachisTopologyChangeException e)
                 {
                     // The leader cannot remove itself, so we stepdown and try again to remove this node.
                     err = e;
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
-                    if (leader == null)
-                        continue;
-                    leader.ServerStore.Engine.CurrentLeader?.StepDown();
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
-                    {
-                        await leader.ServerStore.Engine.WaitForState(RachisState.Follower, cts.Token);
-                    }
+                    leader?.ServerStore.Engine.CurrentLeader?.StepDown();
                 }
                 catch (Exception e) when (e is NotLeadingException)
                 {
                     err = e;
                 }
-                
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
-            throw new InvalidOperationException("Failed to get leader after 5 retries.", err);
+
+            throw new InvalidOperationException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus()}", err);
+        }
+
+        private string GetNodesStatus()
+        {
+            var servers = Servers.Select(s =>
+            {
+                var engine = s.ServerStore.Engine;
+                return $"{s.ServerStore.NodeTag} in {engine.CurrentState} at term {engine.CurrentTerm}";
+            });
+            return string.Join(Environment.NewLine, servers);
         }
 
         protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected)
