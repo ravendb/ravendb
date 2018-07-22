@@ -17,16 +17,25 @@ namespace SlowTests.Issues
         [Fact]
         public async Task NestedObjectShouldBeExportedAndImportedProperly()
         {
+            var id = "companies/1";
+            string cv;
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(_testCompany, "companies/1");
+                    session.Store(_testCompany, id);
                     session.SaveChanges();
+                    cv = session.Advanced.GetChangeVectorFor(_testCompany);
                 }
 
                 var client = new HttpClient();
                 var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies&format=csv");
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(id);
+                }
 
                 using (var commands = store.Commands())
                 {
@@ -46,10 +55,10 @@ namespace SlowTests.Issues
                 }
 
                 using (var session = store.OpenSession())
-                {
-                    var res = session.Query<Company>().ToList();
-                    Assert.Equal(2, res.Count);
-                    Assert.Equal(res[0], res[1]);
+                {                    
+                    var res = session.Load<Company>(id);
+                    Assert.NotEqual(session.Advanced.GetChangeVectorFor(res), cv);
+                    Assert.Equal(res, _testCompany);
                 }
             }
         }
