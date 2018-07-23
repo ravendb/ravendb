@@ -65,6 +65,7 @@ namespace Raven.Client.Documents.Linq
         private bool _selectLoad;
         private const string DefaultLoadAlias = "__load";
         private const string DefaultAlias = "__ravenDefaultAlias";
+        private bool _addedDefaultAlias;
 
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -2893,12 +2894,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (NeedToAddFromAliasToField(field))
             {
-                AddFromAliasToFieldToFetch(_fromAlias, ref field, ref alias);
+                AddFromAliasToFieldToFetch(ref field, ref alias);
             }
             else if (_aliasKeywords.Contains(field))
             {
-                AddDefaultAliasToQuery(out var fromAlias);
-                AddFromAliasToFieldToFetch(fromAlias, ref field, ref alias, true);
+                AddDefaultAliasToQuery();
+                AddFromAliasToFieldToFetch(ref field, ref alias, true);
             }
 
             if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
@@ -2919,24 +2920,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private bool NeedToAddFromAliasToField(string field)
         {
-            if (_fromAlias == null || 
-                field.StartsWith($"{_fromAlias}."))
-                return false;
-
-            if (_loadAliases == null)
-                return true;
-
-            var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
-            if (indexOf != -1)
-            {
-                field = field.Substring(0, indexOf);
-            }
-
-            return _loadAliases.Contains(field) == false;
-
+            return _addedDefaultAlias && 
+                   field.StartsWith($"{_fromAlias}.") == false;
         }
 
-        private static void AddFromAliasToFieldToFetch(string fromAlias, ref string field, ref string alias, bool quote = false)
+        private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
         {
             if (field == alias)
             {
@@ -2944,18 +2932,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             field = quote
-                ? $"{fromAlias}.'{field}'"
-                : $"{fromAlias}.{field}";
+                ? $"{_fromAlias}.'{field}'"
+                : $"{_fromAlias}.{field}";
         }
 
-        private void AddDefaultAliasToQuery(out string fromAlias)
+        private void AddDefaultAliasToQuery()
         {
-            fromAlias = $"{DefaultAlias}{_aliasesCount++}";
+            var fromAlias = $"{DefaultAlias}{_aliasesCount++}";
             AddFromAlias(fromAlias);
             foreach (var fieldToFetch in FieldsToFetch)
             {
                 fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
             }
+
+            _addedDefaultAlias = true;
         }
 
         private void VisitSkip(ConstantExpression constantExpression)
