@@ -2096,14 +2096,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (newExpression.Arguments[index] is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
                         {
-                            var counterInfo = LinqPathProvider.CreateCounterResult(mce);
-                            if (_fromAlias == null && counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
-                            {
-                                AddFromAlias(counterInfo.Args[0]);
-                            }
-
-                            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
-                            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(newExpression.Members[index]));
+                            HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);                            
                             continue;
                         }
 
@@ -2158,14 +2151,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (field.Expression is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
                         {
-                            var counterInfo = LinqPathProvider.CreateCounterResult(mce);
-                            if (_fromAlias == null && counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
-                            {
-                                AddFromAlias(counterInfo.Args[0]);
-                            }
-
-                            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
-                            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(field.Member));
+                            HandleSelectCounter(mce, lambdaExpression, field.Member);
                             continue;
                         }
 
@@ -2191,10 +2177,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                       
                     if (expressionInfo.Args != null)
                     {
-                        if (_fromAlias == null 
-                            && expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+                        if (expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
                         {
-                            AddFromAlias(expressionInfo.Args[0]);
+                            AddFromAliasOrRenameArgument(ref expressionInfo.Args[0]);
                         }
 
                         AddCallArgumentsToPath(expressionInfo.Args, ref path, out alias);
@@ -2206,6 +2191,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private void AddFromAliasOrRenameArgument(ref string arg)
+        {
+            if (_fromAlias == null)
+            {
+                AddFromAlias(arg);
+            }
+            else
+            {
+                arg = _fromAlias;
+            }
+        }
+
+        private void HandleSelectCounter(MethodCallExpression methodCallExpression, LambdaExpression lambdaExpression, MemberInfo member)
+        {
+            var counterInfo = LinqPathProvider.CreateCounterResult(methodCallExpression);
+            if (counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+            {
+                AddFromAliasOrRenameArgument(ref counterInfo.Args[0]);
+            }
+
+            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
+            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(member));
         }
 
         private static void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)
@@ -2920,8 +2929,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private bool NeedToAddFromAliasToField(string field)
         {
-            return _addedDefaultAlias && 
-                   field.StartsWith($"{_fromAlias}.") == false;
+            return _addedDefaultAlias &&
+                   field.StartsWith($"{_fromAlias}.") == false &&
+                   field.StartsWith("id(") == false &&
+                   field.StartsWith("counter(") == false &&
+                   field.StartsWith("counterRaw(") == false;
         }
 
         private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
