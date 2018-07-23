@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Utils;
 using Sparrow.Platform;
 
 namespace Tests.Infrastructure.InterversionTest
@@ -86,10 +87,10 @@ namespace Tests.Infrastructure.InterversionTest
             catch (Exception err)
             {
                 if (File.Exists(packagePath))
-                    File.Delete(packagePath);
+                    IOExtensions.DeleteFile(packagePath);
 
                 if (Directory.Exists(serverDirectory))
-                    Directory.Delete(serverDirectory, true);
+                    IOExtensions.DeleteDirectory(serverDirectory);
 
                 throw err;
             }
@@ -153,10 +154,10 @@ namespace Tests.Infrastructure.InterversionTest
             catch (Exception exc)
             {
                 if (File.Exists(downloadFilePath))
-                    File.Delete(downloadFilePath);
+                    IOExtensions.DeleteFile(downloadFilePath);
 
                 if (File.Exists(packageFilePath))
-                    File.Delete(packageFilePath);
+                    IOExtensions.DeleteFile(packageFilePath);
 
                 throw exc;
             }
