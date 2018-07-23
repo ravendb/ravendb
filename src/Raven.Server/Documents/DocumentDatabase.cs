@@ -288,17 +288,7 @@ namespace Raven.Server.Documents
                     }
                 }, null);
 
-                Task.Run(() =>
-                {
-                    try
-                    {
-                        ExectueClusterTransactionTask();
-                    }
-                    catch
-                    {
-                        //
-                    }
-                }, DatabaseShutdown);
+                Task.Run(() => ExectueClusterTransactionTask(), DatabaseShutdown);
 
             }
             catch (Exception)
@@ -371,6 +361,8 @@ namespace Raven.Server.Documents
                 _hasClusterTransaction.Wait(DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
+
+                _hasClusterTransaction.Reset();
 
                 ExectueClusterTransactionOnDatabase();
             }
