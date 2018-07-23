@@ -14,6 +14,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Sparrow.Json;
@@ -606,45 +607,109 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private readonly ConcurrentQueue<CommandBase> _commandsQueue = new ConcurrentQueue<CommandBase>();
-        private readonly ConcurrentDictionary<CommandBase, CommandState> _completedCommands = new ConcurrentDictionary<CommandBase, CommandState>();
+        private readonly ConcurrentQueue<(CommandBase Cmd, TaskCompletionSource<Task<(long Index,object Result)>> Tcs)> _commandsQueue = new ConcurrentQueue<(CommandBase, TaskCompletionSource<Task<(long, object)>>)>();
+
+        private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-
-            _commandsQueue.Enqueue(command);
-
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
+            var tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _commandsQueue.Enqueue((command, tcs));
+            while (tcs.Task.IsCompleted == false)
             {
-                while (_commandsQueue.TryDequeue(out var cmd))
+                var lockTaken = false;
+                try
                 {
-                    _engine.InvokeBeforeAppendToRaftLog(context, cmd);
+                    var task = _waitForCommit.WaitAsync(timeout);
+                    Monitor.TryEnter(_commandsQueue, ref lockTaken);
 
-                    var djv = cmd.ToJson(context);
-                    var cmdJson = context.ReadObject(djv, "raft/command");
-
-                    var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                    var state = AddToEntries(index, GetConvertResult(cmd));
-                    _completedCommands[cmd] = state;
+                    if (lockTaken)
+                    {
+                        try
+                        {
+                            EmptyQueue();
+                        }
+                        finally
+                        {
+                            _waitForCommit.SetAndResetAtomically();
+                        }
+                    }
+                    else
+                    {
+                        if (await task == false)
+                        {
+                            GetConvertResult(command)?.AboutToTimeout();
+                            throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                        }
+                    }
                 }
-                context.Transaction.Commit();
+                finally
+                {
+                    if (lockTaken)
+                        Monitor.Exit(_commandsQueue);
+                }
             }
 
-            _newEntry.Set();
-
-            if (_completedCommands.TryRemove(command, out var myCommand) == false)
+            var inner = await tcs.Task;
+            if (await inner.WaitWithTimeout(timeout) == false)
             {
-                throw new ArgumentException($"Who took my command?");
-            }
-            
-            if (await myCommand.TaskCompletionSource.Task.WaitWithTimeout(timeout) == false)
-            {
-                myCommand.ConvertResult?.AboutToTimeout();
+                GetConvertResult(command)?.AboutToTimeout();
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
             }
 
-            return await myCommand.TaskCompletionSource.Task;
+            return await inner;
+        }
+
+        private void EmptyQueue()
+        {
+            var list = new List<TaskCompletionSource<Task<(long, object)>>>();
+            var tasks = new List<Task<(long, object)>>();
+            try
+            {
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    while (_commandsQueue.TryDequeue(out var cmd))
+                    {
+                        list.Add(cmd.Tcs);
+                        _engine.InvokeBeforeAppendToRaftLog(context, cmd.Cmd);
+
+                        var djv = cmd.Cmd.ToJson(context);
+                        var cmdJson = context.ReadObject(djv, "raft/command");
+
+                        var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+
+                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        tasks.Add(tcs.Task);
+                        var state = new
+                            CommandState // we need to add entry inside write tx lock to avoid
+                                         // a situation when command will be applied (and state set)
+                                         // before it is added to the entries list
+                            {
+                                CommandIndex = index,
+                                TaskCompletionSource = tcs,
+                                ConvertResult = GetConvertResult(cmd.Cmd)
+                        };
+                        _entries[index] = state;
+                    }
+                    context.Transaction.Commit();
+                }
+
+                if (tasks.Count > 0)
+                    _newEntry.Set();
+
+                for (int i = 0; i < tasks.Count; i++)
+                {
+                    list[i].TrySetResult(tasks[i]);
+                }
+            }
+            catch (Exception e)
+            {
+                foreach (var tcs in list)
+                {
+                    tcs.TrySetException(e);
+                }
+            }
         }
 
         private static ConvertResultAction GetConvertResult(CommandBase cmd)
@@ -659,22 +724,8 @@ namespace Raven.Server.Rachis
                     return null;
             }
         }
-
-        public CommandState AddToEntries(long index, ConvertResultAction convertResult)
-        {
-            var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var state = new
-                CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
-                {
-                    CommandIndex = index,
-                    TaskCompletionSource = tcs,
-                    ConvertResult = convertResult
-                };
-            _entries[index] = state;
-            return state;
-        }
-
-        public System.Collections.Concurrent.ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
+        
+        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(string nodeTag, Exception e)
         {
