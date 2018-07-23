@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -17,7 +18,7 @@ namespace SlowTests.Interversion
             var getStoreTask405 = GetDocumentStoreAsync("4.0.5");
             var getStoreTask406patch = GetDocumentStoreAsync("4.0.6-patch-40047");
             var getStoreTaskCurrent = GetDocumentStoreAsync();
-            
+
             await Task.WhenAll(getStoreTask405, getStoreTask406patch, getStoreTaskCurrent);
 
             AssertStore(await getStoreTask405);
@@ -25,22 +26,25 @@ namespace SlowTests.Interversion
             AssertStore(await getStoreTaskCurrent);
         }
 
-        private static void AssertStore(Raven.Client.Documents.IDocumentStore store)
+        private static void AssertStore(IDocumentStore store)
         {
-            using (var session = store.OpenSession())
+            using (store)
             {
-                session.Store(new Company()
+                using (var session = store.OpenSession())
                 {
-                    Name = "HR"
-                }, "companies/1");
-                session.SaveChanges();
-            }
+                    session.Store(new Company()
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+                    session.SaveChanges();
+                }
 
-            using (var session = store.OpenSession())
-            {
-                var c = session.Load<Company>("companies/1");
-                Assert.NotNull(c);
-                Assert.Equal("HR", c.Name);
+                using (var session = store.OpenSession())
+                {
+                    var c = session.Load<Company>("companies/1");
+                    Assert.NotNull(c);
+                    Assert.Equal("HR", c.Name);
+                }
             }
         }
     }
