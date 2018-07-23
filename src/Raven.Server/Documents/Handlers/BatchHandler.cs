@@ -477,8 +477,14 @@ namespace Raven.Server.Documents.Handlers
                                         var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
                                         if (item.Missing)
                                         {
-                                            var missingMsg = $"This shouldn't happened and probably a bug! Missing id: {cmd.Id}, doc: {_count}, raft:{current} on {context.DocumentDatabase.ServerStore.NodeTag}";
-                                            throw new InvalidDataException(missingMsg);
+                                            AddPutResult(new DocumentsStorage.PutOperationResults
+                                            {
+                                                ChangeVector = changeVector,
+                                                Id = cmd.Id,
+                                                LastModified = DateTime.UtcNow,
+                                                Collection = Database.DocumentsStorage.ExtractCollectionName(context, cmd.Document)
+                                            });
+                                            continue;
                                         }
                                         var collection = GetCollection(context, item);
                                         AddPutResult(new DocumentsStorage.PutOperationResults
@@ -517,6 +523,15 @@ namespace Raven.Server.Documents.Handlers
                                     try
                                     {
                                         var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
+                                        if (item.Missing)
+                                        {
+                                            AddDeleteResult(new DocumentsStorage.DeleteOperationResult
+                                            {
+                                                ChangeVector = changeVector,
+                                                Collection = null
+                                            }, cmd.Id);
+                                            continue;
+                                        }
                                         var collection = GetCollection(context, item);
                                         AddDeleteResult(new DocumentsStorage.DeleteOperationResult
                                         {
