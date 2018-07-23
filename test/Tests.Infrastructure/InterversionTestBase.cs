@@ -12,9 +12,14 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.TestDriver;
 using Tests.Infrastructure.InterversionTest;
+using Xunit;
 
 namespace Tests.Infrastructure
 {
@@ -26,24 +31,78 @@ namespace Tests.Infrastructure
 
         private static ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
 
-        protected async Task<IDocumentStore> GetDocumentStoreAsync()
+        protected async Task<IDocumentStore> GetDocumentStoreAsync(Options options = null, [CallerMemberName] string caller = null)
         {
-            return GetDocumentStore();
+            return GetDocumentStore(options, caller);
         }
 
         protected async Task<IDocumentStore> GetDocumentStoreAsync(
-            string serverVersion, [CallerMemberName] string database = null, CancellationToken token = default(CancellationToken))
+            string serverVersion,
+            InterversionTestOptions options = null,
+            [CallerMemberName] string database = null,
+            CancellationToken token = default(CancellationToken))
         {
+
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
             var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo);
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
+
             var locator = new ConfigurableRavenServerLocator(testServerPath);
             var (serverUrl, serverProcess) = await RunServer(locator);
-            return new DocumentStore() {
-                Urls = new [] { serverUrl.ToString() },
-                Database = database
+
+            options = options ?? InterversionTestOptions.Default;
+            var name = GetDatabaseName(database);
+
+            if (options.ModifyDatabaseName != null)
+                name = options.ModifyDatabaseName(name) ?? name;
+
+            var runInMemory = true;
+            var doc = new DatabaseRecord(name)
+            {
+                Settings =
+                        {
+                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                            [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
+                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
+                        }
             };
+
+            options.ModifyDatabaseRecord?.Invoke(doc);
+
+            var store = new DocumentStore()
+            {
+                Urls = new[] { serverUrl.ToString() },
+                Database = name 
+            };
+
+            options.ModifyDocumentStore?.Invoke(store);
+
+            store.Initialize();
+
+            if (options.CreateDatabase)
+            {
+                var dbs = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, 10));
+                foreach (var db in dbs)
+                {
+                    if (db == name)
+                    {
+                        throw new InvalidOperationException($"Database '{name}' already exists.");
+                    }
+                }
+
+                DatabasePutResult result;
+                result = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, options.ReplicationFactor));
+            }
+
+            store.AfterDispose += (object sender, EventArgs e) =>
+            {
+                KillSlavedServerProcess(serverProcess);
+            };
+
+            return store;
         }
 
         public static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
@@ -197,5 +256,100 @@ namespace Tests.Infrastructure
                 });
             }
         }
+
+        public class InterversionTestOptions
+        {
+            private readonly bool _frozen;
+
+            private bool _createDatabase;
+            private bool _deleteDatabaseOnDispose;
+            private int _replicationFactor;
+            private Action<DocumentStore> _modifyDocumentStore;
+            private Action<DatabaseRecord> _modifyDatabaseRecord;
+            private Func<string, string> _modifyDatabaseName;
+
+            public static readonly InterversionTestOptions Default = new InterversionTestOptions(true);
+
+            public InterversionTestOptions() : this(false)
+            {
+            }
+
+            private InterversionTestOptions(bool frozen)
+            {
+                DeleteDatabaseOnDispose = true;
+                CreateDatabase = true;
+                ReplicationFactor = 1;
+
+                _frozen = frozen;
+            }
+
+            public Func<string, string> ModifyDatabaseName
+            {
+                get => _modifyDatabaseName;
+                set
+                {
+                    AssertNotFrozen();
+                    _modifyDatabaseName = value;
+                }
+            }
+
+            public Action<DatabaseRecord> ModifyDatabaseRecord
+            {
+                get => _modifyDatabaseRecord;
+                set
+                {
+                    AssertNotFrozen();
+                    _modifyDatabaseRecord = value;
+                }
+            }
+
+            public Action<DocumentStore> ModifyDocumentStore
+            {
+                get => _modifyDocumentStore;
+                set
+                {
+                    AssertNotFrozen();
+                    _modifyDocumentStore = value;
+                }
+            }
+
+            public int ReplicationFactor
+            {
+                get => _replicationFactor;
+                set
+                {
+                    AssertNotFrozen();
+                    _replicationFactor = value;
+                }
+            }
+
+            public bool DeleteDatabaseOnDispose
+            {
+                get => _deleteDatabaseOnDispose;
+                set
+                {
+                    AssertNotFrozen();
+                    _deleteDatabaseOnDispose = value;
+                }
+            }
+
+            public bool CreateDatabase
+            {
+                get => _createDatabase;
+                set
+                {
+                    AssertNotFrozen();
+                    _createDatabase = value;
+                }
+            }
+
+            private void AssertNotFrozen()
+            {
+                if (_frozen)
+                    throw new InvalidOperationException("Options are frozen and cannot be changed.");
+            }
+        }
     }
+
+
 }
