@@ -26,18 +26,6 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Client");
-/*
-
-        private static readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "AS",
-            "SELECT",
-            "WHERE",
-            "GROUP",
-            "ORDER",
-            "INCLUDE",
-            "UPDATE"
-        };*/
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
