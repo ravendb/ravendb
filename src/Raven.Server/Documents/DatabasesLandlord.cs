@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +10,6 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -47,20 +45,6 @@ namespace Raven.Server.Documents
             _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Server");
             CatastrophicFailureHandler = new CatastrophicFailureHandler(this, _serverStore);
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
-            {
-                try
-                {
-                    ExecutePendingClusterTransactions();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info("An error occurred during cluster transaction execution.", e);
-                    }
-                }
-            }, null, "Cluster transaction thread");
         }
 
         public CatastrophicFailureHandler CatastrophicFailureHandler { get; }
@@ -179,143 +163,21 @@ namespace Raven.Server.Documents
             }
         }
 
-        private readonly ConcurrentDictionary<string, long> _clusterTxCount = new ConcurrentDictionary<string, long>();
-        private readonly ConcurrentDictionary<string, Task<DocumentDatabase>> _pendingClusterTx = new ConcurrentDictionary<string, Task<DocumentDatabase>>();
-        private readonly ManualResetEventSlim _newClusterTx = new ManualResetEventSlim(false);
-
         public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task)
         {
-            _pendingClusterTx[name] = task;
-            _newClusterTx.Set();
-        }
-
-        private void ExecutePendingClusterTransactions()
-        {
-            while (_serverStore.ServerShutdown.IsCancellationRequested == false)
+            try
             {
-                _newClusterTx.Wait(_serverStore.ServerShutdown);
-                if (_serverStore.ServerShutdown.IsCancellationRequested)
-                    return;
-
-                _newClusterTx.Reset();
-
-                var didWork = true;
-                while (true)
+                task.Result.NotifyOnPendingClusterTransaction();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
                 {
-                    if (didWork == false)
-                    {
-                        Thread.Sleep(500);
-                    }
-
-                    didWork = false;
-                    var keys = _pendingClusterTx.Keys;
-                    if (keys.Count == 0)
-                        break;
-                    
-                    foreach (var key in keys)
-                    {
-                        if (_pendingClusterTx.TryRemove(key, out var dbtask))
-                        {
-                            if (dbtask.IsCompleted == false)
-                            {
-                                _pendingClusterTx[key] = dbtask;
-                                continue;
-                            }
-                        }
-
-                        // avoid tight loop when the database is loading
-                        didWork = true;
-
-                        try
-                        {
-                            var database = dbtask.Result;
-                            ExectueClusterTransactionOnDatabase(database);
-                        }
-                        catch (Exception e)
-                        {
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info($"Can't perform cluster transaction on database '{key}', failed to load.", e);
-                            }
-                        }
-                    }
+                    _logger.Info($"Failed to notify the database '{name}' about new cluster transactions.", e);
                 }
             }
         }
-
-        public void ExectueClusterTransactionOnDatabase(DocumentDatabase database, Action<List<Task>> customWait = null)
-        {
-            var transactionsTasks = new List<Task>();
-            using (database.PreventFromUnloading())
-            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-            using (serverContext.OpenReadTransaction())
-            {
-                var currentCount = _clusterTxCount.GetOrAdd(database.Name, 0);
-                var commands = ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, fromCount: currentCount).ToList();
-                if (commands.Count == 0)
-                {
-                    return;
-                }
-
-                _clusterTxCount[database.Name] = commands.Last().PreviousCount;
-
-                foreach (var command in commands)
-                {
-                    var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
-                    var task = database.TxMerger.Enqueue(mergedCommands);
-                    transactionsTasks.Add(task);
-                    NotifyDatabaseAfterCompletion(database, command.Index, task, mergedCommands);
-                }
-
-                if (customWait != null)
-                {
-                    customWait(transactionsTasks);
-                    return;
-                }
-
-                Task.WaitAll(transactionsTasks.ToArray());
-            }
-        }
-
-        private void NotifyDatabaseAfterCompletion(DocumentDatabase database, long index, Task task, BatchHandler.ClusterTransactionMergedCommand mergedCommands)
-        {
-            task.ContinueWith(t =>
-            {
-                try
-                {
-                    if (t.IsCompletedSuccessfully)
-                    {
-                        var options = mergedCommands.Options;
-                        Task indexTask = null;
-                        if (options?.WaitForIndexesTimeout != null)
-                        {
-                            indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
-                                options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                                mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                        }
-
-                        var result = new BatchHandler.ClusterTransactionCompletionResult
-                        {
-                            Array = mergedCommands.Reply,
-                            IndexTask = indexTask,
-                        };
-                        database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
-                        return;
-                    }
-
-                    database.ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
-                }
-                catch (Exception e)
-                {
-                    // nothing we can do
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"Failed to notify about transaction completion for database '{database.Name}'.", e);
-                    }
-                }
-            });
-        }
-
+        
         public bool ShouldDeleteDatabase(string dbName, DatabaseRecord record)
         {
             var deletionInProgress = DeletionInProgressStatus.No;

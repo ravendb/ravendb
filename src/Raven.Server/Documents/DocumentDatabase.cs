@@ -18,6 +18,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -30,6 +31,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -285,6 +287,19 @@ namespace Raven.Server.Documents
                         // We ignore the exception since it was caught in the function itself
                     }
                 }, null);
+
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        ExectueClusterTransactionTask();
+                    }
+                    catch
+                    {
+                        //
+                    }
+                }, DatabaseShutdown);
+
             }
             catch (Exception)
             {
@@ -338,6 +353,108 @@ namespace Raven.Server.Documents
         internal DatabaseDisabledException CreateDatabaseShutdownException(Exception e = null)
         {
             return new DatabaseDisabledException("The database " + Name + " is shutting down", e);
+        }
+
+        private readonly ManualResetEventSlim _hasClusterTransaction = new ManualResetEventSlim(false);
+
+        public void NotifyOnPendingClusterTransaction()
+        {
+            _hasClusterTransaction.Set();
+        }
+
+        private long _clusterTxCount;
+
+        private void ExectueClusterTransactionTask()
+        {
+            while (DatabaseShutdown.IsCancellationRequested == false)
+            {
+                _hasClusterTransaction.Wait(DatabaseShutdown);
+                if (DatabaseShutdown.IsCancellationRequested)
+                    return;
+
+                ExectueClusterTransactionOnDatabase();
+            }
+        }
+
+        public void ExectueClusterTransactionOnDatabase(Action<List<Task>> customWait = null)
+        {
+            try
+            {
+                var transactionsTasks = new List<Task>();
+                using (PreventFromUnloading())
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    var commands = ClusterTransactionCommand.ReadCommandsBatch(serverContext, Name, fromCount: _clusterTxCount).ToList();
+                    if (commands.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (var command in commands)
+                    {
+                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, command);
+                        var task = TxMerger.Enqueue(mergedCommands);
+                        transactionsTasks.Add(task);
+                        OnClusterTransactionCompletion(command.Index, task, mergedCommands);
+                    }
+
+                    if (customWait != null)
+                    {
+                        customWait(transactionsTasks);
+                        return;
+                    }
+
+                    Task.WaitAll(transactionsTasks.ToArray(), DatabaseShutdown);
+                    _clusterTxCount = commands.Last().PreviousCount;
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
+                }
+            }
+        }
+
+        private void OnClusterTransactionCompletion(long index, Task task, BatchHandler.ClusterTransactionMergedCommand mergedCommands)
+        {
+            task.ContinueWith(t =>
+            {
+                try
+                {
+                    if (t.IsCompletedSuccessfully)
+                    {
+                        var options = mergedCommands.Options;
+                        Task indexTask = null;
+                        if (options?.WaitForIndexesTimeout != null)
+                        {
+                            indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                                options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                                mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                        }
+
+                        var result = new BatchHandler.ClusterTransactionCompletionResult
+                        {
+                            Array = mergedCommands.Reply,
+                            IndexTask = indexTask,
+                        };
+                        ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
+                        return;
+                    }
+
+                    ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
+                }
+                catch (Exception e)
+                {
+                    // nothing we can do
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    }
+                }
+            }, DatabaseShutdown);
         }
 
         public struct DatabaseUsage : IDisposable
