@@ -227,8 +227,16 @@ namespace Raven.Server.ServerWide
                             _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateCommand)}.");
                         NotifyValueChanged(context, type, index); // just need to notify listeners
                         break;
+                    case nameof(RecheckStatusOfServerCertificateReplacementCommand):
+                        if (_parent.Log.IsOperationsEnabled)
+                            _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateReplacementCommand)}.");
+                        NotifyValueChanged(context, type, index); // just need to notify listeners
+                        break;
                     case nameof(ConfirmReceiptServerCertificateCommand):
                         ConfirmReceiptServerCertificate(context, cmd, index, serverStore);
+                        break;
+                    case nameof(ConfirmServerCertificateReplacedCommand):
+                        ConfirmServerCertificateReplaced(context, cmd, index, serverStore);
                         break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index, leader);
@@ -351,8 +359,63 @@ namespace Raven.Server.ServerWide
                     "Failed to confirm receipt of the new certificate.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
+            }
+        }
+
+        private void ConfirmServerCertificateReplaced(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        {
+            if (_parent.Log.IsOperationsEnabled)
+                _parent.Log.Operations($"Received {nameof(ConfirmServerCertificateReplacedCommand)}.");
+            try
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                using (Slice.From(context.Allocator, "server/cert", out var key))
+                {
+                    if (cmd.TryGet(nameof(ConfirmServerCertificateReplacedCommand.Thumbprint), out string thumbprint) == false)
+                    {
+                        throw new ArgumentException($"Thumbprint property didn't exist in {nameof(ConfirmServerCertificateReplacedCommand)}");
+                    }
+                    var certInstallation = GetItem(context, "server/cert");
+                    if (certInstallation == null)
+                        return; // already applied? 
+
+                    if (certInstallation.TryGet("Thumbprint", out string storedThumbprint) == false)
+                        throw new ArgumentException("Thumbprint property didn't exist in 'server/cert' value");
+
+                    if (storedThumbprint != thumbprint)
+                        return; // confirmation for a different cert, ignoring
+
+                    certInstallation.TryGet("Replaced", out int replaced);
+
+                    certInstallation.Modifications = new DynamicJsonValue(certInstallation)
+                    {
+                        ["Replaced"] = replaced + 1
+                    };
+
+                    certInstallation = context.ReadObject(certInstallation, "server.cert.update");
+
+                    UpdateValue(index, items, key, key, certInstallation);
+
+                    if (_parent.Log.IsOperationsEnabled)
+                        _parent.Log.Operations("Confirming that certificate replacement has happened.");
+
+                    // this will trigger the deletion of the new and old server certs from the cluster
+                    NotifyValueChanged(context, nameof(ConfirmServerCertificateReplacedCommand), index);
+                }
+            }
+            catch (Exception e)
+            {
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations($"{nameof(ConfirmReceiptServerCertificate)} failed.", e);
+
+                serverStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    "Server certificate",
+                    "Failed to confirm replacement of the new certificate.",
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Error,
+                    details: new ExceptionDetails(e)));
             }
         }
 
@@ -377,7 +440,9 @@ namespace Raven.Server.ServerWide
                     {
                         ["Certificate"] = cert,
                         ["Thumbprint"] = x509Certificate.Thumbprint,
+                        ["OldThumbprint"] = serverStore.Server.Certificate.Certificate.Thumbprint,
                         ["Confirmations"] = 0,
+                        ["Replaced"] = 0,
                         ["ReplaceImmediately"] = replaceImmediately
                     };
 
@@ -400,8 +465,7 @@ namespace Raven.Server.ServerWide
                     $"{nameof(InstallUpdatedServerCertificate)} failed.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
             }
         }
 

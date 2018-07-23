@@ -60,10 +60,44 @@ namespace Raven.Server.ServerWide.Commands
             return json;
         }
     }
-    
+
+    public class ConfirmServerCertificateReplacedCommand : CommandBase
+    {
+        public string Thumbprint { get; set; }
+
+        public ConfirmServerCertificateReplacedCommand()
+        {
+            // for deserialization
+        }
+
+        public ConfirmServerCertificateReplacedCommand(string thumbprint)
+        {
+            Thumbprint = thumbprint;
+        }
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Thumbprint)] = Thumbprint;
+            return json;
+        }
+    }
+
     public class RecheckStatusOfServerCertificateCommand : CommandBase
     {
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+    }
 
+    public class RecheckStatusOfServerCertificateReplacementCommand : CommandBase
+    {
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             AssertClusterAdmin(isClusterAdmin);

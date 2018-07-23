@@ -1265,8 +1265,6 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException($"Failed to add node '{continueSetupInfo.NodeTag}' to the cluster.", e);
                     }
                 }
-
-                serverStore.EnsureServerCertificateIsInClusterState("Cluster-Wide Certificate");
             }
 
             progress.AddInfo("Registering client certificate in the local server.");
@@ -1420,7 +1418,6 @@ namespace Raven.Server.Commercial
                                     throw new InvalidOperationException($"Failed to add node '{node.Key}' to the cluster.", e);
                                 }
                             }
-                            serverStore.EnsureServerCertificateIsInClusterState("Cluster-Wide Certificate");
                         }
                         catch (Exception e)
                         {
