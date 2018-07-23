@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using Sparrow;
 using System.Net;
 using System.Threading;
@@ -8,6 +10,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -208,50 +211,37 @@ namespace Raven.Server.Documents.Handlers
                 return NumberOfCommands;
             }
 
-            public DynamicJsonValue Serialize()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
             {
-                var dJsonCommands = new DynamicJsonValue[NumberOfCommands];
-                for (var i = 0; i < NumberOfCommands; i++)
+                return new MergedInsertBulkCommandDto
                 {
-                    dJsonCommands[i] = BatchRequestParser.CommandToDynamicJson(Commands[i], Database);
-                }
-
-                var ret = new DynamicJsonValue
-                {
-                    [nameof(Commands)] = dJsonCommands
+                    Commands = Commands.Take(NumberOfCommands).ToArray()
                 };
+            }
+        }
+    }
 
-                return ret;
+    public class MergedInsertBulkCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BulkInsertHandler.MergedInsertBulkCommand>
+    {
+        public BatchRequestParser.CommandData[] Commands { get; set; }
+
+        public BulkInsertHandler.MergedInsertBulkCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        {
+            if (Commands == null || Commands.Any() == false) 
+            {
+                //Todo To check if empty array can append & if it is make sense to check it here 
+                throw new InvalidDataException("There should be at least one command");
             }
 
-            public static MergedInsertBulkCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context,
-                Logger logger)
+            return new BulkInsertHandler.MergedInsertBulkCommand
             {
-                if (mergedCmdReader.TryGet(nameof(Commands), out BlittableJsonReaderArray commandsReader) == false)
-                {
-                    throw new InvalidOperationException($"Can't read {nameof(Commands)} while deserializing {nameof(MergedInsertBulkCommand)}");
-                }
-
-                var totalSize = 0;
-                var commands = new BatchRequestParser.CommandData[commandsReader.Length];
-                for (var i = 0; i < commandsReader.Length; i++)
-                {
-                    var commandReader = commandsReader.GetByIndex<BlittableJsonReaderObject>(i);
-                    commands[i] = BatchRequestParser.ReadCommand(commandReader, database, context);
-                    totalSize += commands[i].Document.Size;
-                }
-
-                var ret = new MergedInsertBulkCommand
-                {
-                    NumberOfCommands = commandsReader.Length,
-                    TotalSize = totalSize,
-                    Commands = commands,
-                    Database = database,
-                    Logger = logger
-                };
-
-                return ret;
-            }
+                NumberOfCommands = Commands.Length,
+                //Todo Maybe should not check, catch the exception in higher level and throw it with descriptive message
+                TotalSize = Commands.Sum(c => c.Document?.Size ?? 0),
+                Commands = Commands,
+                Database = database,
+                Logger = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name)
+            };
         }
     }
 }

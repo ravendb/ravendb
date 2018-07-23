@@ -473,11 +473,8 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable, TransactionOperationsMerger.IRecordableCommand
+    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
     {
-        private const string IdKey = "Id";
-        private const string DocumentKey = "Document";
-        private const string ChangeVectorKey = "ChangeVector";
         private string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
@@ -532,37 +529,26 @@ namespace Raven.Server.Documents.Handlers
             _document?.Dispose();
         }
 
-        public DynamicJsonValue Serialize()
+        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
         {
-            var ret = new DynamicJsonValue
+            return new MergedPutCommandDto()
             {
-                [IdKey] = _id,
-                [DocumentKey] = _document,
-                [ChangeVectorKey] = _expectedChangeVector
+                Id = _id,
+                ExpectedChangeVector = _expectedChangeVector,
+                Document = _document
             };
-
-            return ret;
         }
 
-        public static MergedPutCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context)
+        public class MergedPutCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedPutCommand>
         {
-            if (mergedCmdReader.TryGet(IdKey, out string id) == false)
+            public string Id { get; set; }
+            public LazyStringValue ExpectedChangeVector { get; set; }
+            public BlittableJsonReaderObject Document { get; set; }
+
+            public MergedPutCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
             {
-                throw new InvalidOperationException($"Can't read {IdKey} while deserializing {nameof(MergedPutCommand)}");
+                return new MergedPutCommand(Document, Id, ExpectedChangeVector, database);
             }
-
-            if (mergedCmdReader.TryGet(DocumentKey, out BlittableJsonReaderObject document) == false)
-            {
-                throw new InvalidOperationException($"Can't read {DocumentKey} while deserializing {nameof(MergedPutCommand)}");
-            }
-
-            document = document.Clone(context);
-
-            mergedCmdReader.TryGet(ChangeVectorKey, out LazyStringValue changeVector);
-
-            var ret = new MergedPutCommand(document, id, changeVector, database);
-
-            return ret;
         }
     }
 }

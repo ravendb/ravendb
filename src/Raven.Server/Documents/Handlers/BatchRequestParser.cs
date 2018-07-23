@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
@@ -31,6 +32,7 @@ namespace Raven.Server.Documents.Handlers
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
 
+            [JsonIgnore]
             public PatchDocumentCommand PatchCommand;
 
             #region Attachment
@@ -39,76 +41,6 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
 
             #endregion
-        }
-
-        public static DynamicJsonValue CommandToDynamicJson(CommandData command, DocumentDatabase database)
-        {
-            var ret = new DynamicJsonValue
-            {
-                [nameof(command.Type)] = command.Type.ToString(),
-                [nameof(command.Id)] = command.Id
-            };
-
-            if (command.Document != null)
-            {
-                ret[nameof(command.Document)] = command.Document;
-            }
-
-            if (command.Type == CommandType.PATCH)
-            {
-                var patchCommand = command.PatchCommand;
-                if (patchCommand == null)
-                {
-                    patchCommand = new PatchDocumentCommand(
-                        context: null,
-                        id: command.Id,
-                        expectedChangeVector: command.ChangeVector,
-                        skipPatchIfChangeVectorMismatch: false,
-                        patch: (command.Patch, command.PatchArgs),
-                        patchIfMissing: (command.PatchIfMissing, command.PatchIfMissingArgs),
-                        database: database,
-                        isTest: false,
-                        debugMode: false,
-                        collectResultsNeeded: true
-                    );
-                }
-
-                ret[nameof(command.PatchCommand)] = patchCommand.Serialize();
-            }
-
-            return ret;
-        }
-
-        public static CommandData ReadCommand(BlittableJsonReaderObject commandReader, DocumentDatabase database, JsonOperationContext context)
-        {
-            var command = new BatchRequestParser.CommandData();
-
-            if (commandReader.TryGet(nameof(command.Type), out string type))
-            {
-                //ToDo to check what happen when fail to parse
-                Enum.TryParse(type, true, out command.Type);
-            }
-
-            if (commandReader.TryGet(nameof(command.Id), out string id))
-            {
-                command.Id = id;
-            }
-            if (commandReader.TryGet(nameof(command.PatchArgs), out BlittableJsonReaderObject patchArgs))
-            {
-                command.PatchArgs = patchArgs.Clone(context);
-            }
-
-            if (commandReader.TryGet(nameof(command.PatchCommand), out BlittableJsonReaderObject patch))
-            {
-                command.PatchCommand = PatchDocumentCommand.Deserialize(patch, database, context);
-            }
-
-            if (commandReader.TryGet(nameof(command.Document), out BlittableJsonReaderObject document))
-            {
-                command.Document = document.Clone(context);
-            }
-
-            return command;
         }
 
         private static readonly CommandData[] Empty = new CommandData[0];

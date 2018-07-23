@@ -7,6 +7,8 @@ namespace Raven.Client.Json.Converters
 {
     internal sealed class LazyStringValueJsonConverter : RavenJsonConverter
     {
+        public static readonly LazyStringValueJsonConverter Instance = new LazyStringValueJsonConverter();
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             writer.WriteValue(value);

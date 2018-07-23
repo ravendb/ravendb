@@ -151,8 +151,6 @@ namespace Sparrow.Json
             throw new ObjectDisposedException("blittable object has been disposed");
         }
 
-        public bool HasParent => _parent != null;
-
         public int Size => _size;
 
         public int Count => _propCount;
@@ -780,6 +778,13 @@ NotFound:
         {
             throw new InvalidOperationException(
                 "Attempted to copy a nested object. This will actually copy the whole object, which is probably not what you wanted.");
+        }
+
+        //There is an issue when write blittable & at the same time clone another blittable on the same context
+        //Todo To check if should remove this method after issue is fixed
+        public BlittableJsonReaderObject CloneOnTheSameContext()
+        {
+            return Clone(_context);
         }
 
         public BlittableJsonReaderObject Clone(JsonOperationContext context)

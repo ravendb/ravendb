@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.Text;
 using Newtonsoft.Json;
 using Sparrow.Json;
 
@@ -10,6 +8,8 @@ namespace Raven.Client.Json.Converters
 
     internal sealed class BlittableJsonConverter : RavenJsonConverter
     {
+        public static readonly BlittableJsonConverter Instance = new BlittableJsonConverter();
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             writer.WriteValue(value);
@@ -29,16 +29,20 @@ namespace Raven.Client.Json.Converters
 
             if (blittableReader.Value is BlittableJsonReaderObject blittableValue)
             {
-                //Skip in order to prevent unnecessary movement inside the blittable
-                //when field\property type is BlittableJsonReaderObject
-                blittableReader.SkipBlittableInside();
+                if (reader.TokenType == JsonToken.StartObject)
+                {
+                    //Skip in order to prevent unnecessary movement inside the blittable
+                    //when field\property type is BlittableJsonReaderObject
+                    blittableReader.SkipBlittableInside();
+                }
 
-                return blittableValue.BelongsToContext(blittableReader.Context) 
-                    ? blittableValue 
-                    : blittableValue.Clone(blittableReader.Context);
+                return
+                    blittableValue.BelongsToContext(blittableReader.Context) &&
+                    blittableValue.HasParent == false
+                        ? blittableValue
+                        : blittableValue.Clone(blittableReader.Context);
             }
             throw new SerializationException($"Try to read {nameof(BlittableJsonReaderObject)} from non {nameof(BlittableJsonReaderObject)} value");
-
         }
 
         public override bool CanConvert(Type objectType)

@@ -357,6 +357,7 @@ namespace Raven.Client.Json
 
         public void SkipBlittableInside()
         {
+            SetToken(JsonToken.EndObject);
             _items.Pop();
         }
     }

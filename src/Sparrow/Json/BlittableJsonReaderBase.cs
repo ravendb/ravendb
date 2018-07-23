@@ -21,6 +21,8 @@ namespace Sparrow.Json
             return context == _context;
         }
 
+        public bool HasParent => _parent != null;
+
         public bool NoCache { get; set; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

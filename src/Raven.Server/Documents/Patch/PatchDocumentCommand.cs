@@ -13,20 +13,8 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable, TransactionOperationsMerger.IRecordableCommand
+    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
     {
-        private const string IdKey = "Id";
-        private const string ExpectedChangeVectorKey = "ExpectedChangeVector";
-        private const string SkipPatchIfChangeVectorMismatchKey = "SkipPatchIfChangeVectorMismatch";
-        private const string PatchKey = "Patch";
-        private const string PatchIfMissingKey = "PatchIfMissing";
-        private const string RunKey = "Run";
-        private const string ArgKey = "Arg";
-        private const string IsTestKey = "IsTest";
-        private const string DebugModeKey = "DebugMode";
-        private const string CollectResultsNeededKey = "CollectResultsNeeded";
-
-
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly bool _skipPatchIfChangeVectorMismatch;
@@ -188,7 +176,7 @@ namespace Raven.Server.Documents.Patch
                     result.Status = PatchStatus.Created;
                 }
                 else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument,
-                    tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
+                             tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
                 {
                     Debug.Assert(originalDocument != null);
                     if (_isTest == false || _run.PutOrDeleteCalled)
@@ -215,131 +203,47 @@ namespace Raven.Server.Documents.Patch
             _returnRunIfMissing.Dispose();
         }
 
-        public DynamicJsonValue Serialize()
+        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
         {
-            var ret = new DynamicJsonValue
+            return new PatchDocumentCommandDto
             {
-                [IdKey] = _id,
+                Id = _id,
+                ExpectedChangeVector = _expectedChangeVector,
+                SkipPatchIfChangeVectorMismatch = _skipPatchIfChangeVectorMismatch,
+                Patch = _patch,
+                PatchIfMissing = _patchIfMissing,
+                IsTest = _isTest,
+                DebugMode = _debugMode,
+                CollectResultsNeeded = _externalContext != null
             };
-
-            RecordBool(ret, IsTestKey, _isTest);
-            RecordBool(ret, DebugModeKey, _debugMode);
-            RecordBool(ret, CollectResultsNeededKey, _externalContext != null);
-            RecordBool(ret, SkipPatchIfChangeVectorMismatchKey, _skipPatchIfChangeVectorMismatch);
-
-            if (_expectedChangeVector != null)
-            {
-                ret[ExpectedChangeVectorKey] = _expectedChangeVector.ToString();
-            }
-
-            ret[PatchKey] = RecordPatch(_patch);
-            var jsonPatchIfMissing = RecordPatch(_patchIfMissing);
-            if (jsonPatchIfMissing != null)
-            {
-                ret[PatchIfMissingKey] = jsonPatchIfMissing;
-            }
-
-            return ret;
         }
+    }
 
-        private void RecordBool(DynamicJsonValue ret, string key, bool value)
+    public class PatchDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<PatchDocumentCommand>
+    {
+        public string Id;
+        public LazyStringValue ExpectedChangeVector;
+        public bool SkipPatchIfChangeVectorMismatch;
+        public (PatchRequest run, BlittableJsonReaderObject args) Patch;
+        public (PatchRequest run, BlittableJsonReaderObject args) PatchIfMissing;
+        public bool IsTest;
+        public bool DebugMode;
+        public bool CollectResultsNeeded;
+
+        public PatchDocumentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
         {
-            if (value)
-            {
-                ret[key] = true;
-            }
-        }
-
-        private DynamicJsonValue RecordPatch((PatchRequest Run, BlittableJsonReaderObject Args) patch)
-        {
-            if (patch.Run == null)
-            {
-                return null;
-            }
-
-            var ret = new DynamicJsonValue
-            {
-                [RunKey] = new DynamicJsonValue
-                {
-                    [nameof(patch.Run.Type)] = patch.Run.Type,
-                    [nameof(patch.Run.Script)] = patch.Run.Script
-                }
-            };
-
-            if (patch.Args != null)
-            {
-                ret[ArgKey] = patch.Args;
-            }
-
-            return ret;
-        }
-
-        public static PatchDocumentCommand Deserialize(BlittableJsonReaderObject mergedCmdReader, DocumentDatabase database, JsonOperationContext context)
-        {
-
-            if (!mergedCmdReader.TryGet(IdKey, out string id))
-            {
-                ThrowCantReadProperty(IdKey);
-            }
-
-            mergedCmdReader.TryGet(IsTestKey, out bool isTest);
-            mergedCmdReader.TryGet(DebugModeKey, out bool debugMode);
-            mergedCmdReader.TryGet(CollectResultsNeededKey, out bool collectResultsNeeded);
-            mergedCmdReader.TryGet(SkipPatchIfChangeVectorMismatchKey, out bool skipPatchIfChangeVectorMismatch);
-
-            var patch = ReadPatch(mergedCmdReader, PatchKey, context);
-            if (patch.Item1 == null)
-            {
-                ThrowCantReadProperty(PatchKey);
-            }
-            var patchIfMissing = ReadPatch(mergedCmdReader, PatchIfMissingKey, context);
-
-            if (!mergedCmdReader.TryGet(ExpectedChangeVectorKey, out LazyStringValue expectedChangeVector) &&
-                skipPatchIfChangeVectorMismatch)
-            {
-                ThrowCantReadProperty(ExpectedChangeVectorKey);
-            }
-
-            var newCmd = new PatchDocumentCommand(
+            return new PatchDocumentCommand(
                 context,
-                id,
-                expectedChangeVector,
-                skipPatchIfChangeVectorMismatch,
-                patch,
-                patchIfMissing,
+                Id,
+                ExpectedChangeVector,
+                SkipPatchIfChangeVectorMismatch,
+                Patch,
+                PatchIfMissing,
                 database,
-                isTest,
-                debugMode,
-                collectResultsNeeded);
-
-            return newCmd;
-        }
-
-        private static (PatchRequest, BlittableJsonReaderObject) ReadPatch(BlittableJsonReaderObject mergedCmdReader, string key, JsonOperationContext context)
-        {
-            (PatchRequest run, BlittableJsonReaderObject arg) patch = (null, null);
-
-            if (!mergedCmdReader.TryGet(key, out BlittableJsonReaderObject patchReader) ||
-                !patchReader.TryGet(RunKey, out BlittableJsonReaderObject runReader))
-            {
-                return patch;
-            }
-
-            runReader.TryGet(nameof(PatchRequest.Type), out PatchRequestType type);
-            runReader.TryGet(nameof(PatchRequest.Script), out string script);
-            patch.run = new PatchRequest(script, type);
-
-            if (patchReader.TryGet(ArgKey, out BlittableJsonReaderObject argReader))
-            {
-                patch.arg = argReader.Clone(context);
-            }
-
-            return patch;
-        }
-
-        private static void ThrowCantReadProperty(string idKey)
-        {
-            throw new SerializationException($"Can't read {idKey} of {nameof(PatchDocumentCommand)}");
+                IsTest,
+                DebugMode,
+                CollectResultsNeeded);
         }
     }
 }
+

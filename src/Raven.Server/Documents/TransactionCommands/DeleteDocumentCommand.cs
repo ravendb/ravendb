@@ -1,6 +1,9 @@
 ﻿using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -9,7 +12,6 @@ namespace Raven.Server.Documents.TransactionCommands
 {
     public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
     {
-        private const string IdKey = "Id";
         private readonly string _id;
         private readonly string _expectedChangeVector;
         private readonly DocumentDatabase _database;
@@ -43,24 +45,26 @@ namespace Raven.Server.Documents.TransactionCommands
             return 1;
         }
 
-        public DynamicJsonValue Serialize()
+        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
         {
-            var json = new DynamicJsonValue
+            return new DeleteDocumentCommandDto()
             {
-                [IdKey] = _id
+                Id = _id,
+                ChangeVector = _expectedChangeVector,
+                CatchConcurrencyErrors = _catchConcurrencyErrors
             };
-
-            return json;
         }
+    }
 
-        public static DeleteDocumentCommand Deserialize(BlittableJsonReaderObject reader, DocumentDatabase database)
+    public class DeleteDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteDocumentCommand>
+    {
+        public string Id { get; set; }
+        public string ChangeVector { get; set; }
+        public bool CatchConcurrencyErrors { get; set; }
+
+        public DeleteDocumentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
         {
-            if (!reader.TryGet(IdKey, out string id))
-            {
-                throw new SerializationException($"Can't read {IdKey} of {nameof(DeleteDocumentCommand)}");
-            }
-
-            return new DeleteDocumentCommand(id, null, database);
+            return new DeleteDocumentCommand(Id, ChangeVector, database, CatchConcurrencyErrors);
         }
     }
 }

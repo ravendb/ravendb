@@ -559,9 +559,8 @@ namespace Raven.Client.Json
                     }
                     else
                     {
-                        throw new NotImplementedException("Can't write value of non root blittable");
-//                        var clonedBlittable = readerObject.Clone(_context);
-//                        _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(clonedBlittable);
+                        var clonedBlittable = readerObject.CloneOnTheSameContext();
+                        _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(clonedBlittable);
                     }
                     return;
                 case LazyStringValue lazyStringValue:
