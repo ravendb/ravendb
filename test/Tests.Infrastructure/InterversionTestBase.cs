@@ -262,7 +262,6 @@ namespace Tests.Infrastructure
             private readonly bool _frozen;
 
             private bool _createDatabase;
-            private bool _deleteDatabaseOnDispose;
             private int _replicationFactor;
             private Action<DocumentStore> _modifyDocumentStore;
             private Action<DatabaseRecord> _modifyDatabaseRecord;
@@ -276,7 +275,6 @@ namespace Tests.Infrastructure
 
             private InterversionTestOptions(bool frozen)
             {
-                DeleteDatabaseOnDispose = true;
                 CreateDatabase = true;
                 ReplicationFactor = 1;
 
@@ -320,16 +318,6 @@ namespace Tests.Infrastructure
                 {
                     AssertNotFrozen();
                     _replicationFactor = value;
-                }
-            }
-
-            public bool DeleteDatabaseOnDispose
-            {
-                get => _deleteDatabaseOnDispose;
-                set
-                {
-                    AssertNotFrozen();
-                    _deleteDatabaseOnDispose = value;
                 }
             }
 
