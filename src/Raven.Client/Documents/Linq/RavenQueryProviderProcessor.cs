@@ -63,6 +63,8 @@ namespace Raven.Client.Documents.Linq
         private string _loadAlias;
         private bool _selectLoad;
         private const string DefaultLoadAlias = "__load";
+        private const string DefaultAlias = "__ravenDefaultAlias";
+
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "AS",
@@ -2345,7 +2347,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         ? innerMemberExpression.Member.Name
                         : string.Empty;
 
-                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith("__ravenDefaultAlias") || _aliasKeywords.Contains(param))
+                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith(DefaultAlias) || _aliasKeywords.Contains(param))
                 {
                     // (1) the load argument was defined in a previous let statment, i.e :
                     //     let detailId = "details/1-A" 
@@ -2473,7 +2475,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_insideLet > 0)
             {
-                var newAlias = $"__ravenDefaultAlias{_aliasesCount++}";
+                var newAlias = $"{DefaultAlias}{_aliasesCount++}";
                 AppendLineToOutputFunction(alias, newAlias);
                 return newAlias;
             }
@@ -2886,6 +2888,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 alias = "'" + alias + "'";
             }
 
+            if (_fromAlias != null && field.StartsWith(_fromAlias) == false)
+            {
+                field = $"{_fromAlias}.{field}";
+            }
+            else if (_aliasKeywords.Contains(field))
+            {
+                AddDefaultAliasToQuery(out var fromAlias);
+                field = $"{fromAlias}.{field}";
+            }
+
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
             if (identityProperty != null && identityProperty.Name == field)
             {
@@ -2894,6 +2906,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             FieldsToFetch.Add(new FieldToFetch(field, alias));
+        }
+
+        private void AddDefaultAliasToQuery(out string fromAlias)
+        {
+            fromAlias = $"{DefaultAlias}{_aliasesCount++}";
+            AddFromAlias(fromAlias);
+            foreach (var fieldToFetch in FieldsToFetch)
+            {
+                fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+            }
         }
 
         private void VisitSkip(ConstantExpression constantExpression)
@@ -3212,7 +3234,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             Alias = name != alias ? alias : null;
         }
 
-        public string Name { get; }
+        public string Name { get; internal set; }
         public string Alias { get; internal set; }
 
         protected bool Equals(FieldToFetch other)

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Tokens;
@@ -25,6 +26,18 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Client");
+/*
+
+        private static readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AS",
+            "SELECT",
+            "WHERE",
+            "GROUP",
+            "ORDER",
+            "INCLUDE",
+            "UPDATE"
+        };*/
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
@@ -136,10 +149,18 @@ namespace Raven.Client.Documents.Session.Operations
                 var typeInfo = type.GetTypeInfo();
                 var projectionField = fieldsToFetch.Projections[0];
 
-                if (fieldsToFetch.SourceAlias != null)
+                if (fieldsToFetch.SourceAlias != null )
                 {
-                    // remove source-alias from projection name
-                    projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
+                    if (projectionField.StartsWith(fieldsToFetch.SourceAlias))
+                    {
+                        // remove source-alias from projection name
+                        projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
+                    }
+                    else if (Regex.IsMatch(projectionField, "'([^']*)")) 
+                    {
+                        // projection field is quoted, remove quotes
+                        projectionField = projectionField.Substring(1, projectionField.Length -2);
+                    }
                 }
 
                 if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
