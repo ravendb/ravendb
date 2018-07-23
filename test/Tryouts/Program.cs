@@ -10,6 +10,7 @@ using SlowTests.Client.Attachments;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using Sparrow.Logging;
+using StressTests.Client.Attachments;
 
 namespace Tryouts
 {
@@ -19,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new Jordan())
+                using (var test = new AttachmentsSessionStress())
                 {
-                    await test.CanTranslateToRql();
+                    test.StressPutLotOfAttachments(10_000);
                 }
             }
             catch (Exception e)

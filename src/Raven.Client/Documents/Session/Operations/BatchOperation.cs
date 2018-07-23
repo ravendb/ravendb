@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -24,6 +23,8 @@ namespace Raven.Client.Documents.Session.Operations
         private List<object> _entities;
         private int _sessionCommandsCount;
         private int _allCommandsCount;
+
+        private Dictionary<LazyStringValue, DocumentInfo> _modifications;
 
         public BatchCommand CreateRequest()
         {
@@ -136,6 +137,62 @@ namespace Raven.Client.Documents.Session.Operations
                         throw new NotSupportedException($"Command '{type}' is not supported.");
                 }
             }
+
+            FinalizeResult();
+        }
+
+        private void FinalizeResult()
+        {
+            if (_modifications == null || _modifications.Count == 0)
+                return;
+
+            foreach (var kvp in _modifications)
+            {
+                var id = kvp.Key;
+                var documentInfo = kvp.Value;
+
+                ApplyMetadataModifications(id, documentInfo);
+            }
+        }
+
+        private void ApplyMetadataModifications(LazyStringValue id, DocumentInfo documentInfo)
+        {
+            if (documentInfo.Metadata.Modifications == null)
+                return;
+
+            documentInfo.MetadataInstance = null;
+            using (var old = documentInfo.Metadata)
+            {
+                documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
+                documentInfo.Metadata.Modifications = null;
+            }
+
+            documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+            {
+                [Constants.Documents.Metadata.Key] = documentInfo.Metadata
+            };
+
+            using (var old = documentInfo.Document)
+            {
+                documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
+                documentInfo.Document.Modifications = null;
+            }
+        }
+
+        private DocumentInfo GetOrAddModifications(LazyStringValue id, DocumentInfo documentInfo, bool applyModifications)
+        {
+            if (_modifications == null)
+                _modifications = new Dictionary<LazyStringValue, DocumentInfo>(LazyStringValueComparer.Instance);
+
+            if (_modifications.TryGetValue(id, out var modifiedDocumentInfo))
+            {
+                if (applyModifications)
+                    ApplyMetadataModifications(id, modifiedDocumentInfo);
+            }
+            else
+                _modifications[id] = modifiedDocumentInfo = documentInfo;
+
+            return modifiedDocumentInfo;
         }
 
         private void HandleAttachmentCopy(BlittableJsonReaderObject batchResult)
@@ -158,8 +215,10 @@ namespace Raven.Client.Documents.Session.Operations
         {
             var id = GetLazyStringField(batchResult, type, idFieldName);
 
-            if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+            if (_session.DocumentsById.TryGetValue(id, out var sessionDocumentInfo) == false)
                 return;
+
+            var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: true);
 
             if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsJson) == false || attachmentsJson == null ||
                 attachmentsJson.Length == 0)
@@ -167,8 +226,8 @@ namespace Raven.Client.Documents.Session.Operations
 
             var name = GetLazyStringField(batchResult, type, attachmentNameFieldName);
 
-            documentInfo.Metadata.Modifications = null;
-            documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
+            if (documentInfo.Metadata.Modifications == null)
+                documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
 
             var attachments = new DynamicJsonArray();
             documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
@@ -182,9 +241,6 @@ namespace Raven.Client.Documents.Session.Operations
                 attachments.Add(attachment);
                 break;
             }
-
-            documentInfo.MetadataInstance = null;
-            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
         }
 
         private void HandleAttachmentPut(BlittableJsonReaderObject batchResult)
@@ -196,17 +252,23 @@ namespace Raven.Client.Documents.Session.Operations
         {
             var id = GetLazyStringField(batchResult, type, idFieldName);
 
-            if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+            if (_session.DocumentsById.TryGetValue(id, out var sessionDocumentInfo) == false)
                 return;
 
-            documentInfo.Metadata.Modifications = null;
-            documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
+            var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: false);
 
-            var attachments = documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsJson)
-                ? new DynamicJsonArray(attachmentsJson)
-                : new DynamicJsonArray();
+            if (documentInfo.Metadata.Modifications == null)
+                documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
 
-            documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+            var attachments = documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Attachments] as DynamicJsonArray;
+            if (attachments == null)
+            {
+                attachments = documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsJson)
+                    ? new DynamicJsonArray(attachmentsJson)
+                    : new DynamicJsonArray();
+
+                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+            }
 
             attachments.Add(new DynamicJsonValue
             {
@@ -216,15 +278,6 @@ namespace Raven.Client.Documents.Session.Operations
                 [nameof(AttachmentDetails.Name)] = GetLazyStringField(batchResult, type, attachmentNameFieldName),
                 [nameof(AttachmentDetails.Size)] = GetLongField(batchResult, type, nameof(AttachmentDetails.Size))
             });
-
-            documentInfo.MetadataInstance = null;
-            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
-            documentInfo.Document.Modifications = null;
-            documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
-            {
-                [Constants.Documents.Metadata.Key] = documentInfo.Metadata
-            };
-            documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
         }
 
         private void HandlePatch(BlittableJsonReaderObject batchResult)
@@ -244,15 +297,16 @@ namespace Raven.Client.Documents.Session.Operations
 
                     var id = GetLazyStringField(batchResult, CommandType.PATCH, nameof(ICommandData.Id));
 
-                    if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+                    if (_session.DocumentsById.TryGetValue(id, out var sessionDocumentInfo) == false)
                         return;
 
-                    var changeVector = GetLazyStringField(batchResult, CommandType.PUT, nameof(Constants.Documents.Metadata.ChangeVector));
-                    var lastModified = GetLazyStringField(batchResult, CommandType.PUT, nameof(Constants.Documents.Metadata.LastModified));
+                    var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: true);
+
+                    var changeVector = GetLazyStringField(batchResult, CommandType.PATCH, nameof(Constants.Documents.Metadata.ChangeVector));
+                    var lastModified = GetLazyStringField(batchResult, CommandType.PATCH, nameof(Constants.Documents.Metadata.LastModified));
 
                     documentInfo.ChangeVector = changeVector;
 
-                    documentInfo.Metadata.Modifications = null;
                     documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata)
                     {
                         [Constants.Documents.Metadata.Id] = id,
@@ -260,14 +314,12 @@ namespace Raven.Client.Documents.Session.Operations
                         [Constants.Documents.Metadata.LastModified] = lastModified
                     };
 
-                    documentInfo.MetadataInstance = null;
-                    documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
-                    documentInfo.Document = document;
-                    documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+                    using (var old = documentInfo.Document)
                     {
-                        [Constants.Documents.Metadata.Key] = documentInfo.Metadata
-                    };
-                    documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
+                        documentInfo.Document = document;
+
+                        ApplyMetadataModifications(id, documentInfo);
+                    }
 
                     if (documentInfo.Entity != null)
                         _session.EntityToBlittable.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
@@ -284,6 +336,8 @@ namespace Raven.Client.Documents.Session.Operations
         private void HandleDeleteInternal(BlittableJsonReaderObject batchResult, CommandType type)
         {
             var id = GetLazyStringField(batchResult, type, nameof(ICommandData.Id));
+
+            _modifications?.Remove(id);
 
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
@@ -313,13 +367,14 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (isDeferred)
             {
-                if (_session.DocumentsById.TryGetValue(id, out documentInfo) == false)
+                if (_session.DocumentsById.TryGetValue(id, out var sessionDocumentInfo) == false)
                     return;
+
+                documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: true);
 
                 entity = documentInfo.Entity;
             }
 
-            documentInfo.Metadata.Modifications = null;
             documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
 
             foreach (var propertyName in batchResult.GetPropertyNames())
@@ -332,14 +387,8 @@ namespace Raven.Client.Documents.Session.Operations
 
             documentInfo.Id = id;
             documentInfo.ChangeVector = changeVector;
-            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
-            documentInfo.Document.Modifications = null;
-            documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
-            {
-                [Constants.Documents.Metadata.Key] = documentInfo.Metadata
-            };
-            documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
-            documentInfo.MetadataInstance = null;
+
+            ApplyMetadataModifications(id, documentInfo);
 
             _session.DocumentsById.Add(documentInfo);
 
