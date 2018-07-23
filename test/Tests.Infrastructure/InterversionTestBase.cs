@@ -20,6 +20,7 @@ using Raven.Server.Utils;
 using Raven.TestDriver;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
+using Raven.Client.Util;
 
 namespace Tests.Infrastructure
 {
@@ -31,12 +32,15 @@ namespace Tests.Infrastructure
 
         private static ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
 
-        protected async Task<IDocumentStore> GetDocumentStoreAsync(Options options = null, [CallerMemberName] string caller = null)
+        protected DocumentStore GetDocumentStore(
+            string serverVersion,
+            InterversionTestOptions options = null,
+            [CallerMemberName] string database = null)
         {
-            return GetDocumentStore(options, caller);
+            return AsyncHelpers.RunSync(() => GetDocumentStoreAsync(serverVersion, options, database));
         }
 
-        protected async Task<IDocumentStore> GetDocumentStoreAsync(
+        protected async Task<DocumentStore> GetDocumentStoreAsync(
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
@@ -75,7 +79,7 @@ namespace Tests.Infrastructure
             var store = new DocumentStore()
             {
                 Urls = new[] { serverUrl.ToString() },
-                Database = name 
+                Database = name
             };
 
             options.ModifyDocumentStore?.Invoke(store);
