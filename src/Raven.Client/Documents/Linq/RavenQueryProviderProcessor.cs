@@ -58,6 +58,7 @@ namespace Raven.Client.Documents.Linq
         private StringBuilder _declareBuilder;
         private DeclareToken _declareToken;
         private List<LoadToken> _loadTokens;
+        private HashSet<string> _loadAliases;
         private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
         private int _insideLet = 0;
         private string _loadAlias;
@@ -588,8 +589,8 @@ namespace Raven.Client.Documents.Linq
         {
             if (alias != null &&
                 (alias == _fromAlias ||
-                 _loadTokens != null &&
-                 _loadTokens.Select(lt => lt.Alias).Contains(alias)))
+                 _loadAliases != null &&
+                 _loadAliases.Contains(alias)))
                 return $"{alias}.{prop}";
 
             return prop;
@@ -1757,6 +1758,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_loadTokens == null)
             {
                 _loadTokens = new List<LoadToken>();
+                _loadAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
             string arg;
@@ -1770,7 +1772,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 arg = ToJs(mce.Arguments[0]);
             }
 
-            _loadTokens.Add(LoadToken.Create(arg, _loadAlias ?? DefaultLoadAlias));
+            AddLoadToken(arg, _loadAlias ?? DefaultLoadAlias);
 
             if (_loadAlias == null)
             {
@@ -2379,6 +2381,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_loadTokens == null)
             {
                 _loadTokens = new List<LoadToken>();
+                _loadAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
             name = RenameAliasIfNeeded(name);
@@ -2405,16 +2408,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
             }
 
+            string alias;
             if (js == string.Empty)
             {
-                if (loadSupport.IsEnumerable)
-                {
-                    _loadTokens.Add(LoadToken.Create(arg, $"{name}[]"));
-                }
-                else
-                {
-                    _loadTokens.Add(LoadToken.Create(arg, name));
-                }
+                alias = loadSupport.IsEnumerable 
+                    ? $"{name}[]" 
+                    : name;
+
+                AddLoadToken(arg, alias);
                 return;
             }
 
@@ -2426,13 +2427,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (loadSupport.IsEnumerable)
             {
                 doc = $"_docs_{_loadTokens.Count}";
-                _loadTokens.Add(LoadToken.Create(arg, $"{doc}[]"));
+                alias = $"{doc}[]";
             }
             else
             {
                 doc = $"_doc_{_loadTokens.Count}";
-                _loadTokens.Add(LoadToken.Create(arg, doc));
+                alias = doc;
             }
+
+            AddLoadToken(arg, alias);
 
             //add name to the list of aliases that were moved to the output function
             _loadAliasesMovedToOutputFuction.Add(name);
@@ -2443,6 +2446,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             AppendLineToOutputFunction(name, doc + js);
+        }
+
+        private void AddLoadToken(string arg, string alias)
+        {
+            _loadTokens.Add(LoadToken.Create(arg, alias));
+            _loadAliases.Add(alias);
         }
 
         private void AppendLineToOutputFunction(string name, string js)
@@ -2882,20 +2891,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
-            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
-                _aliasKeywords.Contains(alias))
+            if (NeedToAddFromAliasToField(field))
             {
-                alias = "'" + alias + "'";
-            }
-
-            if (_fromAlias != null && field.StartsWith(_fromAlias) == false)
-            {
-                field = $"{_fromAlias}.{field}";
+                AddFromAliasToFieldToFetch(_fromAlias, ref field, ref alias);
             }
             else if (_aliasKeywords.Contains(field))
             {
                 AddDefaultAliasToQuery(out var fromAlias);
-                field = $"{fromAlias}.{field}";
+                AddFromAliasToFieldToFetch(fromAlias, ref field, ref alias, true);
+            }
+
+            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
+                _aliasKeywords.Contains(alias))
+            {
+                alias = "'" + alias + "'";
             }
 
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
@@ -2906,6 +2915,37 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             FieldsToFetch.Add(new FieldToFetch(field, alias));
+        }
+
+        private bool NeedToAddFromAliasToField(string field)
+        {
+            if (_fromAlias == null || 
+                field.StartsWith($"{_fromAlias}."))
+                return false;
+
+            if (_loadAliases == null)
+                return true;
+
+            var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
+            if (indexOf != -1)
+            {
+                field = field.Substring(0, indexOf);
+            }
+
+            return _loadAliases.Contains(field) == false;
+
+        }
+
+        private static void AddFromAliasToFieldToFetch(string fromAlias, ref string field, ref string alias, bool quote = false)
+        {
+            if (field == alias)
+            {
+                alias = null;
+            }
+
+            field = quote
+                ? $"{fromAlias}.'{field}'"
+                : $"{fromAlias}.{field}";
         }
 
         private void AddDefaultAliasToQuery(out string fromAlias)

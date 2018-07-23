@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Session.Operations
                         // remove source-alias from projection name
                         projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
                     }
-                    else if (Regex.IsMatch(projectionField, "'([^']*)")) 
+                    if (Regex.IsMatch(projectionField, "'([^']*)")) 
                     {
                         // projection field is quoted, remove quotes
                         projectionField = projectionField.Substring(1, projectionField.Length -2);
