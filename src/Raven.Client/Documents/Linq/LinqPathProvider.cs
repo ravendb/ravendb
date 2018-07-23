@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Linq
             return result;
         }
 
-        public static Result CreateCounterResult(MethodCallExpression callExpression)
+        internal static Result CreateCounterResult(MethodCallExpression callExpression)
         {
             var counterName = (callExpression.Arguments[callExpression.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
 
