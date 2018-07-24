@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetResult(result);
+                task.TrySetResult(result);
             }
         }
 
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetException(e);
+                task.TrySetException(e);
             }
         }
 
