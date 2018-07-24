@@ -6,13 +6,10 @@ using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IPoolAllocatorOptions
+    public interface IPoolAllocatorOptions : IComposableAllocator<Pointer>
     {
-        int MaxChunkSize { get; }
-        int MaxPoolMemoryInBytes { get; }
-
-        bool HasOwnership { get; }
-        IAllocatorComposer<Pointer> CreateAllocator();
+        int MaxBlockSize { get; }
+        int MaxPoolSizeInBytes { get; }
     }
 
     public static class PoolAllocator
@@ -23,8 +20,8 @@ namespace Sparrow
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
-            public int MaxChunkSize => 64 * Constants.Size.Megabyte;
-            public int MaxPoolMemoryInBytes => 256 * Constants.Size.Megabyte;
+            public int MaxBlockSize => 64 * Constants.Size.Megabyte;
+            public int MaxPoolSizeInBytes => 256 * Constants.Size.Megabyte;
 
             public bool HasOwnership => true;
 
@@ -69,7 +66,7 @@ namespace Sparrow
 
             // This cast will get evicted by the JIT.             
             allocator._options = (TOptions)(object)configuration;
-            allocator._freed = new BlockPointer[Bits.MostSignificantBit(allocator._options.MaxChunkSize)];
+            allocator._freed = new BlockPointer[Bits.MostSignificantBit(allocator._options.MaxBlockSize)];
             allocator._internalAllocator = allocator._options.CreateAllocator();
         }
 
@@ -101,7 +98,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref PoolAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
-            if (allocator.Used > allocator._options.MaxPoolMemoryInBytes || Allocator.LowMemoryFlag.IsRaised())
+            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
 
             int originalSize = ptr.Size;

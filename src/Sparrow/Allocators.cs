@@ -9,7 +9,7 @@ namespace Sparrow
 
     public interface IAllocatorOptions { }
 
-    public interface IBlockAllocatorOptions : IAllocatorOptions
+    public interface IFixedSizeAllocatorOptions
     {
         int BlockSize { get; }
     }
@@ -31,6 +31,12 @@ namespace Sparrow
     public interface IRenewable<TAllocator> where TAllocator : struct, IAllocator
     {
         void Renew(ref TAllocator allocator);
+    }
+
+    public interface IComposableAllocator<TPointerType> where TPointerType : struct, IPointerType
+    {
+        bool HasOwnership { get; }
+        IAllocatorComposer<TPointerType> CreateAllocator();
     }
 
     public interface IAllocatorComposer<TPointerType> where TPointerType : struct, IPointerType
@@ -350,10 +356,10 @@ namespace Sparrow
             where TConfig : struct, IAllocatorOptions
         {
 
-            if (!typeof(IBlockAllocatorOptions).IsAssignableFrom(typeof(TConfig)))
+            if (!typeof(IFixedSizeAllocatorOptions).IsAssignableFrom(typeof(TConfig)))
                 throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TConfig)}");
 
-            this._blockSize = ((IBlockAllocatorOptions)options).BlockSize;
+            this._blockSize = ((IFixedSizeAllocatorOptions)options).BlockSize;
 
             if (_allocator is ILifecycleHandler<TAllocator> a)
                 a.BeforeInitialize(ref _allocator);

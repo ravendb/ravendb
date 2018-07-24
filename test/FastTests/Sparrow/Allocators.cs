@@ -196,10 +196,10 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ThreadAffinePoolReturnUsedBytes()
         {
-            var allocator = new FixedSizeAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
-            allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
+            var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Default>>();
+            allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Default));
 
-            var config = default(ThreadAffineBlockAllocator.Default);
+            var config = default(FixedSizeThreadAffinePoolAllocator.Default);
 
             var ptr = allocator.Allocate();
             Assert.Equal(config.BlockSize, ptr.Size);
@@ -363,10 +363,10 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ThreadAffinePoolReturnBlockBytes()
         {
-            var allocator = new FixedSizeAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
-            allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
+            var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Default>>();
+            allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Default));
 
-            var config = default(ThreadAffineBlockAllocator.Default);
+            var config = default(FixedSizeThreadAffinePoolAllocator.Default);
 
             long[] addresses = new long[5];
             var pointers = new Pointer[5];
