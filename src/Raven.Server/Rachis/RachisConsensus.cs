@@ -597,8 +597,7 @@ namespace Raven.Server.Rachis
             Action beforeStateChangedEvent = null)
         {
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
-                throw new ConcurrencyException(
-                    $"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
+                RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
             var sp = Stopwatch.StartNew();
             
@@ -914,6 +913,7 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
+                engine.Url = clusterTopology.AllNodes[engine.Tag];
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
