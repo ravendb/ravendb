@@ -1152,10 +1152,22 @@ class indexPerformance extends viewModelBase {
             }
             if (element.ReduceDetails) {
                 let reduceDetails: string;
-                reduceDetails = `<br/>*** Reduce details ***<br/>`;
-                reduceDetails += `Compressed leafs: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
-                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches.toLocaleString()}<br/>`;
-                reduceDetails += `Modified leafs: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
+
+                if (element.ReduceDetails.TreesReduceDetails) {
+                    reduceDetails = `<br/>*** Trees details ***<br/>`;
+                    reduceDetails += `Modified leafs: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedLeafs.toLocaleString()} (compressed: ${element.ReduceDetails.TreesReduceDetails.NumberOfCompressedLeafs.toLocaleString()})<br/>`;
+                    reduceDetails += `Modified branches: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedBranches.toLocaleString()}`;
+                }
+                else {
+                    reduceDetails = `<br/>*** Reduce details ***<br/>`;
+                    reduceDetails += `Reduce attempts: ${element.ReduceDetails.ReduceAttempts.toLocaleString()} <br/>`;
+                    reduceDetails += `Reduce successes: ${element.ReduceDetails.ReduceSuccesses.toLocaleString()} <br/>`;
+                    reduceDetails += `Reduce errors: ${element.ReduceDetails.ReduceErrors.toLocaleString()} <br/>`;
+                    reduceDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.ReduceDetails.CurrentlyAllocated)} <br/>`;
+                    reduceDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessPrivateMemory)}<br/>`;
+                    reduceDetails += `Process working set: ${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessWorkingSet)}`;
+                }
+                
                 tooltipHtml += reduceDetails;
             }           
 

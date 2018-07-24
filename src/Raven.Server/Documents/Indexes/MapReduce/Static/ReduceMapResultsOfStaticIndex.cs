@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -15,21 +16,27 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly DynamicIterationOfAggregationBatchWrapper _blittableToDynamicWrapper = new DynamicIterationOfAggregationBatchWrapper();
         private readonly IndexingFunc _reducingFunc;
+        private readonly IndexType _indexType;
         private IPropertyAccessor _propertyAccessor;
 
         public ReduceMapResultsOfStaticIndex(Index index, IndexingFunc reducingFunc, MapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
             : base(index, indexDefinition, indexStorage, metrics, mapReduceContext)
         {
             _reducingFunc = reducingFunc;
+            _indexType = index.Type;
         }
         
-        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token)
+        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
             _blittableToDynamicWrapper.InitializeForEnumeration(aggregationBatch);
             
             var resultObjects = new List<object>();
 
-            foreach (var output in _reducingFunc(_blittableToDynamicWrapper))
+            var indexingFunctionType = _indexType.IsJavaScript() ? IndexingOperation.Map.Jint : IndexingOperation.Map.Linq;
+
+            var funcStats = stats?.For(indexingFunctionType, start: false);
+
+            foreach (var output in new TimeCountingEnumerable(_reducingFunc(_blittableToDynamicWrapper), funcStats))
             {
                 token.ThrowIfCancellationRequested();
 
