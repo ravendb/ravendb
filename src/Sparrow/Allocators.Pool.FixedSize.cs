@@ -1,21 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow.Binary;
 using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IPoolAllocatorOptions
-    {
-        int MaxChunkSize { get; }
-        int MaxPoolMemoryInBytes { get; }
-
-        bool HasOwnership { get; }
-        IAllocatorComposer<Pointer> CreateAllocator();
-    }
-
-    public static class PoolAllocator
+    public static class FixedSizePoolAllocator
     {
         public struct Default : IPoolAllocatorOptions, INativeOptions
         {
@@ -23,7 +16,7 @@ namespace Sparrow
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
-            public int MaxChunkSize => 64 * Constants.Size.Megabyte;
+            public int MaxChunkSize => 1 * Constants.Size.Megabyte;
             public int MaxPoolMemoryInBytes => 256 * Constants.Size.Megabyte;
 
             public bool HasOwnership => true;
@@ -43,11 +36,11 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
-    public unsafe struct PoolAllocator<TOptions> : IAllocator<PoolAllocator<TOptions>, BlockPointer>, IRenewable<PoolAllocator<TOptions>>
+    public unsafe struct FixedSizePoolAllocator<TOptions> : IAllocator<FixedSizePoolAllocator<TOptions>, Pointer>, IAllocator, IRenewable<FixedSizePoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
-        private BlockPointer[] _freed;
+        private Pointer _freed;
 
         // PERF: This should be devirtualized. 
         private IAllocatorComposer<Pointer> _internalAllocator;
@@ -55,75 +48,67 @@ namespace Sparrow
         public long Allocated { get; private set; }
         public long Used { get; private set; }
 
-        public void Initialize(ref PoolAllocator<TOptions> allocator)
+        public void Initialize(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             // Initialize the struct pointers structure used to navigate over the allocated memory.          
             allocator.Allocated = 0;
             allocator.Used = 0;
         }
 
-        public void Configure<TConfig>(ref PoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
+        public void Configure<TConfig>(ref FixedSizePoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
             if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
                 throw new NotSupportedException($"{nameof(TConfig)} is not compatible with {nameof(TOptions)}");
 
             // This cast will get evicted by the JIT.             
-            allocator._options = (TOptions)(object)configuration;
-            allocator._freed = new BlockPointer[Bits.MostSignificantBit(allocator._options.MaxChunkSize)];
+            allocator._options = (TOptions)(object)configuration;            
             allocator._internalAllocator = allocator._options.CreateAllocator();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BlockPointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
+        public Pointer Allocate(ref FixedSizePoolAllocator<TOptions> allocator, int size)
         {
-            int vsize = Bits.NextPowerOf2(Math.Max(sizeof(BlockPointer), size));
+            if (size != allocator._options.MaxChunkSize)
+                ThrowOnlyFixedSizeMemoryCanBeRequested();
 
-            var index = Bits.MostSignificantBit(vsize) - 1;
-            if (index < allocator._freed.Length && allocator._freed[index].IsValid)
+            if (allocator._freed.IsValid)
             {
                 // Stack copy of the pointer itself.
-                BlockPointer section = _freed[index];
+                Pointer section = _freed;
 
                 // Pointer was holding the marker for the next released block instead. 
-                allocator._freed[index] = *((BlockPointer*)section.Ptr);
+                allocator._freed = *((Pointer*)section.Ptr);
                 allocator.Used += section.Size;
 
                 return section;
             }
 
             allocator.Used += size;
-            allocator.Allocated += vsize;
+            allocator.Allocated += size;
 
-            var ptr = _internalAllocator.Allocate(vsize);
-            return new BlockPointer(ptr.Ptr, size, size);
+            var ptr = _internalAllocator.Allocate(size);
+            return new Pointer(ptr.Ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Release(ref PoolAllocator<TOptions> allocator, ref BlockPointer ptr)
+        public void Release(ref FixedSizePoolAllocator<TOptions> allocator, ref Pointer ptr)
         {
+            if (ptr.Size != allocator._options.MaxChunkSize)
+                ThrowMemoryDoesNotBelongToAllocator(ptr);
+
             if (allocator.Used > allocator._options.MaxPoolMemoryInBytes || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
 
-            int originalSize = ptr.Size;
-
-            int size = Bits.NextPowerOf2(ptr.BlockSize);
-            var index = Bits.MostSignificantBit(size) - 1;
-
-            // Retaining chunks bigger than the max chunk size could clutter the allocator, so we reroute it to the backing allocator.
-            if (index >= allocator._freed.Length)
-                goto UnlikelyRelease;
-
-            var section = allocator._freed[index];
+            var section = allocator._freed;
             if (section.IsValid)
             {
                 // Copy the section pointer that is already freed to the current memory. 
-                *(BlockPointer*)ptr.Ptr = section;
+                *(Pointer*)ptr.Ptr = section;
             }
 
             // Put a copy of the currently released memory block on the front. 
-            allocator._freed[index] = ptr;
-
-            allocator.Used -= originalSize;
+            allocator._freed = ptr;
+            allocator.Used -= ptr.Size;
 
             return;
 
@@ -135,12 +120,22 @@ namespace Sparrow
 
             allocator.Used -= ptr.Size;
 
-            Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.BlockSize);
+            Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.Size);
             allocator._internalAllocator.Release(ref nakedPtr);
         }
 
+        private void ThrowMemoryDoesNotBelongToAllocator(in Pointer ptr)
+        {
+            throw new InvalidOperationException($"The memory pointer {ptr.Describe()} does not belong to this allocator.");
+        }
+
+        private void ThrowOnlyFixedSizeMemoryCanBeRequested()
+        {
+            throw new InvalidOperationException($"The memory size requested is not supported by this allocator. You should use {this._options.MaxChunkSize} instead.");
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Renew(ref PoolAllocator<TOptions> allocator)
+        public void Renew(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             if (Allocator.LowMemoryFlag.IsRaised())
                 ReleaseMemoryPool(ref allocator);
@@ -149,7 +144,7 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Reset(ref PoolAllocator<TOptions> allocator)
+        public void Reset(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             if (allocator._options.HasOwnership)
                 ReleaseMemoryPool(ref allocator);
@@ -160,18 +155,18 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnAllocate(ref PoolAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnAllocate(ref FixedSizePoolAllocator<TOptions> allocator, Pointer ptr)
         {
             // Nothing to do here.
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnRelease(ref PoolAllocator<TOptions> allocator, BlockPointer ptr)
+        public void OnRelease(ref FixedSizePoolAllocator<TOptions> allocator, Pointer ptr)
         {
             // Nothing to do here.
         }
 
-        public void Dispose(ref PoolAllocator<TOptions> allocator)
+        public void Dispose(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             if (allocator._options.HasOwnership)
                 // We are going to be disposed, we then release all holded memory. 
@@ -180,34 +175,28 @@ namespace Sparrow
             allocator._internalAllocator.Dispose();
         }
 
-        private void ResetMemoryPool(ref PoolAllocator<TOptions> allocator)
+        private void ResetMemoryPool(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             // We dont own the memory pool, so we just reset the state and let the owner give us memory again on the next cycle.
-            // This is the typical mode of operation when the underlying allocator is able to reuse memory (ex. ArenaAllocator).
-            for (int i = 0; i < _freed.Length; i++)
-            {
-                allocator._freed[i] = new BlockPointer();
-            }
+            // This is the typical mode of operation when the underlying allocator is able to reuse memory (ex. NativeAllocator).
+            allocator._freed = new Pointer();
         }
 
-        private void ReleaseMemoryPool(ref PoolAllocator<TOptions> allocator)
+        private void ReleaseMemoryPool(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             // We own the memory pool, so we have to release all the pointers that we have to the parent allocator.
             // This is the typical mode of operation when the underlying allocator is leaky (ex. NativeAllocator). 
-            for (int i = 0; i < _freed.Length; i++)
+            ref var section = ref _freed;
+            while (section.IsValid)
             {
-                ref var section = ref _freed[i];
-                while (section.IsValid)
-                {
-                    BlockPointer current = section;
+                Pointer current = section;
 
-                    // Copy the pointer found on the first memory bytes of the section. 
-                    section = *(BlockPointer*)current.Ptr;
+                // Copy the pointer found on the first memory bytes of the section. 
+                section = *(Pointer*)current.Ptr;
 
-                    // The block is guaranteed to be valid, so we release it to the internal allocator.
-                    Pointer currentPtr = new Pointer(current.Ptr, current.BlockSize);
-                    allocator._internalAllocator.Release(ref currentPtr);
-                }
+                // The block is guaranteed to be valid, so we release it to the internal allocator.
+                Pointer currentPtr = new Pointer(current.Ptr, current.Size);
+                allocator._internalAllocator.Release(ref currentPtr);
             }
         }
     }

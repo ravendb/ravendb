@@ -9,7 +9,7 @@ namespace Sparrow
     public interface IPointerType<T> : IPointerType where T : struct { }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct Pointer : IPointerType
+    public readonly unsafe struct Pointer : IPointerType, Meta.IDescribe
     {
         public readonly void* Ptr;
 
@@ -83,10 +83,18 @@ namespace Sparrow
 
             return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
         }
+
+        public string Describe()
+        {
+            if (this.IsValid)
+                return $"{{{(long)this.Ptr:X64}|{this.Size}}}";
+
+            return "{null}";
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct Pointer<T> : IPointerType<T> where T : struct
+    public readonly unsafe struct Pointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
     {
         public readonly void* Ptr;
 
@@ -192,6 +200,14 @@ namespace Sparrow
             }
         }
 
+        public string Describe()
+        {
+            if (this.IsValid)
+                return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.SizeAsBytes}b}}";
+
+            return "{null}";
+        }
+
         [Conditional("DEBUG")]
         [Conditional("VALIDATE")]
         internal void EnsureIsNotBadPointerAccess()
@@ -213,7 +229,7 @@ namespace Sparrow
     /// a straight Pointer will have the same size for the allocation size and the actual size. 
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct BlockPointer : IPointerType
+    public readonly unsafe struct BlockPointer : IPointerType, Meta.IDescribe
     {
         public readonly void* Ptr;
 
@@ -291,6 +307,14 @@ namespace Sparrow
             return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
         }
 
+        public string Describe()
+        {
+            if (this.IsValid)
+                return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.BlockSize}}}";
+
+            return "{null}";
+        }
+
         public static implicit operator BlockPointer(Pointer ptr)
         {
             return new BlockPointer(ptr.Ptr, ptr.Size, ptr.Size);
@@ -303,7 +327,7 @@ namespace Sparrow
     /// a straight Pointer will have the same size for the allocation size and the actual size. 
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct BlockPointer<T> : IPointerType<T> where T : struct
+    public readonly unsafe struct BlockPointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
     {
         public readonly void* Ptr;
 
@@ -419,6 +443,14 @@ namespace Sparrow
         {
             if (Ptr == null)
                 throw new InvalidOperationException($"Trying to access the pointer but it is not valid");
+        }
+
+        public string Describe()
+        {
+            if (this.IsValid)
+                return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.BlockSize}|{this.SizeAsBytes}b}}";
+
+            return "{null}";
         }
 
         public static implicit operator BlockPointer(BlockPointer<T> ptr)

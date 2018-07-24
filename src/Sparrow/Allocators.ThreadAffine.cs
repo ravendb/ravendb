@@ -52,7 +52,7 @@ namespace Sparrow
 
     }
 
-    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, Pointer>, IAllocator, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
+    public unsafe struct ThreadAffineBlockAllocator<TOptions> : IAllocator<ThreadAffineBlockAllocator<TOptions>, Pointer>, ILowMemoryHandler<ThreadAffineBlockAllocator<TOptions>>
             where TOptions : struct, IThreadAffineBlockOptions
     {
         private TOptions _options;

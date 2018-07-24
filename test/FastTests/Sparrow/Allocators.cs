@@ -243,6 +243,13 @@ namespace FastTests.Sparrow
             public int MaxArenaSize => 64 * Constants.Size.Megabyte;
         }
 
+        public struct FragmentFixedSize : IFragmentAllocatorOptions
+        {
+            public int ReuseBlocksBiggerThan => 1 * Constants.Size.Kilobyte;
+            public int AllocationBlockSizeInBytes => 10 * Constants.Size.Kilobyte;
+            public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<FixedSize>>();
+        }
+
         [Fact]
         public void Alloc_ArenaReturnBlockBytes()
         {
@@ -317,6 +324,41 @@ namespace FastTests.Sparrow
             Assert.True(ptr.IsValid);
         }
 
+        [Fact]
+        public void Alloc_FragmentGrowMultiple()
+        {
+            var allocator = new Allocator<FragmentAllocator<FragmentFixedSize>>();
+            allocator.Initialize(default(FragmentFixedSize));
+
+            int size = 4000;
+            Pointer ptr;
+
+            int length = 10;
+
+            long[] addresses = new long[length];
+            var pointers = new Pointer[length];
+            for (int i = 0; i < length; i++)
+            {
+                ptr = allocator.Allocate(size);
+                Assert.Equal(size, ptr.Size);
+                Assert.True(ptr.IsValid);
+
+                pointers[i] = ptr;
+                addresses[i] = (long)ptr.Ptr;
+            }
+
+            for (int i = length - 1; i >= 0; i--)
+            {
+                allocator.Release(ref pointers[i]);
+                Assert.False(pointers[i].IsValid);
+            }
+
+            allocator.Reset();
+
+            ptr = allocator.Allocate(size);
+            Assert.Equal(size, ptr.Size);
+            Assert.True(ptr.IsValid);
+        }
 
         [Fact]
         public void Alloc_ThreadAffinePoolReturnBlockBytes()

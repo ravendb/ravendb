@@ -93,9 +93,7 @@ namespace Sparrow
         // The current position over the current arena chunk
         private byte* _ptrCurrent;
 
-        // How many bytes has this arena allocated from its memory provider since resets
-        private long _allocated;
-        // How many bytes has this arena handed out to the customers.
+        // How many bytes has this arena section handed out to the customers.
         private long _used;
 
         // Buffers that has been used and cannot be cleaned until a reset happens.
@@ -116,7 +114,7 @@ namespace Sparrow
             if (_ptrStart == null)
                 ThrowInvalidAllocateFromResetWithoutRenew();
 
-            if (allocator._used + size > allocator._allocated)
+            if (allocator._used + size > allocator._currentBuffer.Size)
             {
                 allocator.GrowArena(ref allocator, size);
             }
@@ -131,7 +129,7 @@ namespace Sparrow
 
         private void GrowArena( ref ArenaAllocator<TOptions> allocator, int requestedSize)
         {
-            int newSize = allocator._options.GrowthStrategy.GetGrowthSize(allocator._allocated, allocator._used);            
+            int newSize = allocator._options.GrowthStrategy.GetGrowthSize(allocator._currentBuffer.Size, allocator._used);            
             if (newSize > allocator._options.MaxArenaSize)
                 newSize = allocator._options.MaxArenaSize;
 
@@ -165,7 +163,6 @@ namespace Sparrow
             allocator._ptrStart = (byte*)newBuffer.Ptr;
             allocator._ptrCurrent = (byte*)newBuffer.Ptr;
 
-            allocator._allocated = newSize;
             allocator._used = 0;            
         }
 
@@ -193,6 +190,7 @@ namespace Sparrow
             allocator._ptrCurrent -= ptr.Size;
         }
 
+        // How many bytes has this arena allocated from its memory provider since resets
         public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -214,7 +212,7 @@ namespace Sparrow
             allocator._ptrCurrent = allocator._ptrStart;
 
             // Is our strategy requiring us to change the size after having worked with it?
-            long preferredSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._allocated, allocator._used);
+            long preferredSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._currentBuffer.Size, allocator._used);
 
             // Check if there has been new allocations happening in this round.
             if (allocator._olderBuffers == null || allocator._olderBuffers.Count == 0)
@@ -226,7 +224,6 @@ namespace Sparrow
                         allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref _currentBuffer);
 
                     allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)preferredSize);
-                    allocator._allocated = preferredSize;
                     allocator._ptrCurrent = allocator._ptrStart = null;
                 }
 
@@ -247,7 +244,7 @@ namespace Sparrow
             allocator._olderBuffers.Clear();
 
             // If we didnt use more memory than the currently allocated or we are in low memory mode
-            if (allocator._used <= allocator._allocated || Allocator.LowMemoryFlag.IsRaised())            
+            if (allocator._used <= allocator._currentBuffer.Size || Allocator.LowMemoryFlag.IsRaised())            
             {
                 // Go on with the current setup
                 allocator._used = 0;
@@ -260,7 +257,7 @@ namespace Sparrow
             if (allocator._ptrStart != null)
                 allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref _currentBuffer);
 
-            long newSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._allocated, allocator._used);
+            long newSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._currentBuffer.Size, allocator._used);
             if (newSize > allocator._options.MaxArenaSize)
                 newSize = allocator._options.MaxArenaSize;
 
@@ -268,7 +265,6 @@ namespace Sparrow
             allocator._ptrStart = allocator._ptrCurrent = (byte*)allocator._currentBuffer.Ptr;
             allocator.Allocated = 0;
 
-            allocator._allocated = newSize;
             allocator._used = 0;
         }
 
@@ -277,7 +273,7 @@ namespace Sparrow
             if (allocator._ptrStart != null)
                 return;
 
-            allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)allocator._allocated);
+            allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)allocator._currentBuffer.Size);
             allocator._ptrStart = allocator._ptrCurrent = (byte*)allocator._currentBuffer.Ptr;
             allocator.Allocated = 0;
             allocator._used = 0;
