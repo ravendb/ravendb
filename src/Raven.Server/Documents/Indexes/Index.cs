@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _batchStopped;
 
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-        private NativeMemory.ThreadStats _threadAllocations;
+        internal NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
         internal TimeSpan? _firstBatchTimeout;

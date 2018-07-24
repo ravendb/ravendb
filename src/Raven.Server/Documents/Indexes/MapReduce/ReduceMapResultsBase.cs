@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -94,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
                 token.ThrowIfCancellationRequested();
-
+                
                 using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
                 using (store.Value)
                 using (_aggregationBatch)
@@ -119,6 +120,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         default:
                             throw new ArgumentOutOfRangeException(modifiedStore.Type.ToString());
                     }
+                }
+
+                using (MemoryUsageGuard.GetProcessMemoryUsage(out var memoryUsage, out _))
+                {
+                    stats.RecordReduceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory);
                 }
             }
 
@@ -170,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 AggregationResult result;
                 using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
                 {
-                    result = AggregateOn(_aggregationBatch.Items, indexContext, token);
+                    result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
                 }
 
                 if (section.IsNew == false)
@@ -185,6 +191,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _metrics.MapReduceIndexes.ReducedPerSec.Mark(numberOfEntriesToReduce);
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
+                stats.RecordReduceAllocations(_index._threadAllocations.Allocations);
             }
             catch (Exception e) when (e is OperationCanceledException == false)
             {
@@ -380,6 +387,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     // we still have unaggregated branches which were modified but their children were not modified (branch page splitting) so we missed them
                     parentPagesToAggregate.Add(branchesToAggregate.First());
                 }
+
+                stats.RecordReduceAllocations(_index._threadAllocations.Allocations);
             }
 
             if (compressedEmptyLeafs != null && compressedEmptyLeafs.Count > 0)
@@ -422,7 +431,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     _aggregationBatch.Items.Add(reduceEntry);
                 }
 
-                return AggregateBatchResults(_aggregationBatch.Items, indexContext, token);
+                return AggregateBatchResults(_aggregationBatch.Items, indexContext, _treeReductionStats.LeafAggregation, token);
             }
         }
 
@@ -463,17 +472,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
 
-                return AggregateBatchResults(_aggregationBatch.Items, indexContext, token);
+                return AggregateBatchResults(_aggregationBatch.Items, indexContext, _treeReductionStats.BranchAggregation, token);
             }
         }
 
-        private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token)
+        private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
             AggregationResult result;
 
             try
             {
-                result = AggregateOn(aggregationBatch, indexContext, token);
+                result = AggregateOn(aggregationBatch, indexContext, stats, token);
             }
             finally
             {
@@ -559,7 +568,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             throw new AggregationResultNotFoundException(message);
         }
 
-        protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);
+        protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidTreeReductionStats(IndexingStatsScope stats)
