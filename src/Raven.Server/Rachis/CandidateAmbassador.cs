@@ -314,7 +314,7 @@ namespace Raven.Server.Rachis
                         break;
                     }
                     catch (Exception e)
-                        when (e is OperationCanceledException || e is LockAlreadyDisposedException)
+                        when (e is OperationCanceledException || e is LockAlreadyDisposedException || e is RachisConcurrencyException)
                     {
                         NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, e);
                         break;

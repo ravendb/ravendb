@@ -199,6 +199,7 @@ namespace Raven.Server.Rachis
                                 {
                                     _engine.Log.Info($"Follower ambassador reuses the connection for {_tag} and send a winning message to his elector.");
                                 }
+
                                 CandidateAmbassador.SendElectionResult(_engine, _connection, _term, ElectionResult.Won);
                             }
                         }
@@ -374,6 +375,11 @@ namespace Raven.Server.Rachis
                         }
                     }
 
+                    catch (RachisConcurrencyException)
+                    {
+                        // our term is no longer valid
+                        throw;
+                    }
                     catch (RachisException)
                     {
                         // this is a rachis protocol violation exception, we must close this ambassador. 
