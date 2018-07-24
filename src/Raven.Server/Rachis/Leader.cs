@@ -49,12 +49,12 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEvent _noop = new ManualResetEvent(false);
         private long _lowestIndexInEntireCluster;
 
-        private readonly Dictionary<string, FollowerAmbassador> _voters =
-            new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, FollowerAmbassador> _promotables =
-            new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
-            new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, FollowerAmbassador> _voters =
+            new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, FollowerAmbassador> _promotables =
+            new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, FollowerAmbassador> _nonVoters =
+            new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
         private PoolOfThreads.LongRunningWork _leaderLongRunningWork;
 
@@ -93,10 +93,16 @@ namespace Raven.Server.Rachis
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");                
         }
 
+        private int _steppedDown;
+
         public void StepDown()
         {
             if (_voters.Count == 0)
                 throw new InvalidOperationException("Cannot step down when I'm the only voter in the cluster");
+
+            if (Interlocked.CompareExchange(ref _steppedDown, 1, 0) == 1)
+                return;
+
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             if (_engine.Log.IsInfoEnabled)
             {
@@ -112,7 +118,6 @@ namespace Raven.Server.Rachis
         public Dictionary<string, NodeStatus> GetStatus()
         {
             var dict = new Dictionary<string, NodeStatus>();
-
             foreach (var peers in new[] { _nonVoters, _voters, _promotables })
             {
                 foreach (var kvp in peers)
@@ -185,7 +190,7 @@ namespace Raven.Server.Rachis
                     if (old.TryGetValue(voter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_voterResponded);
-                        _voters.Add(voter.Key, existingInstance);
+                        _voters[voter.Key] = existingInstance;
                         old.Remove(voter.Key);
                         continue; // already here
                     }
@@ -193,7 +198,7 @@ namespace Raven.Server.Rachis
                     connections?.TryGetValue(voter.Key, out connection);
                     var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value,
                         _engine.ClusterCertificate, connection);
-                    _voters.Add(voter.Key, ambasaddor);
+                    _voters[voter.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -207,7 +212,7 @@ namespace Raven.Server.Rachis
                     if (old.TryGetValue(promotable.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_promotableUpdated);
-                        _promotables.Add(promotable.Key, existingInstance);
+                        _promotables[promotable.Key] = existingInstance;
                         old.Remove(promotable.Key);
                         continue; // already here
                     }
@@ -215,7 +220,7 @@ namespace Raven.Server.Rachis
                     connections?.TryGetValue(promotable.Key, out connection);
                     var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
                         _engine.ClusterCertificate, connection);
-                    _promotables.Add(promotable.Key, ambasaddor);
+                    _promotables[promotable.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -230,7 +235,7 @@ namespace Raven.Server.Rachis
                     {
                         existingInstance.UpdateLeaderWake(_noop);
 
-                        _nonVoters.Add(nonVoter.Key, existingInstance);
+                        _nonVoters[nonVoter.Key] = existingInstance;
                         old.Remove(nonVoter.Key);
                         continue; // already here
                     }
@@ -238,7 +243,7 @@ namespace Raven.Server.Rachis
                     connections?.TryGetValue(nonVoter.Key, out connection);
                     var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value,
                         _engine.ClusterCertificate, connection);
-                    _nonVoters.Add(nonVoter.Key, ambasaddor);
+                    _nonVoters[nonVoter.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {

@@ -1804,7 +1804,15 @@ namespace Raven.Server.ServerWide
 
                 if (_engine.CurrentState == RachisState.Leader)
                 {
-                    return await _engine.PutAsync(cmd);
+                    try
+                    {
+                        return await _engine.PutAsync(cmd);
+                    }
+                    catch (NotLeadingException)
+                    {
+                        // if the leader was changed during the PutAsync, we will retry.
+                        continue;
+                    }
                 }
                 if (_engine.CurrentState == RachisState.Passive)
                 {
