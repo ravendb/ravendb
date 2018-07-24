@@ -15,6 +15,18 @@ namespace SlowTests.Issues
             public int Group { get; set; }
         }
 
+        private class User2
+        {
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public Group Group { get; set; }
+        }
+
+        private class Group
+        {
+            public string Order { get; set; }
+        }
+
         [Fact]
         public void Can_Use_RQL_Reserved_Words_As_Field_To_Fetch()
         {
@@ -44,8 +56,8 @@ namespace SlowTests.Issues
                             user.Group
                         });
 
-                    Assert.Equal("from Users as __ravenDefaultAlias0 " +
-                                 "select __ravenDefaultAlias0.'Group'"
+                    Assert.Equal("from Users as __alias0 " +
+                                 "select __alias0.'Group'"
                                 , query.ToString());
 
                     var results = query.ToList();
@@ -89,10 +101,10 @@ namespace SlowTests.Issues
                             user.LastName
                         });
 
-                    Assert.Equal("from Users as __ravenDefaultAlias0 " +
-                                 "select __ravenDefaultAlias0.FirstName, " +
-                                    "__ravenDefaultAlias0.'Group', " +
-                                    "__ravenDefaultAlias0.LastName"
+                    Assert.Equal("from Users as __alias0 " +
+                                 "select __alias0.FirstName, " +
+                                    "__alias0.'Group', " +
+                                    "__alias0.LastName"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -139,10 +151,10 @@ namespace SlowTests.Issues
                             Likes = RavenQuery.Counter(user, "likes")
                         });
 
-                    Assert.Equal("from Users as __ravenDefaultAlias0 " +
-                                 "select __ravenDefaultAlias0.FirstName, " +
-                                 "__ravenDefaultAlias0.'Group', " +
-                                 "counter(__ravenDefaultAlias0, likes) as Likes"
+                    Assert.Equal("from Users as __alias0 " +
+                                 "select __alias0.FirstName, " +
+                                 "__alias0.'Group', " +
+                                 "counter(__alias0, likes) as Likes"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -152,6 +164,51 @@ namespace SlowTests.Issues
                         Assert.Equal("Test", results[index].FirstName);
                         Assert.InRange(results[index].Group, 0, 3);
                         Assert.Equal(index * 100, results[index].Likes);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Use_RQL_Reserved_Words_As_Field_To_Fetch_With_Nested_Path()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var user = new User2
+                        {
+                            Group = new Group
+                            {
+                                Order = "orders/" + i
+                            }
+                        };
+                        session.Store(user);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User2>()
+                        .Select(user => new
+                        {
+                            user.Group.Order
+                        });
+
+                    Assert.Equal("from User2s as __alias0 " +
+                                 "select __alias0.'Group'.Order as 'Order'"
+                                , query.ToString());
+
+                    var results = query.ToList();
+                    Assert.Equal(10, results.Count);
+
+                    for (var i = 0; i < results.Count; i++)
+                    {
+                        Assert.Equal(results[i].Order, "orders/"+ i);
                     }
                 }
             }

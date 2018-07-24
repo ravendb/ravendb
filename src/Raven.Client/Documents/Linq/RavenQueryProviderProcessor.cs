@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Linq
         private string _loadAlias;
         private bool _selectLoad;
         private const string DefaultLoadAlias = "__load";
-        private const string DefaultAlias = "__ravenDefaultAlias";
+        private const string DefaultAliasPrefix = "__alias";
         private bool _addedDefaultAlias;
 
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -2359,7 +2359,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         ? innerMemberExpression.Member.Name
                         : string.Empty;
 
-                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith(DefaultAlias) || _aliasKeywords.Contains(param))
+                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith(DefaultAliasPrefix) || _aliasKeywords.Contains(param))
                 {
                     // (1) the load argument was defined in a previous let statment, i.e :
                     //     let detailId = "details/1-A" 
@@ -2494,7 +2494,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_insideLet > 0)
             {
-                var newAlias = $"{DefaultAlias}{_aliasesCount++}";
+                var newAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
                 AppendLineToOutputFunction(alias, newAlias);
                 return newAlias;
             }
@@ -2901,6 +2901,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
+            HandleKeywordsIfNeeded(ref field, ref alias);
+
+            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
+            if (identityProperty != null && identityProperty.Name == field)
+            {
+                FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
+                return;
+            }
+
+            FieldsToFetch.Add(new FieldToFetch(field, alias));
+        }
+
+        private void HandleKeywordsIfNeeded(ref string field, ref string alias)
+        {
             if (NeedToAddFromAliasToField(field))
             {
                 AddFromAliasToFieldToFetch(ref field, ref alias);
@@ -2911,20 +2925,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AddFromAliasToFieldToFetch(ref field, ref alias, true);
             }
 
+            var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
+            if (indexOf != -1)
+            {
+                var parameter = field.Substring(0, indexOf);
+                if (_aliasKeywords.Contains(parameter))
+                {
+                    // field is a nested path that starts with RQL keyword,
+                    // need to quote the keyword
+
+                    var nestedPath = field.Substring(indexOf + 1);
+                    AddDefaultAliasToQuery();
+                    AddFromAliasToFieldToFetch(ref parameter, ref alias, true);
+                    field = $"{parameter}.{nestedPath}";
+                }
+            }
+
             if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
                 _aliasKeywords.Contains(alias))
             {
                 alias = "'" + alias + "'";
             }
-
-            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
-            if (identityProperty != null && identityProperty.Name == field)
-            {
-                FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
-                return;
-            }
-
-            FieldsToFetch.Add(new FieldToFetch(field, alias));
         }
 
         private bool NeedToAddFromAliasToField(string field)
@@ -2950,7 +2971,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddDefaultAliasToQuery()
         {
-            var fromAlias = $"{DefaultAlias}{_aliasesCount++}";
+            var fromAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
             AddFromAlias(fromAlias);
             foreach (var fieldToFetch in FieldsToFetch)
             {
