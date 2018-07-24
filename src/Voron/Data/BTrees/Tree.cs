@@ -786,7 +786,7 @@ namespace Voron.Data.BTrees
             Slice firstKey;
             if (leftmostPage)
             {
-                firstScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
+                firstScope = new ByteStringContext.Scope();
                 firstKey = Slices.BeforeAllKeys;
             }
             else
@@ -798,7 +798,7 @@ namespace Voron.Data.BTrees
             Slice lastKey;
             if (rightmostPage)
             {
-                lastScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
+                lastScope = new ByteStringContext.Scope();
                 lastKey = Slices.AfterAllKeys;
             }
             else
@@ -818,7 +818,7 @@ namespace Voron.Data.BTrees
             Slice firstKey;
             if (leftmostPage)
             {
-                firstScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
+                firstScope = new ByteStringContext.Scope();
                 firstKey = Slices.BeforeAllKeys;
             }
             else
@@ -830,7 +830,7 @@ namespace Voron.Data.BTrees
             Slice lastKey;
             if (rightmostPage)
             {
-                lastScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
+                lastScope = new ByteStringContext.Scope();
                 lastKey = Slices.AfterAllKeys;
             }
             else

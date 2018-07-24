@@ -8,7 +8,7 @@ namespace Sparrow
     public interface IFragmentAllocatorOptions : IAllocatorOptions
     {
         int ReuseBlocksBiggerThan { get; }
-        int AllocationBlockSizeInBytes { get; }
+        int BlockSize { get; }
 
         IAllocatorComposer<Pointer> CreateAllocator();
     }
@@ -22,7 +22,7 @@ namespace Sparrow
             public bool Zeroed => false;
 
             public int ReuseBlocksBiggerThan => 128 * Constants.Size.Kilobyte;
-            public int AllocationBlockSizeInBytes => 4 * Constants.Size.Megabyte;
+            public int BlockSize => 4 * Constants.Size.Megabyte;
 
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
@@ -38,16 +38,14 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
-    public unsafe struct FragmentAllocator<TOptions> : IAllocator<FragmentAllocator<TOptions>, Pointer>, IAllocator
+    public unsafe struct FragmentAllocator<TOptions> : IAllocator<FragmentAllocator<TOptions>, Pointer>
         where TOptions : struct, IFragmentAllocatorOptions
     {
         private TOptions _options;
         private IAllocatorComposer<Pointer> _internalAllocator;
 
-        private Pointer _currentBuffer;
-
         // The start of the current arena chunk
-        private byte* _ptrStart;
+        private Pointer _currentBuffer;
         // The current position over the current arena chunk
         private byte* _ptrCurrent;
         
@@ -59,7 +57,8 @@ namespace Sparrow
         // Buffers that has been used and cannot be cleaned until a reset happens.
         private List<Pointer> _allocatedSegments;
 
-        // How many bytes has this arena allocated from its memory provider since resets
+        // How many bytes has this arena allocated from its memory provider since resets 
+        // This is the total memory from this allocator which is in customer's hands.
         public long Allocated { get; private set; }
 
         public void Initialize(ref FragmentAllocator<TOptions> allocator)
@@ -80,9 +79,9 @@ namespace Sparrow
 
         public Pointer Allocate(ref FragmentAllocator<TOptions> allocator, int size)
         {
-            if (size < allocator._options.AllocationBlockSizeInBytes)
+            if (size <= allocator._options.BlockSize)
             {                
-                if (allocator._used + size > allocator._currentBuffer.Size || _ptrStart == null)
+                if (allocator._used + size > allocator._currentBuffer.Size || !allocator._currentBuffer.IsValid)
                 {
                     // PERF: This should be considered cold code.
                     // TODO: Check the code layout.
@@ -100,6 +99,9 @@ namespace Sparrow
             // The allocation is too big to fit, the memory will be used afterwards as a segment when released.
             // PERF: For this kind of allocations we dont care if we hit cold code.
             Pointer segment = allocator._internalAllocator.Allocate(size);
+            allocator._used += segment.Size;
+            allocator.Allocated += segment.Size;
+
             allocator._allocatedSegments.Add(segment);
             return segment;
         }
@@ -133,19 +135,18 @@ namespace Sparrow
             // TODO: Time the impact of using a heap structure instead of a SortedList.
             // Get the biggest segment on the Heap and if size < the biggest one, we avoid the allocation.
             Pointer segment;
-            if (allocator._allocatedSegments.Count > 0 && allocator._allocatedSegments[0].Size >= size)
+            if (allocator._internalReadyToUseMemorySegments.Count > 0 && allocator._internalReadyToUseMemorySegments.Values[0].Size >= size)
             {
-                segment = allocator._allocatedSegments[0];
-                allocator._allocatedSegments.RemoveAt(0);
+                segment = allocator._internalReadyToUseMemorySegments[0];
+                allocator._internalReadyToUseMemorySegments.RemoveAt(0);
             }
             else
             {
-                segment = allocator._internalAllocator.Allocate(allocator._options.AllocationBlockSizeInBytes);
+                segment = allocator._internalAllocator.Allocate(allocator._options.BlockSize);
                 allocator._allocatedSegments.Add(segment);
             }
 
             allocator._currentBuffer = segment;
-            allocator._ptrStart = (byte*)segment.Ptr;
             allocator._ptrCurrent = (byte*)segment.Ptr;
 
             allocator._used = 0;            
@@ -154,7 +155,7 @@ namespace Sparrow
         public void Release(ref FragmentAllocator<TOptions> allocator, ref Pointer ptr)
         {
             byte* address = (byte*)ptr.Ptr;
-            if (address < allocator._ptrStart || address != allocator._ptrCurrent - ptr.Size)
+            if (address < allocator._currentBuffer.Ptr || address != allocator._ptrCurrent - ptr.Size)
             {
                 // We have fragmentation. note that this fragmentation will be healed by the call to Reset
                 // trying to do this on the fly is too expensive unless the chunk is big enough to consider it a whole segment for himself.
@@ -199,7 +200,6 @@ namespace Sparrow
             }
 
             allocator._allocatedSegments.Clear();
-            allocator._ptrStart = null;
             allocator._ptrCurrent = null;
             allocator._used = 0;
         }

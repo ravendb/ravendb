@@ -31,7 +31,7 @@ namespace Sparrow
         public unsafe int GetHashCode(StringSegment str)
         {
             if (_buffer == null || _buffer.Length < str.Length)
-                _buffer = new char[Bits.NextPowerOf2(str.Length)];
+                _buffer = new char[Bits.PowerOf2(str.Length)];
 
             for (int i = 0; i < str.Length; i++)
             {

@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Sparrow.Binary;
 using Sparrow.Global;
 
 namespace Sparrow
@@ -16,8 +14,8 @@ namespace Sparrow
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
-            public int MaxChunkSize => 1 * Constants.Size.Megabyte;
-            public int MaxPoolMemoryInBytes => 256 * Constants.Size.Megabyte;
+            public int MaxBlockSize => 1 * Constants.Size.Megabyte;
+            public int MaxPoolSizeInBytes => 32 * Constants.Size.Megabyte;
 
             public bool HasOwnership => true;
 
@@ -36,13 +34,13 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
-    public unsafe struct FixedSizePoolAllocator<TOptions> : IAllocator<FixedSizePoolAllocator<TOptions>, Pointer>, IAllocator, IRenewable<FixedSizePoolAllocator<TOptions>>
+    public unsafe struct FixedSizePoolAllocator<TOptions> : IAllocator<FixedSizePoolAllocator<TOptions>, Pointer>, IRenewable<FixedSizePoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
         private Pointer _freed;
 
-        // PERF: This should be devirtualized. 
+        // PERF: This should be devirtualized.        
         private IAllocatorComposer<Pointer> _internalAllocator;
 
         public long Allocated { get; private set; }
@@ -68,7 +66,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Pointer Allocate(ref FixedSizePoolAllocator<TOptions> allocator, int size)
         {
-            if (size != allocator._options.MaxChunkSize)
+            if (size != allocator._options.MaxBlockSize)
                 ThrowOnlyFixedSizeMemoryCanBeRequested();
 
             if (allocator._freed.IsValid)
@@ -93,10 +91,10 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref FixedSizePoolAllocator<TOptions> allocator, ref Pointer ptr)
         {
-            if (ptr.Size != allocator._options.MaxChunkSize)
+            if (ptr.Size != allocator._options.MaxBlockSize)
                 ThrowMemoryDoesNotBelongToAllocator(ptr);
 
-            if (allocator.Used > allocator._options.MaxPoolMemoryInBytes || Allocator.LowMemoryFlag.IsRaised())
+            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
 
             var section = allocator._freed;
@@ -131,7 +129,7 @@ namespace Sparrow
 
         private void ThrowOnlyFixedSizeMemoryCanBeRequested()
         {
-            throw new InvalidOperationException($"The memory size requested is not supported by this allocator. You should use {this._options.MaxChunkSize} instead.");
+            throw new InvalidOperationException($"The memory size requested is not supported by this allocator. You should use {this._options.MaxBlockSize} instead.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -140,7 +138,7 @@ namespace Sparrow
             if (Allocator.LowMemoryFlag.IsRaised())
                 ReleaseMemoryPool(ref allocator);
 
-            _internalAllocator.Renew();
+            allocator._internalAllocator.Renew();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -151,7 +149,7 @@ namespace Sparrow
             else
                 ResetMemoryPool(ref allocator);
 
-            _internalAllocator.Reset();
+            allocator._internalAllocator.Reset();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -169,8 +167,10 @@ namespace Sparrow
         public void Dispose(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             if (allocator._options.HasOwnership)
+            {
                 // We are going to be disposed, we then release all holded memory. 
                 allocator.ReleaseMemoryPool(ref allocator);
+            }
 
             allocator._internalAllocator.Dispose();
         }

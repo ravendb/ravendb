@@ -40,7 +40,7 @@ namespace Voron.Impl
 
         public byte* Get(int size, out NativeMemory.ThreadStats thread)
         {
-            size = Bits.NextPowerOf2(size);
+            size = Bits.PowerOf2(size);
 
             if (size > Constants.Size.Megabyte * 16)
             {
@@ -64,7 +64,7 @@ namespace Voron.Impl
             if (ptr == null)
                 return;
 
-            size = Bits.NextPowerOf2(size);
+            size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
             if (size > Constants.Size.Megabyte * 16)

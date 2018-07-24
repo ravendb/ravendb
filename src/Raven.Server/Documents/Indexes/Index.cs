@@ -1195,7 +1195,8 @@ namespace Raven.Server.Documents.Indexes
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
-            ByteStringMemoryCache.CleanForCurrentThread();
+            // TODO: Centralize the blocks fragmentation to ensure we can clean up the memory on-demand without having to go to each context to do so. 
+            //ByteStringMemoryCache.CleanForCurrentThread();
             IndexPersistence.Clean();
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 

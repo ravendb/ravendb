@@ -138,8 +138,8 @@ namespace FastTests.Sparrow
 
             int size = 1000;
 
-            var ptr = allocator.Allocate(size);
-            Assert.Equal(size, ptr.Size);
+            var ptr = allocator.Allocate(1024);
+            Assert.Equal(1024, ptr.BlockSize);
             Assert.True(ptr.IsValid);
 
             long pointerAddress = (long)ptr.Ptr;
@@ -166,9 +166,10 @@ namespace FastTests.Sparrow
             var pointers = new BlockPointer[5];
             for (int i = 0; i < 5; i++)
             {
-                var ptr = allocator.Allocate(size);
-                Assert.Equal(size, ptr.Size);
+                var ptr = allocator.Allocate(1024);
+                Assert.Equal(1024, ptr.Size);
                 Assert.True(ptr.IsValid);
+                Assert.Equal(1024, ptr.BlockSize);
 
                 pointers[i] = ptr;
                 addresses[i] = (long)ptr.Ptr;
@@ -180,14 +181,16 @@ namespace FastTests.Sparrow
                 Assert.False(pointers[i].IsValid);
             }
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var ptr = allocator.Allocate(size);
                 Assert.Contains((long)ptr.Ptr, addresses);
+                Assert.Equal(1024, ptr.BlockSize);
             }
 
             var nonReusedPtr = allocator.Allocate(size);
             Assert.Equal(size, nonReusedPtr.Size);
+            Assert.Equal(size, nonReusedPtr.BlockSize);
             Assert.True(nonReusedPtr.IsValid);
             // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
@@ -196,10 +199,10 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ThreadAffinePoolReturnUsedBytes()
         {
-            var allocator = new FixedSizeAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
-            allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
+            var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Default>>();
+            allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Default));
 
-            var config = default(ThreadAffineBlockAllocator.Default);
+            var config = default(FixedSizeThreadAffinePoolAllocator.Default);
 
             var ptr = allocator.Allocate();
             Assert.Equal(config.BlockSize, ptr.Size);
@@ -246,7 +249,7 @@ namespace FastTests.Sparrow
         public struct FragmentFixedSize : IFragmentAllocatorOptions
         {
             public int ReuseBlocksBiggerThan => 1 * Constants.Size.Kilobyte;
-            public int AllocationBlockSizeInBytes => 10 * Constants.Size.Kilobyte;
+            public int BlockSize => 10 * Constants.Size.Kilobyte;
             public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<FixedSize>>();
         }
 
@@ -363,10 +366,10 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ThreadAffinePoolReturnBlockBytes()
         {
-            var allocator = new FixedSizeAllocator<ThreadAffineBlockAllocator<ThreadAffineBlockAllocator.Default>>();
-            allocator.Initialize(default(ThreadAffineBlockAllocator.Default));
+            var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Default>>();
+            allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Default));
 
-            var config = default(ThreadAffineBlockAllocator.Default);
+            var config = default(FixedSizeThreadAffinePoolAllocator.Default);
 
             long[] addresses = new long[5];
             var pointers = new Pointer[5];

@@ -81,14 +81,14 @@ namespace Voron.Impl.Paging
         private bool TryHandleFailureToLockMemory(PagerState newState, PagerState.AllocationInfo info)
         {
             var currentProcess = Process.GetCurrentProcess();
-            var sum = Bits.NextPowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
+            var sum = Bits.PowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
 
             if (PlatformDetails.RunningOnPosix == false)
             {
                 // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                 // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sum);
+                var nextSize = Bits.PowerOf2(currentProcess.MinWorkingSet.ToInt64() + sum);
                 if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
                 {
                     nextSize = int.MaxValue;
@@ -362,7 +362,7 @@ namespace Voron.Impl.Paging
             {
                 _lastIncrease = now;
                 // cannot return less than the minRequested
-                return Bits.NextPowerOf2(minRequested);
+                return Bits.PowerOf2(minRequested);
             }
 
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
@@ -389,7 +389,7 @@ namespace Voron.Impl.Paging
             // we then want to get the next power of two number, to get pretty file size
             var totalSize = current + actualIncrease;
             if (totalSize < 512 * 1024 * 1024L)
-                return Bits.NextPowerOf2(totalSize);
+                return Bits.PowerOf2(totalSize);
 
             // if it is over 0.5 GB, then we grow at 1 GB intervals
             var remainder = totalSize%Constants.Size.Gigabyte;

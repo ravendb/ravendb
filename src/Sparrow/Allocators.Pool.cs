@@ -6,13 +6,10 @@ using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IPoolAllocatorOptions
+    public interface IPoolAllocatorOptions : IAllocatorOptions, IComposableAllocator<Pointer>
     {
-        int MaxChunkSize { get; }
-        int MaxPoolMemoryInBytes { get; }
-
-        bool HasOwnership { get; }
-        IAllocatorComposer<Pointer> CreateAllocator();
+        int MaxBlockSize { get; }
+        int MaxPoolSizeInBytes { get; }
     }
 
     public static class PoolAllocator
@@ -23,8 +20,8 @@ namespace Sparrow
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
-            public int MaxChunkSize => 64 * Constants.Size.Megabyte;
-            public int MaxPoolMemoryInBytes => 256 * Constants.Size.Megabyte;
+            public int MaxBlockSize => 64 * Constants.Size.Megabyte;
+            public int MaxPoolSizeInBytes => 256 * Constants.Size.Megabyte;
 
             public bool HasOwnership => true;
 
@@ -69,45 +66,55 @@ namespace Sparrow
 
             // This cast will get evicted by the JIT.             
             allocator._options = (TOptions)(object)configuration;
-            allocator._freed = new BlockPointer[Bits.MostSignificantBit(allocator._options.MaxChunkSize)];
+            allocator._freed = new BlockPointer[Bits.MostSignificantBit(allocator._options.MaxBlockSize)];
             allocator._internalAllocator = allocator._options.CreateAllocator();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BlockPointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
-            int vsize = Bits.NextPowerOf2(Math.Max(sizeof(BlockPointer), size));
-
-            var index = Bits.MostSignificantBit(vsize) - 1;
-            if (index < allocator._freed.Length && allocator._freed[index].IsValid)
+            // We are effectively disabling the pooling code generation.
+            // It is useful for cases where composition is done through type chaining. 
+            if (allocator._options.MaxPoolSizeInBytes > 0)
             {
-                // Stack copy of the pointer itself.
-                BlockPointer section = _freed[index];
+                int vsize = Bits.PowerOf2(Math.Max(sizeof(BlockPointer), size));
 
-                // Pointer was holding the marker for the next released block instead. 
-                allocator._freed[index] = *((BlockPointer*)section.Ptr);
-                allocator.Used += section.Size;
+                var index = Bits.MostSignificantBit(vsize) - 2; // We use -2 because we are not starting at 0. 
+                if (index < allocator._freed.Length && allocator._freed[index].IsValid)
+                {
+                    // Stack copy of the pointer itself.
+                    BlockPointer section = _freed[index];
 
-                return section;
-            }
+                    // Pointer was holding the marker for the next released block instead. 
+                    allocator._freed[index] = *((BlockPointer*)section.Ptr);
+                    allocator.Used += section.Size;
+
+                    return new BlockPointer(section.Ptr, section.BlockSize, size);
+                }
+            }        
 
             allocator.Used += size;
-            allocator.Allocated += vsize;
+            allocator.Allocated += size;
 
-            var ptr = _internalAllocator.Allocate(vsize);
+            var ptr = _internalAllocator.Allocate(size);
             return new BlockPointer(ptr.Ptr, size, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref PoolAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
-            if (allocator.Used > allocator._options.MaxPoolMemoryInBytes || Allocator.LowMemoryFlag.IsRaised())
+            // When MaxPoolSizeInBytes is zero, we are effectively disabling the pooling code generation.
+            // It is useful for cases where composition is done through type chaining. 
+            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised() || allocator._options.MaxPoolSizeInBytes == 0)
                 goto UnlikelyRelease;
 
             int originalSize = ptr.Size;
 
-            int size = Bits.NextPowerOf2(ptr.BlockSize);
-            var index = Bits.MostSignificantBit(size) - 1;
+            int size = ptr.BlockSize;
+            if (!Bits.IsPowerOfTwo(size))
+                size = Bits.PowerOf2(size) >> 1;
+            
+            var index = Bits.MostSignificantBit(size) - 2; // We use -2 because we are not starting at 0. 
 
             // Retaining chunks bigger than the max chunk size could clutter the allocator, so we reroute it to the backing allocator.
             if (index >= allocator._freed.Length)
@@ -119,8 +126,12 @@ namespace Sparrow
                 // Copy the section pointer that is already freed to the current memory. 
                 *(BlockPointer*)ptr.Ptr = section;
             }
+            else
+            {
+                // Put a copy of the currently released memory block on the front. 
+                *(BlockPointer*)ptr.Ptr = new BlockPointer();
+            }
 
-            // Put a copy of the currently released memory block on the front. 
             allocator._freed[index] = ptr;
 
             allocator.Used -= originalSize;

@@ -47,7 +47,7 @@ namespace Micro.Benchmark.PageLocatorImpl
             if (tx != null)
                 Debug.Fail("");
 
-            cacheSize = Bits.NextPowerOf2(cacheSize);
+            cacheSize = Bits.PowerOf2(cacheSize);
             if (cacheSize > 1024)
                 cacheSize = 1024;
 

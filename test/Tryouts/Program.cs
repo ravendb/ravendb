@@ -27,7 +27,7 @@ namespace Tryouts
             /*
                 The AST for 
 
-                with { from Movies where Name = “Star Wars Episode 1” } as lovedMovie
+                with { from Movies where Name = ï¿½Star Wars Episode 1ï¿½ } as lovedMovie
                 with { from Movies } as recommendedMovie
                 with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
                 match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)<-(u)

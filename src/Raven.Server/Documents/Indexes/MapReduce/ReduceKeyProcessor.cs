@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (_buffer == null || 
                 _bufferPos + size > _buffer.SizeInBytes)
             {
-                var newBuffer = _buffersPool.Allocate(Bits.NextPowerOf2(_bufferPos + size));
+                var newBuffer = _buffersPool.Allocate(Bits.PowerOf2(_bufferPos + size));
                 if (_buffer != null)
                 {
                     Memory.Copy(newBuffer.Address, _buffer.Address, _buffer.SizeInBytes);

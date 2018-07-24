@@ -113,7 +113,7 @@ namespace Voron.Data.BTrees
 
                     EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
 
-                    var newPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
+                    var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
                     ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, newPageSize, nestedPage.PageSize);
 
@@ -199,7 +199,7 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            var actualPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
+            var actualPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
             byte* ptr;
             using (DirectAdd(key, actualPageSize, out ptr))

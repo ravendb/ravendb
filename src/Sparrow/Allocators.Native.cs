@@ -101,7 +101,9 @@ namespace Sparrow
 
             allocator.Allocated += size;
 
-            return new Pointer(memory, size);
+            var ptr = new Pointer(memory, size);
+            Console.WriteLine($"Pointer{ptr.Describe()} = _allocator.Allocate(ref {nameof(NativeAllocator<TOptions>)}, {size})");
+            return ptr;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -124,7 +124,7 @@ namespace Voron.Impl.Journal
             long minRequiredSize = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
             if (_currentJournalFileSize < minRequiredSize)
             {
-                _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                _currentJournalFileSize = Bits.PowerOf2(minRequiredSize);
                 actualLogSize = _currentJournalFileSize;
             }
 
@@ -299,7 +299,7 @@ namespace Voron.Impl.Journal
 
         private void RecoverCurrentJournalSize(AbstractPager pager)
         {
-            var journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            var journalSize = Bits.PowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
                 return;
 

@@ -44,7 +44,7 @@ namespace Voron.Data.Fixed
             ByteStringContext.Scope IFixedSizeIterator.Value(out Slice slice)
             {
                 slice = new Slice();
-                return new ByteStringContext<ByteStringMemoryCache>.Scope();
+                return new ByteStringContext.Scope();
             }
 
             public bool MoveNext()

@@ -267,7 +267,7 @@ namespace Sparrow.Json
             // Write the property names and register their positions
             if (_propertyArrayOffset == null || _propertyArrayOffset.Length < propertiesDiscovered)
             {
-                _propertyArrayOffset = new int[Bits.NextPowerOf2(propertiesDiscovered)];
+                _propertyArrayOffset = new int[Bits.PowerOf2(propertiesDiscovered)];
             }
 
             unsafe

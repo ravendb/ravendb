@@ -352,7 +352,7 @@ namespace Voron.Data.BTrees
                 if (necessarySize > Constants.Compression.MaxPageSize)
                     DecompressedPageSize = Constants.Compression.MaxPageSize; // we are guranteed that after decompression a page won't exceed max size
                 else
-                    DecompressedPageSize = Bits.NextPowerOf2(necessarySize);
+                    DecompressedPageSize = Bits.PowerOf2(necessarySize);
             }
 
             public readonly TreePage Page;
