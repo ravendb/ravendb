@@ -763,7 +763,7 @@ namespace Raven.Server.Rachis
             var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
             {
-                ClusterCommandsVersionManager.CurrentClusterMinimalVersion = version;
+                ClusterCommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
             });
             leader.Start(connections);
