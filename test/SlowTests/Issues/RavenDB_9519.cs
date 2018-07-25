@@ -30,12 +30,7 @@ namespace SlowTests.Issues
                 }
 
                 var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies&format=csv");
-                
-                using (var session = store.OpenSession())
-                {
-                    session.Delete(id);
-                }
+                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies&format=csv");               
 
                 using (var commands = store.Commands())
                 {
