@@ -14,7 +14,7 @@ class exportDatabaseModel {
 
     exportFileName = ko.observable<string>();
 
-    includeExpiredDocuments = ko.observable(false);
+    includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
     includeAllCollections = ko.observable(true);
