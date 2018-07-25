@@ -42,12 +42,12 @@ namespace Raven.Client.Documents.Session
         /// Access the lazy operations
         /// </summary>
         public ILazySessionOperations Lazily => this;
-        
+
         /// <summary>
         /// Access the attachments operations
         /// </summary>
         public IAttachmentsSessionOperations Attachments { get; }
-        
+
         /// <summary>
         /// Access the revisions operations
         /// </summary>
@@ -89,6 +89,9 @@ namespace Raven.Client.Documents.Session
         {
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
+
+            if (_knownMissingIds.Contains(id))
+                return false;
 
             if (DocumentsById.TryGetValue(id, out _))
                 return true;
@@ -186,7 +189,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, 
+        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation,
             List<GetRequest> requests)
         {
             var multiGetOperation = new MultiGetOperation(this);

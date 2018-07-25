@@ -40,6 +40,9 @@ namespace Raven.Client.Documents.Session
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
 
+            if (_knownMissingIds.Contains(id))
+                return false;
+
             if (DocumentsById.TryGetValue(id, out _))
                 return true;
 
