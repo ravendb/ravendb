@@ -38,7 +38,7 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
-    public unsafe struct FragmentAllocator<TOptions> : IAllocator<FragmentAllocator<TOptions>, Pointer>, IAllocator
+    public unsafe struct FragmentAllocator<TOptions> : IAllocator<FragmentAllocator<TOptions>, Pointer>
         where TOptions : struct, IFragmentAllocatorOptions
     {
         private TOptions _options;
@@ -133,10 +133,10 @@ namespace Sparrow
             // TODO: Time the impact of using a heap structure instead of a SortedList.
             // Get the biggest segment on the Heap and if size < the biggest one, we avoid the allocation.
             Pointer segment;
-            if (allocator._allocatedSegments.Count > 0 && allocator._allocatedSegments[0].Size >= size)
+            if (allocator._internalReadyToUseMemorySegments.Count > 0 && allocator._internalReadyToUseMemorySegments[0].Size >= size)
             {
-                segment = allocator._allocatedSegments[0];
-                allocator._allocatedSegments.RemoveAt(0);
+                segment = allocator._internalReadyToUseMemorySegments[0];
+                allocator._internalReadyToUseMemorySegments.RemoveAt(0);
             }
             else
             {
