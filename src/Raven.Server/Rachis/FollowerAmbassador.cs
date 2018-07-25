@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -721,7 +722,9 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
-                FollowerCommandsVersion = llr.CommandsVersion ?? 400;
+
+                FollowerCommandsVersion = GetFollowerVersion(llr);
+                ClusterCommandsVersionManager.SetMinimalClusterVersion(FollowerCommandsVersion);
 
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -804,7 +807,15 @@ namespace Raven.Server.Rachis
                 } while (true);
             }
         }
-        
+
+        private int GetFollowerVersion(LogLengthNegotiationResponse llr)
+        {
+            var version = llr.CommandsVersion ?? 400_000;
+            if (version == 400)
+                return 400_000;
+            return version;
+        }
+
         private void SendHello(TransactionOperationContext context, ClusterTopology clusterTopology)
         {
             UpdateLastSend("Hello");

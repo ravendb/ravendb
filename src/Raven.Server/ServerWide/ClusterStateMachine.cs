@@ -964,11 +964,16 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Match(Items.Content)
-                    || slice.Content.Match(CompareExchange.Content)
-                    || slice.Content.Match(Identities.Content)
-                    || slice.Content.Match(TransactionCommands.Content) 
-                    || slice.Content.Match(TransactionCommandsIndex.Content);
+            var baseVersion = slice.Content.Match(Items.Content)
+                            || slice.Content.Match(CompareExchange.Content)
+                            || slice.Content.Match(Identities.Content);
+
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 410_000)
+                return baseVersion
+                       || slice.Content.Match(TransactionCommands.Content)
+                       || slice.Content.Match(TransactionCommandsIndex.Content);
+
+            return baseVersion;
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
